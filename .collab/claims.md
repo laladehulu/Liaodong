@@ -24,3 +24,4 @@
 - debug (fork): NEW src/debug.js; build.sh splice; sim.js Sim.prototype.mJump + one applyCommand case; tiny hooks main.js/zhe.js/jin.js/shenji.js
 - feet fork: src/anim.js (ANIM.feet + rig leg bypass), render.js locomotion else-branch hook (feet), a.ph phase lock
 - club-anim (fork): sim.js startWindup club thrust override (top lines), render.js KF.club/VM.club + drawFigure clubbing arm/grip lines, vmSj grip
+- choices (fork): NEW src/choices.js (campaign branching decisions, consequences, epilogue ledger), build.sh splice; tiny hooks zhe.js/jin.js/shenji.js flow

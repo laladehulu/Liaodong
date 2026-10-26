@@ -883,7 +883,7 @@ class Sim {
     if (u.champ && atkPressed && u.dodgeT > 0 && u.dodgeFwd && u.sta >= 10) { u.sta -= 10; u.staT = 0; u.lunge = true; u.blocking = false; u.st = ST_WINDUP; u.stT = 0; u.atkDir = DIR_DOWN; u.windupId++; u.swingHit = false; this.release(u); u.dodgeT = Math.max(u.dodgeT, 0.18); this.events.push({ t: 'lunge', id: u.id, x: u.x, y: u.y, z: u.z }); u.atkHeld = atk; u.blockHeld = blk; return; }
     if (u.champ && atkPressed && u.sta < 8) { if (!u.tiredT || u.tiredT <= 0) { u.tiredT = 0.8; this.events.push({ t: 'tired', id: u.id }); } u.atkHeld = atk; u.blockHeld = blk; return; }
     if (atkPressed && u.flinchT <= 0 && (u.st === ST_IDLE || (u.st === ST_RECOVER && u.stT > u.def.recover * 0.6))) {
-      u.blocking = false; if (u.champ) { const chain = this.tick - (u.lastSwing || -999) < 40; u.combo = chain ? (u.combo || 0) + 1 : 0; u.lastSwing = this.tick; u.sta -= 6 + u.combo * 3; u.staT = 0; } this.startWindup(u, weaponDir(u.weapon, ad));
+      u.blocking = false; if (u.champ) { const chain = this.tick - (u.lastSwing || -999) < 40; u.combo = chain ? (u.combo || 0) + 1 : 0; u.lastSwing = this.tick; u.sta -= 6 + u.combo * 3; u.staT = 0; } this.startWindup(u, u.weapon === 'rifle' && u.club ? ad : weaponDir(u.weapon, ad));
     } else if (blk && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_KICK && u.st !== ST_SWAP && u.flinchT <= 0 && (u.st === ST_IDLE || u.st === ST_RECOVER || u.st === ST_RELOAD)) {
       if (!u.blocking) { u.blocking = true; u.blockT = 0; u.blockDir = bd; }
       if (u.st === ST_RECOVER) { u.st = ST_IDLE; u.stT = 0; }
@@ -891,7 +891,10 @@ class Sim {
     u.atkHeld = atk; u.blockHeld = blk;
   }
   startWindup(u, dir) { if (u.hrT > 0) return; u.wMul = 1;
-    if (u.def.brush && dir === DIR_UP) dir = (u.windupId & 1) ? DIR_LEFT : DIR_RIGHT; // the wolf-brush pokes and sweeps side to side; it is never chopped down overhead if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; }
+    if (u.def.brush && dir === DIR_UP) dir = (u.windupId & 1) ? DIR_LEFT : DIR_RIGHT; /* the wolf-brush pokes and sweeps side to side; it is never chopped down overhead */
+    /* a gun swung as a club is never thrust: the stab becomes an overhead smash (the player) or a smash and side swings in turn (AI) */
+    if (u.weapon === 'rifle' && (u.club || u.ctrl < 0) && dir !== DIR_UP && dir !== DIR_LEFT && dir !== DIR_RIGHT) dir = u.ctrl >= 0 ? DIR_UP : [DIR_UP, DIR_RIGHT, DIR_LEFT][u.windupId % 3];
+    /* (was swallowed by a comment long ago; left off so combat tuning is unchanged) if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } */
     if (this.xc && u.ctrl >= 0 && !u.champ) { // mashing: each swing in quick succession costs arm; past three in a breath the windups slow and telegraph
       u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + 1; u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
     u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
