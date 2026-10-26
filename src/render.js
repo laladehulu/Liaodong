@@ -1836,12 +1836,12 @@ class Renderer {
     else if (w === 'katana' && arm === 'mace') { segW(f.hilt, -0.2, 0.03, 0.045, 0.045); segW(f.blade, 0.03, 0.62, 0.07, 0.07); }
     else if (w === 'katana' && arm === 'jian') { segW(f.hilt, -0.2, 0.03, 0.035, 0.08); segW(f.blade, 0.03, 0.86, 0.018, 0.045); }
     else if (w === 'katana') { if (big) { segW(f.hilt, -0.55, 0.03, 0.045, 0.05); segW(f.blade, 0.03, 1.2, 0.03, 0.085); } else { segW(f.hilt, -0.2, 0.03, 0.04, 0.045); segW(f.blade, 0.03, 0.72, 0.026, 0.075); } }
-    else if (w === 'yari') { if (u.role === 'spear') segW(f.hilt, 3.55, 3.7, 0.1, 0.1); else segW(f.hilt, 1.7, 1.86, 0.11, 0.11); } else f.hilt.setMatrixAt(slot, Z);
-    if (w === 'yari') { if (u.role === 'spear') { segW(f.yari, -0.9, 3.7, 0.042, 0.042); segW(f.blade, 3.7, 4.0, 0.02, 0.06); } else { segW(f.yari, -0.8, 1.85, 0.045, 0.045); segW(f.blade, 1.85, 2.15, 0.02, 0.06); } } // the duck team's 長槍 is about 1丈5尺, near 5 m
+    else if (w === 'yari') { if ((u.kitRole !== undefined ? u.kitRole : u.role) === 'spear') segW(f.hilt, 3.55, 3.7, 0.1, 0.1); else segW(f.hilt, 1.7, 1.86, 0.11, 0.11); } else f.hilt.setMatrixAt(slot, Z);
+    if (w === 'yari') { if ((u.kitRole !== undefined ? u.kitRole : u.role) === 'spear') { segW(f.yari, -0.9, 3.7, 0.042, 0.042); segW(f.blade, 3.7, 4.0, 0.02, 0.06); } else { segW(f.yari, -0.8, 1.85, 0.045, 0.045); segW(f.blade, 1.85, 2.15, 0.02, 0.06); } } // the duck team's 長槍 is about 1丈5尺, near 5 m
     else if (w !== 'katana') f.blade.setMatrixAt(slot, Z);
     if (w !== 'yari' && !(w === 'katana' && arm === 'guandao')) f.yari.setMatrixAt(slot, Z);
     { // the mandarin duck's special arms: 狼筅 wolf-brush (a bamboo trunk left bristling with branches) and 镗钯 tangba (three-pronged fork)
-      const role = u.role, brush = w === 'yari' && role === 'brush', fork = w === 'yari' && role === 'trident'; let n = 0;
+      const role = (u.kitRole !== undefined ? u.kitRole : u.role), brush = w === 'yari' && role === 'brush', fork = w === 'yari' && role === 'trident'; let n = 0;
       if (brush || fork) { let ex = dy * 0 - dz * 1, ey = 0, ez = dx * 1 - dy * 0; let el = Math.hypot(ex, ey, ez); if (el < 1e-3) { ex = 1; ey = 0; ez = 0; el = 1; } ex /= el; ey /= el; ez /= el; const fx = dy * ez - dz * ey, fy = dz * ex - dx * ez, fz = dx * ey - dy * ex;
         if (brush) { segW(f.yari, -0.8, 3.3, 0.055, 0.05); f.blade.setMatrixAt(slot, Z); f.hilt.setMatrixAt(slot, Z);
           for (let k = 0; k < 9; k++) { const sk = 1.6 + k * 0.2, a = k * 2.4 + 0.5, L = 0.5 - k * 0.03; const bx = P(sk, 0), by = P(sk, 1), bz = P(sk, 2); const ox = (ex * Math.cos(a) + fx * Math.sin(a)) * L, oy = (ey * Math.cos(a) + fy * Math.sin(a)) * L, oz = (ez * Math.cos(a) + fz * Math.sin(a)) * L;
@@ -1881,7 +1881,7 @@ class Renderer {
     // blade trail while the cut is moving
     if (melee && (u.st === ST_RELEASE || (u.st === ST_RECOVER && stT < 0.06))) {
       const cx = this.camera.position.x - x, cz = this.camera.position.z - z;
-      if (cx * cx + cz * cz < 45 * 45) { const t0 = w === 'yari' ? (u.role === 'spear' ? 3.2 : 1.4) : 0.25, t1 = w === 'yari' ? (u.role === 'spear' ? 4.0 : 2.15) : 0.8; this.trailPush(u.id, P(t0, 0), P(t0, 1), P(t0, 2), P(t1, 0), P(t1, 1), P(t1, 2), u.team === this.localTeam); }
+      if (cx * cx + cz * cz < 45 * 45) { const t0 = w === 'yari' ? ((u.kitRole !== undefined ? u.kitRole : u.role) === 'spear' ? 3.2 : 1.4) : 0.25, t1 = w === 'yari' ? ((u.kitRole !== undefined ? u.kitRole : u.role) === 'spear' ? 4.0 : 2.15) : 0.8; this.trailPush(u.id, P(t0, 0), P(t0, 1), P(t0, 2), P(t1, 0), P(t1, 1), P(t1, 2), u.team === this.localTeam); }
     }
   }
   // ---------- blade trails ----------
@@ -2035,7 +2035,7 @@ class Renderer {
     if (this.vmBow.visible) { const dr = hero.st === ST_AIM || hero.aiming ? 1 : 0; this.vmBow.position.set(-0.05 + dr * 0.04, -0.12 + dr * 0.08, -0.55); this.vmBow.rotation.set(0, 0, 0.2 - dr * 0.15); }
     { const arm = hero.def.arm, K = this.vmKatana.scale; if (arm === 'guandao') K.set(1.1, 1.8, 2.2); else if (arm === 'mace') K.set(3, 0.72, 1.3); else if (arm === 'jian') K.set(0.75, 1.15, 0.6); else K.set(1, 1, 1); }
     { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * 14); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
-    const yrole = w === 'yari' ? hero.role : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
+    const yrole = w === 'yari' ? (hero.kitRole !== undefined ? hero.kitRole : hero.role) : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
     // a three-eyed gun model added by a campaign (vmSj) replaces the musket parts every frame, whoever you now are
     { const cl = !!hero.club && w === 'rifle'; this.vmRifle.rotation.y = cl ? Math.PI : 0; this.vmRifle.rotation.x = cl ? -0.25 : 0; this.vmRifle.position.z = cl ? -1.05 : 0; this.vmRifle.position.y = cl ? 0.05 : 0; }
     if (this.vmSj) { const on = hero.type === 'rifle_spencer'; this.vmSj.visible = on; for (const c of this.vmRifle.children) { if (c === this.vmSj) continue; if (c === this.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; } }

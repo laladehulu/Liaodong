@@ -3376,7 +3376,7 @@ Sim.prototype.kitSwitch = function (u, i) {
   if (!(u.st === ST_IDLE || u.st === ST_RELOAD || u.st === ST_AIM)) return false;
   const cur = u.kit[u.kitI]; if (cur) cur.am = u.ammo;
   const sl = u.kit[i]; u.kitI = i; u.def = this.kitDef(u, sl); const w = sl.o ? sl.w : WPN[sl.k].w;
-  u.role = WPN[sl.k].role || u.baseRole; u.club = false;
+  u.kitRole = sl.o ? undefined : (WPN[sl.k].role || ''); u.club = false; // his place in the team (u.role) never changes; kitRole only says which long weapon he holds
   const g = gunOf(u.def, w); u.ammo = sl.am !== undefined ? sl.am : g ? (g.mag || 1) : 0; if (g) u.shots = Math.max(u.shots || 0, 20);
   u.nextWeapon = w; u.st = ST_SWAP; u.stT = 0; u.blocking = false; u.aiming = false; u.fireQ = 0;
   this.events.push({ t: 'kitswap', id: u.id, k: sl.k }); return true;

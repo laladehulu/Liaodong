@@ -115,7 +115,8 @@ const SPEECH = (() => {
     const range = o.loud ? 48 : 26;
     const mine = (v) => { const sim = state.sim, me = sim && sim.players[state.localIdx]; if (!v || !me) return false; if (nameOf(v.id)) return true; const sq = v.squad >= 0 ? sim.squads[v.squad] : null; return !!sq && (v.squad === me.soldierSq || sq.owner === state.localIdx); };
     // the stack is for your own men, and for the named commanders whose words carry the story; everyone else speaks only where he stands
-    if (prio >= 2 && u && !u.dead && (mine(u) || (prio >= 3 && o.who))) { const n0 = o.who || nameOf(id); comms(u, prio >= 3 ? 'story' : 'alert', typeof n0 === 'string' ? n0 : n0 ? n0.zh + ' ' + n0.en : '', zh, en, o.dur || (prio >= 3 ? Math.min(8, 3 + (en || '').length / 20) : 4.5)); if (prio >= 3 && (!L || Math.hypot(u.x - L.x, u.z - L.z) > range)) return true; }
+    const self = typeof localHero === 'function' && localHero() && localHero().id === id; // your own words: only the caption at the bottom, not the stack
+    if (prio >= 2 && u && !u.dead && !self && (mine(u) || (prio >= 3 && o.who))) { const n0 = o.who || nameOf(id); comms(u, prio >= 3 ? 'story' : 'alert', typeof n0 === 'string' ? n0 : n0 ? n0.zh + ' ' + n0.en : '', zh, en, o.dur || (prio >= 3 ? Math.min(8, 3 + (en || '').length / 20) : 4.5)); if (prio >= 3 && (!L || Math.hypot(u.x - L.x, u.z - L.z) > range)) return true; }
     if (!u || u.dead || !L || Math.hypot(u.x - L.x, u.z - L.z) > range) { if (o.radio && typeof radio === 'function' && typeof MIS !== 'undefined' && MIS) radio(o.who || 'Voice', `${zh ? zh + '  ' : ''}${en}`); return false; }
     if (prio < 2 && (cool[id] || 0) > now) return false; cool[id] = now + (o.cool || 6);
     for (let i = live.length - 1; i >= 0; i--) if (live[i].id === id) { kill(i); }
