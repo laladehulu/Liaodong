@@ -947,6 +947,7 @@ class Sim {
   applyCommand(p, c) {
     const type = c[1] | 0;
     if (type === 21) { if (this.beaconBuy) this.beaconBuy(p, c[2] | 0); return; }
+    if (type === 31) { this.debugCmd(p, c[2] | 0, c[3] | 0); return; }
     if (type === ORD_SPAWN) { if ((this.mode === 'assault' || this.mode === 'campaign') && !p.ai) this.deploy(p, c[0] | 0, c[2] | 0); return; }
     if (this.mode === 'assault' && type === ORD_DIRECTIVE) return; // in an assault you are a soldier: the generals are not yours to command
     if (this.chaos && type !== ORD_CONTROL) return; // no orders in chaos: only body-hopping
@@ -1747,6 +1748,7 @@ class Sim {
   }
   applyDamage(u, dmg, attackerId, ix, iy, iz, cause, hx, hy, hz) {
     if (u.dead || u.inactive) return false;
+    if (u.ctrl >= 0 && this.players[u.ctrl] && this.players[u.ctrl].god) return false; // debug mode: the tester cannot be hurt
     if (this.xc && u.ctrl >= 0 && !this.players[u.ctrl].ai && (cause === 'melee' || cause === 'trample' || cause === 'spear' || cause === 'counter' || cause === 'arrow' || cause === 'shot')) { // no instant deaths in a crowd or under a whole company's volley
       const dec = (this.tick - (u.xcT === undefined ? this.tick : u.xcT)) * DT * 0.3 * u.def.hp; u.xcB = Math.max(0, (u.xcB || 0) - dec); u.xcT = this.tick;
       const room = Math.max(0, u.def.hp * 0.4 - u.xcB); if (dmg > room) dmg = room + (dmg - room) * 0.15;
@@ -3515,6 +3517,27 @@ Sim.prototype.missionThink = function () {
   if (r === 0 && P.limit && el > P.limit) r = -1;
   if (r < 0) { this.mOver(false, lost ? 'Your companies are gone.' : (P.fail || 'The objective is lost.')); return; }
   if (r > 0) { for (const a of P.done || []) this.mAct(a); for (const k of P.hide || []) this.mAct(['hide', k]); if (mv.ph + 1 >= M.phases.length) { this.mOver(true, M.win); return; } mv.ph++; mv.t0 = this.tick; this.mStart(); }
+};
+// ---- debug / testing (solo only: travels in the input stream like any order, so it stays deterministic) ----
+Sim.prototype.debugCmd = function (p, sub, val) {
+  if (this.players.filter(q => !q.ai).length !== 1 || p.ai) return;
+  if (sub === 1) { p.god = !!val; this.events.push({ t: 'dbg', what: 'god', v: p.god ? 1 : 0 }); return; }
+  if (sub === 0 && this.mission && this.mode !== 'assault' && this.mwin === undefined) this.mJump(val);
+};
+// skip straight to phase ph: the skipped phases' waves, timed actions and closing actions all happen at once, as
+// if they had been played (groups released, the script's deaths applied), then the new phase starts as usual
+Sim.prototype.mJump = function (ph) {
+  const M = this.mission, mv = this.mv; if (!M || !M.phases || M.camp) return;
+  if (mv.ph < 0) { mv.ph = 0; mv.t0 = this.tick; this.mStart(); }
+  ph = clamp(ph | 0, 0, M.phases.length); if (ph <= mv.ph) return;
+  while (mv.ph < ph) { const P = M.phases[mv.ph];
+    for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k]) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }
+    for (const [t, a] of P.at || []) { const k = mv.ph + ':at:' + t; if (!mv.ats[k]) { mv.ats[k] = 1; this.mAct(a); } }
+    for (const s of P.say || []) mv.said[mv.ph + ':' + s[0]] = 1;
+    for (const a of P.done || []) this.mAct(a); for (const k of P.hide || []) this.mAct(['hide', k]);
+    if (mv.ph + 1 >= M.phases.length) { this.mOver(true, M.win); return; }
+    mv.ph++; mv.t0 = this.tick; this.mStart(); }
+  this.events.push({ t: 'dbg', what: 'jump', v: mv.ph });
 };
 Sim.prototype.mStart = function () { const P = this.mission.phases[this.mv.ph]; for (const k of P.show || []) this.mAct(['show', k]); for (const k of P.hide || []) this.mAct(['hide', k]); for (const a of P.start || []) this.mAct(a); this.events.push({ t: 'mphase', ph: this.mv.ph, title: P.title, text: P.text });
   for (const p of this.players) { if (p.ai || !p.levyIds) continue; const ids = p.levyIds.filter(id => this.squads[id].levyPh === this.mv.ph); p.levyIds = p.levyIds.filter(id => !ids.includes(id)); for (const id of ids) this.mJoin(p, id, true); } };
