@@ -1721,9 +1721,16 @@ class Renderer {
     } else if (down) {
       legPlane(0, 1, 0.12, 0.2, 0); legPlane(9, -1, -0.05, 0.3, 0); pel = 0.92;
     } else if (u.camp && a.cl > 0.02) { legPlane(0, 1, 0.06, 0.12, 0); legPlane(9, -1, 0.02, 0.2, 0); pel = 0.92;
+      // lying on a slope: tilt with the ground between his feet and his head so neither end sinks into it
+      { const hx = x - sy * 1.6, hz = z - cy * 1.6; a.cTilt = clamp(Math.atan2(terrainH(hx, hz) - terrainH(x, z), 1.6), -0.4, 0.4); }
     } else if (u.camp && a.cs > 0.02) { // seated on the ground (knees up, or legs out) or on a log, rising when someone comes to talk
-      const k = a.cs, Sv = a.cSv === 2 ? [1.6, 1.25, 1.6, 1.25, 0.42] : a.cSv === 1 ? [1.5, 0.15, 1.45, 0.25, 0.14] : [2.1, 1.75, 1.95, 1.6, 0.2];
-      const eL = legPlane(0, 1, lerp(0.05, Sv[0], k), lerp(0.1, Sv[1], k), 0.14 * k), eR = legPlane(9, -1, lerp(0.05, Sv[2], k), lerp(0.1, Sv[3], k), -0.14 * k); pel = lerp(Math.max(eL, eR), Sv[4], k);
+      const k = a.cs, g0 = terrainH(x, z); let v = a.cSv;
+      if (v === 1 && terrainH(x + sy * 0.85, z + cy * 0.85) - g0 > 0.03) v = 0; // ground rising in front: knees up rather than legs pushed into it
+      const Sv = v === 2 ? [1.6, 1.25, 1.6, 1.25, 0.42] : v === 1 ? [1.5, 0.15, 1.45, 0.25, 0.17] : [2.1, 1.75, 1.95, 1.6, 0.22];
+      const eL = legPlane(0, 1, lerp(0.05, Sv[0], k), lerp(0.1, Sv[1], k), 0.14 * k), eR = legPlane(9, -1, lerp(0.05, Sv[2], k), lerp(0.1, Sv[3], k), -0.14 * k); const p0 = lerp(Math.max(eL, eR), Sv[4], k);
+      // feet and knees rest ON the ground under them: lift the seat as much as the highest one needs (a simple foot IK)
+      let lift = 0; for (const o of [3, 6, 12, 15]) { const fx = x + legs[o] * cy + legs[o + 2] * sy, fz = z - legs[o] * sy + legs[o + 2] * cy; const need = terrainH(fx, fz) - g0 + (o === 6 || o === 15 ? 0.06 : 0.08) - (p0 + legs[o + 1]); if (need > lift) lift = need; }
+      pel = p0 + Math.min(lift, 0.35);
     } else if (u.airborne) {
       legPlane(0, 1, 0.55, 1.1, 0); legPlane(9, -1, 0.3, 1.2, 0); pel = 0.95;
     } else if (u.st === ST_KICK) {
@@ -1786,7 +1793,7 @@ class Renderer {
     else { toRoot(a.lh, tmpA, 0); ik(0, 6, tmpA[0], tmpA[1], tmpA[2], 1); }
     if (fkR && w !== 'bow' && w !== '') { J[18] = J[15]; J[19] = J[16]; J[20] = J[17]; const fx = J[15] - J[12], fy = J[16] - J[13], fz = J[17] - J[14]; const l = Math.hypot(fx, fy, fz) || 1; const cdir = routing ? [fx / l * 0.3 - C[6], fy / l * 0.3 - C[7] - 0.4, fz / l * 0.3 - C[8]] : [C[6], C[7] + 0.3, C[8]]; const cl2 = Math.hypot(cdir[0], cdir[1], cdir[2]) || 1; J[21] = cdir[0] / cl2; J[22] = cdir[1] / cl2; J[23] = cdir[2] / cl2; }
     // ---------- to world ----------
-    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : (u.camp && a.cl ? -1.42 * a.cl : 0), cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
+    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : (u.camp && a.cl ? (-1.42 + (a.cTilt || 0)) * a.cl : 0), cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
     const oy = wdp !== null ? woy : down ? 0.15 : u.camp && a.cl ? 0.12 * a.cl : 0;
     const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
     const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
