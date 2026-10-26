@@ -22,3 +22,4 @@
 - campLife (fork): sim.js camp NPC think (new Sim.prototype.campThink + 1 hook in unitAI), render.js drawFigure camp pose hook + new campPose fn, props
 - melee-anim (fork): render.js POSES/KF attack keyframes, drawFigure attack pose/torso twist, viewmodel swing
 - debug (fork): NEW src/debug.js; build.sh splice; sim.js Sim.prototype.mJump + one applyCommand case; tiny hooks main.js/zhe.js/jin.js/shenji.js
+- feet fork: src/anim.js (ANIM.feet + rig leg bypass), render.js locomotion else-branch hook (feet), a.ph phase lock

@@ -58,7 +58,9 @@ const ANIM = (function () {
     if (snap) { for (let i = 0; i < N; i++) { S[i] = T[i]; V[i] = 0; } }
     else { st.sprung++; const h = Math.min(dt, 0.05); for (let i = 0; i < 61; i++) spring(S, V, i, T[i], W[i], h);
       // a weapon held in a hand moves with that hand, velocity and all, so letting go of it later starts smoothly
-      const hs = gripR ? OJ + 15 : gripL ? OJ + 6 : -1; if (hs >= 0) for (let q = 0; q < 3; q++) { S[OJ + 18 + q] = S[hs + q]; V[OJ + 18 + q] = V[hs + q]; } }
+      const hs = gripR ? OJ + 15 : gripL ? OJ + 6 : -1; if (hs >= 0) for (let q = 0; q < 3; q++) { S[OJ + 18 + q] = S[hs + q]; V[OJ + 18 + q] = V[hs + q]; }
+      // planted feet are already where they belong: a spring would only drag them (and the hips riding on them) behind
+      const fw = a.fpW || 0; if (fw > 0) { for (let i = 0; i < 18; i++) { S[OL + i] += (T[OL + i] - S[OL + i]) * fw; V[OL + i] *= 1 - fw; } S[OP] += (T[OP] - S[OP]) * fw; V[OP] *= 1 - fw; } }
     // write back, with the constraints restored
     for (let i = 0; i < 18; i++) legs[i] = S[OL + i];
     for (let i = 0; i < 30; i++) J[i] = S[OJ + i];
@@ -76,5 +78,79 @@ const ANIM = (function () {
     out[0] = S[OP]; out[1] = S[OP + 1]; out[2] = S[OP + 2]; out[3] = S[OP + 3];
     return out;
   }
-  return { rig, st, get on() { return st.on; }, set on(v) { st.on = !!v; } };
+  // ---------------- foot planting ----------------
+  // A man's feet are where he put them. Each foot has a planted spot in the world and stays exactly there; when the
+  // hips have moved (or turned) far enough past it, it steps: lifted on an arc to a landing spot ahead of where the
+  // hips are going, then planted again. Walking is long slow steps, running short quick ones with a moment in the air
+  // when both feet are up. The legs are solved to reach the feet (two-bone IK, knee forward), and the hips ride on
+  // whatever foot is down, so the bob, the drop on a long stride and the lower hips on a slope come from the feet.
+  // In a fighting stance the ideal spots are the stance's own feet, so a lunge steps into the blow and a turn on the
+  // spot is a few small pivot steps. Render-only; near figures only (far ones keep the cycle).
+  const FP = { on: true, near: 40 }, LT = 0.46, LS = 0.46;
+  const FT = new Float64Array(6), IL = new Float64Array(9);
+  function legIK(out, o, side, tx, ty, tz) { // hip at (side*0.1, 0, 0) root-local; out gets hip, knee, foot
+    const hx = side * 0.1; let dx = tx - hx, dy = ty, dz = tz; let d = Math.hypot(dx, dy, dz) || 1e-4;
+    const dm = Math.min(Math.max(d, 0.25), LT + LS - 0.004), k = dm / d; dx *= k; dy *= k; dz *= k; d = dm;
+    const ux = dx / d, uy = dy / d, uz = dz / d, ca = (LT * LT + d * d - LS * LS) / (2 * LT * d), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
+    let px = side * 0.12, py = 0, pz = 1; const dp = px * ux + py * uy + pz * uz; px -= ux * dp; py -= uy * dp; pz -= uz * dp; const pl = Math.hypot(px, py, pz) || 1; px /= pl; py /= pl; pz /= pl; // the knee bends forward (and a touch out)
+    out[o] = hx; out[o + 1] = 0; out[o + 2] = 0;
+    out[o + 3] = hx + LT * (ux * ca + px * sa); out[o + 4] = LT * (uy * ca + py * sa); out[o + 5] = LT * (uz * ca + pz * sa);
+    out[o + 6] = hx + dx; out[o + 7] = dy; out[o + 8] = dz;
+  }
+  const sm = (t) => t * t * (3 - 2 * t);
+  // legs: the cycle's legs (root-local, edited in place); pel: the cycle's pelvis height; pz: the lunge's forward shift of
+  // the whole leg set; x,y,z/cy,sy: the root in the world; vsc: the man's size. Returns the pelvis height to use.
+  function feet(r, u, a, legs, pel, pz, x, y, z, cy, sy, vsc, dt) {
+    const now = r.time || 0, cam = r.camera ? r.camera.position : null, near = FP.on && st.on && (!cam || Math.hypot(x - cam.x, z - cam.z) < FP.near) && dt > 0 && dt < 0.1;
+    let F = a.fp;
+    a.fpW = (a.fpW || 0) + ((near ? 1 : 0) - (a.fpW || 0)) * Math.min(1, dt * 6);
+    if (!near && a.fpW < 0.01) { a.fpW = 0; if (F) F.ok = false; return pel; }
+    const tH = SIM.terrainH;
+    // the hips' velocity (rendered, so knockback and hit shoves are walked too), smoothed
+    if (!F) F = a.fp = { px: new Float64Array(2), pz: new Float64Array(2), sx: new Float64Array(2), sz: new Float64Array(2), lx: new Float64Array(2), lz: new Float64Array(2), t: new Float64Array(2), ok: false, vx: 0, vz: 0, X: x, Z: z, T: now, last: -9, still: 0, n: 0 };
+    const reset = !F.ok || now - F.T > 0.3 || Math.hypot(x - F.X, z - F.Z) > 2.5;
+    if (!reset) { const k = Math.min(1, dt * 10), ivx = (x - F.X) / dt, ivz = (z - F.Z) / dt; if (Math.hypot(ivx, ivz) < 14) { F.vx += (ivx - F.vx) * k; F.vz += (ivz - F.vz) * k; } }
+    else { F.vx = 0; F.vz = 0; }
+    F.X = x; F.Z = z; F.T = now;
+    const vx = F.vx, vz = F.vz, spd = Math.hypot(vx, vz);
+    // ideal foot spots: the stance's own feet when standing, a neutral track under the hips when moving
+    const kM = Math.min(1, spd / 1.2);
+    for (let f = 0; f < 2; f++) { const o = f * 9, side = f ? -1 : 1;
+      const lx = legs[o + 6] * (1 - kM) + side * 0.13 * kM, lz = (legs[o + 8] + pz) * (1 - kM);
+      FT[f * 3] = x + (lx * cy + lz * sy) * vsc; FT[f * 3 + 2] = z + (-lx * sy + lz * cy) * vsc; }
+    const Tstep = Math.min(0.55, Math.max(0.2, 0.62 - spd * 0.065)), run = spd > 4.2, Tsw = Math.max(0.17, Tstep * (run ? 1.12 : 0.82)), lift = Math.min(0.2, 0.05 + spd * 0.028);
+    if (reset) { for (let f = 0; f < 2; f++) { F.px[f] = FT[f * 3]; F.pz[f] = FT[f * 3 + 2]; F.t[f] = -1; } F.ok = true; F.last = now; }
+    // trigger a step
+    F.still = spd < 0.25 ? F.still + dt : 0;
+    const thr = spd > 0.3 ? Math.max(0.13, spd * Tstep * 0.55) : (F.still > 0.35 ? 0.07 : 0.14);
+    const lead = spd > 0.3 ? Tstep * 0.25 : 0;
+    let best = -1, be = thr;
+    for (let f = 0; f < 2; f++) { if (F.t[f] >= 0) continue; const g = 1 - f, otherOk = F.t[g] < 0 || (run && F.t[g] > 0.55) || (!run && F.t[g] > 0.92); if (!otherOk) continue; if (now - F.last < Tstep * (spd > 0.3 ? 0.55 : 0.8)) continue;
+      const e = Math.hypot(F.px[f] - (FT[f * 3] + vx * lead), F.pz[f] - (FT[f * 3 + 2] + vz * lead)); if (e > be) { be = e; best = f; } }
+    if (best >= 0) { F.t[best] = 0; F.sx[best] = F.px[best]; F.sz[best] = F.pz[best]; F.last = now; F.n++; a.fpLast = best; }
+    // move the swinging feet (the landing spot is re-predicted every frame, so a turn mid-step lands where it should)
+    const hy = [0, 0];
+    for (let f = 0; f < 2; f++) { if (F.t[f] < 0) continue; F.t[f] = Math.min(1, F.t[f] + dt / Tsw);
+      const rem = Tsw * (1 - F.t[f]), ahead = spd > 0.3 ? Tstep * 0.42 : 0;
+      F.lx[f] = FT[f * 3] + vx * (rem + ahead); F.lz[f] = FT[f * 3 + 2] + vz * (rem + ahead);
+      const s = sm(F.t[f]); F.px[f] = F.sx[f] + (F.lx[f] - F.sx[f]) * s; F.pz[f] = F.sz[f] + (F.lz[f] - F.sz[f]) * s;
+      hy[f] = Math.sin(F.t[f] * Math.PI) * (spd > 0.3 ? lift : 0.05);
+      if (F.t[f] >= 1) { F.t[f] = -1; hy[f] = 0; } }
+    // arms swing with the legs: lock the cycle phase to the stepping foot (left leg forward at ph = pi/2)
+    if (spd > 0.4 && a.fpLast !== undefined) { const f = a.fpLast, tt = F.t[f] >= 0 ? F.t[f] : 1, want = (f ? Math.PI / 2 : -Math.PI / 2) + tt * Math.PI;
+      let dph = (want - a.ph) % (2 * Math.PI); if (dph > Math.PI) dph -= 2 * Math.PI; if (dph < -Math.PI) dph += 2 * Math.PI; a.ph += dph * Math.min(1, dt * 8); }
+    // the hips ride on the planted feet: as high as the cycle wants, no higher than a down foot allows
+    let pelOut = pel;
+    for (let f = 0; f < 2; f++) { const side = f ? -1 : 1, hx = x + side * 0.1 * cy * vsc, hz = z - side * 0.1 * sy * vsc, gy = tH(F.px[f], F.pz[f]) + hy[f];
+      FT[f * 3 + 1] = gy; if (F.t[f] >= 0) continue;
+      const dh = Math.hypot(F.px[f] - hx, F.pz[f] - hz), L = (LT + LS) * 0.985 * vsc; const top = gy + Math.sqrt(Math.max(0, L * L - dh * dh)); const pmax = (top - y) / vsc; if (pmax < pelOut) pelOut = pmax; }
+    pelOut = Math.max(pelOut, pel - 0.32);
+    // solve the legs to the feet (root-local, relative to the pelvis), and blend with the cycle by the near weight
+    const w = a.fpW;
+    for (let f = 0; f < 2; f++) { const o = f * 9, side = f ? -1 : 1, dX = (F.px[f] - x) / vsc, dZ = (F.pz[f] - z) / vsc;
+      const lx = dX * cy - dZ * sy, lz = dX * sy + dZ * cy - pz, ly = (FT[f * 3 + 1] - y) / vsc - pelOut;
+      legIK(IL, 0, side, lx, ly, lz); for (let i = 0; i < 9; i++) legs[o + i] = legs[o + i] + (IL[i] - legs[o + i]) * w; }
+    return pel + (pelOut - pel) * w;
+  }
+  return { rig, feet, st, FP, get on() { return st.on; }, set on(v) { st.on = !!v; }, get fpOn() { return FP.on; }, set fpOn(v) { FP.on = !!v; } };
 })();

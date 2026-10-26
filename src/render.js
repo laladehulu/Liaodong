@@ -1821,7 +1821,11 @@ class Renderer {
       const bb = beta * (1 - s);
       const eL = legPlane(0, 1, L[0], L[1], bb), eR = legPlane(9, -1, R[0], R[1], bb);
       pel = Math.max(eL, eR) + r * 0.03 * Math.max(0, Math.cos(2 * ph));
+      // near men put their feet down and keep them there (anim.js feet): the legs reach for planted spots, the hips ride on them
+      if (typeof ANIM !== 'undefined' && ANIM.feet && !this.studio) { const vs0 = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24);
+        pel = ANIM.feet(this, u, a, legs, pel, a.lunge * 0.9, x, y, z, cy, sy, vs0, dt); a.fpF = this.time; }
     }
+    if (a.fpW && a.fpF !== this.time) { a.fpW = 0; if (a.fp) a.fp.ok = false; } // sitting, riding, down: their own legs
     // ---------- chest frame ----------
     const pz = a.lunge * 0.9 * (mounted ? 0 : 1);
     const cr = Math.cos(a.roll), sr = Math.sin(a.roll), cl = Math.cos(a.lean), sl = Math.sin(a.lean), ct = Math.cos(a.twist), st = Math.sin(a.twist);
