@@ -710,6 +710,7 @@ class Sim {
     if (this.phase === 1 && this.wx && this.wx.lift && this.tick >= this.wx.lift) this.weatherLift();
     if (this.phase === 1) { if (this.tick % 15 === 0) { this.objectivesThink(); this.fireThink(); } this.navalThink(); if (this.rain) this.stormThink(); if (this.duels.length) this.duelThink(); if (this.heroMode) this.heroThink(); }
     for (let i = 0; i < units.length; i++) { const u = units[i]; if (!u.dead && !u.inactive) this.updateUnit(u); }
+    if (this.xc) this.xcEbb();
     if (this.phase === 1 && this.tick % 3 === 0) this.brushThink();
     if (this.waves.length && this.phase === 1 && this.tick % 15 === 0) this.wavesThink();
     if (this.mission && this.phase === 1 && this.tick % 15 === 0) this.missionThink();
@@ -1006,6 +1007,7 @@ class Sim {
       else sq.order = ORD_HOLD;
     }
     if (sq.order === ORD_MOVE && len(sq.cx - sq.tx, sq.cz - sq.tz) < 2.5) sq.order = ORD_HOLD;
+    if (this.xc) this.xcFront(sq);
     const fx = sin(sq.facing), fz = cos(sq.facing), rx = -cos(sq.facing), rz = sin(sq.facing), s = spacingOf(sq.def);
     let k = 0;
     // friendly companies given the same ground slide apart instead of merging into one mob
@@ -1018,7 +1020,7 @@ class Sim {
       const u = units[sq.unitIds[i]]; if (u.dead) continue;
       let [lat, dep] = slotOffset(sq.formation, k++, n, s, sq.cols); if (sq.def.yuanyang && sq.formation !== FORM_COLUMN) { const r = YY_SLOT[i % 12]; lat = r[0] * 0.92; dep = r[1] * 0.82; }
       if (u.restT > this.tick) dep -= 3.4;
-      u.slotX = clamp(sq.tx + ox + rx * lat + fx * dep, -HALF, HALF); u.slotZ = clamp(sq.tz + oz + rz * lat + fz * dep, -HALF, HALF);
+      u.slotX = clamp((sq.front ? sq.fax : sq.tx) + ox + rx * lat + fx * dep, -HALF, HALF); u.slotZ = clamp((sq.front ? sq.faz : sq.tz) + oz + rz * lat + fz * dep, -HALF, HALF);
       for (const p of this.players) { if (p.ai || p.team !== sq.team) continue; const h = units[p.heroId]; if (!h || h.dead || h === u) continue; const hx = u.slotX - h.x, hz = u.slotZ - h.z, hd = len(hx, hz); if (hd < 1.9) { const e = hd > 0.05 ? 1.9 / hd : 0; u.slotX = h.x + (hd > 0.05 ? hx * e : rx * 1.9); u.slotZ = h.z + (hd > 0.05 ? hz * e : rz * 1.9); } } // leave the player room to move
       if (sq.def.ai === 'ranged' && sq.order === ORD_HOLD) this.coverSlot(u, fx, fz);
     }
@@ -2559,7 +2561,7 @@ const MISSIONS = {
       chase2: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'samurai'], at: [92, -118, -PI / 2], reserve: true },
     },
     phases: [
-      { title: '一 · 入谷 · Into the valley', goal: 'Keep up with your file', text: 'March with the column up the valley toward Hetu Ala. Keep up with your file.',
+      { title: '一 · 入谷 · Into the valley', goal: 'March up the valley with your file', text: 'March with the column up the valley toward Hetu Ala. Keep up with your file.',
         obj: { survive: 58 },
         at: [[18, ['dir', 'liu', 'hold', 0, -50]], [34, ['dir', 'liu', 'hold', 0, -32]], [34, ['dir', 'tusi', 'hold', 0, -4]]],
         say: [[2, 'liu', 'Three Jin stockades burned in three days and their villages empty. The slave chief is afraid of us!', '三日連破三寨，奴酋怯矣！'],
@@ -2574,7 +2576,7 @@ const MISSIONS = {
           [4, 'liu', 'Levies, hold them! Duck teams, close up behind and be ready!', '土兵頂住！鴛鴦陣隨後待命！'],
           [7, 'chief', 'Shields down! Brushes up! Spears behind me — as Marshal Qi taught us!', '藤牌在前，狼筅次之，長槍隨後！'],
           [52, 'chief', 'They give way! Hold the line — nobody chases!', '他們退了！穩住，不許追！']] },
-      { title: '三 · 皇太極 · The ridge', goal: 'Stay with your file and live', text: 'A second Jin host comes down the west ridge into the side of the column.', start: [['release', 'hong'], ['release', 'ridge'], ['dir', 'hong', 'attack']],
+      { title: '三 · 皇太極 · The ridge', goal: 'Turn and fight off the ridge attack', text: 'A second Jin host comes down the west ridge into the side of the column.', start: [['release', 'hong'], ['release', 'ridge'], ['dir', 'hong', 'attack']],
         obj: { survive: 48 },
         at: [[13, ['kill', 'liu']], [17, ['promote']], [23, ['wound', 3]]],
         say: [[1, 'fang', 'The west ridge — more banners! The rider lied. Du Song is not coming!', '西嶺上還有！那人是假的，杜總兵不會來了！'],
@@ -2612,14 +2614,14 @@ const MISSIONS = {
       cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
     },
     phases: [
-      { title: '一 · 橋北 · North of the bridge', text: 'The White Poles have crossed to the north bank. Stand to in the Zhejiang camp with your file and watch the far bank.', show: ['camp'],
+      { title: '一 · 橋北 · North of the bridge', goal: 'Stand to in camp and watch the far bank', text: 'The White Poles have crossed to the north bank. Stand to in the Zhejiang camp with your file and watch the far bank.', show: ['camp'],
         obj: { survive: 66 }, at: [[1, ['promote']]], waves: [[22, 'bayara', ['hold', 74, 34]]],
         say: [[3, 'qi', 'Shenyang fell yesterday. General He and General You are both dead.', '瀋陽昨日已陷，賀總兵、尤副總兵俱死。'],
           [10, 'chen', 'The city is lost. There is nothing left to relieve. We march back to Liaoyang.', '城已陷，救無可救。收兵回遼陽。'],
           [16, 'sichuan', 'If we cannot save Shenyang, what have we been doing here these three years?', '我輩不能救瀋，在此三年何為！'],
           [24, 'lookout', 'Red banners on the far bank — the Khan\'s own guard, riding at the Sichuan camp alone!', '北岸紅旗！巴牙喇單獨衝川營了！'],
           [50, 'lookout', 'They threw them back! The White Poles held!', '打退了！白杆兵頂住了！']] },
-      { title: '二 · 白杆 · The White Poles', text: 'The Jin right wing comes on in strength. Take your file to the south end of the bridge and keep it open, so that whoever can get back across, can.', show: ['sbridge'],
+      { title: '二 · 白杆 · The White Poles', goal: 'Hold the south end of the bridge', text: 'The Jin right wing comes on in strength. Take your file to the south end of the bridge and keep it open, so that whoever can get back across, can.', show: ['sbridge'],
         start: [['release', 'rw'], ['dir', 'rw', 'hold', 74, 34], ['dir', 'bayara', 'hold', 74, 34]],
         obj: { survive: 80 }, waves: [[28, 'guns', ['hold', 86, 92]]],
         at: [[72, ['kill', 'sichuan']], [74, ['dir', 'sichuan', 'hold', 58, -58]]],
@@ -2628,14 +2630,14 @@ const MISSIONS = {
           [34, 'fang', 'They say Li Yongfang found our gunners among the prisoners and paid them to serve the guns.', '聽說李永芳在俘虜裡找出我們的砲手，賞了銀子讓他們開砲。'],
           [70, 'lookout', 'The white banners are going down on the far bank, one after another.', '北岸的白旗一面一面倒了。'],
           [73, 'lookout', 'Qin Bangping is down! Zhou Dunji is down! The Sichuan men are coming back over the bridge!', '秦邦屏陣亡！周敦吉陣亡！川兵退過橋來了！']] },
-      { title: '三 · 車營 · The wagon camp', text: 'The Jin left wing is over the river. Get your file back inside the camp and hold the line of wagons and palisades.', show: ['camp'], hide: ['sbridge'],
+      { title: '三 · 車營 · The wagon camp', goal: 'Get back inside the camp and hold the wagons', text: 'The Jin left wing is over the river. Get your file back inside the camp and hold the line of wagons and palisades.', show: ['camp'], hide: ['sbridge'],
         start: [['release', 'lw'], ['dir', 'lw', 'hold', 58, -58], ['dir', 'chen', 'hold', 64, -56], ['dir', 'zhe', 'hold', 58, -60]],
         obj: { survive: 110 }, waves: [[40, 'east', ['hold', 58, -60]]],
         at: [[64, ['wound', 3]]],
         say: [[3, 'qi', 'Wagons together! Muskets to the palisade — let them come onto the guns.', '車並起來！銃手上柵——讓他們撞上來。'],
           [36, 'lookout', 'Shield carts! They are pushing shield carts at the ditch!', '盾車！他們推盾車來填壕了！'],
           [85, 'qi', 'The powder is nearly gone. Spears forward, shields close up!', '火藥快盡了！長槍向前，藤牌靠攏！']] },
-      { title: '四 · 夜 · The last stand', text: 'Night. The camp cannot hold. Qi Jin orders you out: take your file and your wounded down the Liaoyang road, so that someone lives to tell what happened here.', show: ['road'], hide: ['camp'],
+      { title: '四 · 夜 · The last stand', goal: 'Take your file and wounded down the Liaoyang road', text: 'Night. The camp cannot hold. Qi Jin orders you out: take your file and your wounded down the Liaoyang road, so that someone lives to tell what happened here.', show: ['road'], hide: ['camp'],
         start: [['release', 'night'], ['dir', 'night', 'hold', 58, -60], ['kill', 'chen']],
         obj: { extract: 'road' }, limit: 420, fail: 'The ring closed around the camp.',
         waves: [[14, 'cut', ['attack']]], at: [[55, ['kill', 'zhe']]],
@@ -2667,14 +2669,14 @@ const MISSIONS = {
       jin3: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'byakkotai'], at: [-130, -96, PI / 2], reserve: true },
     },
     phases: [
-      { title: '一 · 雨 · North in the rain', text: 'Lead your file up the road with the column, to the rise where you can see north toward Kaiyuan.', show: ['crest'],
+      { title: '一 · 雨 · North in the rain', goal: 'Lead your file up to the rise', text: 'Lead your file up the road with the column, to the rise where you can see north toward Kaiyuan.', show: ['crest'],
         obj: { all: [{ reach: 'crest' }, { survive: 42 }] },
         at: [[1, ['promote']], [16, ['dir', 'col', 'hold', 0, -40]], [40, ['dir', 'col', 'hold', 0, -16]]],
         say: [[3, 'col', 'Kaiyuan has sent for help twice. The last party that went north never got there. Close up and keep moving.', '開原兩次求援，上回派去的人一個也沒到。跟緊，快走。'],
           [10, 'fang', 'Rain like this, half the matches will be out by noon. Keep your cord under your hat.', '這種雨，不到中午火繩就滅一半。把火繩塞帽子裡。'],
           [24, 'he', 'Three months since the mountains, and we are walking north again.', '從山裡出來才三個月，又往北走了。'],
           [36, 'lookout', 'Smoke — north, under the rain. That is Kaiyuan.', '北邊有煙，雨裡還在燒。那是開原。']] },
-      { title: '二 · 百姓 · The people on the road', text: 'The people of Kaiyuan are coming down the road. Hold the rise with your file until they are past you, and keep the horsemen off them.', show: ['crest'],
+      { title: '二 · 百姓 · The people on the road', goal: 'Hold the rise until the people are past', text: 'The people of Kaiyuan are coming down the road. Hold the rise with your file until they are past you, and keep the horsemen off them.', show: ['crest'],
         start: [['release', 'folk'], ['dir', 'folk', 'hold', 0, -136], ['dir', 'col', 'hold', 0, -6]],
         obj: { survive: 80 }, waves: [[18, 'jin1', ['attack']], [44, 'jin2', ['attack']]],
         say: [[3, 'lookout', 'People on the road! Carts, children — the whole town is coming south!', '路上有人！推車的，抱孩子的——整個城的人都往南跑！'],
@@ -2684,7 +2686,7 @@ const MISSIONS = {
           [24, 'he', 'Stand in front of the carts. They want the people, not us.', '站到車前頭去。他們要的是百姓，不是我們。'],
           [46, 'lookout', 'More on the right!', '右邊也來了！'],
           [62, 'folk', 'Heaven keep you, soldiers. Heaven keep you.', '老天保佑你們，老天保佑。']] },
-      { title: '三 · 回鐵嶺 · Back to Tieling', text: 'The column cannot get through to Kaiyuan, and it is turning back. Get your file down the road toward Tieling — and leave no one who can still walk.', show: ['tieling'], hide: ['crest'],
+      { title: '三 · 回鐵嶺 · Back to Tieling', goal: 'Get your file back down the road to Tieling', text: 'The column cannot get through to Kaiyuan, and it is turning back. Get your file down the road toward Tieling — and leave no one who can still walk.', show: ['tieling'], hide: ['crest'],
         start: [['release', 'jin3'], ['dir', 'jin3', 'attack'], ['dir', 'col', 'hold', 0, -138]],
         obj: { extract: 'tieling' }, limit: 360, fail: 'The horsemen closed the road.',
         at: [[9, ['wound', 4]]],
@@ -2720,7 +2722,7 @@ const MISSIONS = {
       guard: { team: 1, name: 'The Khan\'s guard', zh: '巴牙喇', army: ['shinsengumi', 'samurai', 'archer', 'archer'], exit: [0, -150], at: [0, -126, 0], reserve: true },
     },
     phases: [
-      { title: '一 · 清野 · Scorched earth', text: 'The houses outside the walls are ash; the people and the grain are inside. Take your file up the ramp onto the west wall.', show: ['wallW'],
+      { title: '一 · 清野 · Scorched earth', goal: 'Climb the ramp onto the west wall', text: 'The houses outside the walls are ash; the people and the grain are inside. Take your file up the ramp onto the west wall.', show: ['wallW'],
         obj: { all: [{ reach: 'wallW' }, { survive: 44 }] }, at: [[1, ['promote']], [8, ['dir', 'yuan', 'hold', -21, 45]], [36, ['dir', 'yuan', 'hold', 6, 45]], [30, ['dir', 'camp', 'hold', -30, -126]]],
         say: [[3, 'captain', 'Up on the wall, west side. Nobody stays below tonight.', '上城，西面。今晚誰也不許待在下面。'],
           [12, 'yuan', 'Zhejiang men? I am a southerner too. We are a long way from home, the two of us.', '浙兵？我也是南方人。咱們都離家很遠啊。'],
@@ -2729,7 +2731,7 @@ const MISSIONS = {
           [28, 'lookout', 'They\'re making camp out on the plain — close, too close!', '他們在平地上紮營了——太近了！'],
           [33, 'gunner', 'Inside the red cannon\'s reach! Light the match!', '進了紅夷砲的射程了！點火！'],
           [40, 'lookout', 'They\'re pulling the camp back! They didn\'t know how far our guns carry!', '他們拔營往後退了！不知道我們的砲打多遠！']] },
-      { title: '二 · 攻城 · The assault', text: 'The Jin come on with shield carts and ladders. Hold the west wall: throw down any ladder that goes up (E at its top) and keep your file together.',
+      { title: '二 · 攻城 · The assault', goal: 'Hold the west wall and throw down ladders (E)', text: 'The Jin come on with shield carts and ladders. Hold the west wall: throw down any ladder that goes up (E at its top) and keep your file together.',
         start: [['release', 'van'], ['release', 'carts'], ['dir', 'yuan', 'hold', 0, 50]],
         obj: { survive: 110, keep: 'wallW' }, at: [[34, ['sector', 1, 'fill']], [74, ['wound', 4]]],
         say: [[3, 'captain', 'Shield carts! They\'re filling the ditch!', '盾車！他們在填壕！'],
@@ -2737,14 +2739,14 @@ const MISSIONS = {
           [30, 'lookout', 'They\'re throwing bundles of brushwood into the ditch — it\'s filling!', '他們往壕裡扔柴捆——壕快填平了！'],
           [42, 'lookout', 'Ladders at the wall! Saltpeter at the foot — fire it!', '雲梯靠城了！城下的硝——點！'],
           [60, 'captain', 'Throw the ladders down! Get to the top of them!', '把梯子推下去！上梯頭！']] },
-      { title: '三 · 穴城 · Under the wall', text: 'Under their carts, men are chiselling at the foot of the wall where arrows and stones cannot reach them. Hold your post while the wall burns them out.',
+      { title: '三 · 穴城 · Under the wall', goal: 'Hold your post on the wall', text: 'Under their carts, men are chiselling at the foot of the wall where arrows and stones cannot reach them. Hold your post while the wall burns them out.',
         start: [['release', 'sap'], ['release', 'van2']],
         obj: { survive: 110, keep: 'wallW' },
         say: [[4, 'lookout', 'They\'re digging into the wall under the carts! We can\'t hit them from up here!', '他們躲在車底下鑿城！從上面打不著！'],
           [14, 'yuan', 'Bedding! Quilts, straw, oil and powder — roll them up, light them, throw them down!', '把被褥、柴草拿來！澆油裹藥，點著了往下扔！'],
           [40, 'soldier', 'It\'s caught under the cart — they\'re running out!', '燒到車底下了——他們往外跑了！'],
           [75, 'captain', 'The cold\'s on our side. The ground is frozen hard as iron. Let them dig.', '天冷幫我們。地凍得跟鐵一樣。讓他們挖。']] },
-      { title: '四 · 紅夷砲 · The red cannon', text: 'The Khan\'s own guard comes at the walls. The guns are firing over your heads. Hold until they break.',
+      { title: '四 · 紅夷砲 · The red cannon', goal: 'Hold the wall until they break', text: 'The Khan\'s own guard comes at the walls. The guns are firing over your heads. Hold until they break.',
         start: [['release', 'guard'], ['release', 'east'], ['dir', 'yuan', 'hold', -14, 45]],
         obj: { survive: 100, keep: 'wallW' }, at: [[66, ['break', 'guard']], [68, ['break', 'van']], [70, ['break', 'carts']], [72, ['break', 'sap']], [73, ['break', 'van2']], [74, ['break', 'east']], [75, ['break', 'camp']]],
         say: [[3, 'lookout', 'Yellow banners — the Khan\'s guard!', '黃旗！大汗的親兵！'],
@@ -3255,6 +3257,67 @@ Sim.prototype.siegeDirs = function () {
   // defenders: the wall garrisons stand on the wall top above the ladders; the rest hold the gatehouse and the town
   const posts = [[-26, 43.6], [26, 43.6], [-14, 43.6], [14, 43.6], [0, W.z1 + 7], [-18, 80], [0, 110]];
   let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D || g.broken || g.G.free) continue; const pt = posts[j++ % posts.length]; p.directive = { kind: DIR_HOLD, x: pt[0], z: pt[1], by: -1 }; }
+};
+// ---- line fighting (realism / experimental combat only) ----
+// Every man has only a few fighting spaces round him, in his front arc. Men who can't get one wait a pace or two back
+// with their guard up; an engaged company keeps its frontage; the hurt and the blown step back a rank while the next
+// man steps up; after a hard exchange both fronts give a step and breathe; spears keep their reach.
+Sim.prototype.xcLim = function (v) { return v.ctrl >= 0 && !this.players[v.ctrl].ai ? 2 : 3; };
+Sim.prototype.xcSpaces = function () { // spaces held on each man this tick, counted once in unit order
+  if (this.spTick === this.tick) return this.spN; this.spTick = this.tick;
+  if (!this.spN || this.spN.length < this.units.length + 8) this.spN = new Int16Array(this.units.length + 64); else this.spN.fill(0);
+  for (const v of this.units) { if (!(v.spaceOf >= 0)) continue; const t = this.units[v.spaceOf];
+    if (v.dead || v.wounded || v.downed || !t || t.dead || v.target !== v.spaceOf) { v.spaceOf = -1; continue; } this.spN[v.spaceOf]++; }
+  return this.spN;
+};
+Sim.prototype.xcHold = function (u, tgt, d, nx, nz, keep, spd) { // stand off at a distance from the foe, facing him
+  const e = d - keep, sp = u.def.speed * spd;
+  if (e < -0.25) { const k = Math.min(1, -e); u.mx = -nx * sp * k; u.mz = -nz * sp * k; }
+  else if (e > 0.45) { const k = Math.min(1, e * 0.8); u.mx = nx * sp * k; u.mz = nz * sp * k; }
+  else { u.mx = 0; u.mz = 0; }
+};
+Sim.prototype.xcGuard = function (u) { if (!u.blocking && u.st === ST_IDLE && u.flinchT <= 0 && (u.def.shield || this.rng.next() < 0.04)) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = u.def.shield ? 0.6 : 0.4; } };
+Sim.prototype.xcLine = function (u, sq, tgt, d, reach) {
+  const N = this.xcSpaces(), dx = tgt.x - u.x, dz = tgt.z - u.z, nx = dx / (d || 1), nz = dz / (d || 1);
+  // rank rotation: a hurt or blown man in the front rank gives his place to the man behind (the slot code moves a resting man back a rank)
+  if (u.spaceOf >= 0 && d < reach + 1 && (u.hp < u.def.hp * 0.45 || (u.fat || 0) > 75) && this.tick >= (u.restCd || 0) && sq && sq.aliveCount > 3) { u.restT = this.tick + 30 * 5; u.restCd = this.tick + 30 * 20; }
+  const resting = u.restT > this.tick, breath = u.breathE > this.tick;
+  if (resting || breath) { u.spaceOf = -1; this.xcHold(u, tgt, d, nx, nz, resting ? reach + 3.4 : reach + 1.4, breath ? 0.55 : 0.8); this.xcGuard(u); return 1; }
+  if (u.spaceOf === tgt.id && d > reach + 2.8) u.spaceOf = -1;
+  if (u.spaceOf !== tgt.id) {
+    u.spaceOf = -1;
+    if (d < reach + 2.4) {
+      const n = N[tgt.id] || 0, lim = this.xcLim(tgt), front = Math.abs(wrap(atan2(u.x - tgt.x, u.z - tgt.z) - tgt.yaw)) < 1.75;
+      if (n < lim && (front || n === 0)) { u.spaceOf = tgt.id; N[tgt.id] = n + 1; }
+      else { if (u.retT > 5) u.retT = 5; this.xcHold(u, tgt, d, nx, nz, reach + 1.6 + (u.id % 3) * 0.35, 0.7); this.xcGuard(u); return 1; } // the waiting rank: a pace or two back, ready to step in
+    }
+  }
+  if (reach >= 2.9 && d < reach * 0.72 && u.st !== ST_WINDUP && u.st !== ST_RELEASE) { this.xcHold(u, tgt, d, nx, nz, reach - 0.4, 0.6); return 2; } // a spear keeps the point out in front, not the shaft
+  return 0;
+};
+Sim.prototype.xcFront = function (sq) { // a company in contact anchors its front rank on the line between the two bodies instead of on the enemy's centre
+  const was = sq.front; sq.front = false;
+  if (sq.order !== ORD_CHARGE || sq.def.mounted || sq.def.ai === 'ranged' || sq.def.ai === 'cannon' || sq.routing || sq.aliveCount < 2) return;
+  let e = null, bd = 100; for (const q of this.squads) { if (!q.alive || q.inactive || q.team === sq.team || q.def.mounted || q.def.ai === 'cannon') continue; const d2 = (q.cx - sq.cx) * (q.cx - sq.cx) + (q.cz - sq.cz) * (q.cz - sq.cz); if (d2 < bd) { bd = d2; e = q; } }
+  if (!e) return; const d = Math.sqrt(bd) || 1, nx = (e.cx - sq.cx) / d, nz = (e.cz - sq.cz) / d, back = clamp(sq.def.reach * 0.5, 1.05, 1.8);
+  const ax = (sq.cx + e.cx) * 0.5 - nx * back, az = (sq.cz + e.cz) * 0.5 - nz * back;
+  if (was) { sq.fax += (ax - sq.fax) * 0.4; sq.faz += (az - sq.faz) * 0.4; } else { sq.fax = ax; sq.faz = az; }
+  sq.facing = atan2(nx, nz); sq.front = true;
+};
+Sim.prototype.xcBreathe = function (u, k) { // step back and get your wind; scaled by how tired, hurt and shaken he is
+  if (!u || u.dead || u.ctrl >= 0 || u.mounted || u.wounded || u.champ || u.type === 'horse' || u.def.ai === 'cannon' || u.breathE > this.tick || this.tick < (u.breathCd || 0)) return;
+  const sq = u.squad >= 0 ? this.squads[u.squad] : null, m = sq ? clamp(sq.morale / (sq.moraleMax || 1), 0, 1) : 1;
+  const dur = (1.4 + this.rng.next() * 1.4) * k * (1 + (u.fat || 0) / 200 + (1 - u.hp / u.def.hp) * 0.4) * (1.3 - m * 0.3);
+  u.breathE = this.tick + Math.round(dur * 30); u.breathCd = u.breathE + Math.round((3 + this.rng.next() * 2.5) * 30); u.xch = 0; u.spaceOf = -1;
+};
+Sim.prototype.xcEbb = function () { // clash, pause, clash: count the blows each man trades; a hard exchange or a man falling makes both fronts give a step
+  const ev = this.events, U = this.units, tk = this.tick;
+  const bump = (a, b) => { for (const u of [a, b]) { u.xch = Math.max(0, (u.xch || 0) - (tk - (u.xchT || tk)) * DT * 0.4) + 1; u.xchT = tk; }
+    if (a.xch >= 2.6 || b.xch >= 2.6) { this.xcBreathe(a, 1); this.xcBreathe(b, 1); } };
+  for (let i = 0; i < ev.length; i++) { const e = ev[i];
+    if (e.t === 'hit' && e.att >= 0 && (e.cause === 'melee' || e.cause === 'spear' || e.cause === 'counter')) { const a = U[e.att], v = U[e.id]; if (!a || !v) continue; bump(a, v);
+      if (e.killed) { const n = this.gatherNear(v.x, v.z, 4); for (let j = 0; j < n; j++) { const w = U[this.nearBuf[j]]; if (w !== v && !w.dead && len(w.x - v.x, w.z - v.z) < 4 && this.rng.next() < 0.75) this.xcBreathe(w, 0.85); } } }
+    else if (e.t === 'block' && e.att >= 0 && e.by >= 0) { const a = U[e.att], v = U[e.by]; if (a && v) bump(a, v); } }
 };
 
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, spacingOf, gunOf,
