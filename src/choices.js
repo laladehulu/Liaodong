@@ -185,6 +185,10 @@ const PI_ = Math.PI;
     if (ZHOOK.sleep || !ZC || ZC.night >= 2) return _s();
     const C = chCtx(); if (!C) return _s(); chData(C.S);
     if (ZC.night === 0 && chGot(C, 'z1boy') < 0) { chDecide(CHD.z1boy.build(C), () => _s()); return; }
+    if (ZC.night === 1 && chGot(C, 'z2road') < 0 && chZW(C)) { chDecide(CHD.z2road.build(C), (o) => {
+      if (o === 2) return _s();
+      const sc = o === 0 ? 'zford' : 'zfucha'; ZS.stage = sc; zSave();
+      zCards([{ title: o === 0 ? '南 · South' : '東 · East', year: 'April 1619', p: [o === 0 ? 'You march before light, the litter in the middle of the file, south toward the passes and the river beyond them.' : 'You march east along the valley toward the smoke of the Korean camp at Fucha.'], btn: 'March →' }], () => zGo(sc)); }); return; }
     return chDream(() => _s()); }; }
 // the talk at the fire remembers: every answer can give a man something to say about it
 function chTalkAdd(D, k) {
@@ -193,5 +197,164 @@ function chTalkAdd(D, k) {
   if (!add.length) return D; if (!D) D = { g: chL('……', '...'), t: [] }; return Object.assign({}, D, { t: add.concat(D.t || []) });
 }
 { const _t = zTalk; zTalk = function (k, night) { return chTalkAdd(_t(k, night), k); }; }
+// 二 · the ravine (camp1, before you sleep): a man of the file cannot walk, and there are three roads out
+const chZW = (C) => ['liu6', 'he', 'ye', 'lou', 'luo', 'jin', 'wang', 'fang', 'du', 'zhu'].find(k => C.S.alive[k] && k !== C.S.me) || null;
+CHD.z2road = {
+  build: (C) => { const w = chZW(C), W = [chNm(C, w), chNm(C, w, true)], sp = ['he', 'fang', 'lou', 'luo', 'wang'].find(k => k !== w && C.S.alive[k] && k !== C.S.me);
+    const S0 = sp ? [chNm(C, sp), chNm(C, sp, true)] : ['', 'The oldest man left'];
+    return { id: 'z2road', keep: { w }, title: '峽谷 · The ravine', ltitle: `The ravine: ${W[1]}`, year: 'The night after Abudali, April 1619', who: [S0[0] ? `${S0[0]} ${S0[1]}` : S0[1], 'squatting by what is left of the fire'],
+      lines: [chL(`（${W[0]}躺在火邊，腿用撕下的旗子綁著。他一晚上都醒著，裝睡。）`, `(${W[1]} lies by the fire with his leg bound in a torn banner. He has been awake all evening, pretending to sleep.)`),
+        chL('三條路。往南翻山，四百里，抬著他走。慢。金人的哨騎守著山口。', 'Three roads. South over the mountains, four hundred li, carrying him. Slow. And their patrols are watching the passes.'),
+        chL('往東去富察，朝鮮兵在那兒紮營。有火，有糧，他能躺下。可朝鮮人被圍好幾天了。', 'East to Fucha, where the Koreans are camped. Fires, food, somewhere for him to lie down. But the Koreans have been surrounded for days.'),
+        chL('或者……給他留水，留把刀。我們今晚就走，走得快。', 'Or... we leave him water, and a knife. We go tonight, and we go fast.'),
+        chL(`（${W[0]}什麼也沒說。他在看著你。）`, `(${W[1]} says nothing. He is looking at you.)`)],
+      opts: [
+        { q: 'We carry him. South, all of us.', led: `Carried ${W[1]} south over the mountains.`, a: [chL('好。那就抬。', 'Good. Then we carry him.'), chL('（兩根長槍，一面旗，一張擔架。天沒亮就上路。）', '(Two spears and a banner make a litter. You are on the road before light.)')], fx: (C) => { chBond(C, w, 2); chRep(C, 'care', 1); } },
+        { q: 'To the Korean camp. He needs a fire.', led: `Took ${W[1]} east to the Korean camp at Fucha.`, a: [chL('朝鮮人……好吧。至少那邊有火。', 'The Koreans... all right. At least there\'s a fire.')], fx: (C) => { chBond(C, w, 1); } },
+        { q: 'Leave him the water and the knife.', led: `Left ${W[1]} in the ravine with water and a knife.`, a: [chL(`${W[0]}：「……去吧。」他再也沒看你一眼。`, `${W[1]}: "...Go on." He doesn't look at you again.`), chL('（你們走了一夜。沒人說話，沒人回頭。每個人都想回頭。）', '(You walk south all night. Nobody speaks. Nobody looks back. Everyone wants to.)')],
+          fx: (C) => { chLose(C, w, 'left', 'z2road'); for (const k in C.S.alive) if (C.S.alive[k] && k !== C.S.me && k !== 'me') chBond(C, k, -1); chRep(C, 'care', -2); } },
+      ] }; },
+  dream: (C, o) => { const w = (C.S.ch.z2road || {}).w, n = w ? chNm(C, w, true) : 'him';
+    if (o === 2) return ['Two years on', [`Water dripping somewhere in a ravine. ${n} calling your name, patiently, as if you had only stepped away for a moment.`, 'In the dream you always go back. You never get there.']];
+    if (o === 1 && chGot(C, 'z2tent') === 1) return ['After Fucha', ['The flap of the Korean surgeon\'s tent, falling shut. Through the cloth, the shapes of men coming in, and no sound at all.']];
+    return null; },
+  end: (C, o) => { const w = (C.S.ch.z2road || {}).w, n = w ? chNm(C, w, true) : 'He';
+    if (o === 2) return `${n} was left in the ravine above Abudali with water and a knife. Nobody knows what he did with the knife.`;
+    if (o === 1) return chGot(C, 'z2tent') === 1 ? `${n} was left in the surgeons' tent at Fucha. The Jin killed every Ming soldier they found in the Korean camp.` : C.S.alive[w] ? `You carried ${n} out of Fucha when the Koreans gave up. He lived.` : `You went back for ${n} at Fucha. You could not get him out.`;
+    return C.S.alive[w] ? `You carried ${n} four hundred li over the mountains. He lived.` : `You carried ${n} as far as the river.`; },
+  talk: (C, k, o) => { const w = (C.S.ch.z2road || {}).w; if (!w) return null; const n = [chNm(C, w), chNm(C, w, true)];
+    if (k === w && C.S.alive[w] && o === 0) return { q: 'How is the leg?', bond: 1, a: [chL('你們抬了我四百里。……總有一天，我把你抬回義烏。', 'You carried me four hundred li. ...One day I\'ll carry you home to Yiwu.')] };
+    if (o === 2 && (k === 'luo' || k === 'he' || k === 'lou')) return { q: `Do you think about ${n[1]}?`, a: [chL(`每天。${n[0]}要是在，這會兒該笑我們了。`, `Every day. If ${n[1]} were here he'd be laughing at us right now.`), chL('……那天換了我，我也會那麼選。我只是不想再說它。', '...If it had been my call, I might have chosen the same. I just don\'t want to talk about it.')] };
+    return null; },
+};
+// 二 · the battles the ravine leads to: the ford (carry him south) and Fucha (the Korean camp)
+CH.missions = () => {
+  const M = SIM.MISSIONS, PI = Math.PI; if (M.zford) return;
+  M.zford = { title: '無名河 · The ford', year: 'April 1619', battle: 'toba', side: 0, soldier: { group: 'zhe' }, hidden: true, ch: 'zb',
+    bdef: { name: 'A river in the hills', jp: '無名河', when: 'April 1619', biome: 'winter', fog: 0.45 },
+    brief: 'Two days south of Abudali the survivors come down to a river with a single ford. You carry your wounded with you.',
+    start: [0, 112, PI],
+    zones: [{ key: 'ford', x: 0, zr: 18, r: 11, name: 'The ford' }, { key: 'sbank', x: 0, zr: -20, r: 12, name: 'The south bank' }, { key: 'south', x: 4, z: -132, r: 14, name: 'The track south' }],
+    groups: {
+      zhe: { team: 0, name: 'Your file', zh: '浙兵', army: ['yuanyang'], at: [0, 112, PI], dir: ['hold', 0, 108], stay: true },
+      strag: { team: 0, name: 'Stragglers from the column', zh: '潰兵', army: ['ashigaru'], n: 7, at: [10, 122, PI], dir: ['hold', 8, -128] },
+      p1: { team: 1, name: 'A Jin patrol', zh: '金哨騎', army: ['cavalry'], n: 6, at: [-130, 70, PI / 2], reserve: true },
+      p2: { team: 1, name: 'Jin horse at the ford', zh: '金騎', army: ['cavalry', 'archer'], n: 12, at: [132, -34, -PI / 2], reserve: true },
+      p3: { team: 1, name: 'Jin horsemen', zh: '金騎', army: ['cavalry'], n: 7, at: [-132, -96, PI / 2], reserve: true },
+    },
+    choices: [[[['wound', '$k']]]],
+    phases: [
+      { title: '一 · 夜路 · The night road', goal: 'Get your wounded down to the ford', text: 'Before dawn, down out of the hills to the river. The litter is slow. Keep the file around it.', show: ['ford'],
+        obj: { reach: 'ford' }, at: [[1, ['promote']]], waves: [[40, 'p1', ['attack']]],
+        say: [[3, 'he', 'Slow and steady. A man on a litter feels every stone.', '慢點，穩點。擔架上的人，每塊石頭都覺得到。'], [14, 'fang', 'The river is low this time of year. There is a ford, if the map is right.', '這個時節水淺。地圖沒錯的話，有個淺灘。'],
+          [41, 'lookout', 'Horsemen behind us, on the west slope!', '後面西坡上有馬兵！'], [46, 'luo', 'Put him down and fight, or keep walking?', '放下他打，還是接著走？']] },
+      { title: '二 · 渡 · The ford', goal: 'Hold the ford until your wounded is across', text: 'The ford. Get everyone over, the litter first, and hold the water\'s edge until they are.', show: ['sbank'], hide: ['ford'],
+        obj: { survive: 50 }, waves: [[10, 'p2', ['attack']]],
+        say: [[2, 'he', 'Litter first! Spears at the water\'s edge!', '擔架先過！長槍守水邊！'], [11, 'lookout', 'More of them on the far bank!', '對岸也有！'], [30, 'wang', 'The water is like knives.', '這水跟刀子一樣。']] },
+      { title: '三 · 南 · South', goal: 'Carry on south out of the hills', text: 'Over. Now south, before they bring more.', show: ['south'], hide: ['sbank'],
+        obj: { extract: 'south' }, limit: 360, fail: 'They caught the file on the open track.', waves: [[22, 'p3', ['attack']]],
+        say: [[2, 'fang', 'South. Every li south is a li nearer home.', '往南。往南走一里，離家近一里。'], [23, 'lookout', 'Riders on the track ahead!', '前面有馬兵！']] },
+    ],
+    win: 'You carried your wounded out of the hills.' };
+  M.zfucha = { title: '富察 · Fucha', year: 'April 1619', battle: 'zroad', side: 0, soldier: { group: 'zhe' }, hidden: true, ch: 'zb',
+    bdef: { name: 'Fucha', jp: '富察', when: 'April 1619', biome: 'winter', fog: 0.3 },
+    brief: 'The Korean army of Gang Hong-rip, cut off and starving, is camped at Fucha. Ming survivors from Abudali are drifting into its lines.',
+    start: [0, -100, 0],
+    zones: [{ key: 'kcamp', x: 0, z: 60, r: 15, name: 'The Korean camp' }, { key: 'south', x: 0, z: -132, r: 14, name: 'The road south' }],
+    forts: [[-16, 60, 0.5, 14, 1.6, 'palisade'], [16, 60, 0.5, 14, 1.6, 'palisade'], [-10, 74, 6, 0.5, 1.6, 'palisade'], [10, 74, 6, 0.5, 1.6, 'palisade'], [-10, 46, 6, 0.5, 1.6, 'palisade'], [10, 46, 6, 0.5, 1.6, 'palisade'], [-6, 66, 1.6, 1.2, 1.9, 'tent'], [6, 54, 1.6, 1.2, 1.9, 'tent']],
+    labels: { rifle_imp: ['Korean musketeers', '朝鮮銃手'] },
+    groups: {
+      zhe: { team: 0, name: 'Your file', zh: '浙兵', army: ['yuanyang'], at: [0, -100, 0], dir: ['hold', 0, -96], stay: true },
+      korea: { team: 0, name: 'Gang Hong-rip\'s Koreans', zh: '姜弘立', army: ['rifle_imp', 'rifle_imp', 'ashigaru', 'archer'], at: [0, 62, 0], dir: ['hold', 0, 62], stay: true, exit: [0, 150] },
+      jin: { team: 1, name: 'Daišan\'s banners', zh: '代善', army: ['cavalry', 'samurai', 'samurai', 'cavalry'], at: [0, 138, PI], reserve: true, stay: true, dir: ['hold', 0, 100] },
+      take: { team: 1, name: 'Bannermen sent into the camp', zh: '金兵', army: ['samurai', 'samurai', 'archer'], at: [-124, 64, PI / 2], reserve: true },
+      cut: { team: 1, name: 'Jin horsemen', zh: '金騎', army: ['cavalry', 'cavalry'], at: [118, -64, -PI / 2], reserve: true },
+    },
+    choices: [[[['wound', '$k']]], [[], [['park', '$k', -6, 63]]]],
+    phases: [
+      { title: '一 · 富察 · Fucha', goal: 'Bring your file into the Korean camp', text: 'East to Fucha. The Korean camp, its palisade, its fires. Bring your wounded in.', show: ['kcamp'],
+        start: [['release', 'jin'], ['calm', 'jin', 6]], obj: { all: [{ reach: 'kcamp' }, { survive: 50 }] }, at: [[1, ['promote']]],
+        say: [[4, 'fang', 'They have been starving here for days. Look at the horses — skin and bone.', '他們在這裡餓了好幾天了。你看那些馬，皮包骨。'], [16, 'korea', 'Ming soldiers? Come in, come in. There is a little millet left.', '明國的兵？進來，進來。還剩一點小米。'],
+          [34, 'lookout', 'Banners on the north road. They are not attacking. They are waiting.', '北邊路上有旗。他們不打，他們在等。']] },
+      { title: '二 · 議 · The parley', goal: 'Wait in the camp with your wounded', text: 'The Korean general has ridden out to talk with the Jin. Wait.',
+        obj: { survive: 46 },
+        say: [[3, 'korea', 'The general has gone out under a white flag to talk with them.', '都元帥打著白旗出去了，跟他們談。'], [14, 'fang', 'Terms. Terms for whom?', '議和。替誰議的和？'],
+          [30, 'korea', 'He says they will let us go home. Only... they want the Ming men handed over.', '他說他們放我們回國。只是……明兵要交出去。'], [38, 'he', 'Handed over. We know what that means.', '交出去。我們知道那是什麼意思。']] },
+      { title: '三 · 降 · The surrender', goal: 'Break out of the camp and run south', text: 'The Koreans are laying down their arms. The Jin are coming in for the Ming men. Get out — south, down the road.', show: ['south'], hide: ['kcamp'],
+        start: [['break', 'korea'], ['release', 'take'], ['dir', 'take', 'attack'], ['dir', 'jin', 'attack'], ['calm', 'jin', 30]],
+        obj: { extract: 'south' }, limit: 360, fail: 'The Jin went through the Korean camp tent by tent.', waves: [[25, 'cut', ['hold', 0, -84]]],
+        say: [[1, 'lookout', 'The Koreans are stacking their muskets! They are giving up!', '朝鮮兵把銃都堆起來了！他們降了！'], [26, 'lookout', 'Horsemen on the road south!', '南邊路上有馬兵！']] },
+    ],
+    win: 'You broke out of Fucha.' };
+};
+// in Fucha, when the Koreans give up: the tent, and the man in it
+CHD.z2tent = {
+  build: (C) => { const w = (C.S.ch.z2road || {}).w, n = [chNm(C, w), chNm(C, w, true)];
+    return { id: 'z2tent', urgent: true, timer: 11, def: 1, title: 'The surgeons\' tent', ltitle: `Fucha: ${n[1]} in the surgeons' tent`, kick: '抉擇 · NOW', who: [n[0] + ' ' + n[1]],
+      lines: [chL(`${n[0]}還在朝鮮人的醫帳裡！金兵進營了——`, `${n[1]} is still in the Korean surgeons' tent! The Jin are inside the camp —`)],
+      opts: [{ q: `Go back for ${n[1]}`, led: `Went back into the camp for ${n[1]}.`, a: [chL('回去！把他架出來！', 'Back! Get him out!')], fx: (C) => { chBond(C, w, 2); } },
+        { q: 'Run. There is no time.', led: `Ran, and left ${n[1]} in the tent.`, a: [chL('……跑！', '...Run!')], fx: (C) => { chRep(C, 'care', -1); } }] }; },
+  end: () => '',
+};
+// ---------------- starting and finishing the branch battles ----------------
+const CHZB = {
+  zford: { m: 'zford', zone: 'south', next: 'kai', card: ['April 1619. Two days south of Abudali, the remnants come down out of the hills to a river. Your wounded is on a litter in the middle of the file. F follow · H halt · C charge · Z form up.', '無名河 · The ford'], init: 0, file: () => zFileK() },
+  zfucha: { m: 'zfucha', zone: 'south', next: 'kai', card: ['April 1619. East to Fucha, where Gang Hong-rip\'s Korean army is camped behind its palisade. Bring your file and your wounded in. F follow · H halt · C charge · Z form up.', '富察 · Fucha'], init: 0, file: () => zFileK() },
+};
+function chStartZ(scene) {
+  const B = CHZB[scene]; CH.missions(); ZS = zLoad() || zFresh(); chData(ZS);
+  $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
+  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'lead', connected: true }];
+  startGame({ seed, battle: SIM.MISSIONS[B.m].battle, mode: 'campaign', mission: B.m, players: pl }, 0, null, 1);
+  const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; const meIdx = ZR.findIndex(r => r.k === (ZS.me || 'me'));
+  ZB = { map: {}, sq: q.id, first: me.heroId, cur: ZS.me || 'me', fell: false, ch2: true, chz: scene };
+  const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = meIdx; const file = B.file();
+  const left = []; for (const r of file) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } else left.push(r); }
+  for (const r of left) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role !== 'lead'); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } }
+  for (const uid in ZB.map) zDress(sim.units[uid], ZB.map[uid]);
+  // the wounded man of the ravine starts the fight wounded: tell the sim which place in the file is his
+  const w = (ZS.ch.z2road || {}).w; let k = -1; if (w) for (const uid in ZB.map) if (ZR[ZB.map[uid]] && ZR[ZB.map[uid]].k === w) k = q.unitIds.indexOf(+uid);
+  ZB.wk = k; ZB.wkey = w; if (B.init !== undefined && k >= 0) chAfterTicks(sim, 4, () => chSend(B.init, 0, k));
+  if (B.dress) B.dress(sim);
+  setTimeout(() => storyCard(B.card[0], B.card[1]), 700);
+}
+function chAfterTicks(sim, n, fn) { let tries = 0; const iv = setInterval(() => { if (state.sim !== sim || ++tries > 300) return clearInterval(iv); if (sim.tick >= n) { clearInterval(iv); fn(); } }, 100); }
+function chFinishZ(winner) {
+  const sim = state.sim, h = localHero(), M = sim.mission, B = CHZB[ZB.chz], z = sim.missionZone(B.zone), won = winner === M.side;
+  const fate = {}, near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
+  for (const uid in ZB.map) { const r = ZR[ZB.map[uid]]; if (!r) continue; const u = sim.units[uid]; if (u.dead) { fate[r.k] = 'dead'; continue; }
+    const out = (near(u, won ? 26 : 12) || (z && Math.hypot(u.x - z.x, u.z - z.z) < z.r + 10)) && !(u.wounded && u.helpedBy < 0 && !near(u, 5) && !(z && Math.hypot(u.x - z.x, u.z - z.z) < z.r + 4)); fate[r.k] = out ? 'out' : 'lost'; }
+  for (const k of ZB.deadMe || []) fate[k] = 'dead';
+  const C = chCtx(); if (ZB.chz === 'zfucha' && ZB.wkey && chGot(C, 'z2tent') === 1) fate[ZB.wkey] = 'dead';
+  const meK = ZS.me || 'me'; if (fate[meK] === undefined) fate[meK] = h && !h.dead ? 'out' : 'dead';
+  if (ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && fate[meK] === 'dead') { const nk = ZB.cur; ZS.me = nk; ZS.oldName = ZS.name; ZS.name = { zh: zRow(nk).zh, en: zRow(nk).en }; }
+  const file = B.file(); for (const r of file) { const f = fate[r.k] || 'lost'; ZS.fate[r.k] = f; ZS.alive[r.k] = f === 'out'; }
+  if (ZB.cur && ZB.cur !== 'me' && ZB.cur !== 'stranger') ZS.alive[ZB.cur] = !!(h && !h.dead);
+  if (ZB.wkey) { ZS.flags.z2out = ZS.alive[ZB.wkey] ? 1 : 0; if (!ZS.alive[ZB.wkey]) chData(ZS).chLost[ZB.wkey] = { id: 'z2road', how: fate[ZB.wkey] }; }
+  ZS.stage = B.next; zSave();
+  const all = [{ k: meK, zh: ZS.name.zh, en: ZS.name.en, me: true }].concat(file.filter(r => r.k !== meK));
+  const li = all.map(r => { const f = r.me ? 'out' : ZS.fate[r.k] || 'lost'; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${r.zh} ${r.en}${r.me ? ' (you)' : ''}${r.k === ZB.wkey ? ' — the wounded man' : ''} — ${f === 'out' ? 'came out' : f === 'dead' ? 'killed' : 'missing'}</li>`; }).join('');
+  const outN = file.filter(r => ZS.fate[r.k] === 'out').length + 1, wn = ZB.wkey ? chNm(C, ZB.wkey, true) : '';
+  $('resultTitle').textContent = won ? (ZB.chz === 'zford' ? '渡 · Across the river' : '出 · Out of Fucha') : '散 · Scattered'; $('resultTitle').className = won ? 'win' : 'lose';
+  $('resultText').innerHTML = `${won ? M.win : 'They caught you on the road, but a few of you got away after dark.'} ${outN} of your file came out.${wn ? (ZS.alive[ZB.wkey] ? ` ${wn} came out with you.` : ` ${wn} did not.`) : ''}`;
+  $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';
+  const hist = ZB.chz === 'zfucha' ? { title: '富察 · What happened', year: 'The fourth month of 1619', p: ['Cut off and starving, Gang Hong-rip surrendered the Korean army at Fucha to Daišan. The Koreans were spared and most were later sent home. The Ming soldiers who had fled into their camp were not: the Jin took them out and killed them.', 'Gang Hong-rip himself was kept in the Jin capital for years. In Korea it was said he had been told by his own king to surrender if the war went badly.'], zh: '姜弘立以朝鮮兵降。明兵在營者，皆為金人所殺。' }
+    : { title: '南 · South', year: 'The fourth month of 1619', p: ['For ten days the file walked south through the hills, carrying its wounded, eating what it could find, hiding from the Jin patrols by day.', 'Behind you, the Korean army at Fucha surrendered to the Jin. The Ming soldiers who had fled into its camp were taken out and killed.'], zh: '朝鮮兵降金，明兵在營者皆死。' };
+  $('btnNext').onclick = () => { $('result').hidden = true; zCards([hist, { title: '伍 · Your file', year: `${outN} came out`, html: `<ul>${li}</ul>`, btn: 'On →' },
+    { title: '第一章終 · End of Chapter One', year: 'April 1619', p: [`${outN} of your file reach the Ming lines. What is left of the southern troops is spread among the northern garrisons. Your file is sent to Tieling, a walled town on the road between Shenyang and Kaiyuan.`], zh: '間章 · 開原道 · The Kaiyuan road, summer 1619', btn: 'Summer →' }], () => zGo(B.next)); };
+}
+{ const _st = zStart; zStart = function (scene) { if (CHZB[scene]) return chStartZ(scene); return _st(scene); }; }
+{ const _f = zheFinish; zheFinish = function (w) { if (ZB && ZB.chz && CHZB[ZB.chz]) { try { if (typeof ddFinish === 'function') ddFinish(w); } catch (e) { } const r = chFinishZ(w); try { if (typeof ddResultLine === 'function') ddResultLine(); } catch (e) { } return r; } return _f(w); }; }
+// the in-battle choices: when the sim reaches the moment, the panel burns; the answer goes to the sim as a command
+const CHBT = {
+  zfucha: [{ ph: 2, t: 3, id: 'z2tent', cid: 1, when: () => ZB && ZB.wk >= 0 && chGot(chCtx(), 'z2tent') < 0 }],
+};
+function chBattleTick() {
+  const sim = state.sim; if (!sim || !sim.mission || !ZB || state.ended || CH.live) return; const L = CHBT[sim.cfg.mission]; if (!L) return;
+  const el = (sim.tick - sim.mv.t0) / 30; for (const b of L) { const key = sim.cfg.mission + ':' + b.id; if (CH.fired[key] === sim || sim.mv.ph !== b.ph || el < b.t) continue; if (b.when && !b.when()) { CH.fired[key] = sim; continue; }
+    CH.fired[key] = sim; const C = chCtx(); const spec = CHD[b.id].build(C); chDecide(spec, (i) => chSend(b.cid, i, b.k ? b.k() : (ZB.wk >= 0 ? ZB.wk : 0))); return; }
+}
+{ const _h = zheHUD; zheHUD = function (dt) { const r = _h(dt); try { chBattleTick(); chCampTick(dt); } catch (e) { console.warn('choices', e); } return r; }; }
+function chCampTick(dt) { }
 // test handle (headless scripts): the registry and the entry points
 window.__ch = { CHD, CH, ctx: () => chCtx(), sleep: () => zSleep(), decide: (id) => { const C = chCtx(); chDecide(CHD[id].build(C), () => { }); }, ledger: () => { const C = chCtx(); return C ? chLedgerCard(C) : null; } };
