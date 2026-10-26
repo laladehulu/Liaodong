@@ -3364,7 +3364,7 @@ Sim.prototype.campThink = function (u) {
       if (u.cAct === 7 && rng.next() < 0.6) u.cAct = 1; // not everyone sleeps
       u.cT = (30 * (u.cAct === 7 ? 40 + rng.next() * 30 : 14 + rng.next() * 22)) | 0; }
     else if (u.cWander && u.cAct !== 11 && rng.next() < 0.6) { // off for a walk: a fire, a tent, a cart, a friend
-      const T = []; for (const f of C.fires || []) { const a = rng.next() * 6.283; T.push([f[0] + Math.sin(a) * 2.3, f[1] + Math.cos(a) * 2.3]); }
+      const T = []; for (const f of C.fires || []) { const a = rng.next() * 6.283; T.push([f[0] + sin(a) * 2.3, f[1] + cos(a) * 2.3]); }
       for (const t of C.tents || []) T.push([t[0], t[1] + t[3] + 1.4]); for (const p of C.props || []) if (p[0] === 'wagon' || p[0] === 'pot' || p[0] === 'rack' || p[0] === 'cart') T.push([p[1] + 1.2, p[2] + 1.2]);
       for (const v of this.units) if (v.camp && v !== u && !v.cSeat) T.push([v.x + 1.1, v.z + 0.6]);
       T.push([u.cHx, u.cHz]); const t = T[(rng.next() * T.length) | 0]; u.cTx = t[0]; u.cTz = t[1]; u.cAct = 11; u.cT = 30 * 25; }

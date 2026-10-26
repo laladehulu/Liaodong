@@ -1008,9 +1008,12 @@ class Renderer {
       if (noHat && p.hat) { mesh.setMatrixAt(idx, T.zero); continue; }
       if (p.f === 'seg') { if (!G) { mesh.setMatrixAt(idx, T.zero); continue; } const a = GJ[p.a], z = GJ[p.z]; const ax = G[a] + (G[z] - G[a]) * p.t0, ay = G[a + 1] + (G[z + 1] - G[a + 1]) * p.t0, az = G[a + 2] + (G[z + 2] - G[a + 2]) * p.t0; const bx = G[a] + (G[z] - G[a]) * p.t1, by = G[a + 1] + (G[z + 1] - G[a + 1]) * p.t1, bz = G[a + 2] + (G[z + 2] - G[a + 2]) * p.t1; this.seg(mesh, idx, ax, ay, az, bx, by, bz, p.w, p.d); continue; }
       const F = fr[p.f]; if (!F) { mesh.setMatrixAt(idx, T.zero); continue; }
-      const Bf = F[3], o = p.o; const cx = F[0] + Bf[0] * o[0] + Bf[3] * o[1] + Bf[6] * o[2], cy = F[1] + Bf[1] * o[0] + Bf[4] * o[1] + Bf[7] * o[2], cz = F[2] + Bf[2] * o[0] + Bf[5] * o[1] + Bf[8] * o[2];
-      if (!p.r) { this.boxB(mesh, idx, cx, cy, cz, Bf, p.s[0], p.s[1], p.s[2]); continue; }
-      T.m.set(Bf[0], Bf[3], Bf[6], cx, Bf[1], Bf[4], Bf[7], cy, Bf[2], Bf[5], Bf[8], cz, 0, 0, 0, 1).multiply(T.r.makeRotationFromEuler(T.e.set(p.r[0], p.r[1], p.r[2]))).multiply(T.s.makeScale(p.s[0], p.s[1], p.s[2])); mesh.setMatrixAt(idx, T.m);
+      // cloth and plates that hang from a joint follow the limb under them (no knee through the skirt, no arm through the pauldron)
+      let Bf = F[3], o = p.o, fx0 = F[0], fy0 = F[1], fz0 = F[2], ps = p.s;
+      if (G) { const h = this.gearFollow(u, p, F, G); if (h) { Bf = h.B; o = h.o; fx0 = h.x; fy0 = h.y; fz0 = h.z; ps = h.s || p.s; } }
+      const cx = fx0 + Bf[0] * o[0] + Bf[3] * o[1] + Bf[6] * o[2], cy = fy0 + Bf[1] * o[0] + Bf[4] * o[1] + Bf[7] * o[2], cz = fz0 + Bf[2] * o[0] + Bf[5] * o[1] + Bf[8] * o[2];
+      if (!p.r) { this.boxB(mesh, idx, cx, cy, cz, Bf, ps[0], ps[1], ps[2]); continue; }
+      T.m.set(Bf[0], Bf[3], Bf[6], cx, Bf[1], Bf[4], Bf[7], cy, Bf[2], Bf[5], Bf[8], cz, 0, 0, 0, 1).multiply(T.r.makeRotationFromEuler(T.e.set(p.r[0], p.r[1], p.r[2]))).multiply(T.s.makeScale(ps[0], ps[1], ps[2])); mesh.setMatrixAt(idx, T.m);
     }
   }
   boxB(mesh, idx, cx, cy, cz, B, sx, sy, sz) {
@@ -1660,6 +1663,10 @@ class Renderer {
     if (mounted) { lean += 0.06 + 0.22 * clamp(((u.mounted ? u.speedNow : this.sim.units[u.mount].speedNow) - 4) / 5, 0, 1); stance = 0; twist += clamp(wrapA(yaw - ryaw), -1.1, 1.1); }
     if (u.camp && u.campPose === 'squat') { crouch = 0.5; lean = 0.3; stance = 0.35; twist = 0.05 * Math.sin(this.time * 0.4 + u.id); rateB = 6; } // hunkered down by the fire
     else if (u.camp) { lean = 0.04 + 0.03 * Math.sin(this.time * 0.6 + u.id); twist = 0.12 * Math.sin(this.time * 0.25 + u.id * 1.7); }
+    // camp life (campPoseT): relaxed hands and weapon, sitting, lying, small activities, a prop in the hand
+    if (u.camp && !u.dead && u.cAct !== undefined) { const P = this.campPoseT(u, a, w); a.cProp = P.prop; a.cPropH = P.ph;
+      lean = P.lean; twist = P.twist; crouch = P.crouch; stance = P.stance; roll = P.roll; rateB = 5;
+      if (P.anchor !== 'skip') { anchor = P.anchor; fkL = P.fkL; fkR = P.fkR; two = P.two; rateW = 6; } }
     if (u.wounded && !u.dead) { if (u.helpedBy >= 0) { lean = 0.28; crouch = Math.max(crouch, 0.16); roll = 0.12 * Math.sin(ph); } else { crouch = 0.62; lean = 0.62; roll = 0.1; stance = 0.4; } rateB = 8; } // doubled over / limping on a friend's shoulder
     // ---------- smoothing ----------
     a.recoil = Math.max(0, a.recoil - dt * 3.2);
@@ -1713,6 +1720,10 @@ class Renderer {
       pel = Q[4]; wdp = Q[5]; woy = Q[6];
     } else if (down) {
       legPlane(0, 1, 0.12, 0.2, 0); legPlane(9, -1, -0.05, 0.3, 0); pel = 0.92;
+    } else if (u.camp && a.cl > 0.02) { legPlane(0, 1, 0.06, 0.12, 0); legPlane(9, -1, 0.02, 0.2, 0); pel = 0.92;
+    } else if (u.camp && a.cs > 0.02) { // seated on the ground (knees up, or legs out) or on a log, rising when someone comes to talk
+      const k = a.cs, Sv = a.cSv === 2 ? [1.6, 1.25, 1.6, 1.25, 0.42] : a.cSv === 1 ? [1.5, 0.15, 1.45, 0.25, 0.14] : [2.1, 1.75, 1.95, 1.6, 0.2];
+      const eL = legPlane(0, 1, lerp(0.05, Sv[0], k), lerp(0.1, Sv[1], k), 0.14 * k), eR = legPlane(9, -1, lerp(0.05, Sv[2], k), lerp(0.1, Sv[3], k), -0.14 * k); pel = lerp(Math.max(eL, eR), Sv[4], k);
     } else if (u.airborne) {
       legPlane(0, 1, 0.55, 1.1, 0); legPlane(9, -1, 0.3, 1.2, 0); pel = 0.95;
     } else if (u.st === ST_KICK) {
@@ -1775,8 +1786,8 @@ class Renderer {
     else { toRoot(a.lh, tmpA, 0); ik(0, 6, tmpA[0], tmpA[1], tmpA[2], 1); }
     if (fkR && w !== 'bow' && w !== '') { J[18] = J[15]; J[19] = J[16]; J[20] = J[17]; const fx = J[15] - J[12], fy = J[16] - J[13], fz = J[17] - J[14]; const l = Math.hypot(fx, fy, fz) || 1; const cdir = routing ? [fx / l * 0.3 - C[6], fy / l * 0.3 - C[7] - 0.4, fz / l * 0.3 - C[8]] : [C[6], C[7] + 0.3, C[8]]; const cl2 = Math.hypot(cdir[0], cdir[1], cdir[2]) || 1; J[21] = cdir[0] / cl2; J[22] = cdir[1] / cl2; J[23] = cdir[2] / cl2; }
     // ---------- to world ----------
-    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : 0, cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
-    const oy = wdp !== null ? woy : down ? 0.15 : 0;
+    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : (u.camp && a.cl ? -1.42 * a.cl : 0), cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
+    const oy = wdp !== null ? woy : down ? 0.15 : u.camp && a.cl ? 0.12 * a.cl : 0;
     const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
     const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
     const Wd = (lx, ly, lz, out, o) => { const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = lx * cy + z2 * sy; out[o + 1] = y2; out[o + 2] = -lx * sy + z2 * cy; };
@@ -1785,6 +1796,7 @@ class Renderer {
     for (let i = 0; i < 30; i += 3) { if (i === 21) Wd(J[21], J[22], J[23], G, 18 + i); else Wp(J[i], J[i + 1], J[i + 2], G, 18 + i); }
     const CB = this._CB || (this._CB = new Float64Array(9)); Wd(C[0], C[1], C[2], CB, 0); Wd(C[3], C[4], C[5], CB, 3); Wd(C[6], C[7], C[8], CB, 6);
     Wp(0, pel - 0.02, pz, G, 60);
+    if (u.camp) this.campPropDraw(u, a, G);
     this._sx = CB[0]; this._sy = CB[1]; this._sz = CB[2];
     if (vsc !== 1) for (let i = 0; i < 9; i++) CB[i] *= vsc;
     // ---------- draw body ----------
@@ -1817,8 +1829,8 @@ class Renderer {
     else if (w === 'katana' && arm === 'mace') { segW(f.hilt, -0.2, 0.03, 0.045, 0.045); segW(f.blade, 0.03, 0.62, 0.07, 0.07); }
     else if (w === 'katana' && arm === 'jian') { segW(f.hilt, -0.2, 0.03, 0.035, 0.08); segW(f.blade, 0.03, 0.86, 0.018, 0.045); }
     else if (w === 'katana') { if (big) { segW(f.hilt, -0.55, 0.03, 0.045, 0.05); segW(f.blade, 0.03, 1.2, 0.03, 0.085); } else { segW(f.hilt, -0.2, 0.03, 0.04, 0.045); segW(f.blade, 0.03, 0.72, 0.026, 0.075); } }
-    else if (w === 'yari') segW(f.hilt, 1.7, 1.86, 0.11, 0.11); else f.hilt.setMatrixAt(slot, Z);
-    if (w === 'yari') { segW(f.yari, -0.8, 1.85, 0.045, 0.045); segW(f.blade, 1.85, 2.15, 0.02, 0.06); }
+    else if (w === 'yari') { if (u.role === 'spear') segW(f.hilt, 3.55, 3.7, 0.1, 0.1); else segW(f.hilt, 1.7, 1.86, 0.11, 0.11); } else f.hilt.setMatrixAt(slot, Z);
+    if (w === 'yari') { if (u.role === 'spear') { segW(f.yari, -0.9, 3.7, 0.042, 0.042); segW(f.blade, 3.7, 4.0, 0.02, 0.06); } else { segW(f.yari, -0.8, 1.85, 0.045, 0.045); segW(f.blade, 1.85, 2.15, 0.02, 0.06); } } // the duck team's 長槍 is about 1丈5尺, near 5 m
     else if (w !== 'katana') f.blade.setMatrixAt(slot, Z);
     if (w !== 'yari' && !(w === 'katana' && arm === 'guandao')) f.yari.setMatrixAt(slot, Z);
     { // the mandarin duck's special arms: 狼筅 wolf-brush (a bamboo trunk left bristling with branches) and 镗钯 tangba (three-pronged fork)
@@ -1862,7 +1874,7 @@ class Renderer {
     // blade trail while the cut is moving
     if (melee && (u.st === ST_RELEASE || (u.st === ST_RECOVER && stT < 0.06))) {
       const cx = this.camera.position.x - x, cz = this.camera.position.z - z;
-      if (cx * cx + cz * cz < 45 * 45) { const t0 = w === 'yari' ? 1.4 : 0.25, t1 = w === 'yari' ? 2.15 : 0.8; this.trailPush(u.id, P(t0, 0), P(t0, 1), P(t0, 2), P(t1, 0), P(t1, 1), P(t1, 2), u.team === this.localTeam); }
+      if (cx * cx + cz * cz < 45 * 45) { const t0 = w === 'yari' ? (u.role === 'spear' ? 3.2 : 1.4) : 0.25, t1 = w === 'yari' ? (u.role === 'spear' ? 4.0 : 2.15) : 0.8; this.trailPush(u.id, P(t0, 0), P(t0, 1), P(t0, 2), P(t1, 0), P(t1, 1), P(t1, 2), u.team === this.localTeam); }
     }
   }
   // ---------- blade trails ----------
@@ -2016,7 +2028,7 @@ class Renderer {
     if (this.vmBow.visible) { const dr = hero.st === ST_AIM || hero.aiming ? 1 : 0; this.vmBow.position.set(-0.05 + dr * 0.04, -0.12 + dr * 0.08, -0.55); this.vmBow.rotation.set(0, 0, 0.2 - dr * 0.15); }
     { const arm = hero.def.arm, K = this.vmKatana.scale; if (arm === 'guandao') K.set(1.1, 1.8, 2.2); else if (arm === 'mace') K.set(3, 0.72, 1.3); else if (arm === 'jian') K.set(0.75, 1.15, 0.6); else K.set(1, 1, 1); }
     { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * 14); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
-    const yrole = w === 'yari' ? hero.role : null; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
+    const yrole = w === 'yari' ? hero.role : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
     // a three-eyed gun model added by a campaign (vmSj) replaces the musket parts every frame, whoever you now are
     { const cl = !!hero.club && w === 'rifle'; this.vmRifle.rotation.y = cl ? Math.PI : 0; this.vmRifle.rotation.x = cl ? -0.25 : 0; this.vmRifle.position.z = cl ? -1.05 : 0; this.vmRifle.position.y = cl ? 0.05 : 0; }
     if (this.vmSj) { const on = hero.type === 'rifle_spencer'; this.vmSj.visible = on; for (const c of this.vmRifle.children) { if (c === this.vmSj) continue; if (c === this.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; } }
@@ -2581,5 +2593,96 @@ Renderer.prototype.buildGroundMap = function () {
 };
 // where a footprint meets sloping ground: the lowest corner, so walls and plinths go down into the earth, not float
 Renderer.prototype.footY = function (b) { let y = Infinity; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) y = Math.min(y, terrainH(b.x + sx * b.hw, b.z + sz * b.hd)); return y - 0.08; };
+// ---- gear that follows the limb under it (model-style pass) ----
+// Pauldrons and arm plates hang from the shoulder and swing with the upper arm; skirt panels, tassets and robe tails hinge
+// at the waist and follow the thigh behind them; capes hinge at the shoulders and trail when running. Returns null when
+// the part keeps its rigid frame.
+Renderer.prototype.gearFollow = function (u, p, F, G) {
+  const B = F[3], o = p.o, s = p.s; if (!o || !s) return null;
+  const sc = Math.hypot(B[0], B[1], B[2]) || 1, ux = B[3] / sc, uy = B[4] / sc, uz = B[5] / sc, fx = B[6] / sc, fy = B[7] / sc, fz = B[8] / sc;
+  const dirOf = (a, b) => { const dx = G[b] - G[a], dy = G[b + 1] - G[a + 1], dz = G[b + 2] - G[a + 2], l = Math.hypot(dx, dy, dz) || 1; return [dx / l, dy / l, dz / l]; };
+  const A = this.anims[u.id], spd = A ? A.spd || 0 : 0;
+  const R = this._gfR || (this._gfR = { B: new Float64Array(9), o: [0, 0, 0], x: 0, y: 0, z: 0, s: null, ss: [0, 0, 0] }); R.s = null;
+  // basis: up (y) as given, x = the frame's own x made perpendicular, z = x × y; scaled like the source frame
+  const build = (yx, yy, yz) => { let l = Math.hypot(yx, yy, yz) || 1; yx /= l; yy /= l; yz /= l;
+    let xx = B[0] / sc, xy = B[1] / sc, xz = B[2] / sc; const d = xx * yx + xy * yy + xz * yz; xx -= yx * d; xy -= yy * d; xz -= yz * d; l = Math.hypot(xx, xy, xz) || 1; xx /= l; xy /= l; xz /= l;
+    const zx = xy * yz - xz * yy, zy = xz * yx - xx * yz, zz = xx * yy - xy * yx; const O = R.B;
+    O[0] = xx * sc; O[1] = xy * sc; O[2] = xz * sc; O[3] = yx * sc; O[4] = yy * sc; O[5] = yz * sc; O[6] = zx * sc; O[7] = zy * sc; O[8] = zz * sc; };
+  // hinge: keep the part's top edge where it was on the rigid frame, hang the rest along the new up axis
+  const hinge = () => { const top = o[1] + s[1] * 0.5; R.x = F[0] + B[0] * o[0] + B[3] * top + B[6] * o[2]; R.y = F[1] + B[1] * o[0] + B[4] * top + B[7] * o[2]; R.z = F[2] + B[2] * o[0] + B[5] * top + B[8] * o[2]; R.o[0] = 0; R.o[1] = -s[1] * 0.5; R.o[2] = 0; };
+  if (p.f === 'sl' || p.f === 'sr') { // shoulder plates ride the upper arm (70% arm, 30% chest so they still sit on the shoulder)
+    const d = dirOf(p.f === 'sl' ? 18 : 27, p.f === 'sl' ? 21 : 30), k = 0.7;
+    build(-d[0] * k + ux * (1 - k), -d[1] * k + uy * (1 - k), -d[2] * k + uz * (1 - k)); R.x = F[0]; R.y = F[1]; R.z = F[2]; R.o[0] = o[0]; R.o[1] = o[1]; R.o[2] = o[2]; return R; }
+  if (p.f === 'p' && o[1] < -0.06 && s[1] > 0.12) { // skirt / tasset / robe panel below the waist
+    const L = dirOf(0, 3), Rt = dirOf(9, 12); let d, k = 0.8;
+    const fl = L[0] * fx + L[1] * fy + L[2] * fz, fr = Rt[0] * fx + Rt[1] * fy + Rt[2] * fz;
+    if (o[0] > 0.07) d = L; else if (o[0] < -0.07) d = Rt;
+    else if (Math.min(s[0], s[2]) < 0.12) { d = (o[2] >= 0) === (fl >= fr) ? L : Rt; k = 0.9; } // a thin front panel goes with the leading leg, a back panel with the trailing one
+    else { d = [(L[0] + Rt[0]) * 0.5, (L[1] + Rt[1]) * 0.5, (L[2] + Rt[2]) * 0.5]; k = 0.6; // a whole robe skirt: hangs between the legs and flares in depth with the stride so no knee comes through
+      R.ss[0] = s[0] + Math.abs((L[0] - Rt[0]) * B[0] + (L[1] - Rt[1]) * B[1] + (L[2] - Rt[2]) * B[2]) / sc * 0.12; R.ss[1] = s[1]; R.ss[2] = s[2] + Math.abs(fl - fr) * 0.32; R.s = R.ss; }
+    const lag = Math.min(0.3, spd * 0.045); // the hem lifts and trails when running
+    build(-d[0] * k + ux * (1 - k) + fx * lag, -d[1] * k + uy * (1 - k) + fy * lag, -d[2] * k + uz * (1 - k) + fz * lag); hinge(); return R; }
+  if (p.f === 'c' && o[2] < -0.13 && o[1] < 0.22 && s[1] > 0.3 && s[2] < 0.12) { // a cape or back cloth hanging from the shoulders
+    const lag = Math.min(0.45, spd * 0.07), fl = spd > 0.5 ? Math.sin((this.time || 0) * 5 + u.id) * 0.04 * Math.min(1, spd / 4) : 0;
+    build(ux + fx * lag + (B[0] / sc) * fl, uy + fy * lag + (B[1] / sc) * fl, uz + fz * lag + (B[2] / sc) * fl); hinge(); return R; }
+  return null;
+};
+// ---- camp life, drawn: relaxed poses and small activities for the men at the fire (sim sets u.cAct; see campThink) ----
+// Sets the hand/weapon targets in this.tg (chest-local: +x left, +y up from the shoulders, +z forward) and returns the body.
+Renderer.prototype.campPoseT = function (u, a, w) {
+  const tg = this.tg, t = (this.time || 0) + uhash(u.id, 31) * 20, dt = this.fdt || 0.016, act = u.cAct | 0, rise = !!u.cRise, look = !!u.cLook;
+  const lie = act === 7 && !rise, squat = !!u.cSeat && (act === 4 || act === 12) && !rise && !lie, sit = !!u.cSeat && !lie && !squat && !rise;
+  if (a.cSv === undefined) { a.cs = sit ? 1 : 0; a.cl = lie ? 1 : 0; let v = uhash(u.id, 33) < 0.6 ? 0 : 1; const C = this.sim.cfg.camp; if (C && C.props) for (const p of C.props) if (p[0] === 'log' && Math.hypot(p[1] - u.x, p[2] - u.z) < 1.1) v = 2; a.cSv = v; }
+  const kk = 1 - Math.exp(-2.6 * dt); a.cs += ((sit ? 1 : 0) - a.cs) * kk; a.cl += ((lie ? 1 : 0) - a.cl) * kk;
+  const seatPel = a.cSv === 2 ? 0.42 : a.cSv === 1 ? 0.14 : 0.2, gy = sit ? -(seatPel + 0.47) + 0.05 : squat ? -0.95 : -1.34;
+  const R = { lean: 0.03 + 0.02 * Math.sin(t * 0.6), twist: 0.08 * Math.sin(t * 0.21), crouch: 0, stance: 0.2, roll: 0.03 * Math.sin(t * 0.33), anchor: 'W', fkL: false, fkR: false, two: true, prop: '', ph: 'R' };
+  const S3 = (o, x, y, z) => { o[0] = x; o[1] = y; o[2] = z; };
+  const bump = (per, on) => { const c = ((t / per) % 1 + 1) % 1; return c < on ? Math.sin(c / on * PI) : 0; };
+  const L3 = (o, p, q, k) => { for (let j = 0; j < 3; j++) o[j] = p[j] + (q[j] - p[j]) * k; };
+  const pole = w === 'yari' || w === 'rifle';
+  // where the weapon is when the hands are busy: on the ground at his right side
+  const grounded = () => { S3(tg.wp, -0.44, gy, 0.08); S3(tg.wd, 0.05, 0.02, 1); nrm3(tg.wd); };
+  // held at rest: a pole or gun upright at the side, a sabre point-down
+  const rest = (side) => { const sx = side > 0 ? 0.24 : -0.24; if (pole) { S3(tg.wp, sx, -0.42, 0.1); S3(tg.wd, 0, 1, 0.06); } else { S3(tg.wp, sx * 0.95, -0.66, 0.08); S3(tg.wd, 0.05 * side, -0.95, 0.3); } nrm3(tg.wd); if (side > 0) { set3(tg.lh, tg.wp); } else { set3(tg.rh, tg.wp); } };
+  const knees = () => { S3(tg.rh, -0.17, sit ? -0.52 : -0.5, 0.34); S3(tg.lh, 0.17, sit ? -0.52 : -0.5, 0.34); };
+  if (w === 'bow' || w === '' || w === 'revolver') { R.anchor = 'skip'; }
+  if (lie) { S3(tg.rh, -0.06, -0.3, 0.13); S3(tg.lh, 0.07, -0.34, 0.12); S3(tg.wp, -0.42, -0.45, -0.05); S3(tg.wd, 0, 1, 0.02); nrm3(tg.wd); R.lean = 0; R.twist = 0; R.roll = 0.05; R.stance = 0; return R; }
+  if (look) { // somebody has come to talk: look up at him, hands to the knees (or the weapon at rest)
+    if (sit || squat) { knees(); grounded(); R.lean = -0.12; R.crouch = squat ? 0.5 : 0; R.stance = squat ? 0.35 : 0; } else { rest(-1); R.fkL = true; R.lean = -0.04; }
+    return R; }
+  switch (act) {
+    case 1: { const r2 = 0.02 * Math.sin(t * 3.1); S3(tg.rh, -0.09, -0.27 + r2, 0.46); S3(tg.lh, 0.09, -0.27 - r2, 0.46); grounded(); R.lean = 0.24; break; } // hands to the fire
+    case 2: case 15: { const k = act === 2 ? bump(6.5, 0.32) : bump(9, 0.4); L3(tg.rh, [-0.16, -0.42, 0.3], act === 2 ? [-0.03, 0.11, 0.12] : [-0.05, 0.06, 0.17], k); R.prop = act === 2 ? 'gourd' : 'pipe';
+      if (sit || squat) { S3(tg.lh, 0.17, -0.52, 0.34); grounded(); R.lean = 0.12 - (act === 2 ? 0.3 : 0.08) * k; } else { rest(1); R.lean = 0.02 - (act === 2 ? 0.25 : 0.06) * k; } break; }
+    case 3: { const k = bump(2.4, 0.45); S3(tg.lh, 0.05, -0.3, 0.3); L3(tg.rh, [-0.02, -0.26, 0.31], [-0.02, 0.09, 0.13], k); grounded(); R.prop = 'bowl'; R.ph = 'L'; R.lean = 0.22 - 0.1 * k; break; } // bowl and chopsticks
+    case 5: { S3(tg.wp, -0.03, -0.47, 0.34); S3(tg.wd, 1, 0.06, 0.12); nrm3(tg.wd); S3(tg.lh, 0.38, -0.45, 0.38); S3(tg.rh, 0.02 + 0.16 * Math.sin(t * 3.3), -0.42, 0.37); R.prop = 'stone'; R.lean = 0.32; break; } // the whetstone along the blade
+    case 6: { S3(tg.rh, -0.05 + 0.03 * Math.sin(t * 2.3), -0.5 + 0.02 * Math.sin(t * 4.7), 0.3); S3(tg.lh, 0.07, -0.5, 0.31); grounded(); R.prop = 'cloth'; R.ph = 'L'; R.lean = 0.36; break; } // mending a sandal or a sleeve
+    case 4: { knees(); grounded(); R.crouch = 0.5; R.lean = 0.3; R.stance = 0.35; break; }
+    case 12: { const k = bump(5, 0.35); knees(); L3(tg.rh, [-0.17, -0.5, 0.34], [-0.06, -0.7, 0.66], k); grounded(); R.prop = 'stick'; R.crouch = 0.5; R.lean = 0.3 + 0.2 * k; R.stance = 0.35; break; } // feeding the fire
+    case 14: { const k = bump(3.2, 0.3); S3(tg.lh, 0.17, -0.52, 0.34); L3(tg.rh, [-0.1, -0.35 + 0.03 * Math.sin(t * 14), 0.3], [-0.05, -0.62, 0.52], k); grounded(); R.prop = 'cup'; R.lean = 0.3; break; } // dice in a cup
+    case 8: { const k = bump(8, 0.38); L3(tg.rh, [-0.24, -0.62, 0.05], [-0.14, 0.42, 0.02], k); L3(tg.lh, [0.24, -0.62, 0.05], [0.14, 0.42, 0.02], k); S3(tg.wp, -0.46, -0.9, 0.14); S3(tg.wd, -0.1, 1, 0.12); nrm3(tg.wd); R.lean = -0.14 * k; break; } // a long stretch
+    case 9: { rest(1); S3(tg.rh, -0.2 + 0.06 * Math.sin(t * 2.1), -0.26 + 0.09 * Math.sin(t * 1.7), 0.33 + 0.05 * Math.sin(t * 2.6)); R.twist = 0.1 * Math.sin(t * 0.9); R.lean = 0.05; break; } // talking with his hands
+    case 10: { if (pole) rest(-1); else { S3(tg.wp, 0, -0.52, 0.28); S3(tg.wd, 0, -1, 0.12); nrm3(tg.wd); set3(tg.rh, tg.wp); set3(tg.lh, tg.wp); } if (pole) R.fkL = true; R.lean = -0.02; R.stance = 0.3; R.roll = 0; break; } // on watch
+    case 11: { if (w === 'yari') { S3(tg.wp, -0.15, -0.1, 0.18); S3(tg.wd, 0.35, 0.85, 0.22); } else if (w === 'rifle') { S3(tg.wp, -0.21, 0.03, 0.04); S3(tg.wd, 0.16, 0.95, -0.24); } else { const K = KF.katana.carry; set3(tg.wp, K.g); set3(tg.wd, K.d); } nrm3(tg.wd); set3(tg.rh, tg.wp); R.fkL = true; R.stance = 0; R.lean = 0.04; break; } // walking with the weapon sloped
+    case 13: { const c = Math.cos(t * 1.5), s = Math.sin(t * 1.5); S3(tg.rh, -0.04 + 0.1 * c, -0.42, 0.5 + 0.1 * s); S3(tg.lh, 0.06 + 0.1 * c, -0.3, 0.48 + 0.1 * s); grounded(); R.prop = 'ladle'; R.lean = 0.2; break; } // stirring the pot
+    default: { if (sit || squat) { knees(); grounded(); R.lean = 0.18; } else { rest(-1); R.fkL = true; } }
+  }
+  if (squat && act !== 4 && act !== 12) { R.crouch = 0.5; R.stance = 0.35; }
+  return R;
+};
+// the little things in their hands
+Renderer.prototype.campPropDraw = function (u, a, G) {
+  const kind = a.cProp || ''; let P = this.campPropM || (this.campPropM = {});
+  let g = P[u.id];
+  if (!g) { if (!kind) return; g = P[u.id] = {}; const L = (c) => new THREE.MeshLambertMaterial({ color: c });
+    const mk = (geo, c) => { const m = new THREE.Mesh(geo, L(c)); m.visible = false; this.scene.add(m); return m; };
+    g.gourd = mk(new THREE.SphereGeometry(0.055, 7, 5), 0xb08a3c); g.bowl = mk(new THREE.CylinderGeometry(0.075, 0.045, 0.05, 9), 0x6a4a2c); g.cup = mk(new THREE.CylinderGeometry(0.045, 0.04, 0.09, 8), 0x3a2a1c);
+    g.pipe = mk(new THREE.BoxGeometry(0.012, 0.012, 0.3), 0x2a1c12); g.stone = mk(new THREE.BoxGeometry(0.1, 0.025, 0.035), 0x6a6a68); g.cloth = mk(new THREE.BoxGeometry(0.16, 0.025, 0.1), 0x8a7a5a);
+    g.stick = mk(new THREE.BoxGeometry(0.025, 0.025, 0.55), 0x3a2a1a); g.ladle = mk(new THREE.BoxGeometry(0.025, 0.85, 0.025), 0x5a4028); }
+  const hi = a.cPropH === 'L' ? 24 : 33, ei = a.cPropH === 'L' ? 21 : 30;
+  for (const k in g) { const m = g[k]; const on = k === kind && !u.dead; m.visible = on; if (!on) continue;
+    m.position.set(G[hi], G[hi + 1], G[hi + 2]); const fx = G[hi] - G[ei], fz = G[hi + 2] - G[ei + 2];
+    m.rotation.set(k === 'ladle' ? 0.3 : 0, Math.atan2(fx, fz), 0); if (k === 'ladle') m.position.y -= 0.3; if (k === 'gourd') m.position.y += 0.03; }
+};
 return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, roundBox, uhash };
 })();
