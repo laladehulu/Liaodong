@@ -141,6 +141,154 @@ function zTags() {
   }
   for (let i = n; i < ZTAG.pool.length; i++) ZTAG.pool[i].style.display = 'none';
 }
+
+// ===================== 第二章 · Chapter Two: the Hun River, spring 1621 =====================
+// Two years after Abudali. The survivors of the file and new drafts from Zhejiang stand in Qi Jin's wagon camp south of the
+// Hun River bridge while the Sichuan White Poles fight on the far bank. You lead the file now.
+ZR.push(
+  { k: 'xiaoman', zh: '樓小滿', en: 'Lou Xiaoman', role: 'shield', t: 'rattan shield · new draft', ch: 2 },
+  { k: 'bao', zh: '鮑二', en: 'Bao Er', role: 'spear', t: 'long spear · new draft · a Ningbo boatman', ch: 2 },
+  { k: 'shao', zh: '邵阿福', en: 'Shao Afu', role: 'brush', t: 'wolf-brush · new draft · 17', ch: 2 },
+  { k: 'ran', zh: '冉家虎', en: 'Ran Jiahu', role: 'spear', t: 'White Pole of Shizhu · 白杆兵', ch: 2, guest: true });
+Object.assign(ZLOOK, {
+  xiaoman: { hat: 'rattan', brows: 'thick', young: true, skin: 0xd6a880 },
+  bao: { hat: 'wrap', wrap: 0x3a3a3a, brows: 'thin', beard: 'stubble', skin: 0xb48a62 },
+  shao: { hat: 'band', brows: 'high', young: true, rosy: true, skin: 0xe2bc96 },
+  ran: { hat: 'wrap', wrap: 0xe8e2d0, brows: 'thick', beard: 'mous', skin: 0xb8865e },
+});
+const ZP2 = [['北邊的冰還沒化。', 'The ice up north hasn\'t melted yet.'], ['聽說瀋陽的城牆矮。', 'They say Shenyang\'s walls are low.'], ['川兵吃辣子，冬天也不怕冷。', 'The Sichuan men eat chillies. Cold doesn\'t touch them.'], ['火藥多領一包，總沒錯。', 'Draw an extra bag of powder. Never hurts.'], ['又是三月，又在打仗。', 'March again, and war again.']];
+const ZP3 = [['……', '...'], ['遼陽那邊有消息沒？', 'Any word from Liaoyang?'], ['別往北看了。', 'Stop looking north.'], ['火小一點，別讓他們看見。', 'Keep the fire low. Don\'t let them see it.']];
+// who stands in the file in 1621: the men who came out of Abudali, and the new drafts
+function zFile2() { return ZR.filter(r => !r.guest && (r.ch === 2 || (r.k !== 'wu' && r.k !== 'me' && r.k !== ZS.me && ZS.alive[r.k]))); }
+const INTRO2 = [
+  { title: '兩年 · Two years', year: '1619 – 1621', p: ['After Sarhu the frontier crumbled. That summer Kaiyuan and Tieling fell to the Jin. Xiong Tingbi was sent to hold Liaodong; for a year and a half he rebuilt the defences around Liaoyang and Shenyang and drilled what was left of the army.',
+    'Then the old emperor died, and in the new court Xiong\'s enemies talked him out of office. In his place came Yuan Yingtai, a civil official: generous, brave, and no soldier.'], zh: '天啟元年，熊廷弼去職，袁應泰經略遼東。' },
+  { title: '浙兵北上 · New men from the south', year: 'Winter 1620', p: ['More Zhejiang men came north, over three thousand under Qi Jin, a kinsman of Qi Jiguang, and Zhang Mingshi. The file was filled out with new drafts: boys from Yiwu, a boatman from Ningbo.',
+    'You came out of Abudali Pass. The men call you 隊長 now — section chief. The file is yours to lead.'] },
+  { title: '瀋陽 · Shenyang', year: 'The third month of 1621', p: ['In the spring Nurhaci struck at Shenyang. Its generals, He Shixian and You Shigong, were killed and the city fell in a day.',
+    'A relief army marching up from Liaoyang under Chen Ce and Tong Zhongkui came too late: native troops from Sichuan and Huguang — among them the White Poles of Shizhu under Qin Bangping — and the Zhejiang men. Tonight it camps on the Hun River, south of the bridge.'] },
+];
+// ---------- the camp, night before and night after ----------
+const ZSPOT2 = { lou: [-2.5, -0.9, 'squat'], liu6: [-0.9, 2.4, 'squat'], luo: [1.0, 2.4, 'squat'], jin: [2.6, -0.6, 'squat'], ye: [-1.9, 1.6, 'squat'], wang: [7.0, -3.4, 'stand'], fang: [2.1, 1.7, 'squat'], he: [-6.8, -2.6, 'stand'], du: [3.1, -2.4, 'stand'], zhu: [8.9, -3.7, 'stand'],
+  xiaoman: [-2.9, 0.6, 'squat'], bao: [5.2, -6.6, 'stand'], shao: [0.1, 2.8, 'squat'], ran: [-1.6, -2.8, 'stand'] };
+function zCampCfg2(night) {
+  const npcs = [], beds = [], file = zFile2(), rows = [{ k: 'me' }].concat(file), n = rows.length;
+  rows.forEach((r, i) => { const a = -0.5 + (i / Math.max(8, n)) * Math.PI * 1.55 + Math.PI * 0.55; const bx = Math.sin(a) * 6.3, bz = Math.cos(a) * 6.3; const alive = r.k === 'me' || ZS.alive[r.k];
+    beds.push([+bx.toFixed(2), +bz.toFixed(2), +(a + Math.PI).toFixed(3), !alive]); });
+  for (const r of file.concat(night === 2 ? [zRow('ran')] : [])) { if (!ZS.alive[r.k] && !r.guest) continue; const sp = ZSPOT2[r.k] || [4, 4, 'stand']; const [x, z] = sp; const tx = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? 8 : 0, tz = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? -5 : 0;
+    npcs.push({ role: r.role, x, z, yaw: +Math.atan2(tx - x, tz - z).toFixed(3), ci: ZR.indexOf(r), pose: night === 3 && r.k !== 'zhu' ? 'squat' : sp[2] }); }
+  const mb = beds[0]; ZC = { bed: [mb[0], mb[1]] };
+  return { fires: ZCAMP.fires, tents: ZCAMP.tents, props: ZCAMP.props, bedrolls: beds, npcs, me: { x: 0.4, z: -3.4, yaw: 0, role: 'lead' } };
+}
+function zStart2(scene) {
+  ZS = zLoad(); if (!ZS) { ZS = zFresh(); }
+  $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
+  if (scene === 'ch2') { // a new chapter: the drafts join, the dead stay in Abudali
+    if (!ZS.ch2init) { for (const r of ZR) if (r.ch === 2) { ZS.alive[r.k] = true; ZS.bond[r.k] = 0; delete ZS.fate[r.k]; } ZS.fate1 = Object.assign({}, ZS.fate); ZS.ch2init = true; ZS.stage = 'ch2'; zSave(); }
+    zCards(INTRO2, () => { ZS.stage = 'camp2'; zSave(); zStart2('camp2'); }); return;
+  }
+  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'lead', connected: true }];
+  if (scene === 'camp2' || scene === 'camp3') {
+    const night = scene === 'camp2' ? 2 : 3; const camp = zCampCfg2(night);
+    startGame({ seed, battle: 'zcamp', mode: 'campaign', mission: 'zcamp', camp, players: pl }, 0, null, 1);
+    ZC.night = night; ZC.map = {}; for (const u of state.sim.units) if (u.camp) { ZC.map[u.id] = u.ci; zDress(u, u.ci); } { const me = state.sim.units[state.sim.players[0].heroId]; zDress(me, ZR.findIndex(r => r.k === (ZS.me || 'me'))); } ZC.chatT = 6;
+    MUSIC.play('menu'); MUSIC.setIntensity(0.15); AUDIO.setFire(0.6); $('army').hidden = true;
+    setTimeout(() => storyCard(night === 3 ? 'The survivors make camp in a burnt farmstead off the Liaoyang road. Walk among them (E to talk), and when you are ready, lie down on your bedroll.' : 'The night before. The camp lies five li south of the Hun River bridge. Walk among your file and talk with them (E). When you are ready, lie down on your bedroll.', night === 3 ? '夜 · The night after' : '營 · The Hun River, spring 1621'), 900);
+  } else if (scene === 'battle2') {
+    startGame({ seed, battle: 'toba', mode: 'campaign', mission: 'hunz', players: pl }, 0, null, 1);
+    const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; const meIdx = ZR.findIndex(r => r.k === (ZS.me || 'me'));
+    ZB = { map: {}, sq: q.id, first: me.heroId, cur: ZS.me || 'me', fell: false, ch2: true };
+    const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = meIdx;
+    for (const r of zFile2()) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } }
+    for (const uid in ZB.map) zDress(sim.units[uid], ZB.map[uid]);
+    setTimeout(() => storyCard('Spring 1621. You lead your file in Qi Jin\'s wagon camp south of the Hun River. F follow me · H halt · C charge · Z form up where you look. The flag on your back is the file\'s.', '渾河 · The Hun River'), 700);
+  }
+}
+function zSleep2() {
+  if (ZC.night === 2) { ZS.stage = 'battle2'; zSave(); zCards([{ title: '黎明 · Dawn', year: 'Spring 1621', p: ['Before light, word runs through the camp: Shenyang fell yesterday. The officers argue at the bridge. Then the Sichuan men start across it.', 'You walk down your file, tugging straps the way Chief Wu used to. "Twelve men," you hear yourself say. "One life."'], btn: 'Stand to →' }], () => zGo('battle2')); }
+  else { ZS.stage = 'end2'; zSave(); const n = zFile2().filter(r => ZS.alive[r.k]).length; zCards([{ title: '第二章終 · End of Chapter Two', year: 'The Hun River, spring 1621', p: [`${n} of your file sleep in the ashes of the farmstead. In the morning you will walk south. Days later Liaoyang will fall, and everything east of the Liao River with it.`, 'Five years from now, at a small fort called Ningyuan on the Bohai coast, a civil official named Yuan Chonghuan will refuse to run.'], zh: '第三章 · 寧遠 · Ningyuan, 1626 — 待續 · to be continued', btn: 'Back to the menu' }], () => { location.reload(); }); }
+}
+// ---------- dialogue ----------
+function zTalk2(k, night) {
+  const S0 = ZS, F1 = S0.fate1 || {}, d1 = (x) => F1[x] && F1[x] !== 'out', lou1 = !d1('lou'), nm = S0.name;
+  const deadAt1 = ZR.filter(r => !r.ch && r.k !== 'me' && r.k !== 'wu' && d1(r.k)).map(r => r.zh);
+  if (night === 2) return ({
+    lou: { g: ['兩年了。我還是沒把那封信寄出去。', 'Two years. I still haven\'t sent that letter.'], t: [
+      { q: 'Your brother is here.', a: [['小滿？……那個傻小子，自己跑來當兵了。', 'Xiaoman? ...The fool came and enlisted himself.'], ['明天讓他站我後面。我替他擋。', 'Tomorrow he stands behind me. I take what comes for him.']] },
+      { q: 'Why not send it?', bond: 1, a: [['寄了，家裡就以為我還好。', 'If I send it, they\'ll think I\'m still well.'], ['等打完這一仗，我自己帶回去。', 'When this one\'s done, I\'ll carry it home myself.']] }] },
+    xiaoman: { g: lou1 ? ['我哥說你是隊長。他說你在山裡沒丟下人。', 'My brother says you\'re chief. He says you didn\'t leave anyone in those mountains.'] : ['你是我哥的隊長？樓阿根。他在哪？', 'You were my brother\'s chief? Lou Agen. Where is he?'], t: lou1 ? [
+      { q: 'Stay behind your brother tomorrow.', bond: 1, a: [['我不要躲。我是藤牌手，跟他一樣。', 'I won\'t hide. I\'m a shield man, same as him.'], ['……好吧。我站他旁邊。', '...All right. I\'ll stand beside him.']] }] : [
+      { q: 'Tell him the truth.', bond: 1, a: [['（你告訴他阿布達里岡的事。他很久沒說話。）', '(You tell him about Abudali Pass. He says nothing for a long time.)'], ['……娘一直在等他的信。', '...Mother has been waiting all this time for his letter.']] },
+      { q: S0.flags.letter ? 'I wrote a letter for him. I remember it.' : 'He spoke of home often.', bond: 1, a: S0.flags.letter ? [['他說：跟娘說北邊冷，可我有棉襖。跟媳婦說，我很好。', 'He said: tell my mother it\'s cold up north, but I have a padded coat. Tell my wife I\'m well.'], ['（樓小滿低下頭，用袖子擦了擦臉。）', '(Lou Xiaoman bows his head and wipes his face with his sleeve.)']] : [['義烏，山裡，礦坑邊上。他說戚爺爺就是看上他們那股狠勁。', 'Yiwu, up by the mines. He said that was what Marshal Qi liked about them: they never back down.']] }] },
+    liu6: S0.flags.saved6 ? { g: [`${nm.zh}哥。腿好了，你看。`, `Brother ${nm.en}. The leg healed — look.`], t: [
+      { q: 'Look after Shao Afu tomorrow.', bond: 1, a: [['他跟我那時候一樣大。……我會的。', 'He\'s the age I was. ...I will.']] }] } : { g: ['我還記得那個山谷。', 'I still remember that valley.'], t: [{ q: 'So do I.', a: [['這回別讓人掉隊。', 'This time, nobody gets left.']] }] },
+    shao: { g: ['隊長，狼筅這麼重，我拿得穩嗎？', 'Chief, the wolf-brush is so heavy — can I hold it steady?'], t: [
+      { q: 'Plant it, don\'t swing it.', bond: 1, a: [['插在地上，讓馬自己撞上來……對吧？', 'Plant it in the ground and let the horses run onto it... right?'], ['陳小六也這麼教我。', 'Chen Xiaoliu told me the same.']] },
+      { q: 'How old are you?', a: [['十七。這回是真的。', 'Seventeen. Really, this time.']] }] },
+    bao: { g: ['在寧波我撐船，現在撐槍。都是一根長桿子。', 'In Ningbo I poled a boat. Now I pole a spear. It\'s all a long stick.'], t: [
+      { q: 'Can you swim?', a: [['能。可渾河三月的水，冰的。掉下去就上不來。', 'I can. But the Hun River in the third month is ice water. Fall in and you don\'t come out.']] },
+      { q: 'Why did you join?', bond: 1, a: [['欠了船主的錢。當兵有餉。……說是有餉。', 'I owed the boat owner. Soldiers get paid. ...They say soldiers get paid.']] }] },
+    ran: { g: ['浙江來的？我們石柱的人，跟你們一起守過關。', 'From Zhejiang? We Shizhu men have held a pass beside your people before.'], t: [
+      { q: 'Who leads you?', a: [['秦邦屏將軍。他妹妹秦良玉，在家裡管著石柱的兵。', 'General Qin Bangping. His sister, Qin Liangyu, commands the Shizhu troops back home.'], ['我們的槍杆是白的，所以叫白杆兵。槍頭有鉤，可以把馬上的人拉下來。', 'Our spear shafts are white, so they call us the White Poles. The heads have hooks — we pull riders out of the saddle.']] },
+      { q: 'Will you cross the river tomorrow?', bond: 1, a: [['城都丟了，還過河幹什麼？……可周將軍說，不能救瀋陽，在這三年幹什麼。', 'The city\'s gone, why cross? ...But General Zhou says: if we can\'t save Shenyang, what have we been doing here three years?'], ['他過，我們就過。', 'If he crosses, we cross.']] }] },
+    fang: { g: ['熊經略在，遼東還能守。熊經略一走……', 'With Xiong Tingbi in charge, Liaodong could be held. With him gone...'], t: [
+      { q: 'What happened to Xiong Tingbi?', a: [['新皇登基，朝裡有人參他，說他畏敵、說他跋扈。他就辭了。', 'A new emperor, and men at court accused him of cowardice, of arrogance. He resigned.'], ['換了袁經略。袁公是好人，可不懂兵。他還收了好些逃來的蒙古饑民進城，說是仁政。', 'Now we have Commissioner Yuan. A good man, but no soldier. He even took starving Mongol refugees into the cities — calls it benevolence.']] },
+      { q: 'What do you make of tomorrow?', bond: 1, a: [['川兵在北，我們在南，中間一條河、一座橋。', 'The Sichuan men to the north, us to the south, and between us a river and one bridge.'], ['兵分兩處，又隔著水。……我在阿布達里岡見過這種事。', 'An army split in two with water between. ...I saw this at Abudali.']] }] },
+    he: { g: ['兩年前我說劉總兵是條好漢。戚將軍也是。', 'Two years ago I said General Liu was a hero. So is General Qi.'], t: [
+      { q: 'You taught me the shield. Teach Xiaoman.', bond: 1, a: [['我教了。他學得快，跟他哥一樣倔。', 'I have. He learns fast. Stubborn, like his brother.']] }] },
+    luo: { g: ['骰子還是那對。運氣用光了沒有，誰知道。', 'Same pair of dice. Who knows if the luck\'s used up.'], t: [{ q: 'Roll for tomorrow.', bond: 1, a: [['（骰子停下：兩個六。駱鐵頭不笑，把骰子塞給你。）', '(The dice stop: two sixes. Luo Tietou doesn\'t laugh. He presses them into your hand.)'], ['你拿著。隊長的運氣，大家都用得著。', 'You keep them. The whole file can use a chief\'s luck.']] }] },
+    jin: { g: ['這條河晚上有聲音。冰在裂。', 'The river makes noises at night. The ice is cracking.'], t: [{ q: 'You still have the charm?', a: [['在。兩年，一直在。', 'Here. Two years, never left me.']] }] },
+    ye: { g: ['我女兒七歲了。我還沒見過七歲的她。', 'My daughter is seven. I\'ve never seen her at seven.'], t: [{ q: 'You\'ll see her at eight.', bond: 1, a: [['……你答應我？', '...You promise?']] }] },
+    wang: { g: ['我現在一頓吃三個餅。長力氣。', 'I eat three cakes a meal now. Building strength.'], t: [{ q: 'Stay by me tomorrow.', bond: 1, a: [['你在前頭，我就在你左邊。誰都別想過去。', 'You\'re at the front, I\'m at your left. Nobody gets through.']] }] },
+    du: { g: ['五十兩一顆首級。兩年了，我一顆也沒拿到。', 'Fifty taels a head. Two years, and I haven\'t taken one.'], t: [{ q: 'Chunhua?', bond: 1, a: [['她嫁人了。去年。……不提了。', 'She married. Last year. ...Let\'s not talk about it.']] }] },
+    zhu: { g: ['今天有鹽。川兵分給我們的。', 'Salt today. The Sichuan men shared theirs.'], t: [{ q: 'Any news?', a: [['陳總兵要回遼陽，底下的將爺不肯，說來都來了。', 'General Chen wants to march back to Liaoyang. His officers won\'t have it — we\'ve come this far, they say.'], ['朱萬良、姜弼的馬兵在白塔鋪，說是接應。……接應誰，誰知道。', 'Zhu Wanliang and Jiang Bi have cavalry at Baitapu, to support us, they say. ...Support whom, who knows.']] }] },
+  })[k];
+  // the night after
+  const F2 = S0.fate2 || {}, d2 = (x) => F2[x] && F2[x] !== 'out';
+  return ({
+    lou: { g: ['我說過我替他擋。', 'I said I\'d take what came for him.'], t: [{ q: d2('xiaoman') ? 'Xiaoman...' : 'He\'s alive.', bond: 1, a: d2('xiaoman') ? [['（樓阿根把那封兩年前的信拿出來，看了很久，又收回懷裡。）', '(Lou Agen takes out the letter from two years ago, looks at it for a long time, and puts it back against his chest.)']] : [['是。……是。', 'Yes. ...Yes.']] }] },
+    xiaoman: { g: lou1 && !d2('lou') ? ['哥還在。我們都還在。', 'My brother\'s alive. We\'re both alive.'] : ['……', '...'], t: [{ q: 'Rest.', a: [['我閉上眼就聽見砲聲。', 'When I close my eyes I hear the guns.']] }] },
+    liu6: { g: ['這回沒人掉隊吧？……有沒有？', 'Nobody got left this time? ...Did they?'], t: [{ q: 'Some did.', a: [['（他點點頭，把狼筅抱在懷裡。）', '(He nods, and holds the wolf-brush close.)']] }] },
+    shao: { g: ['我插住了一匹馬。牠自己撞上來的，跟你說的一樣。', 'I stopped a horse. It ran right onto the brush, like you said.'], t: [{ q: 'You did well.', bond: 1, a: [['可是旁邊的人……', 'But the man beside me...']] }] },
+    bao: { g: ['我們往南走，對吧？離河越遠越好。', 'We go south, right? The farther from that river the better.'], t: [{ q: 'South.', a: [['遼陽還守得住嗎？', 'Can Liaoyang hold?']] }] },
+    fang: { g: ['戚將軍、張參將、陳總兵、童總兵……都沒了。', 'General Qi, Zhang Mingshi, Chen Ce, Tong Zhongkui... all gone.'], t: [
+      { q: 'What happens now?', a: [['金人下一步就是遼陽。袁經略守不住的。', 'Next the Jin go for Liaoyang. Commissioner Yuan can\'t hold it.'], ['我們這些人，加上川兵剩下的，都是寫不進捷報的人。', 'Men like us, and what\'s left of the Sichuan troops — nobody writes us into the victory reports.']] }] },
+    he: { g: ['戚將軍跟童總兵說，大丈夫報國，就在今日。', 'General Qi told General Tong: a man repays his country today, of all days.'], t: [{ q: 'You heard him?', a: [['我聽見了。然後他回頭叫你帶人走。', 'I heard. Then he turned and told you to take your men out.']] }] },
+    luo: { g: ['骰子呢？還在你那吧。', 'The dice? You still have them?'], t: [{ q: 'Here.', a: [['留著。還沒用完。', 'Keep them. They\'re not used up yet.']] }] },
+    jin: { g: ['冰裂了，好多人掉下去。', 'The ice broke. So many went through.'], t: [{ q: 'We\'re out.', a: [['嗯。我們出來了。', 'Mm. We\'re out.']] }] },
+    ye: { g: ['八歲。你答應過我。', 'Eight. You promised.'], t: [{ q: 'I remember.', bond: 1, a: [['那就再活一年。', 'Then we live one more year.']] }] },
+    wang: { g: ['左邊沒人過去。我說到做到。', 'Nobody got past on the left. I said so.'], t: [{ q: 'Eat something.', a: [['……給我一個餅。', '...Give me a cake.']] }] },
+    du: { g: ['我拿到一顆首級。可是沒人收了。', 'I took a head. But there\'s nobody left to pay for it.'], t: [{ q: 'Leave it.', a: [['（他把那包東西扔進了雪溝。）', '(He throws the bundle into a snowy ditch.)']] }] },
+    zhu: { g: ['鍋還在。人少了，粥就稠了。', 'The pot made it. Fewer men, thicker gruel.'], t: [{ q: 'Sit with us.', bond: 1, a: [['（他給每個人都多舀了一勺，也給空著的位子舀了一碗。）', '(He gives every man an extra scoop, and fills a bowl for each empty place too.)']] }] },
+  })[k];
+}
+// ---------- after the battle ----------
+function zheFinish2(winner) {
+  const sim = state.sim, h = localHero(); const M = sim.mission, z = sim.missionZone('road'); const won = winner === M.side;
+  const fate = {}; const near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
+  for (const uid in ZB.map) { const r = ZR[ZB.map[uid]]; if (!r) continue; const k = r.k; const u = sim.units[uid]; if (u.dead) { fate[k] = 'dead'; continue; }
+    const out = (near(u, won ? 26 : 12) || (z && Math.hypot(u.x - z.x, u.z - z.z) < z.r + 10)) && !(u.wounded && u.helpedBy < 0 && !near(u, 4)); fate[k] = out ? 'out' : 'lost'; }
+  for (const k of ZB.deadMe || []) fate[k] = 'dead';
+  const meK = ZS.me || 'me'; if (fate[meK] === undefined) fate[meK] = h && !h.dead ? 'out' : 'dead';
+  if (ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && fate[meK] === 'dead') { const nk = ZB.cur; ZS.me = nk; ZS.oldName = ZS.name; ZS.name = { zh: zRow(nk).zh, en: zRow(nk).en }; }
+  const file = zFile2(); ZS.fate2 = {}; for (const r of file) { const f = fate[r.k] || 'lost'; ZS.fate2[r.k] = f; ZS.alive[r.k] = f === 'out'; }
+  if (ZB.cur && ZB.cur !== 'me' && ZB.cur !== 'stranger') ZS.alive[ZB.cur] = !!(h && !h.dead);
+  ZS.stage = 'camp3'; zSave();
+  const all = [{ k: meK, zh: ZS.name.zh, en: ZS.name.en, me: true }].concat(file.filter(r => r.k !== meK));
+  const li = all.map(r => { const f = r.me ? (fate[meK] === 'dead' && ZB.cur === meK ? 'dead' : 'out') : ZS.fate2[r.k] || 'lost'; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${r.zh} ${r.en}${r.me ? ' (you)' : ''} — ${f === 'out' ? 'came out by the Liaoyang road' : f === 'dead' ? 'killed' : 'missing on the river'}</li>`; }).join('');
+  const outN = file.filter(r => ZS.fate2[r.k] === 'out').length + 1;
+  $('resultTitle').textContent = won ? '出 · Out by the Liaoyang road' : '陷 · The camp is overrun'; $('resultTitle').className = won ? 'win' : 'lose';
+  $('resultText').innerHTML = `${won ? 'You got out of the camp before the ring closed.' : 'The ring closed, but a few of you crawled out through the dark.'} ${outN} of your file came out.`;
+  $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';
+  $('btnNext').onclick = () => { $('result').hidden = true; zCards([
+    { title: '渾河 · What happened', year: 'The third month of 1621', p: ['Shenyang had fallen the day before. Chen Ce wanted to turn back; his officers would not. Zhou Dunji is recorded as saying: "If we cannot save Shenyang, what have we been doing here these three years?"',
+      'The Sichuan troops under Qin Bangping and Zhou Dunji crossed and made camp north of the bridge. They threw back the first Jin charges and killed many, but were worn down and overwhelmed; Qin Bangping and Zhou Dunji were killed, and a few survivors broke through to the Zhejiang camp. One Ming report says the turncoat Li Yongfang set captured Ming gunners to fire Shenyang\'s cannon into them; some historians doubt it.',
+      'Five li south of the bridge, about three thousand Zhejiang men under Qi Jin and Zhang Mingshi had dug in behind wagons, guns, a ditch and a palisade of sorghum stalks plastered with mud. Surrounded, they fired until their powder ran out, then fought hand to hand into the night. Chen Ce, Tong Zhongkui, Qi Jin and Zhang Mingshi all died. Qi Jin is said to have stopped Tong from withdrawing with the words: "A man repays his country today."',
+      'The cavalry of Zhu Wanliang and Jiang Bi, waiting at Baitapu, held back and were beaten when at last they moved. Days later the Jin took Liaoyang, and Yuan Yingtai killed himself in the burning city. Everything east of the Liao River was lost.'], zh: '大丈夫報國在今日。— attributed to Qi Jin' },
+    { title: '伍 · Your file', year: `${outN} came out`, html: `<ul>${li}</ul>`, btn: 'Night falls →' },
+  ], () => zGo('camp3')); };
+}
+
 const ZR = [ // the file, in the order of the duck team's places (YY_ROLE)
   { k: 'wu', zh: '吳老栓', en: 'Wu Laoshuan', role: 'lead', t: 'section chief · 隊長' },
   { k: 'lou', zh: '樓阿根', en: 'Lou Agen', role: 'shield', t: 'rattan shield' },
@@ -185,7 +333,8 @@ const INTRO = [
 // ---------- dialogue: who says what, the night before and the night after ----------
 // each topic: q (what you say), a: lines [zh, en], bond, flag
 function zTalk(k, night) {
-  const S0 = ZS, dead = (x) => !S0.alive[x], lost = ZR.filter(r => r.k !== 'me' && r.k !== k && !S0.alive[r.k]).map(r => r.zh);
+  if (night >= 2) return zTalk2(k, night);
+  const S0 = ZS, dead = (x) => !S0.alive[x], lost = ZR.filter(r => !r.ch && r.k !== 'me' && r.k !== k && !S0.alive[r.k]).map(r => r.zh);
   if (night === 0) return ({
     wu: { g: ['睡不著？天一亮就拔營。', 'Can\'t sleep? We break camp at first light.'], t: [
       { q: 'How do we fight tomorrow?', a: [['戚爺爺教的：藤牌在前擋箭，狼筅撩住他，長槍刺，鏜鈀補。十二個人，一條命。', 'The way Marshal Qi taught it. Shields in front to take the arrows, the wolf-brushes tangle the man, the long spears kill him, the tridents finish what\'s left. Twelve men, one life.'], ['你是藤牌手。你一倒，後面的人全露出來。舉盾，別離隊。', 'You\'re a shield. If you go down, everyone behind you is naked. Shield up (right mouse), and never leave the file.']] },
@@ -252,7 +401,7 @@ const ZCAMP = { fires: [[0, 0], [8, -5]], tents: [[-10, 4, 1.7, 2.5, 2.1], [-4.5
   spots: { wu: [-2.6, -5.6, 'stand'], lou: [-2.5, -0.9, 'squat'], liu6: [-0.9, 2.4, 'squat'], luo: [1.0, 2.4, 'squat'], jin: [2.6, -0.6, 'squat'], ye: [-1.9, 1.6, 'squat'], wang: [7.0, -3.4, 'stand'], fang: [2.1, 1.7, 'squat'], he: [-6.8, -2.6, 'stand'], du: [3.1, -2.4, 'stand'], zhu: [8.9, -3.7, 'stand'] } };
 function zCampCfg(night) {
   const npcs = [], beds = [], map = {};
-  ZR.forEach((r, i) => { const a = -0.5 + (i / ZR.length) * Math.PI * 1.55 + Math.PI * 0.55; const bx = Math.sin(a) * 6.3, bz = Math.cos(a) * 6.3; const alive = ZS.alive[r.k];
+  ZR.forEach((r, i) => { if (r.ch) return; const a = -0.5 + (i / 12) * Math.PI * 1.55 + Math.PI * 0.55; const bx = Math.sin(a) * 6.3, bz = Math.cos(a) * 6.3; const alive = ZS.alive[r.k];
     beds.push([+bx.toFixed(2), +bz.toFixed(2), +(a + Math.PI).toFixed(3), !alive]);
     if (r.k === 'me' || r.k === ZS.me || !alive) return; const sp = ZCAMP.spots[r.k]; const [x, z] = sp; const tx = r.k === 'zhu' || r.k === 'wang' ? 8 : 0, tz = r.k === 'zhu' || r.k === 'wang' ? -5 : 0;
     npcs.push({ role: r.role, x, z, yaw: +Math.atan2(tx - x, tz - z).toFixed(3), ci: i, pose: night === 1 && r.k !== 'zhu' ? 'squat' : sp[2] }); });
@@ -260,6 +409,7 @@ function zCampCfg(night) {
   return { fires: ZCAMP.fires, tents: ZCAMP.tents, props: ZCAMP.props, bedrolls: beds, npcs, me: { x: 0.4, z: -3.4, yaw: 0, role: 'shield' } };
 }
 function zStart(scene) {
+  if (/^(ch2|camp2|battle2|camp3)$/.test(scene)) return zStart2(scene);
   ZS = zLoad(); if (!ZS) { ZS = zFresh(); }
   $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
   const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'shield', connected: true }];
@@ -273,7 +423,7 @@ function zStart(scene) {
     startGame({ seed, battle: 'abudali', mode: 'campaign', mission: 'abudali', players: pl }, 0, null, 1);
     const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; ZB = { map: {}, sq: q.id, first: me.heroId, cur: 'me', fell: false };
     const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = 2;
-    ZR.forEach((r, i) => { if (r.k === 'me') return; const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = i; } });
+    ZR.forEach((r, i) => { if (r.k === 'me' || r.ch) return; const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = i; } });
     for (const uid in ZB.map) zDress(sim.units[uid], ZB.map[uid]);
     setTimeout(() => storyCard('Dawn, April 1619. The column breaks camp and climbs into the valleys toward Hetu Ala. Stay with your duck team: the chief calls the drill. Shield up with the right mouse button.', '阿布達里岡 · Abudali Pass'), 700);
   }
@@ -294,8 +444,9 @@ function zheKeyE() {
   zDialog(t.k, t.u); return true;
 }
 function zSleep() {
+  if (ZC.night >= 2) return zSleep2();
   if (ZC.night === 0) { ZS.stage = 'battle1'; zSave(); zCards([{ title: '黎明 · Dawn', year: 'April 1619', p: ['Drums before light. The column breaks camp and climbs on into the valleys. Ahead, somewhere, is Hetu Ala; behind, the guns and the grain carts are already falling back along the track.', 'Chief Wu walks down the file, tugging straps and checking match-cord. "Twelve men," he says. "One life."'], btn: 'March →' }], () => zGo('battle1')); }
-  else { ZS.stage = 'end1'; zSave(); zCards([{ title: '第一章終 · End of Chapter One', year: 'Abudali Pass, April 1619', p: [`${ZR.filter(r => r.k !== 'me' && ZS.alive[r.k]).length} of your file sleep around the embers. In the morning you will walk south out of the mountains with the remnants of Liu Ting's army.`, 'Two years later, in the spring of 1621, what is left of the Zhejiang men will stand with the Sichuan White Poles on the south bank of the Hun River, outside Shenyang.'], zh: '第二章 · 渾河 · Hun River, 1621 — 待續 · to be continued', btn: 'Back to the menu' }], () => { location.reload(); }); }
+  else { ZS.stage = 'end1'; zSave(); zCards([{ title: '第一章終 · End of Chapter One', year: 'Abudali Pass, April 1619', p: [`${ZR.filter(r => r.k !== 'me' && ZS.alive[r.k]).length} of your file sleep around the embers. In the morning you will walk south out of the mountains with the remnants of Liu Ting's army.`, 'Two years later, in the spring of 1621, what is left of the Zhejiang men will stand with the Sichuan White Poles on the south bank of the Hun River, outside Shenyang.'], zh: '第二章 · 渾河 · The Hun River, 1621', btn: 'Chapter Two →' }], () => { zGo('ch2'); }); }
 }
 function zDialog(k, u) {
   const sim = state.sim, D = zTalk(k, ZC.night); if (!D) return; const r = zRow(k); state.zheDlg = { k };
@@ -326,9 +477,10 @@ document.addEventListener('keydown', (e) => { // the dialogue panel takes the ke
 // ---------- in battle ----------
 function zheSay(ev) { // scripted lines come out of a man's mouth when you are near enough to hear him; otherwise by runner
   const sim = state.sim, h = localHero(); if (!ZB) return false;
-  const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'] }[ev.who] || ['', ev.who];
+  const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'], qi: ['戚金', 'General Qi Jin'], chen: ['陳策', 'General Chen Ce'], sichuan: ['周敦吉', 'Zhou Dunji of the White Poles'] }[ev.who] || ['', ev.who];
   let id = -1;
   if (ev.who === 'liu') { const g = sim.mg.liu; id = g ? sim.players[g.p].heroId : -1; }
+  else if (sim.mg[ev.who]) { const g = sim.mg[ev.who]; id = sim.players[g.p].heroId; }
   else if (ev.who === 'chief' || ev.who === 'fang') { const want = ev.who === 'chief' ? 0 : 8; for (const uid in ZB.map) if (ZB.map[uid] === want) id = +uid; }
   if (id >= 0 && sim.units[id] && sim.units[id].dead) id = -1;
   if (id < 0 && h) { const q = sim.squads[ZB.sq]; const cand = sim.teamAlive[h.team].filter(u => u.id !== h.id && !u.wounded && u.type !== 'horse' && Math.hypot(u.x - h.x, u.z - h.z) < 22 && (ev.who !== 'rider' || !q.unitIds.includes(u.id))); if (cand.length) id = cand[Math.floor(Math.random() * cand.length)].id; }
@@ -338,12 +490,13 @@ function zheSay(ev) { // scripted lines come out of a man's mouth when you are n
 }
 function zheEvent(ev) {
   const sim = state.sim; if (!ZB || !sim || !sim.mission || !sim.mission.soldier) return; const me = sim.players[state.localIdx];
-  if (ev.t === 'zpromote' && ev.p === state.localIdx) { state.fpSel = null; const q = sim.squads[ev.sq]; const w = q.unitIds.map(id => sim.units[id]).find(u => !u.dead && u.ctrl < 0 && !u.wounded);
+  if (ev.t === 'zpromote' && ev.p === state.localIdx && ZB.ch2) { state.fpSel = null; banner('你領隊 · Your file', 'You lead the file: F follow me / H halt / C charge / Z form up where you look', 6); }
+  else if (ev.t === 'zpromote' && ev.p === state.localIdx) { state.fpSel = null; const q = sim.squads[ev.sq]; const w = q.unitIds.map(id => sim.units[id]).find(u => !u.dead && u.ctrl < 0 && !u.wounded);
     if (w) setTimeout(() => SPEECH.say(w.id, `隊長沒了！${ZS.name.zh}，你說怎麼走？`, `The chief is dead! ${ZS.name.en}, you're senior now — what do we do?`, { prio: 3, dur: 5 }), 1600);
     banner('你領隊 · The file is yours', 'Chief Wu is dead. F follow me / H halt / C charge / Z form up where you look', 6); }
   else if (ev.t === 'zwound' && ev.p === state.localIdx) { ZB.wounded = ev.id; const u = sim.units[ev.id]; const n = SPEECH.nameOf(ev.id);
     SPEECH.say(ev.id, '我的腿……走不了了！', 'My leg... I can\'t walk!', { prio: 3, dur: 4 }); toast(`${n ? n.zh + ' ' + n.en : 'A man of your file'} is hit and can't walk. Get to him and press E to get him up`); }
-  else if (ev.t === 'zhelp' && ev.id === ZB.wounded) { ZS.flags.helped6 = true; feed(`You get ${(SPEECH.nameOf(ev.id) || { en: 'him' }).en}'s arm over your shoulder`, true); }
+  else if (ev.t === 'zhelp' && ev.id === ZB.wounded) { ZS.flags[ZB.ch2 ? 'helped2' : 'helped6'] = true; feed(`You get ${(SPEECH.nameOf(ev.id) || { en: 'him' }).en}'s arm over your shoulder`, true); }
   else if (ev.t === 'zcarry' && ev.p === state.localIdx) { const k = ZB.map[ev.id]; ZB.fell = true; const prev = ZB.cur; if (prev && ZS.alive[prev] !== false) { ZB.deadMe = ZB.deadMe || []; ZB.deadMe.push(prev); }
     ZB.cur = k !== undefined ? ZR[k].k : 'stranger'; const n = SPEECH.nameOf(ev.id); const h = sim.units[ev.id]; if (h) { Input.yaw = h.yaw; Input.pitch = 0; }
     toast(n ? `You fall. The fight goes on — you are ${n.zh} ${n.en} now` : 'You fall. The fight goes on — you are another man of the column now'); }
@@ -353,10 +506,11 @@ function zheObjLines() {
   for (const uid in ZB.map) { const u = sim.units[uid]; if (+uid === (h && h.id)) continue; all++; if (!u.dead && h && Math.hypot(u.x - h.x, u.z - h.z) < 24) n++; }
   let s = `<div class="ob"><i>伍</i><span>Your file with you: ${n} of ${all}</span></div>`;
   { let row = ''; for (const uid in ZB.map) { const u = sim.units[uid], rr = ZR[ZB.map[uid]]; if (!rr || +uid === (h && h.id)) continue; const cls = u.dead ? 'x' : u.wounded ? (u.helpedBy >= 0 ? 'w' : 'd') : u.hp < u.def.hp * 0.5 ? 'w' : 'a'; row += `<b class="zr ${cls}" title="${rr.en} · ${rr.t}">${u.dead ? '✕' : u.wounded ? (u.helpedBy >= 0 ? '✚' : '▼') : '●'} ${rr.zh}</b>`; } s += `<div class="zroster">${row}</div>`; } // every man of the file by name: ● fighting, ✚ wounded, ▼ down, ✕ dead
-  if (ZB.wounded !== undefined) { const u = sim.units[ZB.wounded]; s += `<div class="ob${u.helpedBy >= 0 ? ' done' : ''}"><i>!</i><span>${u.dead ? 'Chen Xiaoliu is dead' : u.helpedBy >= 0 ? 'Chen Xiaoliu is on his feet' : 'Get Chen Xiaoliu up (E beside him)'}</span></div>`; }
+  if (ZB.wounded !== undefined) { const u = sim.units[ZB.wounded]; s += `<div class="ob${u.helpedBy >= 0 ? ' done' : ''}"><i>!</i><span>${(() => { const wn = (SPEECH.nameOf(ZB.wounded) || { en: 'The wounded man' }).en; return u.dead ? wn + ' is dead' : u.helpedBy >= 0 ? wn + ' is on his feet' : 'Get ' + wn + ' up (E beside him)'; })()}</span></div>`; }
   return s;
 }
 function zheFinish(winner) {
+  if (ZB && state.sim.mission && state.sim.mission.ch === 2) return zheFinish2(winner);
   const sim = state.sim, h = localHero(); if (!ZB) return; const M = sim.mission, z = sim.missionZone('mouth'); const won = winner === M.side;
   const fate = {}; const near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
   for (const uid in ZB.map) { const k = ZR[ZB.map[uid]].k; const u = sim.units[uid]; if (u.dead) { fate[k] = 'dead'; continue; }
@@ -365,11 +519,11 @@ function zheFinish(winner) {
   if (fate.me === undefined) fate.me = h && !h.dead ? 'out' : 'dead';
   // you go on as whoever you became
   if (ZB.cur && ZB.cur !== 'me' && ZB.cur !== 'stranger' && fate.me === 'dead') { const nk = ZB.cur; ZS.me = nk; ZS.oldName = ZS.name; ZS.name = { zh: zRow(nk).zh, en: zRow(nk).en }; }
-  for (const r of ZR) { const f = fate[r.k] || 'lost'; ZS.fate[r.k] = f; ZS.alive[r.k] = f === 'out'; }
+  for (const r of ZR) { if (r.ch) continue; const f = fate[r.k] || 'lost'; ZS.fate[r.k] = f; ZS.alive[r.k] = f === 'out'; }
   if (ZB.cur && ZB.cur !== 'me' && ZB.cur !== 'stranger') ZS.alive[ZB.cur] = !!(h && !h.dead);
   ZS.alive.me = fate.me === 'out' || (ZB.cur && ZB.cur !== 'me'); // you live on in whoever carried on
   ZS.flags.saved6 = ZS.alive.liu6 && !!ZS.flags.helped6; ZS.stage = 'camp1'; zSave();
-  const li = ZR.map(r => { const f = ZS.fate[r.k] || 'lost'; const nm = r.k === 'me' ? `${ZS.name.zh} ${ZS.name.en} (you)` : `${r.zh} ${r.en}`; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${nm} — ${f === 'out' ? 'came out of the pass' : f === 'dead' ? 'killed' : 'missing in the valley'}</li>`; }).join('');
+  const li = ZR.filter(r => !r.ch).map(r => { const f = ZS.fate[r.k] || 'lost'; const nm = r.k === 'me' ? `${ZS.name.zh} ${ZS.name.en} (you)` : `${r.zh} ${r.en}`; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${nm} — ${f === 'out' ? 'came out of the pass' : f === 'dead' ? 'killed' : 'missing in the valley'}</li>`; }).join('');
   const outN = ZR.filter(r => ZS.fate[r.k] === 'out').length;
   $('resultTitle').textContent = won ? '出 · Out of the pass' : '陷 · Cut off'; $('resultTitle').className = won ? 'win' : 'lose';
   $('resultText').innerHTML = `${won ? 'You reached the south gorge.' : 'The valley closed behind you, but a few of you crawled out after dark.'} ${outN} of twelve came out.`;
@@ -392,13 +546,13 @@ function zheHUD(dt) {
   ZC.chatT -= dt; if (ZC.chatT <= 0) { ZC.chatT = 7 + Math.random() * 6; const h = localHero(); if (!h) return; const near = sim.units.filter(u => u.camp && Math.hypot(u.x - h.x, u.z - h.z) < 14); if (!near.length) return; const u = near[Math.floor(Math.random() * near.length)];
     const P0 = [['這鬼地方，四月還下雪。', 'Snow in April. What a place.'], ['明天走多少里？', 'How many li tomorrow?'], ['聽說赫圖阿拉的城是木頭的。', 'They say the walls of Hetu Ala are made of logs.'], ['腳上的凍瘡又裂了。', 'My chilblains have split open again.'], ['誰還有菸葉？', 'Anyone got tobacco?'], ['義烏這時候該插秧了。', 'Back in Yiwu they\'ll be planting the rice now.']];
     const P1 = [['……', '...'], ['火別讓它滅了。', 'Don\'t let the fire go out.'], ['明天往南走。', 'Tomorrow we go south.'], ['我閉上眼睛就看見西嶺上的旗。', 'When I close my eyes I see the banners on the west ridge.']];
-    const L = (ZC.night ? P1 : P0)[Math.floor(Math.random() * (ZC.night ? P1 : P0).length)]; SPEECH.say(u.id, L[0], L[1], { prio: 0, cool: 10 }); }
+    const PL = ZC.night === 2 ? ZP2 : ZC.night === 3 ? ZP3 : ZC.night ? P1 : P0; const L = PL[Math.floor(Math.random() * PL.length)]; SPEECH.say(u.id, L[0], L[1], { prio: 0, cool: 10 }); }
 }
 function zMenu() {
   const s = zLoad(); const b = $('btnZhe'), nb = $('btnZheNew'); if (!b) return;
-  const cont = s && s.stage && s.stage !== 'end1'; b.textContent = cont ? 'Continue' : s ? 'Play again' : 'Begin'; nb.hidden = !cont;
+  const cont = s && s.stage && s.stage !== 'end2'; b.textContent = cont ? 'Continue' : s ? 'Play again' : 'Begin'; nb.hidden = !cont;
   const begin = () => { AUDIO.init(); AUDIO.play('ui'); ZS = zFresh(); zSave(); zCards(INTRO, () => { ZS.stage = 'camp0'; zSave(); zStart('camp0'); }); };
-  b.onclick = () => { if (cont) { AUDIO.init(); AUDIO.play('ui'); zStart(s.stage === 'after1' ? 'camp1' : s.stage); } else begin(); };
+  b.onclick = () => { if (cont) { AUDIO.init(); AUDIO.play('ui'); zStart(s.stage === 'after1' ? 'camp1' : s.stage === 'end1' ? 'ch2' : s.stage); } else begin(); };
   nb.onclick = begin;
 }
 zMenu();
