@@ -1417,6 +1417,7 @@ class Renderer {
             const k = vic && vic.def ? clamp((ev.dmg || 20) / Math.max(40, vic.def.hp * 0.5), 0.3, 1.5) * (heavyB ? 1.35 : 1) * (ev.killed ? 1.3 : 1) : 0.6;
             if (melee) {
               this.blood(ev.x, ev.y, ev.z, mine ? (heavyB ? 16 : 11) : 7, dx * 2.2, 1, dz * 2.2);
+              if (mine) for (let i = 0; i < (heavyB ? 6 : 4); i++) this.smoke.spawn(ev.x, ev.y, ev.z, dx * rnd(1, 2.5) + rnd(-0.5, 0.5), rnd(0.2, 1.2), dz * rnd(1, 2.5) + rnd(-0.5, 0.5), rnd(0.22, 0.38), 0.12, heavyB ? 0.6 : 0.42, 0.42, 0.03, 0.04, 0.75, 0.9, 6); // a red mist off the cut, gone in a breath
               if (armd) this.burstSparks(ev.x, ev.y, ev.z, mine ? 10 : 5, 4, 1, 0.8, 0.45, 0.25, 0.07);
               if (heavyB && vic) this.dust(vic.x, vic.y + 0.15, vic.z, 4, dx * 1.2, 0.5, dz * 1.2, 0.6, 0.5, 0.25, 0.7);
               AUDIO.play(armd ? 'strikearmor' : heavyB ? 'strikeheavy' : 'strike', ev.x, ev.y, ev.z, mine ? 1.25 : 0.95);
