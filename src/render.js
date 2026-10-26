@@ -1760,8 +1760,9 @@ class Renderer {
     } else if (u.camp && a.cl > 0.02) { // asleep: down on his back, a knee drawn up (or both legs out), an arm under his head
       const k = a.cl, ss = a.cSl === undefined ? (a.cSl = uhash(u.id, 41) < 0.5 ? 1 : -1) : a.cSl, kv = uhash(u.id, 43) < 0.55, tt = (this.time || 0) + u.id;
       const k2 = clamp((k - 0.15) / 0.85, 0, 1), sk = k2 * k2 * (3 - 2 * k2);
-      legPlane(0, 1, lerp(0.06, kv && ss > 0 ? 1.9 : 1.47, k), lerp(0.12, kv && ss > 0 ? 1.15 : 0.18, k), lerp(0, -0.06, k)); legPlane(9, -1, lerp(0.02, kv && ss < 0 ? 1.9 : 1.5, k), lerp(0.2, kv && ss < 0 ? 1.15 : 0.22, k), lerp(0, 0.1, k));
-      pel = lerp(0.92, 0.14, k); a.lean = lerp(a.lean, -1.5 + 0.018 * Math.sin(tt * 1.25), sk); a.roll = lerp(a.roll, 0.1 * ss, sk); a.twist *= 1 - sk; a.hK = lerp(0.5, 0.08, sk);
+      // the knee on the side he's turned toward is drawn up and falls a little across; the other leg lies out, slightly bent
+      const kU = kv ? 1.95 : 1.7, nU = kv ? 1.25 : 0.85; legPlane(0, 1, lerp(0.06, ss > 0 ? kU : 1.45, k), lerp(0.12, ss > 0 ? nU : 0.3, k), lerp(0, ss > 0 ? -0.35 : 0.05, k)); legPlane(9, -1, lerp(0.02, ss < 0 ? kU : 1.45, k), lerp(0.2, ss < 0 ? nU : 0.3, k), lerp(0, ss < 0 ? 0.35 : -0.05, k));
+      pel = lerp(0.92, 0.15, k); a.lean = lerp(a.lean, -1.45 + 0.02 * Math.sin(tt * 1.25), sk); a.roll = lerp(a.roll, 0.32 * ss, sk); a.twist = lerp(a.twist, 0.12 * ss, sk); a.hK = lerp(0.5, 0.12, sk);
       lie = { k: sk, kind: 'sleep', sA: ss, c: 0, call: false, tt };
       // lying on a slope: tilt with the ground between his feet and his head so neither end sinks into it
       { const hb = terrainH(x - sy * 0.95, z - cy * 0.95), hf = terrainH(x + sy * 0.6, z + cy * 0.6); a.cTilt = clamp(Math.atan2(hb - hf, 1.55), -0.4, 0.4); }
@@ -2702,8 +2703,8 @@ Renderer.prototype.lieArms = function (lie, J, C, pel, toRoot, ik) {
     if (lie.call) { const r = bump(4.6, 0.42); tx += (J[fr] * 0.6 - tx) * r; ty += (pel + 0.72 - ty) * r; tz += (0.42 - tz) * r; }
     put(fr, fr + 6, -sps, tx, ty, tz);
   } else if (lie.kind === 'crawl') {
-    for (const [so, sd, ph] of [[0, 1, 0], [9, -1, Math.PI]]) { const c = lie.c + ph, r = 0.5 + 0.5 * Math.sin(c), up = Math.max(0, Math.cos(c)) * 0.12;
-      put(so, so + 6, sd, J[so] + sd * 0.06, 0.05 + up, J[so + 2] + 0.1 + 0.36 * r); }
+    for (const [so, sd, ph] of [[0, 1, 0], [9, -1, Math.PI]]) { const c = lie.c + ph, r = 0.5 + 0.5 * Math.sin(c), up = Math.max(0, Math.cos(c)) * 0.14;
+      put(so, so + 6, sd, J[so] + sd * (0.2 - 0.1 * r), 0.05 + up, J[so + 2] + 0.05 + 0.5 * r); } // reach ahead, grip, drag the body up to the hand
   } else {
     put(sp, sp + 6, sps, J[27] + sps * 0.13, Math.max(0.06, J[28] - 0.06), J[29] - 0.06);
     toRoot([-sps * 0.06, -0.3, 0.17], T, 0); put(fr, fr + 6, -sps, T[0], T[1], T[2]);
