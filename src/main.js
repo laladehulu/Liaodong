@@ -242,7 +242,9 @@ function empHUD(hero) {
   const ready = H.cd <= 0; $('ammoFill').style.width = (ready ? 100 : (1 - H.cd / H.cdMax) * 100).toFixed(0) + '%'; $('ammoText').textContent = ready ? 'Ready · LMB fire' : `${gun ? 'Sponging and loading' : 'Spanning the bow'}… ${Math.ceil(H.cd / 30)} s`;
   $('dirText').textContent = 'Mouse lays the piece · wheel fine elevation · RMB sight · LMB fire · E leave it';
 }
-function gunMode() { const h = localHero(); return h && ((h.weapon === 'rifle' && !Input.bayonet && !h.club) || h.weapon === 'revolver'); }
+function gunMode() { const h = localHero(); return h && ((h.weapon === 'rifle' && !Input.bayonet && !h.club) || h.weapon === 'revolver' || h.weapon === 'bow'); }
+// a bow (not a crossbow): hold the left button to draw, let go to loose
+function bowMode() { const h = localHero(); return !!(h && !h.dead && h.weapon === 'bow' && !(h.def.bow && h.def.bow.xbow)); }
 document.addEventListener('keydown', (e) => {
   if (state.screen !== 'game') return;
   if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
@@ -416,6 +418,7 @@ canvas.addEventListener('mousedown', (e) => {
   if (!Input.locked) { requestLock(); return; }
   if (Input.orderMode) { if (e.button === 0) fpMove(); else if (e.button === 2) fpCharge(); return; }
   if (e.button === 1) { e.preventDefault(); if (fpReady()) fpMove(); return; }
+  if (e.button === 0 && bowMode()) { Input.bowHeld = true; return; }
   if (e.button === 0) { if (gunMode()) Input.pressed |= S.A_FIRE; else { Input.lmb = true; Input.atkDir = slashDir(); } }
   else if (e.button === 2) { if (gunMode()) Input.ads = !Input.ads; else { Input.rmb = true; Input.blockDir = S.DIR_UP; } }
 });
@@ -423,6 +426,7 @@ document.addEventListener('mouseleave', () => { Input.mouseMoved = false; });
 window.addEventListener('mouseout', (e) => { if (!e.relatedTarget) Input.mouseMoved = false; });
 document.addEventListener('mouseup', (e) => {
   if (e.button === 0) Input.lmb = false; if (e.button === 2) Input.rmb = false;
+  if (e.button === 0 && Input.bowHeld) { Input.bowHeld = false; if (bowMode()) Input.pressed |= S.A_FIRE; }
   if (Drag.btn !== e.button || state.screen !== 'game') return;
   const btn = Drag.btn; Drag.btn = -1;
   if (!Input.cmdMode) return;
@@ -664,6 +668,7 @@ function collectInput() {
   let acts = Input.pressed; Input.pressed = 0;
   if (Input.cmdMode) acts |= S.A_CMD;
   if (!gun) { if (Input.lmb || Input.tapAtk) acts |= S.A_ATK; Input.tapAtk = false; if (Input.rmb) acts |= S.A_BLOCK; acts &= ~S.A_FIRE; }
+  else if (bowMode()) { if (Input.bowHeld) acts |= S.A_AIM; }
   else { if (Input.ads) acts |= S.A_AIM; }
   const yawQ = ((Math.round(Input.yaw / (Math.PI * 2) * 65536) % 65536) + 65536) % 65536;
   const pitchQ = Math.round(Input.pitch * 10000);
@@ -900,8 +905,12 @@ function updateHUD(dt) {
   const sim = state.sim, r = state.renderer; const hero = localHero(); const me = sim.players[state.localIdx];
   if (state.toastT > 0) { state.toastT -= dt; if (state.toastT <= 0) $('toast').classList.remove('show'); }
   { // the red at the edges grows as you lose blood, and beats when you are close to the end; a hit flashes on top
-    const hp0 = hero && !hero.dead ? Math.max(0, Math.min(1, 1 - hero.hp / hero.def.hp)) : 0, low = Math.max(0, (hp0 - 0.25) / 0.75), pulse = hp0 > 0.7 ? 0.12 * (0.5 + 0.5 * Math.sin(performance.now() / 260)) : 0;
-    const fl = r.hitFlash > 0 || r.imp.blur > 0.02 ? Math.min(1, r.hitFlash * 1.6 + r.imp.blur * 0.4) : 0; $('vignette').style.opacity = Math.max(fl, Math.min(0.85, low * 0.7 + pulse)); } $('vignette').style.transform = r.imp.blur > 0.02 ? `scale(${1 + r.imp.blur * 0.06})` : '';
+    // health you can read from the screen alone: the red edge creeps in from the first wound, the colour drains,
+    // the world darkens and below half it beats like a heart, faster and harder the closer you are to the end
+    const hp0 = hero && !hero.dead ? Math.max(0, Math.min(1, 1 - hero.hp / hero.def.hp)) : 0, low = Math.max(0, (hp0 - 0.08) / 0.92);
+    const beat = hp0 > 0.5 ? (hp0 - 0.5) * 2 : 0, ph = performance.now() / (520 - beat * 220), pulse = beat * (0.5 + 0.5 * Math.pow(Math.max(0, Math.sin(ph)), 6)) * 0.35;
+    const fl = r.hitFlash > 0 || r.imp.blur > 0.02 ? Math.min(1, r.hitFlash * 1.6 + r.imp.blur * 0.4) : 0; $('vignette').style.opacity = Math.max(fl, Math.min(1, low * 0.85 + pulse));
+    const cv = $('c'); if (cv) { const k = Math.round(low * 100) / 100, f = k > 0.01 ? `saturate(${(1 - k * 0.75).toFixed(2)}) brightness(${(1 - k * 0.28 - pulse * 0.25).toFixed(2)}) contrast(${(1 + k * 0.12).toFixed(2)})${hp0 > 0.8 ? ` blur(${((hp0 - 0.8) * 4).toFixed(1)}px)` : ''}` : ''; if (cv._f !== f) { cv.style.filter = f; cv._f = f; } } } $('vignette').style.transform = r.imp.blur > 0.02 ? `scale(${1 + r.imp.blur * 0.06})` : '';
   $('parry').style.opacity = r.parryFlash > 0 ? r.parryFlash : 0;
   if (hero && !hero.dead && !Input.cmdMode && sim.phase === 1) { // a horseman bearing down on you: warn in time to dodge or brace
     state.cavT = (state.cavT || 0) - dt; if (state.cavT <= 0) { for (const v of sim.teamAlive[1 - hero.team]) { if (!v.mounted || Math.abs(v.hspeed || 0) < 5.5) continue; const dx = hero.x - v.x, dz = hero.z - v.z, d = Math.hypot(dx, dz); if (d > 28 || d < 3) continue; if ((dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw)) / d < 0.9) continue;

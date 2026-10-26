@@ -1138,7 +1138,10 @@ class Renderer {
     vm.add(rifle); this.vmRifle = rifle;
     // horn bow held out at arm's length, and a rattan shield on the left arm
     const vb = new THREE.Group(); const bw2 = new THREE.MeshLambertMaterial({ color: 0x5a3b1e });
-    vb.add(bx(0.03, 0.42, 0.035, bw2, 0, 0.2, -0.02, -0.25)); vb.add(bx(0.03, 0.42, 0.035, bw2, 0, -0.2, -0.02, 0.25)); vb.add(bx(0.006, 0.8, 0.006, new THREE.MeshLambertMaterial({ color: 0xe8e2cc }), 0, 0, 0.07));
+    vb.add(bx(0.03, 0.42, 0.035, bw2, 0, 0.2, -0.02, -0.25)); vb.add(bx(0.03, 0.42, 0.035, bw2, 0, -0.2, -0.02, 0.25));
+    { // the string in two halves that meet at the nock and pull back with the draw, and the nocked arrow
+      const sm = new THREE.MeshLambertMaterial({ color: 0xe8e2cc }); this.vmBowS = [bx(0.006, 1, 0.006, sm, 0, 0.2, 0.07), bx(0.006, 1, 0.006, sm, 0, -0.2, 0.07)]; for (const s of this.vmBowS) vb.add(s);
+      const ar = new THREE.Group(); ar.add(bx(0.008, 0.008, 0.72, new THREE.MeshLambertMaterial({ color: 0x8a6a40 }), 0, 0, -0.36)); ar.add(bx(0.012, 0.012, 0.06, new THREE.MeshLambertMaterial({ color: 0x9aa0a6 }), 0, 0, -0.74)); ar.add(bx(0.002, 0.03, 0.08, new THREE.MeshLambertMaterial({ color: 0xd8d0c0 }), 0, 0.012, -0.03)); vb.add(ar); this.vmBowA = ar; }
     vb.visible = false; vmFov.add(vb); this.vmBow = vb;
     const sh = new THREE.Group(); const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 18), new THREE.MeshLambertMaterial({ color: 0xa8844a })); disk.rotation.x = Math.PI / 2; sh.add(disk);
     const boss = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 10), new THREE.MeshLambertMaterial({ color: 0x8a2a20 })); boss.rotation.x = Math.PI / 2; boss.position.z = -0.03; sh.add(boss);
@@ -2070,7 +2073,13 @@ class Renderer {
     const P = (px, py, pz, rx, ry, rz) => ({ px, py, pz, rx, ry, rz });
     const xbow = hero.weapon === 'bow' && hero.def.bow && hero.def.bow.xbow; const w = xbow ? 'rifle' : hero.weapon, T = this.tmp;
     this.vmXbar.visible = xbow; this.vmBow.visible = hero.weapon === 'bow' && !xbow;
-    if (this.vmBow.visible) { const dr = hero.st === ST_AIM || hero.aiming ? 1 : 0; this.vmBow.position.set(-0.05 + dr * 0.04, -0.12 + dr * 0.08, -0.55); this.vmBow.rotation.set(0, 0, 0.2 - dr * 0.15); }
+    if (this.vmBow.visible) { const dr = hero.st === ST_AIM || hero.aiming ? 1 : 0;
+      // the draw: the bow comes up to the eye, the string comes back toward the cheek; a long-held full draw trembles
+      const d = Math.min(1, (hero.drawT || 0) / 0.8), k = this.vmBowK = (this.vmBowK || 0) + (d - (this.vmBowK || 0)) * Math.min(1, dt * 16), tr = Math.max(0, (hero.drawT || 0) - 2.5) * 0.004;
+      const sh = tr ? Math.sin(performance.now() / 23) * tr : 0;
+      this.vmBow.position.set(-0.05 + dr * 0.04 + sh, -0.12 + dr * 0.08 + sh * 0.7, -0.55 + k * 0.05); this.vmBow.rotation.set(0, 0, 0.2 - dr * 0.15 - k * 0.05);
+      if (this.vmBowS) { const nz = 0.07 + k * 0.34, tips = [[0.4, -0.02], [-0.4, -0.02]]; this.vmBowS.forEach((s, i) => { const ty = tips[i][0], tz = tips[i][1], dy = 0 - ty, dz = nz - tz, L = Math.hypot(dy, dz); s.position.set(0, ty + dy / 2, tz + dz / 2); s.scale.set(1, L, 1); s.rotation.set(Math.atan2(dz, dy) * -1 + (i ? Math.PI : 0) * 0 + (dy > 0 ? 0 : 0), 0, 0); s.rotation.x = -Math.atan2(dz, dy) + (dy < 0 ? Math.PI : 0) * 0; });
+        const nocked = hero.ammo > 0 || (hero.st === ST_RELOAD && hero.stT > (hero.reloadT || 0.8) * 0.6); this.vmBowA.visible = nocked; this.vmBowA.position.set(0.012, 0, nz); } }
     { const arm = hero.def.arm, K = this.vmKatana.scale; if (arm === 'guandao') K.set(1.1, 1.8, 2.2); else if (arm === 'mace') K.set(3, 0.72, 1.3); else if (arm === 'jian') K.set(0.75, 1.15, 0.6); else K.set(1, 1, 1); }
     { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * 14); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
     const yrole = w === 'yari' ? (hero.kitRole !== undefined ? hero.kitRole : hero.role) : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
