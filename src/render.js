@@ -1863,15 +1863,18 @@ class Renderer {
     if (lie && lie.k > 0.01) this.lieArms(lie, J, C, pel, toRoot, ik);
     // ---------- to world ----------
     const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : (u.camp && a.cl ? (a.cTilt || 0) * a.cl : 0), cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
-    const oy = wdp !== null ? woy : down ? 0.15 : 0;
+    const oy0 = wdp !== null ? woy : down ? 0.15 : 0;
+    // the spring rig (anim.js): every joint travels to its new place instead of popping there
+    const AS = typeof ANIM !== 'undefined' && ANIM.on && !this.studio ? ANIM.rig(this, u, a, legs, J, C, pel, pz, dp, oy0, dt, x, z) : null;
+    const oy = AS ? AS[3] : oy0, cPs = AS ? Math.cos(AS[2]) : cP, sPs = AS ? Math.sin(AS[2]) : sP, pelS = AS ? AS[0] : pel, pzS = AS ? AS[1] : pz;
     const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
-    const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
-    const Wd = (lx, ly, lz, out, o) => { const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = lx * cy + z2 * sy; out[o + 1] = y2; out[o + 2] = -lx * sy + z2 * cy; };
+    const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cPs - lz * sPs, z2 = ly * sPs + lz * cPs; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
+    const Wd = (lx, ly, lz, out, o) => { const y2 = ly * cPs - lz * sPs, z2 = ly * sPs + lz * cPs; out[o] = lx * cy + z2 * sy; out[o + 1] = y2; out[o + 2] = -lx * sy + z2 * cy; };
     const G = this._G || (this._G = new Float64Array(96));
-    for (let i = 0; i < 18; i += 3) Wp(legs[i], legs[i + 1] + pel, legs[i + 2] + pz, G, i);
+    for (let i = 0; i < 18; i += 3) Wp(legs[i], legs[i + 1] + pelS, legs[i + 2] + pzS, G, i);
     for (let i = 0; i < 30; i += 3) { if (i === 21) Wd(J[21], J[22], J[23], G, 18 + i); else Wp(J[i], J[i + 1], J[i + 2], G, 18 + i); }
     const CB = this._CB || (this._CB = new Float64Array(9)); Wd(C[0], C[1], C[2], CB, 0); Wd(C[3], C[4], C[5], CB, 3); Wd(C[6], C[7], C[8], CB, 6);
-    Wp(0, pel - 0.02, pz, G, 60);
+    Wp(0, pelS - 0.02, pzS, G, 60);
     if (u.camp) this.campPropDraw(u, a, G);
     this._sx = CB[0]; this._sy = CB[1]; this._sz = CB[2];
     if (vsc !== 1) for (let i = 0; i < 9; i++) CB[i] *= vsc;
