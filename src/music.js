@@ -123,7 +123,7 @@ const MUSIC = (() => {
           if (bar >= 6) { if (bar === 7 || k % 2 === 0) hit('tg_f', tt, 0.06 + (bar - 6) * 0.06 + k * 0.006, 1, k % 2 ? 0.3 : -0.3); if (k % 4 === 0) dagu(tt, 'mf', 0.22 + (bar - 6) * 0.14 + k * 0.01); }
           continue; }
         const BIG = [[0, 10], [0, 6, 8, 11], [0, 3, 6, 8, 10, 11, 14]][lvl], MID = [[], [4, 12], [4, 12, 13]][lvl];
-        if (BIG.includes(k)) { dagu(tt, 'ff', lvl === 0 ? 0.32 : k === 0 ? 0.62 : 0.5); if (lvl === 2 && k === 0) hit('bd_ff', tt, 0.34, 0.8); }
+        if (BIG.includes(k)) { dagu(tt, 'ff', lvl === 0 ? 0.34 : k === 0 ? 0.66 : 0.54); if (lvl > 0) hit('bd_ff', tt, k === 0 ? 0.4 : 0.28, 0.78); }
         if (MID.includes(k)) dagu(tt, 'mf', 0.36);
         if (lvl === 1 && [2, 7, 9, 14, 15].includes(k)) hit('tg_f', tt, k === 15 ? 0.15 : 0.12, 1, k % 2 ? 0.28 : -0.28);
         if (lvl === 2) { const acc = k % 4 === 2; hit(acc ? 'tg_f' : 'tg_p', tt, acc ? 0.17 : 0.1, 1, k % 2 ? 0.3 : -0.3); if (k === 4 || k === 12) dagu(tt, 'rim', 0.18); }
@@ -133,8 +133,8 @@ const MUSIC = (() => {
       if (!brk && lvl === 2) { if (b8 === 0 && bar) hit('bo_mf', t, 0.12, 1, bar % 2 ? 0.25 : -0.25); if (b8 === 6 && bar % 2) hit('bo_sh', t, 0.1, 1, 0.1); }
       // --- the ground: cello pulse (or pedal) on the root, the zheng ostinato
       if (lvl === 0 || brk) { if (b8 === 0 && bar % 2 === 0) drone(t, sdeg(root, 0, 35), e8 * 16, 0.16); }
-      else { const P = [0, 0, 5, 0, 0, 5, 4, 3]; cello(t, sdeg(root, P[b8], 35), b8 === 0 ? 0.3 : 0.2); }
-      if (lvl > 0 && !brk) zheng(humanize(t), sdeg(root, [0, 3, 5, 3, 6, 3, 5, 3][b8], 59), b8 === 0 ? 0.17 : 0.1);
+      else { const P = [0, 0, 5, 0, 0, 5, 4, 3]; cello(t, sdeg(root, P[b8], 35), b8 === 0 ? 0.38 : 0.27); }
+      if (lvl > 0 && !brk) zheng(humanize(t), sdeg(root, [0, 3, 5, 3, 6, 3, 5, 3][b8], 59), b8 === 0 ? 0.14 : 0.08);
       if (brk && b8 === 0 && bar % 2 === 0) zhengTrem(t, sdeg(root, 5, 47), e8 * 15, 0.12);
       // --- the voices
       if (lvl === 0) { if (s % 2 === 0) { const n = M.get((s / 2) % M.total); if (n) erhu(t, n.m - 12, n.len * e8 * 2, 0.22); } } // the tune at half speed, an octave down: something coming

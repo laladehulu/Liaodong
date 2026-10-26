@@ -113,7 +113,8 @@
     this.sun.color.set(L.sun); this.sun.intensity = L.sunI; this.hemi.color.set(L.hemiSky); this.hemi.groundColor.set(L.hemiGround); this.hemi.intensity = L.hemiI;
     this.sun.shadow.radius = 2; this.sun.shadow.bias = -0.0005; this.sun.shadow.normalBias = 0.05;
     // performance: plain PCF shadows from a smaller map, redrawn every other frame; render scale set by the quality level (F7)
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; const q = realQ(); // soft PCF: shadow edges on walls and boards blend instead of stair-stepping this.sun.shadow.mapSize.set(q === 2 ? 2048 : 1536, q === 2 ? 2048 : 1536); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    // soft PCF: shadow edges on walls and boards blend instead of stair-stepping
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; const q = realQ(); this.sun.shadow.mapSize.set(q === 2 ? 2048 : 1536, q === 2 ? 2048 : 1536); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     this.renderer.shadowMap.enabled = q > 0; this.renderer.shadowMap.autoUpdate = q === 2; this.shadowTick = 0;
     this.renderer.setPixelRatio([0.7, 0.85, 1][q] * Math.min(window.devicePixelRatio || 1, 1.25)); this.resize();
     // the air itself: dust and smoke thicken with distance
