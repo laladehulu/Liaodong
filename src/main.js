@@ -986,6 +986,7 @@ function frame(now) {
   if (hero && !hero.dead && Input.cmdMode && (state.sim.heroMode || state.sim.mode === 'assault') && !state.ended && !(typeof DEP !== 'undefined' && DEP.open)) toggleCmd(false);
   if (hero && hero.id !== state.lastHeroId) { state.lastHeroId = hero.id; }
   cmdCamUpdate(dt);
+  if (typeof SPEECH !== 'undefined' && SPEECH.pump) SPEECH.pump(dt); // speaker faces are drawn before the frame, never over it
   state.renderer.render(state.acc / DT, dt, { mode: Input.cmdMode || !hero || hero.dead ? 'cmd' : 'fp', yaw: Input.yaw, pitch: Input.pitch, selected: (Input.orderMode || state.zHeld) ? state.fpSel : state.selected, fpSel: state.fpSel, ghost: Drag.active ? Drag.ghost : state.fpGhost, ghostLine: Drag.active ? Drag.line : null });
   if (Input.orderMode || state.zHeld) { state.ordT = (state.ordT || 0) - dt; if (state.ordT <= 0) { state.ordT = 0.08; const lay = fpLayout(); state.fpGhost = lay ? lay.ghost : null; if (Input.orderMode) renderOrderMenu(); } }
   updateHUD(dt); storyTick(); heroHUD(); if (typeof SPEECH !== 'undefined') SPEECH.frame(dt); if (typeof zheHUD === 'function') zheHUD(dt);

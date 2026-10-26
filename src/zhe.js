@@ -15,20 +15,32 @@ const SPEECH = (() => {
   function listener() { const r = state.renderer; return r ? r.camera.position : null; }
   // say(unitId, zh, en, opts): opts.prio (0 bark … 3 story), opts.loud (scripted: heard farther), opts.radio (fall back to the radio panel), opts.who (name override), opts.shout
   // ---- the face of whoever is speaking: rendered once per man in the studio above the field, then cached ----
-  const faces = {};
-  function face(u) {
-    const r = state.renderer; if (!r || !u) return null; const key = u.id + ':' + ((u.look && u.look.id) || '');
-    if (faces[key] !== undefined) return faces[key];
-    const c = Object.assign({}, u, { st: S.ST_IDLE, stT: 0, blocking: false, aiming: false, speedNow: 0, walk: 0, mounted: false, mount: -1, downT: 0, flinchT: 0, dead: false, wounded: false, ctrl: -1, posT: 0, entT: 0 });
+  // Rendering a face costs one extra frame of the scene, so faces are queued, drawn at most one every 0.35 s, and drawn
+  // BEFORE the main frame (SPEECH.pump runs ahead of the renderer) so the studio shot is never left on screen. The result
+  // is kept as a small canvas and copied into the HUD with drawImage: no JPEG encoding, no stall.
+  const faces = {}, faceQ = []; let faceT = 0;
+  const faceKey = (u) => u.id + ':' + ((u.look && u.look.id) || '');
+  function face(u) { if (!u) return null; const key = faceKey(u); if (faces[key]) return faces[key]; if (!faceQ.some(q => q.key === key)) faceQ.push({ key, id: u.id }); return null; }
+  function renderFace(u, key) {
+    const r = state.renderer; if (!r) return;
+    const c = Object.assign({}, u, { st: S.ST_IDLE, stT: 0, blocking: false, aiming: false, speedNow: 0, walk: 0, mounted: false, mount: -1, downT: 0, flinchT: 0, dead: false, wounded: false, downed: false, ctrl: -1, posT: 0, entT: 0 });
     const Y = 420, prevC = r.cine, prevS = r.studio; r.studio = { id: u.id, u: c, x: 0, y: Y, z: 0, yaw: 0 };
     const hh = 1.62 * ((u.look && u.look.h) || 1); r.cine = { pos: [0.25, Y + hh + 0.05, 1.35], look: [0, Y + hh - 0.02, 0], fov: 28 };
-    let url = null; try { r.render(1, 0, { mode: 'cmd', yaw: 0, pitch: 0, selected: [] }); const cv = document.getElementById('c'); const t = document.createElement('canvas'); t.width = t.height = 112; const g = t.getContext('2d'); const W = cv.width, H = cv.height, s = Math.min(W, H) * 0.62; g.drawImage(cv, (W - s) / 2, (H - s) / 2, s, s, 0, 0, 112, 112); url = t.toDataURL('image/jpeg', 0.85); } catch (e) { }
-    r.studio = prevS; r.cine = prevC; faces[key] = url; return url;
+    try { r.render(1, 0, { mode: 'cmd', yaw: 0, pitch: 0, selected: [] }); const cv = document.getElementById('c'); const t = document.createElement('canvas'); t.width = t.height = 96; const g = t.getContext('2d'); const W = cv.width, H = cv.height, s = Math.min(W, H) * 0.62; g.drawImage(cv, (W - s) / 2, (H - s) / 2, s, s, 0, 0, 96, 96); faces[key] = t; } catch (e) { faces[key] = null; }
+    r.studio = prevS; r.cine = prevC;
+    for (const el of document.querySelectorAll('.facebox')) if (el._fk === key) paintFace(el, key);
   }
+  function paintFace(el, key) { const f = faces[key]; let cv = el.firstChild; if (!f) { el.classList.add('none'); return; } if (!cv) { cv = document.createElement('canvas'); cv.width = cv.height = 96; el.appendChild(cv); } cv.getContext('2d').drawImage(f, 0, 0); el.classList.remove('none'); }
+  function setFace(el, u) { el.classList.add('facebox'); el._fk = u ? faceKey(u) : ''; if (el.firstChild) el.firstChild.remove(); if (u) face(u); paintFace(el, el._fk); }
+  let warmFor = null;
+  function pump(dt) { faceT -= dt;
+    if (warmFor !== state.sim && state.sim && state.sim.tick > 45) { warmFor = state.sim; const m = Object.assign({}, typeof ZB !== 'undefined' && ZB ? ZB.map : {}, typeof ZC !== 'undefined' && ZC ? ZC.map : {}); prewarm(Object.keys(m)); } // the file's faces, early and one at a time
+    if (faceT > 0 || !faceQ.length) return; const q = faceQ.shift(); const u = unit(q.id); if (u) renderFace(u, q.key); faceT = 0.35; }
+  function prewarm(ids) { for (const id of ids) { const u = unit(+id); if (u) face(u); } }
   let cardEl = null, cardT = 0;
   function card(u, who, zh, en, dur) { // the dialogue card: face on the left, the words on the right
     if (!cardEl) { cardEl = document.createElement('div'); cardEl.id = 'dlgcard'; cardEl.innerHTML = '<div class="f"></div><div class="t"><b></b><span class="z"></span><span class="e"></span></div>'; document.body.appendChild(cardEl); }
-    const f = cardEl.firstChild, url = u ? face(u) : null; f.style.backgroundImage = url ? `url(${url})` : ''; f.classList.toggle('none', !url);
+    setFace(cardEl.firstChild, u);
     const t = cardEl.lastChild; t.children[0].textContent = who || ''; t.children[1].textContent = zh || ''; t.children[2].textContent = en || '';
     cardEl.classList.add('on'); cardT = dur || 5;
   }
@@ -51,15 +63,15 @@ const SPEECH = (() => {
     const key = u ? u.id : 'n:' + who; let s = stack.find(x => x.key === key);
     if (!s) { const el = document.createElement('div'); el.className = 'ce'; el.innerHTML = '<i></i><div><b></b><span class="z"></span><span class="e"></span></div>'; s = { key, el }; stack.push(s); }
     Object.assign(s, { tier, who, zh, en, t: 0, dur: dur || LIFE[tier] }); s.el.className = 'ce ' + tier;
-    const url = u ? face(u) : null; s.el.firstChild.style.backgroundImage = url ? `url(${url})` : ''; s.el.firstChild.className = url ? '' : 'none'; const tx = s.el.lastChild; tx.children[0].textContent = who; tx.children[1].textContent = zh || ''; tx.children[2].textContent = tier === 'story' ? (en || '') : (en || '').slice(0, 60);
+    setFace(s.el.firstChild, u); const tx = s.el.lastChild; tx.children[0].textContent = who; tx.children[1].textContent = zh || ''; tx.children[2].textContent = tier === 'story' ? (en || '') : (en || '').slice(0, 60);
     stack.sort((a, b) => RANK[a.tier] - RANK[b.tier] || a.t - b.t);
     while (stack.length > 4) { const w = stack.pop(); w.el.remove(); }
     stack.forEach(x => stackEl.appendChild(x.el));
   }
   function ticker(u, who, zh, en) {
     if (!tickEl) { tickEl = document.createElement('div'); tickEl.id = 'ticker'; document.body.appendChild(tickEl); }
-    const row = document.createElement('div'); row.className = 'tk'; const url = u ? face(u) : null;
-    row.innerHTML = `<i style="${url ? `background-image:url(${url})` : ''}"></i><b></b><span></span>`; row.children[1].textContent = who ? who.split(' ')[0] : ''; row.children[2].textContent = (zh ? zh + '  ' : '') + (en || '');
+    const row = document.createElement('div'); row.className = 'tk';
+    row.innerHTML = '<i></i><b></b><span></span>'; setFace(row.firstChild, u); row.children[1].textContent = who ? who.split(' ')[0] : ''; row.children[2].textContent = (zh ? zh + '  ' : '') + (en || '');
     tickEl.prepend(row); while (tickEl.children.length > 3) tickEl.lastChild.remove(); setTimeout(() => { row.classList.add('out'); setTimeout(() => row.remove(), 500); }, 4200);
   }
   let subT = 0;
@@ -169,7 +181,7 @@ const SPEECH = (() => {
     if (!heard && sqIds && sqIds.length) AUDIO.play(type === S.ORD_HOLD ? 'gong' : 'drum', undefined, 0, 0, 0.5);
   }
   const speaking = (id) => live.some(l => l.id === id);
-  return { say, frame, event, orderChain, nameOf, speaking, cycle, setLayout, note, get layout() { return layout; } };
+  return { say, frame, event, orderChain, nameOf, speaking, cycle, setLayout, note, pump, prewarm, get layout() { return layout; } };
 })();
 
 // ===== 浙兵 · The Zhejiang Company: a story campaign =====
