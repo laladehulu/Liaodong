@@ -27,7 +27,7 @@
   const EXTRA = [['X1', 'E'], ['X2', 'W'], ['X1', 'N'], ['X2', 'E'], ['X1', 'W'], ['X2', 'NW'], ['X1', 'NE'], ['X2', 'NW']];
   // what the quartermaster can send up from the road: [type, cost, how many companies the road holds]
   const SHOP = [['ashigaru', 25, 2], ['rifle_imp', 35, 2], ['yuanyang', 45, 1], ['rifle_spencer', 40, 1], ['cavalry', 50, 1], ['gatling', 60, 1]];
-  const MEND = 20, FALL = 20, WAVE_MAX = 180, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 40;
+  const MEND = 20, FALL = 20, WAVE_MAX = 180, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 55;
   const groups = {
     garrison: { team: 0, name: 'Tower garrison', zh: '墩軍', army: ['rifle_imp', 'yuanyang'], at: [0, 0, 0], dir: ['hold', 0, 2], stay: true },
     relief: { team: 0, name: 'Guanning relief', zh: '關寧援兵', army: ['cavalry', 'cavalry', 'cavalry', 'rifle_imp'], at: [0, -132, 0], reserve: true, dir: ['hold', 0, 20] },
