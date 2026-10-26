@@ -418,7 +418,7 @@ function jFinish(winner) {
   const fate = {}, near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
   for (const uid in ZB.map) { const r = JR[ZB.map[uid]]; if (!r) continue; const u = sim.units[uid];
     // the winners keep the field and carry in their wounded; after a defeat a man who cannot walk is left behind
-    fate[r.k] = u.dead ? 'dead' : (!won && u.wounded && u.helpedBy < 0 && !near(u, 4)) ? 'lost' : 'out'; }
+    fate[r.k] = u.dead ? 'dead' : (!won && u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 4)) ? 'lost' : 'out'; }
   for (const k of ZB.deadMe) fate[k] = 'dead';
   const meK = JS.me, alive = h && !h.dead, oldName = Object.assign({}, JS.name);
   if (ZB.cur === meK || ZB.cur === 'stranger') fate[meK] = alive ? 'out' : 'dead'; else fate[meK] = 'dead';

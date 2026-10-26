@@ -9,3 +9,4 @@
 - beijing fork: sim.js BATTLES.bjgate + planTerrain/genMap bjgate lines; render.js buildBeijing (new prototype) + 1-line call in buildStructures; shenji.js sj2 battle key
 - sj-ambush (fork): shenji.js new mission sjamb in <sj-missions> + flow lines; sim.js BATTLES new key 'sjvil' (+planTerrain/genMap lines if needed)
 - aidpost (fork): sim.js zCrawl/woundedAI/aiMedic + new Sim.prototype.aidPost/orderlyAI/zAid at wounded section, 1-line unitAI orderly hook; render.js carry viewmodel + aided/carried poses (guarded); main.js/zhe.js goal line + hudMarks aid marker
+- shoulders (fork): render.js drawFigure shoulder/uarm + gear sl/sr parts, real_gear.js shoulder plates

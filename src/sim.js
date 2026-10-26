@@ -161,6 +161,7 @@ const BATTLES = {
   abudali:  { name: 'Abudali Pass', jp: '阿布達里岡', when: 'April 1619', biome: 'winter', fog: 0.3, terrain: 0.45, features: ['pass'], hidden: true, desc: 'A narrow valley in the mountains east of Hetu Ala, its slopes thick with pine and late snow.' },
   bjgate:   { name: 'The Guangqu Gate', jp: '廣渠門', when: 'December 1629', biome: 'winter', fog: 0.15, terrain: 0.2, features: ['streets'], hidden: true, desc: 'The suburb outside the outer wall of Beijing. The wall and its gate towers stand behind, too big to see the end of.' },
   zroad:    { name: 'The road', jp: '道', when: '1619', biome: 'winter', fog: 0.2, terrain: 0.3, features: [], hidden: true, desc: 'A cart road through the Liaodong hills, a village by the way.' },
+  sjvil:    { name: 'A village east of Tongzhou', jp: '村', when: 'November 1629', biome: 'winter', fog: 0.22, terrain: 0.12, features: [], hidden: true, desc: 'A walled farming village on the Tongzhou road: courtyard houses either side of the street, a well in the middle.' },
   zcamp:    { name: 'Camp', jp: '營', when: '1619', biome: 'night', fog: 0.2, terrain: 0.25, features: [], hidden: true, desc: 'A night camp in the hills.' },
   siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
   bonari:   { name: 'Shanhai Pass', jp: '山海關', when: 'May 1644', biome: 'spring', fog: 0.25, terrain: 0.5, features: ['pass'], desc: 'The First Pass Under Heaven: a narrow gap between steep ridges, blocked by two lines of earthworks. Flanking over the slopes is slow and costly.' },
@@ -313,6 +314,7 @@ class Sim {
     if (b === 'bonari') L.pass = { r0: 24, r1: 56, h: 30 };
     if (b === 'siegecity') { L.swall = { z0: SG.z0, z1: SG.z1, h: SG.h, gate: SG.gate, ramps: [-60, -12, 12, 60] }; L.sditch = { zc: SG.ditchZ, w: SG.ditchW, depth: 2.6, bridge: SG.gate, fills: SG.fills.map((f, i) => ({ x: f[0], hw: f[1], done: false, key: i ? 'ditchE' : 'ditchW' })) }; }
     if (b === 'abudali') { L.pass = { r0: 15, r1: 46, h: 24 }; L.hills.push({ x: -34, z: 6, r: 30, h: 6 }); L.hills.push({ x: 30, z: -48, r: 26, h: 5 }); }
+    if (b === 'sjvil') { L.hills.push({ x: -130, z: 60, r: 70, h: 9 }); L.hills.push({ x: 130, z: -50, r: 70, h: 8 }); }
     if (b === 'zroad') { L.hills.push({ x: -105, z: -30, r: 70, h: 13 }); L.hills.push({ x: 110, z: 50, r: 75, h: 15 }); L.hills.push({ x: -95, z: 110, r: 50, h: 9 }); L.hills.push({ x: 0, z: 70, r: 30, h: 2.5 }); }
     if (b === 'bjgate') { L.hills.push({ x: -170, z: -40, r: 70, h: 5 }); L.hills.push({ x: 170, z: -90, r: 60, h: 4 }); }
     if (b === 'zcamp') { L.hills.push({ x: -90, z: 60, r: 70, h: 14 }); L.hills.push({ x: 100, z: -40, r: 80, h: 16 }); L.hills.push({ x: 0, z: 130, r: 70, h: 12 }); }
@@ -378,6 +380,13 @@ class Sim {
       for (let bx = -5; bx <= 5; bx++) for (let bz = -4; bz <= 1; bz++) { const x = 6 + bx * 21 + r.range(-2, 2), z = bz * 24 + 8 + r.range(-3, 3); if (Math.abs(x - 6) < 11 || r.next() < 0.3 || !clear(x, z, 6)) continue;
         const two = r.next() < 0.45; this.boxes.push({ x: x - (two ? 3.6 : 0), z, hw: two ? 3 : 5, hd: 3.2, h: r.range(3, 3.6), kind: 'house' }); if (two) this.boxes.push({ x: x + 4, z: z + r.range(-1, 1), hw: 3, hd: 3, h: r.range(2.8, 3.4), kind: 'house' }); keep.push({ x, z, r: 8 }); }
     }
+    if (B === 'sjvil') { // a north-China village: courtyard houses either side of one street, compound walls with gaps for the lanes, a well
+      this.deco.push({ kind: 'road', x: 0, w: 5 }); this.roadX = 0;
+      const H = [[-8, -18, 3, 3.2], [-8, -4, 3, 3], [-8, 12, 3.2, 3], [-8, 26, 3, 3], [8, -14, 3, 3.2], [8, 2, 3, 3], [8, 18, 3.2, 3], [8, 31, 3, 2.8], [-21, -10, 3, 3.5], [-21, 8, 3.2, 3], [-21, 24, 3, 3], [21, -6, 3, 3], [21, 12, 3.5, 3], [21, 28, 3, 3]];
+      for (const [x, z, hw, hd] of H) this.boxes.push({ x, z, hw, hd, h: 3.4, kind: 'house' });
+      const W = [[-14.5, 3, 0.3, 4], [14.5, -2, 0.3, 4], [-14.5, 19.5, 0.3, 3], [14.5, 23, 0.3, 3], [-9, 36, 4, 0.3], [9, 39, 4, 0.3], [-27, 14, 0.3, 7], [27, 4, 0.3, 7], [-21, -17, 3.5, 0.3], [21, -12, 3.5, 0.3], [3.2, 7, 0.6, 0.6]];
+      for (const [x, z, hw, hd] of W) this.boxes.push({ x, z, hw, hd, h: hw < 1 && hd < 1 ? 0.9 : 2.2, kind: 'wall' });
+      keep.push({ x: 0, z: 8, r: 38 }); keep.push({ x: 0, z: -50, r: 10 }); }
     if (B === 'zroad') { this.deco.push({ kind: 'road', x: 0, w: 6 }); this.roadX = 0;
       for (const [x, z, hw, hd] of [[-13, 22, 3.2, 2.6], [-14, 36, 2.8, 2.4], [-24, 30, 3, 2.6], [12.5, 26, 3, 2.5], [13.5, 41, 3.3, 2.7], [23, 33, 2.6, 2.4], [-12.5, 50, 2.6, 2.2]]) { this.boxes.push({ x, z, hw, hd, h: 3.3, kind: 'house' }); keep.push({ x, z, r: 6 }); }
       keep.push({ x: 0, z: 34, r: 16 }); }
@@ -427,7 +436,7 @@ class Sim {
     // cover: wooden mantlets (pavises) around objectives and across the middle of the field
     const mant = (x, z) => { if (waterAt(x, z) !== 0) return; for (const q of this.boxes) if (Math.abs(q.x - x) < q.hw + 2 && Math.abs(q.z - z) < q.hd + 1.5) return; this.boxes.push({ x, z, hw: 1.15, hd: 0.2, h: 1.35, kind: 'mantlet' }); keep.push({ x, z, r: 2 }); };
     if (this.scen) { for (const c of this.scen.cover) mant(c[0], c[1]); }
-    else if (B !== 'abudali' && B !== 'zcamp' && B !== 'siegecity') { for (const o of this.layout.objectives || []) for (const sd of [-1, 1]) for (const dx of [-5, 0, 5]) mant(o.x + dx + r.range(-1, 1), o.z + sd * (o.r + 2)); for (let i = 0; i < 14; i++) { const x = r.range(-90, 90), z = r.range(-45, 45); if (clear(x, z, 3)) { mant(x, z); mant(x + 2.6, z + r.range(-0.4, 0.4)); } } }
+    else if (B !== 'abudali' && B !== 'zcamp' && B !== 'siegecity' && B !== 'sjvil') { for (const o of this.layout.objectives || []) for (const sd of [-1, 1]) for (const dx of [-5, 0, 5]) mant(o.x + dx + r.range(-1, 1), o.z + sd * (o.r + 2)); for (let i = 0; i < 14; i++) { const x = r.range(-90, 90), z = r.range(-45, 45); if (clear(x, z, 3)) { mant(x, z); mant(x + 2.6, z + r.range(-0.4, 0.4)); } } }
     if (this.scen) for (const L of this.scen.ladders) this.ladders.push({ x: L[0], z: L[1], hd: L[2], up: false, prog: 0, hp: 0 });
     const treeN = B === 'bonari' ? 30 : B === 'abudali' ? 190 : B === 'zcamp' ? 120 : B === 'nagaoka' ? 70 : this.bdef.biome === 'winter' ? 110 : 150;
     for (let i = 0; i < treeN; i++) {
@@ -1321,7 +1330,7 @@ class Sim {
     for (let i = 0; i < enemies.length; i++) { const v = enemies[i]; if (v.inactive || (v.duelWith >= 0 && v.duelWith !== undefined)) continue; const dx = v.x - u.x, dz = v.z - u.z; let d2 = dx * dx + dz * dz;
       if (eng) { const n = eng[v.id] - (u.target === v.id ? 1 : 0); if (n >= 3) d2 *= 5; else if (n === 2) d2 *= 2.2; else if (n === 1) d2 *= 1.25; }
       if (this.xc && eng && this.spN && u.spaceOf !== v.id && (this.spN[v.id] || 0) >= this.xcLim(v)) d2 *= 4; // every space round him is taken: look along the line for a free one
-      if (this.xc && ranged && v.ctrl >= 0 && !this.players[v.ctrl].ai) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 3) d2 *= 8; } if (v.downed && this.story) continue; if (v.wounded) d2 *= v.downed ? 40 : 6; if (this.story && v.zfile && ranged) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 2) d2 *= 4; else if (sh === 1) d2 *= 1.8; } if (v.squad >= 0 && this.squads[v.squad].routing && !u.mounted) d2 *= 1.6; if (sq && sq.focus >= 0 && v.squad === sq.focus && ranged) d2 *= 0.45; if (d2 < bd) { bd = d2; best = v.id; } }
+      if (this.xc && ranged && v.ctrl >= 0 && !this.players[v.ctrl].ai) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 3) d2 *= 8; } if ((v.downed || v.noncomb) && this.story) continue; if (v.wounded) d2 *= v.downed ? 40 : 6; if (this.story && v.zfile && ranged) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 2) d2 *= 4; else if (sh === 1) d2 *= 1.8; } if (v.squad >= 0 && this.squads[v.squad].routing && !u.mounted) d2 *= 1.6; if (sq && sq.focus >= 0 && v.squad === sq.focus && ranged) d2 *= 0.45; if (d2 < bd) { bd = d2; best = v.id; } }
     return best;
   }
   aimedAt(id) { if (this.aimTick !== this.tick) { this.aimTick = this.tick; if (!this.aimN || this.aimN.length < this.units.length) this.aimN = new Int16Array(this.units.length + 64); else this.aimN.fill(0); for (const v of this.units) if (!v.dead && v.target >= 0 && isGun(v.def, v.weapon)) this.aimN[v.target]++; } return this.aimN[id]; }
@@ -1377,6 +1386,7 @@ class Sim {
     const def = u.def, sq = u.squad >= 0 ? this.squads[u.squad] : null;
     u.atkHeld = false; u.blockHeld = false;
     if (u.camp) { u.mx = 0; u.mz = 0; u.target = -1; return; } // a man at the fire
+    if (u.orderly) { this.orderlyAI(u); return; }
     if (u.wounded) { this.woundedAI(u); return; }
     if (this.story && u.team === this.mission.side && u.ctrl < 0 && !u.mounted && def.ai !== 'cannon' && this.aiMedic(u)) return;
     if (u.restT > this.tick && u.hp < u.def.hp * 0.6) u.hp += u.def.hp * 0.012 * DT * 30 / 30; // catching his breath in the second rank
@@ -3253,7 +3263,7 @@ Sim.prototype.zWound = function (k) {
 };
 Sim.prototype.helpWounded = function (u) { // E beside a downed or wounded comrade: haul him up, or get his arm over your shoulder
   if (u.dead || u.mounted) return false; let best = null, bd = 2.6;
-  for (const v of this.teamAlive[u.team]) { if (!v.wounded || v.helpedBy >= 0 || v === u) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } }
+  for (const v of this.teamAlive[u.team]) { if (!v.wounded || v.aided || v.helpedBy >= 0 || v === u) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } }
   if (!best) return false;
   if (best.downed) { if (best.reviveBy !== u.id) { best.reviveBy = u.id; best.reviveT = 0; this.events.push({ t: 'zrevive0', id: best.id, by: u.id }); } return true; }
   best.helpedBy = u.id; this.events.push({ t: 'zhelp', id: best.id, by: u.id }); return true;
@@ -3316,23 +3326,72 @@ Sim.prototype.aiMedic = function (u) {
 // a man down and waiting for help drags himself back toward his own people, slowly, and lies still when the enemy is
 // on top of him (playing dead); he stops once a comrade is within reach so whoever comes for him can find him
 Sim.prototype.zCrawl = function (u) {
-  if (this.tick % 6 === u.id % 6) { let best = null, bd = 45, foe = 99; const n = this.gatherNear(u.x, u.z, 45);
-    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.type === 'horse' || v.camp) continue; const d = len(v.x - u.x, v.z - u.z);
-      if (v.team !== u.team) { if (d < foe) foe = d; continue; } if (v.wounded || v.inactive) continue; const w = d - (v.squad === u.squad ? 6 : 0); if (w < bd) { bd = w; best = v; } }
-    u.crawlTo = best && foe > 3.2 && len(best.x - u.x, best.z - u.z) > 2.4 ? best.id : -1; u.crawling = u.crawlTo >= 0; }
-  if (!u.crawling) return; const v = this.units[u.crawlTo]; if (!v || v.dead) { u.crawling = false; return; }
-  const dx = v.x - u.x, dz = v.z - u.z, d = len(dx, dz); if (d < 2.4) { u.crawling = false; return; }
-  const sp = 0.45 * DT; u.x += dx / d * sp; u.z += dz / d * sp; u.y = terrainH(u.x, u.z); this.turnTo(u, atan2(dx, dz), 2 * DT);
+  if (this.tick % 6 === u.id % 6) { let best = null, bd = 45, foe = 99, near = false; const n = this.gatherNear(u.x, u.z, 45);
+    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.type === 'horse' || v.camp || v.noncomb) continue; const d = len(v.x - u.x, v.z - u.z);
+      if (v.team !== u.team) { if (d < foe) foe = d; continue; } if (v.wounded || v.inactive) continue; if (d < 2.4) near = true; const w = d - (v.squad === u.squad ? 6 : 0); if (w < bd) { bd = w; best = v; } }
+    // the aid post, when it is about as near as his own people, is where he drags himself
+    const A = this.aidPost(), dA = A ? len(A.x - u.x, A.z - u.z) : 1e9, dF = best ? len(best.x - u.x, best.z - u.z) : 1e9;
+    u.crawlAid = !!A && dA < 60 && dA < dF * 1.6 + 6; u.crawlTo = u.crawlAid ? -2 : best && !near ? best.id : -1;
+    u.crawling = foe > 3.2 && (u.crawlAid || (u.crawlTo >= 0 && !near)); }
+  if (!u.crawling) return; let tx, tz; if (u.crawlTo === -2) { const A = this.aidPost(); if (!A) { u.crawling = false; return; } tx = A.x; tz = A.z; if (len(tx - u.x, tz - u.z) < A.r) { this.zAid(u, -1); return; } }
+  else { const v = this.units[u.crawlTo]; if (!v || v.dead) { u.crawling = false; return; } tx = v.x; tz = v.z; }
+  const dx = tx - u.x, dz = tz - u.z, d = len(dx, dz); if (d < 2.4 && u.crawlTo !== -2) { u.crawling = false; return; }
+  const sp = 0.5 * DT; u.x += dx / d * sp; u.z += dz / d * sp; u.y = terrainH(u.x, u.z); this.turnTo(u, atan2(dx, dz), 2 * DT);
+};
+// ---- the aid post (story battles): a staffed tent behind your own line (the Ming 醫 of the camp, the Jin baggage) ----
+// It stands about thirty paces behind your file, away from the enemy, and moves back with the line each phase (or where
+// the mission's phase says, phases[i].aid / mission.aid = [x, z]). A wounded man brought or crawling there is handed to
+// the orderlies: out of the fight, and alive for the roll call.
+Sim.prototype.aidPost = function () {
+  const M = this.mission, mv = this.mv; if (!M || !M.soldier || M.camp || !mv || mv.ph < 0) return null;
+  if (this.aid && this.aid.ph === mv.ph) return this.aid;
+  const side = M.side | 0, P = M.phases[mv.ph] || {}, fix = P.aid || M.aid; let x, z;
+  if (fix) { x = fix[0]; z = fix[1]; }
+  else { let fx = 0, fz = 0, fn = 0, ex = 0, ez = 0, en = 0; const me = this.players.find(p => !p.ai); const fq = me && me.soldierSq !== undefined ? this.squads[me.soldierSq] : null;
+    if (fq && fq.alive) { fx = fq.cx; fz = fq.cz; fn = 1; } else for (const u of this.teamAlive[side]) { if (u.wounded || u.noncomb || u.inactive || u.def.ai === 'cannon') continue; fx += u.x; fz += u.z; fn++; }
+    if (fn) { fx /= fn; fz /= fn; } else { fx = M.start[0]; fz = M.start[1]; }
+    for (const u of this.teamAlive[1 - side]) { if (u.inactive || len(u.x - fx, u.z - fz) > 140) continue; ex += u.x; ez += u.z; en++; }
+    let dx, dz; if (en) { dx = fx - ex / en; dz = fz - ez / en; } else { const y = (M.start[2] || 0) + PI; dx = sin(y); dz = cos(y); }
+    const l = len(dx, dz) || 1; dx /= l; dz /= l; x = fx + dx * 30; z = fz + dz * 30;
+    for (let k = 0; k < 6 && (waterAt(x, z) > 0 || this.boxes.some(b => Math.abs(x - b.x) < b.hw + 3 && Math.abs(z - b.z) < b.hd + 3)); k++) { x -= dx * 5; z -= dz * 5; } }
+  x = clamp(x, -HALF + 12, HALF - 12); z = clamp(z, -HALF + 12, HALF - 12);
+  const old = this.aid; this.aid = { ph: mv.ph, x, z, r: 5.5, n: old ? old.n : 0, ord: old ? old.ord : [], name: M.aidName || (side === 1 ? ['輜重', 'the baggage'] : ['醫帳', 'the aid tent']) };
+  if (!old) { const t = M.side === 1 ? 'ashigaru' : 'ashigaru'; for (let k = 0; k < 3; k++) { const o = this.addUnit(t, side, -1, -1, x + (k - 1) * 2.2, z + 1.5, 0); o.def = defFor(t, side); o.hp = o.def.hp; o.weapon = ''; o.orderly = true; o.noncomb = true; o.fetch = -1; o.slot = k; this.aid.ord.push(o.id); } }
+  // the men already in the tent's care go with it
+  for (const u of this.units) if (u.aided && !u.dead) { const k = u.aidSlot | 0; u.x = u.px = x - 3 + (k % 4) * 1.6; u.z = u.pz = z - 2.5 - Math.floor(k / 4) * 2.2; u.y = u.py = terrainH(u.x, u.z); }
+  this.events.push({ t: 'aidpost', x, z }); return this.aid;
+};
+Sim.prototype.zAid = function (u, by) { // handed to the orderlies: laid on a mat in the tent's lee, out of the fight
+  const A = this.aidPost(); if (!A) return; const k = A.n++; u.aided = true; u.aidSlot = k; u.wounded = true; u.downed = false; u.helpedBy = -1; u.reviveBy = -1; u.crawling = false; u.noncomb = true; u.bleed = 0; u.medic = -1;
+  u.x = u.px = A.x - 3 + (k % 4) * 1.6; u.z = u.pz = A.z - 2.5 - Math.floor(k / 4) * 2.2; u.y = u.py = terrainH(u.x, u.z); u.yaw = PI * 0.5; u.mx = 0; u.mz = 0; u.st = ST_IDLE; u.stT = 0; u.downT = 0.3;
+  for (const o of this.units) if (o.orderly && o.fetch === u.id) o.fetch = -1;
+  this.events.push({ t: 'zaid', id: u.id, by, x: u.x, z: u.z, file: !!u.zfile });
+};
+// the orderlies stand at the tent; when a man lies wounded within a short dash of it and no enemy is on him, one goes
+// out, gets him up with an arm over his shoulder and walks him back
+Sim.prototype.orderlyAI = function (u) {
+  u.target = -1; u.blocking = false; u.aiming = false; if (u.st !== ST_IDLE) { u.st = ST_IDLE; u.stT = 0; } const A = this.aidPost(); if (!A) { u.mx = 0; u.mz = 0; return; }
+  const go = (x, z, sp) => { const d = len(x - u.x, z - u.z); if (d > 0.6) { const y = this.steerFoot(u, x, z, sp); this.turnTo(u, y, 6 * DT); } else { u.mx = 0; u.mz = 0; } return d; };
+  if (u.fetch >= 0) { const v = this.units[u.fetch];
+    if (!v || v.dead || v.aided || !v.wounded || (v.helpedBy >= 0 && v.helpedBy !== u.id) || (v.reviveBy >= 0 && v.reviveBy !== u.id)) { if (v && v.helpedBy === u.id) v.helpedBy = -1; u.fetch = -1; }
+    else if (v.helpedBy === u.id) { go(A.x, A.z, u.def.speed * 0.55); return; }
+    else { if (go(v.x, v.z, u.def.speed * 0.9) < 1.6) { v.downed = false; v.reviveBy = -1; v.crawling = false; v.bleed = 0; v.downT = 0; v.helpedBy = u.id; this.events.push({ t: 'zcollect', id: v.id, by: u.id }); } return; } }
+  if ((this.tick + u.id) % 15 === 0) { let best = null, bd = A.r + 18; for (const v of this.teamAlive[u.team]) { if (!v.wounded || v.aided || v.noncomb || v.helpedBy >= 0 || v.reviveBy >= 0 || v.ctrl >= 0) continue; if (this.units.some(o => o.orderly && o !== u && o.fetch === v.id)) continue; const d = len(v.x - A.x, v.z - A.z); if (d < bd) { bd = d; best = v; } }
+    if (best) { let ed = 1e9; for (const e of this.teamAlive[1 - u.team]) { if (e.inactive) continue; const d = len(e.x - best.x, e.z - best.z); if (d < ed) ed = d; if (ed < 10) break; } if (ed >= 10) { u.fetch = best.id; return; } } }
+  const k = u.slot | 0; go(A.x + (k - 1) * 2.2, A.z + 1.6, u.def.speed * 0.6); if (len(A.x + (k - 1) * 2.2 - u.x, A.z + 1.6 - u.z) < 0.8) this.turnTo(u, u.yaw + 0.01, DT);
 };
 Sim.prototype.woundedAI = function (u) {
   u.target = -1; u.blocking = false; if (u.st !== ST_IDLE && u.st !== ST_STUN) { u.st = ST_IDLE; u.stT = 0; }
+  if (u.aided) { u.mx = 0; u.mz = 0; u.downT = Math.max(u.downT, 0.2); return; }
   if (u.downed) { u.mx = 0; u.mz = 0; u.downT = Math.max(u.downT, 0.2);
     if (u.reviveBy >= 0) { const r = this.units[u.reviveBy]; if (!r || r.dead || r.wounded || len(r.x - u.x, r.z - u.z) > 2.9) { u.reviveBy = -1; u.reviveT = 0; } else if (++u.reviveT >= 45) { this.zRevive(u, r.id); return; } }
     if (--u.bleed <= 0) { u.downed = false; this.kill(u, 0, 0, 0, 'bleed', -1); return; }
     if (u.reviveBy < 0 && u.ctrl < 0) this.zCrawl(u); return; }
   const h = u.helpedBy >= 0 ? this.units[u.helpedBy] : null; if (h && h.dead) u.helpedBy = -1;
   if (u.helpedBy < 0 || !h) { u.mx = 0; u.mz = 0; return; }
-  const bx = h.x - sin(h.yaw) * 1.3 + cos(h.yaw) * 0.5, bz = h.z - cos(h.yaw) * 1.3 - sin(h.yaw) * 0.5, d = len(bx - u.x, bz - u.z);
+  { const A = this.aidPost(); if (A && len(u.x - A.x, u.z - A.z) < A.r) { this.zAid(u, h.id); return; } }
+  // his arm over the helper's shoulder: at the helper's left side, half a pace back, leaning on him
+  const bx = h.x - sin(h.yaw) * 0.25 - cos(h.yaw) * 0.55, bz = h.z - cos(h.yaw) * 0.25 + sin(h.yaw) * 0.55, d = len(bx - u.x, bz - u.z);
   if (d > 0.5) { const y = this.steerFoot(u, bx, bz, u.def.speed * (d > 4 ? 0.8 : 0.62)); this.turnTo(u, y, 4 * DT); } else { u.mx = 0; u.mz = 0; this.turnTo(u, h.yaw, 3 * DT); }
 };
 // a night camp: you, your file around the fire, and the tents
@@ -3369,6 +3428,7 @@ Sim.prototype.missionThink = function () {
   if (M.beacon && this.beaconTick) { this.beaconTick(); if (this.mwin !== undefined) return; }
   const mv = this.mv;
   if (mv.ph < 0) { mv.ph = 0; mv.t0 = this.tick; this.mStart(); }
+  if (M.soldier && this.tick % 15 === 0) this.aidPost();
   const P = M.phases[mv.ph], el = (this.tick - mv.t0) / 30;
   for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k] && el >= t) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }
   for (const [t, a] of P.at || []) { const k = mv.ph + ':at:' + t; if (!mv.ats[k] && el >= t) { mv.ats[k] = 1; this.mAct(a); } }

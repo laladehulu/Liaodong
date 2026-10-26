@@ -95,6 +95,49 @@ const SJ_MISSIONS = (() => { const PI = Math.PI; const cartRow = (z, xs) => xs.m
     ],
     win: 'You got back to Beijing.',
   },
+  // ----- between Shunyi and the gate: a forage party ambushed in a village east of Tongzhou -----
+  sjamb: {
+    title: '村 · The village', year: 'November 1629', battle: 'sjvil', side: 0, soldier: { group: 'sjf' }, hidden: true, ch: 'sja',
+    brief: 'Falling back on Beijing after Shunyi, the army is starving. Your team is sent with a forage party into a village east of Tongzhou. The Jin have been burning the villages around the capital.',
+    start: [0, -58, 0],
+    zones: [{ key: 'well', x: 0, z: 6, r: 7, name: 'The well' }, { key: 'south', x: 0, z: -66, r: 12, name: 'The south road' }],
+    forts: [[-3.6, -9, 0.5, 1.9, 1.5, 'mantlet'], [4, 23, 0.5, 1.9, 1.5, 'mantlet']],
+    labels: { samurai: ['Jin raiders', '金兵'], byakkotai: ['Mongol raiders', '蒙古兵'] },
+    groups: {
+      sjf: { team: 0, name: 'Captain Cui Ying', zh: '崔英', army: ['rifle_spencer'], at: [0, -58, 0], dir: ['hold', 0, -54], stay: true },
+      forage: { team: 0, name: 'The forage party', zh: '採糧隊', army: ['ashigaru'], at: [-4, -64, 0], dir: ['hold', -4, -60], stay: true, n: 6 },
+      west: { team: 1, name: 'Raiders in the courtyards', zh: '金兵', army: ['samurai', 'samurai'], at: [-33, 8, PI / 2], reserve: true, n: 10 },
+      east: { team: 1, name: 'Raiders behind the houses', zh: '金兵', army: ['samurai', 'archer'], at: [33, 2, -PI / 2], reserve: true, n: 10 },
+      north: { team: 1, name: 'More raiders', zh: '蒙古兵', army: ['byakkotai', 'samurai'], at: [0, 48, PI], reserve: true, n: 10 },
+      horse: { team: 1, name: 'Jin horsemen', army: ['cavalry'], at: [-46, -36, PI / 2], reserve: true, n: 4 },
+    },
+    phases: [
+      { title: '一 · 空村 · The empty village', goal: 'Search the village with your team', text: 'No smoke, no dogs. Search it.', show: ['well'],
+        start: [['dir', 'sjf', 'hold', 0, 4], ['dir', 'forage', 'hold', -3, -6]],
+        obj: { all: [{ reach: 'well' }, { survive: 26 }] },
+        say: [[4, 'sj_hu', 'Quiet. No dogs. No smoke from the chimneys.', '太靜了。沒有狗叫，煙囪也沒煙。'],
+          [10, 'sj_qian', 'A village with no dogs has somebody hiding in it.', '沒狗叫的村子，一定藏著人。'],
+          [16, 'sj_ma', 'Millet in that barn. I can smell it.', '那個倉裡有小米。我聞得到。'],
+          [21, 'sj_tian', 'There\'s a child\'s shoe in the street.', '路上有一隻小孩的鞋。']] },
+      { title: '二 · 伏 · Ambush', goal: 'Fire point-blank, then club them', text: 'They come over the walls. Fire into their faces.',
+        start: [['release', 'east'], ['dir', 'east', 'hold', 2, 4], ['calm', 'east', 14], ['dir', 'sjf', 'hold', 0, 5], ['dir', 'forage', 'hold', 0, -2]],
+        obj: { survive: 55 }, waves: [[7, 'west', ['hold', -2, 6]]], at: [[8, ['calm', 'west', 14]]],
+        say: [[1, 'sj_gao', 'Over the walls! Both sides!', '翻牆過來了！兩邊都有！'], [4, 'sj_hu', 'Back to back round the well! Fire into their faces!', '圍著井背靠背！對著臉放！'],
+          [13, 'sj_lin', 'Empty? Turn the gun round and swing!', '打空了？倒過來掄！'], [24, 'sj_wu', 'Ha! Like threshing millet!', '哈！跟打穀子一樣！'],
+          [38, 'sj_zhao', 'One came out of the barn! The barn!', '倉裡又出來一個！倉裡！'], [48, 'sj_song', 'They were waiting for us. They knew we would be hungry.', '他們在等我們。他們知道我們會餓。']] },
+      { title: '三 · 巷戰 · In the lanes', goal: 'Hold the street by the well', text: 'More of them from the north lane.',
+        start: [['release', 'north'], ['dir', 'north', 'hold', 0, 8], ['calm', 'north', 14]],
+        obj: { survive: 45 }, at: [[38, ['break', 'west']], [39, ['break', 'east']], [41, ['break', 'north']]],
+        say: [[1, 'lookout', 'The north lane! Mongols!', '北邊巷子！蒙古兵！'], [6, 'sj_hu', 'Don\'t go into the houses after them! Stay in the street!', '別進屋追！守在街上！'],
+          [20, 'sj_tian', 'Where is the child? Whose shoe was it?', '那孩子呢？那是誰的鞋？'], [40, 'sj_hu', 'They\'re running. Let them go. Count your men.', '跑了。讓他們跑。點人數。']] },
+      { title: '四 · 出村 · Out of the village', goal: 'Get your team out by the south road', text: 'Horsemen will come. Take the wounded and go.', show: ['south'], hide: ['well'],
+        start: [['dir', 'sjf', 'hold', 0, -64], ['dir', 'forage', 'hold', 0, -66], ['release', 'horse'], ['dir', 'horse', 'hold', -10, -40], ['calm', 'horse', 20]],
+        obj: { extract: 'south' }, limit: 240, fail: 'The horsemen cut the road south.',
+        say: [[2, 'sj_ma', 'Leave the millet. Carry the men.', '小米不要了。抬人。'], [10, 'lookout', 'Horsemen in the field to the west!', '西邊地裡有馬兵！'],
+          [16, 'sj_hu', 'Walk. Wounded in the middle. Guns outward.', '走。傷的在中間，銃口朝外。']] },
+    ],
+    win: 'You brought the team out of the village.',
+  },
   // ----- chapter two: the Guangqu Gate, the twentieth day of the eleventh month (December 1629) -----
   sj2: {
     title: '廣渠門 · The Guangqu Gate', year: 'December 1629', battle: 'bjgate', side: 0, soldier: { group: 'sjf' }, hidden: true, ch: 'sj2',
@@ -424,6 +467,7 @@ const SJBAT = {
   battle1: ['sj1', '順義 · Shunyi', 'November 1629. Your team marches behind the carts. Stay with your team: the chief calls the drill. Fire when the drum rolls, then swing the empty gun.', [['sjf', 'sjf'], ['mangui', 'mangui']]],
   battle2: ['sj2', '廣渠門 · The Guangqu Gate', 'The twentieth day of the eleventh month. Before the Guangqu Gate with Yuan Chonghuan\'s Liaodong men. Fire by ranks; never all at once.', [['sjf', 'sjf'], ['yuan', 'yuan'], ['zu', 'zu']]],
   battle3: ['sj3', '長山 · Changshan', 'October 1631. The cart camp on the long hill. Hold the north carts with your team.', [['sjf', 'sjf'], ['zhang', 'zhang']]],
+  battleA: ['sjamb', '村 · The village', 'A village east of Tongzhou, on the road back to Beijing. Search it with your team. Point-blank, the three barrels; then turn the gun round (Q) and swing it.', [['sjf', 'sjf']]],
   drill: ['sjdrill', '校場 · The drill ground', 'The autumn review. Stay with your team and march on the drum. Left mouse fires the three barrels one after another; R reloads.', [['sjf', 'sjf']]],
 };
 function sjBattle(scene) {
@@ -434,6 +478,8 @@ function sjBattle(scene) {
   const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = sIdx(ZS.me);
   ZS.team.forEach((k, i) => { if (k === ZS.me || !ZS.alive[k]) return; let id = q.unitIds[i]; if (id === undefined || used[id]) id = q.unitIds.find(x => !used[x]); if (id === undefined) return; used[id] = 1; ZB.map[id] = sIdx(k); });
   for (const uid in ZB.map) sDress(sim.units[uid], ZB.map[uid]);
+  // only the living men of the team take the field: the places of the dead stay empty until new drafts come (no strangers)
+  { let n = 0; for (const id of q.unitIds) { const u = sim.units[id]; if (ZB.map[id] !== undefined || u.dead) { if (!u.dead) n++; continue; } u.dead = true; u.hp = 0; u.inactive = true; u.trimmed = true; sim.total[u.team]--; } q.count = n; q.aliveCount = n; }
   for (const [g, k] of B[3]) { const G = sim.mg[g]; if (G) sDress(sim.units[sim.players[G.p].heroId], sIdx(k)); }
   document.body.classList.add('sjstory'); sjVM(); sjProps(M);
   if (scene === 'drill') setTimeout(() => storyCard(B[2], B[1]), 11000);
@@ -484,10 +530,10 @@ function sjProps(M) {
 // a battle is over: who came out, who is dead, who is missing
 function sjFinish(winner) {
   const sim = state.sim, h = localHero(); if (!ZB) return; const M = sim.mission, won = winner === M.side, scene = ZB.scene;
-  const z = sim.missionZone(scene === 'battle1' ? 'road' : scene === 'battle3' ? 'river' : 'nowhere'); const near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
+  const z = sim.missionZone(scene === 'battle1' ? 'road' : scene === 'battle3' ? 'river' : scene === 'battleA' ? 'south' : 'nowhere'); const near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
   const fate = {};
   for (const uid in ZB.map) { const r = SR[ZB.map[uid]]; if (!r) continue; const u = sim.units[uid]; if (u.dead) { fate[r.k] = 'dead'; continue; }
-    const inZ = z && Math.hypot(u.x - z.x, u.z - z.z) < z.r + 12, left = u.wounded && u.helpedBy < 0 && !near(u, 5) && !inZ;
+    const inZ = z && Math.hypot(u.x - z.x, u.z - z.z) < z.r + 12, left = u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 5) && !inZ;
     fate[r.k] = left && (z || !won) ? 'lost' : (!z ? won || near(u, 14) : inZ || near(u, won ? 30 : 12)) ? 'out' : 'lost'; }
   for (const k of ZB.deadMe || []) fate[k] = 'dead';
   if (fate[ZS.me] === undefined) fate[ZS.me] = h && !h.dead ? 'out' : 'dead';
@@ -496,7 +542,7 @@ function sjFinish(winner) {
   if (ZB.cur && ZB.cur !== ZS.me && ZB.cur !== 'stranger' && fate[ZS.me] === 'dead') { const nk = ZB.cur; ZS.oldName = ZS.name; sjName(); ZS.me = nk; ZS.name = { zh: sRow(nk).zh, en: sRow(nk).en }; fate[nk] = 'out'; }
   ZS.lastDead = [];
   for (const k in fate) { ZS.fate[k] = fate[k]; ZS.alive[k] = fate[k] === 'out'; if (fate[k] !== 'out') ZS.lastDead.push(k); }
-  const B = { drill: ['camp0', null], battle1: ['ch2', 'back in Beijing'], battle2: ['ch3', 'before the gate'], battle3: ['end', 'across the river'] }[scene];
+  const B = { drill: ['camp0', null], battle1: ['amb', 'back from Shunyi'], battleA: ['ch2', 'back in Beijing'], battle2: ['ch3', 'before the gate'], battle3: ['end', 'across the river'] }[scene];
   ZS.stage = B[0]; zSave();
   if (scene === 'drill') { zCards([{ title: '出征 · Marching out', year: 'The eleventh month of 1629', p: ['The Jin army is through the Great Wall. Zunhua falls; the old general Zhao Shuaijiao, riding to its relief from Shanhai Pass, is killed outside it.', 'The capital camps are sent out to meet the raiders before they reach the walls. Your company goes with Man Gui\'s horsemen from Datong, north-east to Shunyi.'], btn: 'Make camp →' }], () => sjGo('camp0')); return; }
   const outN = ZS.team.filter(k => ZS.alive[k]).length, names = ZS.lastDead.map(k => sRow(k)).filter(Boolean);
@@ -506,6 +552,7 @@ function sjFinish(winner) {
   $('btnNext').onclick = () => { $('result').hidden = true; zCards(SJAFTER[scene]().concat([{ title: '隊 · Your team', year: `${outN} of ten`, html: sjTeamList(B[1]), btn: B[0] === 'end' ? 'Epilogue →' : 'Go on →' }]), () => sjGo(B[0])); };
 }
 const SJAFTER = {
+  battleA: () => [{ title: '村 · The village', year: 'The eleventh month of 1629', p: ['You came back without the millet. The forage parties that went out that week mostly came back the same way, or not at all: the Jin were living off the same villages, and burning what they could not carry.', 'Nobody found the child.'], zh: '金兵四出焚掠，京畿諸村一空。' }],
   battle1: () => [{ title: '順義 · Shunyi', year: 'The eleventh month of 1629', p: ['Man Gui and Hou Shilu were beaten at Shunyi and fell back on Beijing. The Jin rode on, burning the villages around the capital.', 'Three days later Yuan Chonghuan arrived with nine thousand Liaodong horsemen. He had ridden round the Jin army to put himself between it and the city.'], zh: '滿桂、侯世祿戰順義，敗績。' }],
   battle2: () => [{ title: '廣渠門 · The Guangqu Gate', year: 'The twentieth day of the eleventh month', p: ['Yuan Chonghuan\'s men fought outside the Guangqu Gate from noon until dark, and drove the Jin back over the canal. Yuan was in the fight himself; arrows stuck in his armour like the quills of a hedgehog.', 'The same day, outside the Desheng Gate, Man Gui fought under the walls, and the guns on the wall fired into his own men.'], zh: '兩肋如蝟，賴有重甲不透。' },
     { title: '督師 · The Governor', year: 'Winter 1629 – autumn 1630', p: ['The Jin let it be known that Yuan had a secret pact with them. Ten days after the battle the Chongzhen Emperor called Yuan into the palace and arrested him. Zu Dashou took the Liaodong army and rode east in fury. Man Gui was given the command and was killed outside the Yongding Gate a few weeks later.',
@@ -529,6 +576,7 @@ function sjStart(scene) {
   if (scene === 'ch2' || scene === 'ch3') { const ch = scene === 'ch2' ? 1 : 2; if (ZS.refilled !== scene) { sjRefill(ch); ZS.refilled = scene; zSave(); }
     const nc = sjNewMenCard(); const C = scene === 'ch2' ? [{ title: '京城 · The capital', year: 'The eleventh month of 1629', p: ['The gates of the inner city are shut. Your company is quartered in the outer city, under the Guangqu Gate, where the road comes in from the east.'] }] : [{ title: '大凌河 · Dalinghe', year: 'Autumn 1631', p: ['Two years on. The team marches north-east up the coast road, past Shanhai Pass and Ningyuan, with Zhang Chun\'s relief army.'] }];
     zCards(C.concat(nc ? [nc] : []), () => { ZS.stage = scene === 'ch2' ? 'camp1' : 'camp2'; zSave(); sjStart(ZS.stage); }); return; }
+  if (scene === 'amb') return zCards([{ title: '採糧 · Forage', year: 'Three days after Shunyi', p: ['The army falls back on Beijing with nothing to eat. The quartermasters send gun teams out with the forage parties.', 'Your team is told to bring back millet from a village east of Tongzhou. Smoke stands over half the villages on the plain.'], btn: 'Into the village →' }], () => { ZS.stage = 'battleA'; zSave(); sjGo('battleA'); });
   if (/^camp[012]$/.test(scene)) return sjCamp(+scene[4]);
   if (SJBAT[scene]) return sjBattle(scene);
   if (scene === 'end' || scene === 'done') return sjEnd();
