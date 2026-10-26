@@ -1131,7 +1131,7 @@ class Renderer {
     rifle.add(bx(0.04, 0.05, 0.22, wood, 0, -0.04, 0.0));
     rifle.add(bx(0.034, 0.07, 0.3, wood, 0, -0.1, 0.22, 0.38));
     rifle.add(bx(0.008, 0.024, 0.012, brass, 0, 0.022, 0)); rifle.add(bx(0.006, 0.02, 0.006, brass, 0, 0.022, -1.1));
-    rifle.add(bx(0.012, 0.012, 0.09, brass, 0.03, 0.02, -0.06, -0.8)); rifle.add(bx(0.016, 0.016, 0.016, glow, 0.03, 0.05, -0.1));
+    rifle.add(bx(0.012, 0.012, 0.09, brass, 0.03, 0.02, -0.06, -0.8)); rifle.add(bx(0.016, 0.016, 0.016, glow, 0.03, 0.05, -0.1)); this.vmNearEye = rifle.children.slice(-2);
     rifle.add(bx(0.012, 0.012, 0.28, blade, 0, 0.0, -1.24));
     const breech = new THREE.Group(); breech.position.set(0.026, 0.004, -0.13); breech.add(bx(0.03, 0.006, 0.03, brass, 0, 0.006, 0)); rifle.add(breech); this.vmBreech = breech;
     const xbar = new THREE.Group(); xbar.add(bx(0.74, 0.024, 0.034, wood, 0, -0.005, -0.92)); xbar.add(bx(0.006, 0.006, 0.5, new THREE.MeshLambertMaterial({ color: 0xe8e2cc }), 0.19, 0, -0.72, 0, 0.72)); xbar.add(bx(0.006, 0.006, 0.5, new THREE.MeshLambertMaterial({ color: 0xe8e2cc }), -0.19, 0, -0.72, 0, -0.72)); xbar.visible = false; rifle.add(xbar); this.vmXbar = xbar;
@@ -2182,6 +2182,7 @@ class Renderer {
     vm.rotation.set(st.rot.x + this.recoil * 0.3 + st.lagY * 2 * ads - jo * 0.22, st.rot.y + st.lagX * 1.5 * ads, st.rot.z + this.recoilRoll * 0.1 + jr * 0.5);
     // moving parts
     this.vmBreech.rotation.z = -2.0 * breechOpen;
+    if (!(this.vmSj && this.vmSj.visible)) { const sight = hero.aiming && hero.st !== ST_RELOAD; if (this.vmNearEye) for (const m of this.vmNearEye) m.visible = !sight; this.vmBreech.visible = !sight; } // down the sights the brass serpentine and the match sit right at your eye: leave them out
     this.vmCyl.position.x = -0.04 * cylOut;
     this.vmCart.visible = cart;
     this.vmRod.visible = rod; if (rod) { this.vmRod.position.copy(st.rh).add(T.v.set(0, 0, 0.45)); }

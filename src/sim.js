@@ -3917,7 +3917,10 @@ Sim.prototype.siegeThink = function () {
   for (const f of TERR.sditch.fills) { if (f.done) continue; const z = this.missionZone(f.key); if (z && z.owner === A) { f.done = true; this.sgRewater(f); nav = true; this.events.push({ t: 'sgfill', x: f.x, z: TERR.sditch.zc }); } }
   // engines: pushed by the besiegers behind them, hacked at and burned by the defenders
   for (const e of sg.engines) { if (e.hp <= 0) continue; const S = SGE[e.kind];
-    const pushers = this.sgCount(e.x, e.z - S.hd - 1.5, 6, A), foes = this.sgCount(e.x, e.z, S.hw + 2.5, D); e.push = pushers;
+    // every engine comes with its own crew sheltering behind it (the men who push it are not the company that escorts
+    // it); a badly damaged engine has lost its crew and moves only if soldiers lay hands on it
+    const crew = e.hp > e.max * 0.3 ? e.need : 0;
+    const pushers = this.sgCount(e.x, e.z - S.hd - 1.5, 6, A) + crew, foes = this.sgCount(e.x, e.z, S.hw + 2.5, D); e.push = pushers; e.crew = crew;
     if (foes) this.sgHurt(e, foes * 5);
     if (e.burn > 0) { e.burn -= 0.5; this.sgHurt(e, e.kind === 'tower' ? 28 : 22); if (this.tick % 45 === 0) this.events.push({ t: 'sgburn', x: e.x, z: e.z, kind: e.kind }); }
     { const c = this.fireCell(e.x, e.z); if (c >= 0 && this.fireState[c] === 1 && e.burn < 2) e.burn = 4; }
@@ -4000,7 +4003,12 @@ Sim.prototype.siegeDirs = function () {
   // every time an engine is hit or a ladder falls
   const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false, 'ram']);
   eng('tower').forEach((t, i) => jobs.push(t.docked ? [t.x, W.z0 + 2.5, false, 'tw' + t.id] : [t.x, t.z - 5, false, 'tw' + t.id]));
-  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, false, 'z' + k]; }); jobs.unshift(...dz, ...dz.map(j => [j[0], j[1], false, j[3] + 'b'])); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
+  if (s === 0) { // three lanes: west (its ditch, then its tower), centre (the ram), east; extra companies take the ditches and the carts
+    const tw = eng('tower'), lane = (k, t) => { const z = this.missionZone(k); return z.owner !== A || !t ? [z.x, z.z] : [t.x, t.z - 5]; };
+    jobs.length = 0; const W0 = lane(M.sectors[0][0], tw.find(t => t.lane < 0)), E0 = lane(M.sectors[0][1], tw.find(t => t.lane > 0));
+    jobs.push([W0[0], W0[1], false, 'LW'], ram ? [ram.x, ram.z - 5, false, 'ram'] : [0, TERR.sditch.zc - 8, false, 'LC'], [E0[0], E0[1], false, 'LE']);
+    for (const k of M.sectors[0]) { const z = this.missionZone(k); jobs.push([z.x, z.z, false, 'z' + k]); }
+    for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
   else { sg.lads.forEach((L, i) => jobs.push(L.up ? [L.x, W.z0 + 2.5, false, 'ld' + i] : [L.x, W.z0 - 3, false, 'ld' + i])); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false, 'ct' + c.id]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false, 'gate']); }
   const load = {}; for (const g of att) { const G = this.mg[g]; if (G.jid && G.jsec === s && jobs.some(j => j[3] === G.jid)) load[G.jid] = (load[G.jid] || 0) + 1; else { G.jid = null; G.jsec = s; } }
   att.forEach((g) => { const G = this.mg[g], p = this.players[G.p]; if (!jobs.length) return;

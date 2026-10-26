@@ -25,3 +25,4 @@
 - arsenal (fork): sim.js new Sim.prototype.pk*/kit* at end + small hooks (kill → drop, E chain → pickup, swap/wsel → kit), render pickups, main HUD slots, zhe/jin/shenji arsenal hooks
 - lieposes (fork): render.js drawFigure downed/crawl/sleep pose block; camp NPC facing (sim camp / zhe camp)
 - empaim (fork): render.js emplacement aim camera/arc/ring, main.js emplacement HUD; sim.js sgEmpFire read-only unless needed
+- siegeAI (fork): sim.js siegeThink engine movement, siegeDirs, siegeInit crews
