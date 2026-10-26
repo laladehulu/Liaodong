@@ -462,6 +462,9 @@ const BIOMES = {
 // the shadow edge bleeds and wanders (wet-in-wet), ink pools darker along the rim of each wash, and the shaded
 // area is broken by dry-brush granulation so it never reads as flat black. Noise is anchored in world space.
 const INK_SHIFT = { value: new THREE.Vector2() };
+// arm proportions: upper arm and forearm about 15% longer than they were (0.30 / 0.29), and hand targets pushed out from
+// the shoulder by ARM_REACH, so swings, thrusts and gestures sweep wider arcs and read from further away
+const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 (function inkShadows() {
   const REAL = typeof window !== 'undefined' && window.MING_REAL;
   const C = THREE.ShaderChunk; let src = C.shadowmap_pars_fragment; if (!src || src.indexOf('getShadowBase') >= 0) return;
@@ -1832,8 +1835,8 @@ class Renderer {
     toRoot([0.2, 0, 0], J, 0); toRoot([-0.2, 0, 0], J, 9);
     toRoot([0, -0.22, 0], J, 24); toRoot([0, 0.25, 0.01], J, 27);
     const ik = (so, ho, tx, ty, tz, side) => {
-      const sx = J[so], sy2 = J[so + 1], sz = J[so + 2]; let dx = tx - sx, dy = ty - sy2, dz = tz - sz; let d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-4; dx /= d; dy /= d; dz /= d;
-      const A1 = 0.3, A2 = 0.29; d = clamp(d, 0.08, A1 + A2 - 0.002);
+      const sx = J[so], sy2 = J[so + 1], sz = J[so + 2]; let dx = (tx - sx) * ARM_REACH, dy = (ty - sy2) * ARM_REACH, dz = (tz - sz) * ARM_REACH; let d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-4; dx /= d; dy /= d; dz /= d;
+      const A1 = ARM_U, A2 = ARM_F; d = clamp(d, 0.08, A1 + A2 - 0.002);
       const ca = (A1 * A1 + d * d - A2 * A2) / (2 * A1 * d), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
       let px = C[0] * side * 0.7 - C[3] * 1 - C[6] * 0.35, py = C[1] * side * 0.7 - C[4] - C[7] * 0.35, pz2 = C[2] * side * 0.7 - C[5] - C[8] * 0.35;
       const dp = px * dx + py * dy + pz2 * dz; px -= dx * dp; py -= dy * dp; pz2 -= dz * dp; const pl = Math.sqrt(px * px + py * py + pz2 * pz2) || 1; px /= pl; py /= pl; pz2 /= pl;
@@ -1844,9 +1847,9 @@ class Renderer {
       const ux = side * 0.12, uy = -Math.cos(alpha2), uz = Math.sin(alpha2), fx = side * 0.05, fy = -Math.cos(alpha2 + bend), fz = Math.sin(alpha2 + bend);
       const tmp = this._tmp3 || (this._tmp3 = new Float64Array(3));
       dirRoot([ux, uy, uz], tmp, 0); const l1 = Math.hypot(tmp[0], tmp[1], tmp[2]);
-      J[ho - 3] = J[so] + tmp[0] / l1 * 0.3; J[ho - 2] = J[so + 1] + tmp[1] / l1 * 0.3; J[ho - 1] = J[so + 2] + tmp[2] / l1 * 0.3;
+      J[ho - 3] = J[so] + tmp[0] / l1 * ARM_U; J[ho - 2] = J[so + 1] + tmp[1] / l1 * ARM_U; J[ho - 1] = J[so + 2] + tmp[2] / l1 * ARM_U;
       dirRoot([fx, fy, fz], tmp, 0); const l2 = Math.hypot(tmp[0], tmp[1], tmp[2]);
-      J[ho] = J[ho - 3] + tmp[0] / l2 * 0.29; J[ho + 1] = J[ho - 2] + tmp[1] / l2 * 0.29; J[ho + 2] = J[ho - 1] + tmp[2] / l2 * 0.29;
+      J[ho] = J[ho - 3] + tmp[0] / l2 * ARM_F; J[ho + 1] = J[ho - 2] + tmp[1] / l2 * ARM_F; J[ho + 2] = J[ho - 1] + tmp[2] / l2 * ARM_F;
     };
     const armA = (0.22 * (1 - r) + 0.7 * r) * mv, armBend = 0.25 + 1.15 * r + (routing ? 0.3 : 0);
     const tmpA = this._tmpA || (this._tmpA = new Float64Array(6));
@@ -1897,7 +1900,7 @@ class Renderer {
     const o = 18;
     this.seg(f.uarmL, slot, G[o], G[o + 1], G[o + 2], G[o + 3], G[o + 4], G[o + 5], 0.13, 0.13); this.seg(f.farmL, slot, G[o + 3], G[o + 4], G[o + 5], G[o + 6], G[o + 7], G[o + 8], 0.11, 0.11);
     this.seg(f.uarmR, slot, G[o + 9], G[o + 10], G[o + 11], G[o + 12], G[o + 13], G[o + 14], 0.13, 0.13); this.seg(f.farmR, slot, G[o + 12], G[o + 13], G[o + 14], G[o + 15], G[o + 16], G[o + 17], 0.11, 0.11);
-    this.boxB(f.hand, slot * 2, G[o + 6], G[o + 7], G[o + 8], CB, 0.09, 0.09, 0.1); this.boxB(f.hand, slot * 2 + 1, G[o + 15], G[o + 16], G[o + 17], CB, 0.09, 0.09, 0.1);
+    this.boxB(f.hand, slot * 2, G[o + 6], G[o + 7], G[o + 8], CB, 0.105, 0.1, 0.115); this.boxB(f.hand, slot * 2 + 1, G[o + 15], G[o + 16], G[o + 17], CB, 0.105, 0.1, 0.115);
     // ---------- weapon ----------
     const gx = G[o + 18], gy = G[o + 19], gz = G[o + 20], dx = G[o + 21], dy = G[o + 22], dz = G[o + 23];
     const Z = this.tmp.zero;
