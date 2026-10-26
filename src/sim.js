@@ -847,6 +847,9 @@ class Sim {
     else if (u.mounted) this.horseControl(u, keys, disabled, true);
     else this.footControl(u, keys, a, disabled);
     if (disabled) { u.blocking = false; u.atkHeld = !!(a & A_ATK); u.blockHeld = !!(a & A_BLOCK); return; }
+    if (u.manE >= 0 && this.sg && this.empControl(u, a)) return;
+    // E beside a free piece mans it whatever you were doing (reloading, aiming, mid-swing)
+    if ((a & A_KICK) && this.sg && this.phase === 1 && u.mount < 0 && !u.mounted && this.sg.emp.some(e => e.team === u.team && e.man < 0 && len(e.x - u.x, e.z - u.z) < 2.6)) { u.st = ST_IDLE; u.stT = 0; u.aiming = false; u.blocking = false; this.siegeInteract(u); return; }
     const ws = u.def.weapons;
     if ((a & A_SWAP) && ws.length > 1) { u.nextWeapon = ws[(ws.indexOf(u.weapon) + 1) % ws.length]; u.swapQ = true; }
     // a man with only a gun turns it round to fight with it as a club (and back); turning it breaks off a reload
@@ -1687,7 +1690,7 @@ class Sim {
     const shieldBlock = canBlock && def_.def.shield && dir !== DIR_DOWN;
     const omni = def_.ctrlActive; // human players hold one block that covers the front; AI still has to read the direction
     if (canBlock && att.def.brush && def_.type !== 'horse' && (omni || def_.blockDir === counterDir(dir) || shieldBlock)) { // branches can't be parried clean: they wrap the guard
-      this.brushCatch(def_, att, nx, nz, true, hx, hy, hz); this.events.push({ t: 'block', x: hx, y: hy, z: hz, perfect: false, by: def_.id, att: att.id, shield: !!def_.def.shield }); att.heavy = false; return; }
+      if (def_.def.shield) { const m = 1 / (def_.mass || 1); def_.vx += nx * 3.4 * m; def_.vz += nz * 3.4 * m; } else this.brushCatch(def_, att, nx, nz, true, hx, hy, hz); /* a shield turns the branches aside; a plain guard gets wrapped */ this.events.push({ t: 'block', x: hx, y: hy, z: hz, perfect: false, by: def_.id, att: att.id, shield: !!def_.def.shield }); att.heavy = false; return; }
     if (canBlock && (omni || def_.blockDir === counterDir(dir) || shieldBlock)) {
       const perfect = def_.blockT < (def_.def.parry || 0.16) * (omni ? 1.15 : 1) && (omni || def_.blockDir === counterDir(dir));
       if (perfect) { // a true parry: the attacker's balance is wrecked and the defender gets the initiative
@@ -3591,17 +3594,40 @@ Sim.prototype.siegeTick = function () {
       this.events.push({ t: 'sghit', x: p.x, y: p.y, z: p.z, kind: p.kind, eng: e.kind }); ps[i] = ps[ps.length - 1]; ps.pop(); break; } }
   for (const e of sg.emp) { if (e.cd > 0) e.cd--; if (e.man < 0) continue; const u = this.units[e.man];
     if (!u || u.dead || len(u.x - e.x, u.z - e.z) > 3.2) { e.man = -1; if (u) u.manE = -1; continue; }
-    e.yaw = u.yaw; e.pitch = clamp(u.pitch || 0, -0.5, 0.6); const bx = e.x - sin(e.yaw) * 1.2, bz = e.z - cos(e.yaw) * 1.2; u.x = bx; u.z = bz; u.mx = 0; u.mz = 0;
-    if ((u.st === ST_WINDUP || u.st === ST_AIM || u.st === ST_RELEASE) && e.cd <= 0) { this.sgFire(e, e.yaw, e.pitch); u.st = ST_IDLE; u.stT = 0; } else if (u.st === ST_WINDUP) { u.st = ST_IDLE; u.stT = 0; } }
+    // the piece traverses and elevates toward where its gunner looks, at the speed a crew can lay it; he stands at its breech
+    { const bow = e.kind === 'bow', ty = bow ? 2.4 : 1.3, tp = bow ? 1.2 : 0.7; const dy = wrap(u.yaw - e.yaw); e.yaw = wrap(e.yaw + clamp(dy, -ty * DT, ty * DT)); const wp = clamp(u.pitch || 0, -0.5, 0.6); e.pitch = (e.pitch || 0) + clamp(wp - (e.pitch || 0), -tp * DT, tp * DT); }
+    const bx = e.x - sin(e.yaw) * 1.2, bz = e.z - cos(e.yaw) * 1.2; u.x = bx; u.z = bz; u.mx = 0; u.mz = 0; u.st = ST_IDLE; u.stT = 0;
+    if (u.empFire) { u.empFire = false; if (e.cd <= 0) this.sgFire(e, e.yaw, e.pitch, u.id); } }
   if (this.tick % 15 === 0) this.siegeThink();
 };
 const SGE = { ram: { hw: 1.5, hd: 3, h: 3.6, sp: 1.5 }, tower: { hw: 2.5, hd: 2.5, h: 9.5, sp: 1.0 }, cart: { hw: 1.7, hd: 0.9, h: 2.6, sp: 1.6 } };
 Sim.prototype.sgHurt = function (e, dmg) { if (e.hp <= 0) return; e.hp -= dmg; if (e.hp <= 0) { e.hp = 0; if (e.lad && e.lad.up) { e.lad.up = false; this.navBoxes(); } this.events.push({ t: 'sgengine', kind: e.kind, x: e.x, z: e.z }); for (const sq of this.squads) if (sq.alive && sq.team === e.team && !sq.def.fearless) sq.morale = Math.max(0, sq.morale - 6); } };
-Sim.prototype.sgFire = function (e, yaw, pitch) {
-  const bow = e.kind === 'bow', v = bow ? 62 : 78; e.cd = bow ? 30 * 5 : 30 * 9;
+Sim.prototype.sgFire = function (e, yaw, pitch, by) {
+  const bow = e.kind === 'bow', v = bow ? 62 : 78; e.cd = bow ? 30 * 5 : 30 * 9; e.cdMax = e.cd;
   const cp = cos(pitch), x = e.x + sin(yaw) * 1.6, z = e.z + cos(yaw) * 1.6, y = e.y + (bow ? 1.4 : 1.2);
-  this.projectiles.push({ kind: 'solid', bolt: bow, x, y, z, vx: sin(yaw) * cp * v, vy: sin(pitch) * v, vz: cos(yaw) * cp * v, team: e.team, owner: -1, life: 0, hits: 0 });
-  this.events.push({ t: 'sgshot', x, y, z, dx: sin(yaw), dz: cos(yaw), gun: !bow, team: e.team });
+  // a piece on the wall top fires out through its embrasure, over the parapet in front of it
+  this.projectiles.push({ kind: 'solid', bolt: bow, x, y, z, vx: sin(yaw) * cp * v, vy: sin(pitch) * v, vz: cos(yaw) * cp * v, team: e.team, owner: -1, life: 0, hits: 0, over: e.team === this.sg.D });
+  this.events.push({ t: 'sgshot', x, y, z, dx: sin(yaw), dz: cos(yaw), gun: !bow, team: e.team, by: by === undefined ? -1 : by, emp: e.id });
+};
+// a manned piece takes all of its gunner's hands: left click (attack or fire) looses it, E leaves it; his own weapon is
+// slung meanwhile, so nothing he carries can fire, aim, reload or be swapped
+Sim.prototype.empControl = function (u, a) {
+  const e = this.sg.emp[u.manE]; if (!e || e.man !== u.id) { u.manE = -1; return false; }
+  u.aiming = false; u.blocking = false; u.fireQ = 0; u.swapQ = false; u.atkHeld = false; u.blockHeld = false; if (u.st !== ST_IDLE) { u.st = ST_IDLE; u.stT = 0; }
+  if (this.phase !== 1) return true;
+  if (a & (A_FIRE | A_ATK)) u.empFire = true;
+  if (a & A_KICK) this.siegeInteract(u);
+  return true;
+};
+// where a shot from this piece at this lay would first strike: the same steps and stops as updateProjectiles (no state changed)
+Sim.prototype.sgPredict = function (e, yaw, pitch) {
+  const bow = e.kind === 'bow', v = bow ? 62 : 78, cp = cos(pitch); let x = e.x + sin(yaw) * 1.6, z = e.z + cos(yaw) * 1.6, y = e.y + (bow ? 1.4 : 1.2), vx = sin(yaw) * cp * v, vy = sin(pitch) * v, vz = cos(yaw) * cp * v; const over = e.team === this.sg.D, pts = [];
+  for (let t = 0; t < 30 * 8; t++) { for (let s = 0; s < 3; s++) { const dt = DT / 3; vy -= GRAV * dt; x += vx * dt; y += vy * dt; z += vz * dt;
+      if (Math.abs(x) > HALF || Math.abs(z) > HALF) return { x, y, z, pts, out: true };
+      for (const bx of this.boxes) { if (over && bx.kind === 'sface') continue; if (x > bx.x - bx.hw && x < bx.x + bx.hw && z > bx.z - bx.hd && z < bx.z + bx.hd && y < terrainH(bx.x, bx.z) + bx.h) return { x, y, z, pts, box: true }; }
+      const g = terrainH(x, z); if (y <= g) return { x, y: g, z, pts }; }
+    if (t % 3 === 0) pts.push(x, y, z); }
+  return { x, y, z, pts, out: true };
 };
 // pick a mark for an unmanned emplacement: defenders prefer engines, then the thickest crowd of the enemy
 Sim.prototype.sgAim = function (e) {
@@ -3833,7 +3859,7 @@ Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
     if (idle) { let best = null, bd = reach + 2.4; const n = this.gatherNear(u.x, u.z, reach + 2.6);
       for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === u.team || v.dead || !(v.entT > 0.12) || v.type === 'horse') continue; const dv = len(v.x - u.x, v.z - u.z); if (dv >= bd || dv < 1.2) continue;
         let k = 0; for (const id of sq.unitIds) { const w = this.units[id]; if (w !== u && w.yyL === 1 && w.yyT === v.id) k++; } if (k >= 2) continue; best = v; bd = dv; }
-      if (best) { u.yyL = 1; u.yyT = best.id; u.yyS = this.tick; u.target = best.id; this.startWindup(u, DIR_DOWN); u.heavy = true; u.aiHeavy = false; u.lunge = true;
+      if (best) { u.yyL = 1; u.yyT = best.id; u.yyS = this.tick; u.target = best.id; this.startWindup(u, DIR_DOWN); u.heavy = !!this.xc; u.aiHeavy = false; u.lunge = true;
         const dx = best.x - u.x, dz = best.z - u.z, l = len(dx, dz) || 1; u.vx += dx / l * 5; u.vz += dz / l * 5; this.turnTo(u, atan2(dx, dz), 1);
         this.events.push({ t: 'yylunge', id: u.id, at: best.id }); return true; } }
     home(1.0); if (tgt && idle && d <= reach + 0.2 && this.rng.next() < 0.08) this.startWindup(u, DIR_DOWN); return true;

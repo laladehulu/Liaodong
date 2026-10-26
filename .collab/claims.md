@@ -12,3 +12,5 @@
 - shoulders (fork): render.js drawFigure shoulder/uarm + gear sl/sr parts, real_gear.js shoulder plates
 - grounding (fork): render.js new Renderer.prototype.buildGroundMap (end of file) + 1-line call before toonify, houses/walls sink+plinth and mantlet planks in buildStructures/buildSpecialStructures; realism.js terrain shader ground-map lines + post FXAA; stylized.js terrain ground-map lines + post FXAA
 - brush-yy (fork): sim.js resolveMeleeHit brush entangle + block branch, unitAI yy hook (melee branch), new Sim.prototype.brushCatch/yyAI at end; test/zbrush.js
+- emplace (fork): sim manE input/fire (siege section), render viewmodel emplacement hands + aim aid, main.js HUD for manning
+- music fork: src/music.js (whole module), no sim

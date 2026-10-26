@@ -17,8 +17,8 @@ const MUSIC = (() => {
   };
   const mf = (m) => 440 * Math.pow(2, (m - 69) / 12);
   let REC = null, recSrc = null, recG = null, recEnd = 0, comp = null, ctx, out, dry, nb, playing = null, nextT = 0, step = 0, timer = null, vol = 0.5, target = 0.5, I = 0.5, muted = false, prevMel = {};
-  function ensure() {
-    if (out) return true; ctx = AUDIO.ctx; if (!ctx) return false; nb = AUDIO.noise;
+  function ensure(c) {
+    if (out && !c) return true; ctx = c || AUDIO.ctx; if (!ctx) return false; nb = AUDIO.noise;
     out = ctx.createGain(); out.gain.value = muted ? 0 : vol;
     comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 2.5; comp.attack.value = 0.012; comp.release.value = 0.3;
     // a warm hall: stereo exponential tail with a few early reflections
@@ -145,10 +145,11 @@ const MUSIC = (() => {
   let recIdx = 0;
   function startRec(t) { const b = REC.buf; recSrc = ctx.createBufferSource(); recSrc.buffer = b; recSrc.connect(recG); recSrc.start(t); recEnd = t + b.duration; nextT = t + (REC.ph || 0); step = 0; prevMel = {}; }
   function stopRec() { if (recSrc) { try { recG.gain.setTargetAtTime(0, ctx.currentTime, 0.4); const s0 = recSrc; setTimeout(() => { try { s0.stop(); } catch (e) { } }, 1500); } catch (e) { } } recSrc = null; REC = null; }
-  function tick() {
-    if (!playing || !ctx) return; const tr = TRACKS[playing]; const e8 = REC ? REC.e8 : 60 / tr.bpm / 2;
-    if (REC) { recG.gain.setTargetAtTime((REC.pure ? 0.62 : 0.42) + 0.4 * I, ctx.currentTime, 0.8); if (ctx.currentTime + 0.35 > recEnd) { const L = tr.recs; if (L && L.length > 1) { recIdx = (recIdx + 1) % L.length; const nb = S().get(L[recIdx].key); if (nb) REC = Object.assign({ buf: nb }, L[recIdx]); } startRec(recEnd); } }
-    while (nextT < ctx.currentTime + 0.3) { I += (target - I) * 0.06; try { tr.play(step % tr.len, nextT, e8); } catch (e) {} nextT += e8; step++; }
+  function tick() { if (!playing || !ctx) return; tickAt(ctx.currentTime); }
+  function tickAt(now) {
+    const tr = TRACKS[playing]; const e8 = REC ? REC.e8 : 60 / tr.bpm / 2;
+    if (REC) { recG.gain.setTargetAtTime((REC.pure ? 0.62 : 0.42) + 0.4 * I, now, 0.8); if (now + 0.35 > recEnd) { const L = tr.recs; if (L && L.length > 1) { recIdx = (recIdx + 1) % L.length; const nb = S().get(L[recIdx].key); if (nb) REC = Object.assign({ buf: nb }, L[recIdx]); } startRec(recEnd); } }
+    while (nextT < now + 0.3) { I += (target - I) * 0.06; try { tr.play(step % tr.len, nextT, e8); } catch (e) {} nextT += e8; step++; }
   }
   function play(name) {
     if (!ensure() || !TRACKS[name]) return; if (playing === name) return;
@@ -174,7 +175,21 @@ const MUSIC = (() => {
     else if (kind === 'wave') { hit('bo_ff', t, 0.24); dagu(t, 'ff', 0.5); dagu(t + 0.2, 'ff', 0.5); }
   }
   function setIntensity(v) { target = v; }
+  // render a cue offline (for previews and tests): the same scheduler, driven by a fake clock into an OfflineAudioContext
+  async function _offline(name, iv, secs, curve) {
+    const live = { ctx, out, dry, comp, nb, playing, REC, recSrc, recG, recEnd, nextT, step, I, target, prevMel, recIdx };
+    if (timer) { clearInterval(timer); timer = null; }
+    const oc = new OfflineAudioContext(2, Math.ceil(44100 * secs), 44100); out = null; ensure(oc); out.gain.value = vol;
+    playing = name; step = 0; prevMel = {}; nextT = 0.12; REC = null; recSrc = null; recIdx = 0; I = target = iv;
+    const rb = TRACKS[name].rec && S().get(TRACKS[name].rec.key);
+    if (rb) { REC = Object.assign({ buf: rb }, TRACKS[name].rec); recG = oc.createGain(); recG.gain.value = 0.6; recG.connect(comp); startRec(0.12); }
+    for (let now = 0; now < secs - 0.4; now += 0.05) { if (curve) target = curve(now); tickAt(now); }
+    const pr = oc.startRendering();
+    ({ ctx, out, dry, comp, nb, playing, REC, recSrc, recG, recEnd, nextT, step, I, target, prevMel, recIdx } = live);
+    if (playing) timer = setInterval(tick, 50);
+    return pr;
+  }
   function toggle() { muted = !muted; if (out) out.gain.setTargetAtTime(muted ? 0 : vol, ctx.currentTime, 0.1); return !muted; }
   function setMuted(m) { muted = m; if (out) out.gain.setTargetAtTime(muted ? 0 : vol, ctx.currentTime, 0.1); }
-  return { play, stop, sting, accent, setIntensity, toggle, setMuted, get muted() { return muted; }, get track() { return playing; } };
+  return { _offline, play, stop, sting, accent, setIntensity, toggle, setMuted, get muted() { return muted; }, get track() { return playing; } };
 })();
