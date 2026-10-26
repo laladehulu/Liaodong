@@ -630,4 +630,4 @@ function chJFinish(winner) {
 // the Jin talk lives in each chapter's table: give it the same memory
 function chJinTalkWrap() { if (!ZC || !ZC.jin || CH.talkWrapped.has(ZC.night)) return; const C = JCH[ZC.night]; if (!C || !C.talk) return; CH.talkWrapped.add(ZC.night); const _t = C.talk; C.talk = (k) => chTalkAdd(_t(k), k); }
 // test handle (headless scripts): the registry and the entry points
-window.__ch = { CHD, CH, ctx: () => chCtx(), sleep: () => zSleep(), decide: (id) => { const C = chCtx(); chDecide(CHD[id].build(C), () => { }); }, ledger: () => { const C = chCtx(); return C ? chLedgerCard(C) : null; } };
+window.__ch = { CHD, CH, ctx: () => chCtx(), sleep: () => zSleep(), bed: () => { const h = localHero(); if (h && ZC && ZC.bed) { h.x = h.px = ZC.bed[0]; h.z = h.pz = ZC.bed[1]; } return zheKeyE(); }, decide: (id) => { const C = chCtx(); chDecide(CHD[id].build(C), () => { }); }, ledger: () => { const C = chCtx(); return C ? chLedgerCard(C) : null; } };
