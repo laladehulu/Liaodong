@@ -1740,7 +1740,8 @@ class Renderer {
       { const br = 0.025 * Math.sin(tt * 1.9), sh = 0.04 * Math.sin(tt * 0.37); // on his back, up on an elbow, one knee up; breathing hard, shifting
         KG[0] = 2.05 + sh; KG[1] = 1.42 + sh; KG[2] = 1.42; KG[3] = 0.28 + 0.08 * Math.sin(tt * 0.23); KG[4] = 0.17; KG[5] = -1.02 + br; KG[6] = 0; KG[7] = -0.2 * sA; KG[8] = -0.1 * sA; KG[9] = 0.12 * sA; }
       { a.crPh = (a.crPh || 0) + dt * (a.spd > 0.12 ? 3.4 : 0.5); const c = a.crPh, s1 = Math.sin(c); // face down: the arms pull in turn, one leg drawn up to push, the other dragging
-        KC[0] = -1.32 + 0.38 * s1; KC[1] = 0.55 + 0.75 * Math.max(0, s1); KC[2] = -1.38 - 0.12 * s1; KC[3] = 0.3 + 0.75 * Math.max(0, -s1); KC[4] = 0.17; KC[5] = 1.36; KC[6] = 0; KC[7] = 0.1 * s1; KC[8] = -sA * (0.3 + 0.3 * Math.max(0, s1)); KC[9] = sA * (0.3 + 0.3 * Math.max(0, -s1)); }
+        const pA = Math.max(0, s1), pB = Math.max(0, -s1); // A draws its knee up and out to push while B drags, then they change over
+        KC[0] = -1.42 + 0.6 * pA; KC[1] = 0.25 + 1.15 * pA; KC[2] = -1.42 + 0.6 * pB; KC[3] = 0.25 + 1.15 * pB; KC[4] = 0.2; KC[5] = 1.2 + 0.05 * Math.sin(c * 2); KC[6] = 0; KC[7] = 0.14 * s1; KC[8] = -sA * (0.15 + 0.6 * pA); KC[9] = sA * (0.15 + 0.6 * pB); }
       for (let j = 0; j < 10; j++) KD[j] = KG[j] + (KC[j] - KG[j]) * a.cw;
       const KS = [0.05, 0.1, -0.05, 0.1, 0.91, 0, 0, 0, 0, 0], KT = [0.35, 0.5, -0.25, 0.25, 0.84, 0.32, 0, 0.12 * sA, 0, 0], KN = [1.1, 1.5, 0.1, 1.6, 0.5, 0.25, 0, 0.1 * sA, 0, 0];
       const KB = [1.3, 0.55, 1.45, 0.3, 0.2, -1.25, 0.05, -0.12 * sA, 0, 0]; // sat down hard and going over backwards
