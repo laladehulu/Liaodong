@@ -795,8 +795,13 @@ class Renderer {
     if (ramp.length) { const em = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x8a867e }), ramp.length), gm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: snow ? 0xe8ebee : 0x6a6660 }), ramp.length);
       ramp.forEach((b, i) => { const y = terrainH(b.x, b.z); T.m.compose(T.v.set(b.x, y + b.h / 2 - 0.2, b.z), T.q.identity(), T.v2.set(b.hw * 2.25, b.h + 0.4, b.hd * 2.25)); em.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.4, b.z), T.q.identity(), T.v2.set(b.hw * 1.1, 0.8, b.hd * 1.1)); gm.setMatrixAt(i, T.m); });
       for (const m of [em, gm]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); } }
-    if (pal.length) { const n = pal.length * 5; const sm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0, 0.14, 1, 5), new THREE.MeshLambertMaterial({ color: 0x6a4e30 }), n), bm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x5a4028 }), pal.length); let k = 0;
-      pal.forEach((b, i) => { const y = terrainH(b.x, b.z); for (let j = 0; j < 5; j++) { const x = b.x - b.hw + (j + 0.5) * (b.hw * 2 / 5); T.m.compose(T.v.set(x, y + 1.05, b.z + Math.sin(j * 2.1) * 0.12), T.q.setFromEuler(T.e.set(Math.sin(j * 3.7) * 0.12, 0, Math.cos(j * 1.3) * 0.08)), T.v2.set(1, 2.1, 1)); sm.setMatrixAt(k++, T.m); } T.m.compose(T.v.set(b.x, y + 0.75, b.z), T.q.identity(), T.v2.set(b.hw * 2, 0.16, 0.18)); bm.setMatrixAt(i, T.m); });
+    if (pal.length) { // stakes run along the palisade's long side, one every ~0.55 m, so every metre of the collision box is a visible wall
+      const cnt = pal.map(b => Math.max(5, Math.ceil(Math.max(b.hw, b.hd) * 2 / 0.55))); const n = cnt.reduce((a, c) => a + c, 0);
+      const sm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0, 0.14, 1, 5), new THREE.MeshLambertMaterial({ color: 0x6a4e30 }), n), bm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x5a4028 }), pal.length * 2); let k = 0;
+      pal.forEach((b, i) => { const alongX = b.hw >= b.hd, L = (alongX ? b.hw : b.hd) * 2, N = cnt[i];
+        for (let j = 0; j < N; j++) { const t = -L / 2 + (j + 0.5) * (L / N), w = Math.sin(j * 2.1) * 0.12, x = alongX ? b.x + t : b.x + w, z = alongX ? b.z + w : b.z + t, y = terrainH(x, z), hh = b.h > 0 ? Math.max(1.6, b.h * 1.25) : 2.1;
+          T.m.compose(T.v.set(x, y + hh / 2, z), T.q.setFromEuler(T.e.set(Math.sin(j * 3.7) * 0.12, 0, Math.cos(j * 1.3) * 0.08)), T.v2.set(1, hh, 1)); sm.setMatrixAt(k++, T.m); }
+        for (let r = 0; r < 2; r++) { const y = terrainH(b.x, b.z); T.m.compose(T.v.set(b.x, y + 0.55 + r * 0.6, b.z), T.q.identity(), T.v2.set(alongX ? L : 0.18, 0.14, alongX ? 0.18 : L)); bm.setMatrixAt(i * 2 + r, T.m); } });
       for (const m of [sm, bm]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); } }
   }
   // rivers, moats and the sea, printed with Hokusai-style wave lines; bridges and fords

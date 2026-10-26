@@ -2592,8 +2592,8 @@ const MISSIONS = {
     start: [56, -64, 0],
     zones: [{ key: 'sbridge', x: 74, zr: -15, r: 10, name: 'South end of the bridge' }, { key: 'camp', x: 58, z: -62, r: 20, name: 'The Zhejiang camp', owner: 0, rate: 0.5 },
       { key: 'road', x: -88, z: -136, r: 14, name: 'The Liaoyang road' }],
-    forts: [[44, -62, 0.5, 12, 1.6, 'palisade'], [72, -62, 0.5, 12, 1.6, 'palisade'], [49.5, -49, 5.5, 0.5, 1.6, 'palisade'], [66.5, -49, 5.5, 0.5, 1.6, 'palisade'], [49, -75, 5, 0.5, 1.5, 'palisade'], [67, -75, 5, 0.5, 1.5, 'palisade'],
-      [51, -53, 2, 1.1, 1.4, 'mantlet'], [58, -53, 2, 1.1, 1.4, 'mantlet'], [65, -53, 2, 1.1, 1.4, 'mantlet']],
+    forts: [[44, -62, 0.5, 12, 1.6, 'palisade'], [72, -62, 0.5, 12, 1.6, 'palisade'], [48.5, -49, 4.5, 0.5, 1.6, 'palisade'], [67.5, -49, 4.5, 0.5, 1.6, 'palisade'], [49, -75, 5, 0.5, 1.5, 'palisade'], [67, -75, 5, 0.5, 1.5, 'palisade'],
+      [49.5, -53, 2, 1.1, 1.4, 'mantlet'], [66.5, -53, 2, 1.1, 1.4, 'mantlet']], // a 10 m north gate and an 8 m south gate; the mantlets flank the gate instead of filling it
     groups: {
       zhe: { team: 0, name: 'Qi Jin', zh: '戚金', army: ['yuanyang', 'rifle_imp', 'yuanyang', 'rifle_imp', 'samurai'], at: [58, -64, 0], dir: ['hold', 58, -60], stay: true },
       chen: { team: 0, name: 'Chen Ce', zh: '陳策', army: ['samurai', 'rifle_imp'], at: [70, -40, 0], dir: ['hold', 72, -38] },
