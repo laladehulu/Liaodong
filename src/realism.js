@@ -21,6 +21,14 @@
   const NIGHT = { haze: 0x161c28, hazeFar: 0x0c1018, skyTop: 0x04060b, skyMid: 0x0e1420, skyLow: 0x182030, sun: 0x9db2e0, hemiSky: 0x2a3550, hemiGround: 0x0a0a0a, sunI: 0.3, hemiI: 0.4, exposure: 1.05 };
   const look = (r) => r.biome.night ? NIGHT : r.sim.rain ? STORMY : r.biome.snow ? WINTER : LOOK;
 
+  // crisp world-space cells (Voronoi): x = the cell's own random value, y = distance to its centre, z = distance to the
+  // nearest border, w = a second random value. A precision-safe hash (no sin of huge numbers, which bands on GPUs).
+  const TCELL = `
+    float tHh(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+    vec2 tHh2(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+    vec4 tCells(vec2 p){ vec2 i = floor(p), f = fract(p); float d1 = 8.0, d2 = 8.0; vec2 id = i;
+      for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(float(x), float(y)); vec2 r = g + tHh2(i + g) * 0.8 + 0.1 - f; float d = dot(r, r); if (d < d1) { d2 = d1; d1 = d; id = i + g; } else if (d < d2) d2 = d; }
+      float a = sqrt(d1), b = sqrt(d2); return vec4(tHh(id), a, (b - a) * 0.5, tHh(id + 31.7)); }`;
   const NOISE = `
     float rH(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float rV(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(rH(i), rH(i+vec2(1.0,0.0)), f.x), mix(rH(i+vec2(0.0,1.0)), rH(i+vec2(1.0,1.0)), f.x), f.y); }
@@ -50,10 +58,17 @@
     if (this.terrain) { const tm = this.terrain.material; tm.roughness = 0.97;
       const snowF = this.biome.snow ? 1 : -1; tm.onBeforeCompile = (sh) => { sh.uniforms.rTime = RT.time; sh.uniforms.rSnow = { value: snowF };
         sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-        sh.fragmentShader = 'varying vec3 vWP; uniform float rSnow;\n' + NOISE + sh.fragmentShader
+        sh.fragmentShader = 'varying vec3 vWP; uniform float rSnow;\n' + NOISE + TCELL + sh.fragmentShader
           .replace('#include <color_fragment>', `#include <color_fragment>
             { vec2 p = vWP.xz;
-              float big = rF(p * 0.035), mid = rF(p * 0.21), fine = rV(p * 3.1) * 0.5 + rV(p * 7.3) * 0.5, grain = rH(floor(p * 24.0));
+              float big = rF(p * 0.035), mid = rF(p * 0.21), fine = rV(p * 1.7) * 0.6 + rV(p * 0.9 + 4.0) * 0.4;
+              // crisp close-up detail: hard-edged clumps of turf and grit in world space (no soft smears, no pixel blocks).
+              // On steep faces the clumps are projected from the side so they don't stretch; they fade out once a clump is
+              // only a few pixels wide, so nothing shimmers at range.
+              vec3 wn = normalize(cross(dFdx(vWP), dFdy(vWP))); vec2 cp = abs(wn.y) > 0.7 ? p : (abs(wn.x) > abs(wn.z) ? vWP.zy : vWP.xy);
+              float px = length(fwidth(cp)); float near = 1.0 - smoothstep(0.025, 0.08, px);
+              vec4 cl = tCells(cp * 2.6); float edgeW = max(px * 2.6 * 1.5, 0.02); float seam = 1.0 - smoothstep(0.0, edgeW, cl.z);
+              vec4 cl2 = tCells(cp * 9.0 + 17.0); float grit = smoothstep(0.62, 0.62 - max(px * 9.0 * 1.5, 0.02), cl2.y) * step(0.8, cl2.x);
               vec3 base = diffuseColor.rgb; float lum = dot(base, vec3(0.3, 0.59, 0.11));
               float snowy = smoothstep(0.7, 0.8, lum) * step(0.0, rSnow);
               // late-season northern grassland: straw-coloured dry grass, tired green, bare earth and trodden mud
@@ -63,13 +78,20 @@
               grass = mix(grass, straw * 1.08, smoothstep(0.55, 0.9, rV(p * 6.0)) * 0.35);
               float churn = smoothstep(0.45, 0.72, big + (mid - 0.5) * 0.5);
               vec3 c = mix(grass, mix(earth, mud, fine), churn * 0.9);
-              c *= 0.92 + 0.12 * fine; c *= 0.98 + 0.04 * grain;
+              c *= 0.94 + 0.1 * fine;
+              { float t = cl.x; vec3 cc = c * (0.86 + 0.26 * t); cc = mix(cc, mix(straw * 1.06, green * 0.9, step(0.5, fract(t * 7.0))), step(0.82, t) * 0.35 * (1.0 - churn));
+                cc *= 1.0 - seam * 0.12; cc = mix(cc, mix(vec3(0.24, 0.22, 0.19), vec3(0.5, 0.47, 0.42), step(0.5, cl2.w)), grit * 0.55);
+                c = mix(c, cc, near); }
               float stones = smoothstep(0.88, 0.94, rV(p * 1.9)) * (1.0 - churn); c = mix(c, vec3(0.42, 0.4, 0.37), stones * 0.6);
               // keep what the map painted on purpose: water margins, roads, rock, snow
               diffuseColor.rgb = mix(c, base, snowy); }`)
           .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
             { vec2 p = vWP.xz; float e = 0.06; float h0 = rF(p * 0.6); float hx = rF((p + vec2(e, 0.0)) * 0.6); float hz = rF((p + vec2(0.0, e)) * 0.6);
-              vec3 bump = vec3((h0 - hx) / e, 0.0, (h0 - hz) / e) * 0.07; normal = normalize(normal + (viewMatrix * vec4(bump, 0.0)).xyz); }`); };
+              vec3 bump = vec3((h0 - hx) / e, 0.0, (h0 - hz) / e) * 0.07;
+              // each turf clump is a slightly tilted flat facet: a low-poly surface instead of a blurred one
+              float px = length(fwidth(p)); vec4 cl = tCells(p * 2.6); vec2 tilt = (vec2(cl.x, fract(cl.x * 13.7)) - 0.5) * 0.28 * (1.0 - smoothstep(0.025, 0.08, px));
+              bump += vec3(tilt.x, 0.0, tilt.y);
+              normal = normalize(normal + (viewMatrix * vec4(bump, 0.0)).xyz); }`); };
       tm.needsUpdate = true; }
     this.realSetup();
   };
@@ -160,9 +182,9 @@
   };
   // ---- tussocks of dry grass and weeds, alpha-cut cards scattered over the open ground
   R.buildGrass = function () {
-    if (this.biome.snow) return; const W = 128, H = 64;
+    if (this.biome.snow) return; const W = 256, H = 128;
     const draw = (mono) => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'); x.fillStyle = mono ? '#000' : '#6e6446'; x.fillRect(0, 0, W, H); let seed = 7; const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-      for (let i = 0; i < 160; i++) { const bx = W / 2 + (rr() - 0.5) * W * 0.7, lean = (rr() - 0.5) * 30, h = H * (0.45 + rr() * 0.55); const c = rr(); const col = c < 0.55 ? `rgb(${120 + rr() * 30},${105 + rr() * 25},${65 + rr() * 15})` : c < 0.85 ? `rgb(${70 + rr() * 20},${80 + rr() * 20},${45 + rr() * 10})` : `rgb(${150 + rr() * 20},${135 + rr() * 15},90)`; x.strokeStyle = mono ? '#fff' : col; x.lineWidth = 1.6 + rr() * 1.8; x.beginPath(); x.moveTo(bx, H); x.quadraticCurveTo(bx + lean * 0.3, H - h * 0.6, bx + lean, H - h); x.stroke(); }
+      for (let i = 0; i < 160; i++) { const bx = W / 2 + (rr() - 0.5) * W * 0.7, lean = (rr() - 0.5) * 30, h = H * (0.45 + rr() * 0.55); const c = rr(); const col = c < 0.55 ? `rgb(${120 + rr() * 30},${105 + rr() * 25},${65 + rr() * 15})` : c < 0.85 ? `rgb(${70 + rr() * 20},${80 + rr() * 20},${45 + rr() * 10})` : `rgb(${150 + rr() * 20},${135 + rr() * 15},90)`; x.strokeStyle = mono ? '#fff' : col; x.lineWidth = (1.6 + rr() * 1.8) * W / 128; x.beginPath(); x.moveTo(bx, H); x.quadraticCurveTo(bx + lean * 0.3, H - h * 0.6, bx + lean, H - h); x.stroke(); }
       return new THREE.CanvasTexture(cv); };
     const tex = draw(false), alphaTex = draw(true); for (const t of [tex, alphaTex]) { t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; } // no mip blur: blades stay blades at range instead of turning into solid cards
     let seed = 911; const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
