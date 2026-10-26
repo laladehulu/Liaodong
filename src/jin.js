@@ -86,7 +86,8 @@ JCH[1] = {
     { title: '建州 · Jianzhou', year: 'Spring 1619 · 天命四年', p: ['For thirty years Nurhaci has gathered the Jurchen tribes under one hand: Hada, Hoifa, Ula, one after another. In 1616 he named his state the Later Jin and himself its Khan.',
       'Last spring he declared Seven Grievances against the Ming before Heaven and took Fushun. This spring the Ming have answered with four armies.'], zh: '天命三年四月，汗以七大恨告天。' },
     { title: '八旗 · The Eight Banners', year: 'Niru · jalan · gūsa', p: ['Every Jurchen household belongs to a niru, about three hundred men under a captain. Five niru make a jalan, five jalan a banner, and there are eight banners. In war each niru sends out its armoured men.',
-      'You are one of them: a young 披甲, an armoured man, in a niru of the Plain White Banner, the banner of the Khan\'s fourth son, Hong Taiji.'],
+      'Your niru belongs to the Plain White Banner, the banner of the Khan\'s fourth son, Hong Taiji.'] },
+    { title: '你 · You', year: '披甲 · An armoured man', p: ['You are nineteen, the second son of a hunting family. This is your second campaign in armour.'],
       html: '<p><label style="font:14px sans-serif">Your name <input id="jName" value="阿克敦" maxlength="6" style="width:6em;font-size:15px"> <input id="jNameEn" value="Akdun" maxlength="14" style="width:8em;font-size:15px"></label></p>',
       onNext: () => { const zh = ($('jName').value || '阿克敦').trim().slice(0, 6), en = ($('jNameEn').value || 'Akdun').trim().slice(0, 14); JS.name = { zh, en }; jSave(); } },
     { title: '薩爾滸 · Sarhu', year: 'The third month of 1619', p: ['The Ming came by four roads, and the Khan went out by one. Two days ago at Sarhu your banners destroyed Du Song\'s column in the snow. Yesterday Ma Lin\'s broke in the north.',
@@ -302,7 +303,7 @@ function jCampCfg(n) {
     npcs.push({ role: 'spear', x, z, yaw: +Math.atan2(-x, -z).toFixed(3), ci: jIdx(r.k), pose: i % 3 === 2 ? 'stand' : 'squat' }); });
   (C.guests || []).forEach((k, i) => npcs.push({ role: 'spear', x: 7 - i * 1.5, z: -2.6, yaw: 2.6, ci: jIdx(k), pose: 'stand' }));
   ZC = { bed: [beds[0][0], beds[0][1]], jin: true, R: JR, map: {}, night: n };
-  return { type: 'samurai', team: 1, fires: JCAMP.fires, tents: JCAMP.tents, props: JCAMP.props, bedrolls: beds, npcs, me: { x: 0.4, z: -3.4, yaw: 0, role: 'spear' } };
+  return { type: 'samurai', team: 1, fires: JCAMP.fires, tents: JCAMP.tents, props: JCAMP.props, bedrolls: beds, npcs, me: { x: 0.6, z: -6.6, yaw: 0, role: 'spear' } };
 }
 function jStart(scene) {
   JS = jLoad() || jFresh(); jMeRow(); $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
@@ -429,7 +430,8 @@ function jFinish(winner) {
   const ft = C.fateText, rows = list.map(k => { const r = jRow(k), f = fate[k]; const nm = k === JS.me ? `${JS.name.zh} ${JS.name.en} (you)` : k === meK && JS.me !== meK ? `${oldName.zh} ${oldName.en} (you, until you fell)` : `${r.zh} ${r.en}`; return `<li class="${f === 'out' || f === 'home' ? 'out' : f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : f === 'home' ? '·' : '?'} ${nm} — ${ft[f] || ft.out}</li>`; }).join('');
   const outN = list.filter(k => fate[k] === 'out').length;
   $('resultTitle').textContent = won ? '勝 · The field is ours' : '退 · Pulled back'; $('resultTitle').className = won ? 'win' : 'lose';
-  $('resultText').innerHTML = `${won ? M.win : (M.loseText || 'The banners pulled back.')} ${outN} of ${list.length} of your file came through.`;
+  const head = outN <= 1 ? (won ? 'The field is the banners\', but of your file almost no one is left to stand on it.' : 'You came back alone.') : won ? M.win : (M.loseText || 'The banners pulled back.');
+  $('resultText').innerHTML = `${head} ${outN} of ${list.length} of your file came through.`;
   $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';
   $('btnNext').onclick = () => { $('result').hidden = true; JS.stage = C.next; jSave(); zCards(C.after(won, rows, outN), () => C.next === 'done' ? jEnd() : jGo(C.next)); };
 }
