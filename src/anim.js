@@ -56,7 +56,9 @@ const ANIM = (function () {
     if (!S) { S = a.smS = new Float64Array(N); V = a.smV = new Float64Array(N); }
     a.smT = now; a.smSn = snap;
     if (snap) { for (let i = 0; i < N; i++) { S[i] = T[i]; V[i] = 0; } }
-    else { st.sprung++; const h = Math.min(dt, 0.05); for (let i = 0; i < 61; i++) spring(S, V, i, T[i], W[i], h); }
+    else { st.sprung++; const h = Math.min(dt, 0.05); for (let i = 0; i < 61; i++) spring(S, V, i, T[i], W[i], h);
+      // a weapon held in a hand moves with that hand, velocity and all, so letting go of it later starts smoothly
+      const hs = gripR ? OJ + 15 : gripL ? OJ + 6 : -1; if (hs >= 0) for (let q = 0; q < 3; q++) { S[OJ + 18 + q] = S[hs + q]; V[OJ + 18 + q] = V[hs + q]; } }
     // write back, with the constraints restored
     for (let i = 0; i < 18; i++) legs[i] = S[OL + i];
     for (let i = 0; i < 30; i++) J[i] = S[OJ + i];
