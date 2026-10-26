@@ -600,7 +600,7 @@ function updateLabels() {
 const markPool = [];
 function updateMarks() {
   const sim = state.sim, box = $('fpmarks'); let n = 0; const pt = {}; const w = canvas.clientWidth, h = canvas.clientHeight; const hero = localHero(); const me = sim.players[state.localIdx];
-  if (!Input.cmdMode && hero && !hero.dead && sim.phase >= 0) { const own = me.squads; const cam = state.renderer.camera.position;
+  if (false && !Input.cmdMode && hero && !hero.dead && sim.phase >= 0) { const own = me.squads; const cam = state.renderer.camera.position; // the ▲ / ▼ over other squads is switched off
     for (const sq of sim.squads) { if (!sq.alive || sq.inactive) continue; const mineSq = sq.owner === state.localIdx, ally = sq.team === me.team;
       const d = Math.hypot(sq.cx - cam.x, sq.cz - cam.z); if (mineSq) continue; if (d > (ally ? 110 : 80)) continue; // your own men carry in-world markers (renderer) if (!ally && state.renderer.fog && !state.renderer.seenSq[sq.id]) continue;
       squadScreen(sq, pt); if (!pt.visible || pt.x < 0 || pt.x > w || pt.y < 0 || pt.y > h) continue;

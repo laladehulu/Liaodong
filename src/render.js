@@ -2184,7 +2184,7 @@ class Renderer {
   ownMarkStart(fp) {
     if (!this.omPts) { const N = this.sim.units.length; const g = new THREE.BufferGeometry(); this.omPos = new Float32Array(N * 3); g.setAttribute('position', new THREE.BufferAttribute(this.omPos, 3)); g.setDrawRange(0, 0);
       const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.translate(32, 32); c.beginPath(); c.moveTo(0, 26); c.lineTo(15, 2); c.lineTo(0, -14); c.lineTo(-15, 2); c.closePath(); c.fillStyle = 'rgba(6,20,10,.6)'; c.lineWidth = 7; c.strokeStyle = 'rgba(6,20,10,.6)'; c.stroke(); c.fillStyle = '#6fe08a'; c.fill();
-      const tex = new THREE.CanvasTexture(cv); this.omPts = new THREE.Points(g, new THREE.PointsMaterial({ map: tex, size: 0.85, sizeAttenuation: true, transparent: true, depthWrite: false, alphaTest: 0.08, fog: false })); this.omPts.frustumCulled = false; this.omPts.renderOrder = 5; this.scene.add(this.omPts); this.omSpr = []; this.omTex = {}; }
+      const tex = new THREE.CanvasTexture(cv); this.omPts = new THREE.Points(g, new THREE.PointsMaterial({ map: tex, size: 1.25, sizeAttenuation: true, transparent: true, depthWrite: false, alphaTest: 0.08, fog: false })); this.omPts.frustumCulled = false; this.omPts.renderOrder = 5; this.scene.add(this.omPts); this.omSpr = []; this.omTex = {}; }
     if (!fp) { this.omPts.visible = false; for (const sp of this.omSpr) sp.visible = false; return null; }
     this.omN = 0; const P = this.omPos, self = this; return { push(x, y, z) { const k = self.omN++ * 3; if (k + 2 < P.length) { P[k] = x; P[k + 1] = y; P[k + 2] = z; } } };
   }
@@ -2281,7 +2281,7 @@ class Renderer {
       const u = units[i];
       if (u.dead || u.inactive) continue;
       const x = lerp(u.px, u.x, alpha), y = lerp(u.py, u.y, alpha), z = lerp(u.pz, u.z, alpha);
-      if (om && u.squad >= 0 && i !== heroId && u.type !== 'horse') { const q = sim.squads[u.squad]; if (q && (q.owner === this.localIdx || (q.id === sim.players[this.localIdx].soldierSq && sim.mission && sim.mission.soldier))) { const top = y + (u.mounted ? 2.75 : 2.05); om.push(x, top, z); if (capt[u.squad] === undefined) capt[u.squad] = [x, top, z]; } }
+      if (om && u.squad >= 0 && i !== heroId && u.type !== 'horse') { const q = sim.squads[u.squad]; if (q && (q.owner === this.localIdx || (q.id === sim.players[this.localIdx].soldierSq && sim.mission && sim.mission.soldier))) { const top = y + (u.mounted ? 3.15 : 2.55) * (u.look && u.look.h ? u.look.h : 1); om.push(x, top, z); if (capt[u.squad] === undefined) capt[u.squad] = [x, top, z]; } }
       const far = (x - cx) * (x - cx) + (z - cz) * (z - cz) > 330 * 330;
       if (this.fog && u.team !== this.localTeam && !this.seen[i]) { if (this.wasSeen[i]) { this.wasSeen[i] = 0; this.hideFigure(i); const hs = this.horseSlot.get(u.id); if (hs !== undefined) this.hideHorse(hs); const cs = this.cannonSlot.get(u.id); if (cs !== undefined) for (const k in this.cannon) this.cannon[k].setMatrixAt(cs, T.zero); } continue; }
       if (this.fog) this.wasSeen[i] = 1;
