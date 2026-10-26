@@ -11,7 +11,8 @@ const path = require('path'); const out = process.argv[2];
     localStorage.setItem('mingZhe', JSON.stringify({ v: 1, stage: 'end1', name: { zh: '阿明', en: 'Aming' }, alive, fate, bond, talked: {}, flags: { letter: true, saved6: true }, me: 'me' })); });
   await page.reload({ waitUntil: 'load' });
   await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; });
-  await page.click('#btnZhe'); await page.waitForTimeout(400);
+  await page.click('#btnZhe'); await page.waitForTimeout(600);
+  if (!(await page.$('#zheNext'))) { console.log('no cards', errors, await page.evaluate(() => localStorage.getItem('mingZhe').slice(0, 80) + ' btn=' + document.getElementById('btnZhe').textContent)); await browser.close(); return; }
   await page.screenshot({ path: out + '/ch2_intro.png', timeout: 90000 });
   for (let i = 0; i < 3; i++) { await page.click('#zheNext'); await page.waitForTimeout(300); }
   await page.waitForTimeout(2500);
