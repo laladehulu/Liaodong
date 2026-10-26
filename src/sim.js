@@ -2861,6 +2861,62 @@ const MISSIONS = {
     ],
     win: 'The Jin fell back from the walls of Ningyuan.',
   },
+  // ===== 八旗 · The Plain White Niru (Jin story campaign, jin.js): the same wars from the other side, as one armoured man
+  // in a niru of Hong Taiji's Plain White Banner. Chapter One: Abdali, April 1619, from the wooded west ridge.
+  jin1: {
+    title: '阿布達里岡 · Abdali', year: 'April 1619', battle: 'abudali', side: 1, soldier: { group: 'niru' }, hidden: true, ch: 'j1',
+    brief: 'Two days after Sarhu. Du Song\'s column is destroyed and Ma Lin\'s scattered. Liu Ting\'s column is still coming through the eastern mountains, and Hong Taiji\'s banners wait for it on the west ridge above the valley.',
+    start: [-92, 14, PI / 2],
+    zones: [{ key: 'road', x: 0, z: -84, r: 16, name: 'The road where the southerners stand' }],
+    groups: {
+      niru: { team: 1, name: 'Tobohui', zh: '托博輝', army: ['samurai'], at: [-92, 14, PI / 2], dir: ['hold', -90, 14], stay: true },
+      hong: { team: 1, name: 'Hong Taiji', zh: '皇太極', army: ['cavalry', 'samurai', 'samurai', 'byakkotai', 'archer'], at: [-106, -8, PI / 2], dir: ['hold', -100, -8], stay: true },
+      daisan: { team: 1, name: 'Daišan', zh: '代善', army: ['cavalry', 'samurai', 'samurai', 'archer', 'cavalry'], at: [0, 138, PI], reserve: true },
+      ridge: { team: 1, name: 'Archers on the east ridge', army: ['archer'], at: [72, -20, -PI / 2], reserve: true, stay: true, dir: ['hold', 34, -24] },
+      liu: { team: 0, name: 'Liu Ting', zh: '劉綎', army: ['rifle_imp', 'yuanyang', 'rifle_imp'], at: [0, -96, 0], dir: ['hold', 0, -64], stay: true },
+      tusi: { team: 0, name: 'Sichuan and Miao levies', zh: '川黔土兵', army: ['ashigaru', 'ashigaru', 'samurai'], at: [0, -72, 0], dir: ['hold', 0, -40], stay: true },
+      kang: { team: 0, name: 'Kang Yingqian\'s rearguard', zh: '康應乾', army: ['rifle_imp', 'armstrong', 'ashigaru'], at: [0, -128, 0], dir: ['hold', 0, -112], stay: true },
+      duck: { team: 0, name: 'The Zhejiang duck teams', zh: '浙兵鴛鴦陣', army: ['yuanyang', 'yuanyang', 'yuanyang'], at: [6, -110, 0], dir: ['hold', 0, -80], stay: true },
+    },
+    phases: [
+      { title: '一 · 西嶺 · The west ridge', goal: 'Wait in the trees with your niru', text: 'Hong Taiji\'s banners lie hidden in the woods of the west ridge. Below, Liu Ting\'s column hurries north toward Hetu Ala. Wait with your niru.',
+        obj: { survive: 56 },
+        at: [[18, ['dir', 'liu', 'hold', 0, -50]], [34, ['dir', 'liu', 'hold', 0, -32]], [34, ['dir', 'tusi', 'hold', 0, -4]], [30, ['dir', 'duck', 'hold', 0, -62]]],
+        say: [[2, 'niru', 'Down on one knee, and keep your helmets out of the sun. Nobody moves before the conch.', '都跪下，盔別反光。海螺不響，誰也不許動。'],
+          [9, 'ulgen', 'The old man under the big standard, that\'s Liu Ting. They say his sword weighs a hundred and twenty jin.', '大纛底下那個老頭就是劉綎。聽說他的刀有一百二十斤。'],
+          [16, 'hong', 'Plain White. Whose niru is this?', '正白旗的。這是誰的牛錄？'],
+          [19, 'niru', 'Tobohui\'s, my Beile. Every man who can wear armour is here.', '托博輝的，貝勒爺。能披甲的全在這兒。'],
+          [23, 'hong', 'Good. When my elder brother strikes the head of that column, you strike its side. Not one breath before.', '好。等我二哥打他的頭，你們打他的腰。早一口氣也不行。'],
+          [32, 'muktan', 'The man in Ming red who rode down to them last night carried Du Song\'s own command arrow. Du Song has been dead three days.', '昨晚穿紅衣下去的那個人，拿的是杜松自己的令箭。杜松已經死了三天了。'],
+          [41, 'ilan', 'So the old man is hurrying to a feast that\'s already been eaten.', '所以那老頭是趕著去吃一桌早散了的席。'],
+          [50, 'sose', 'Their guns are falling behind. The column is stretching like a wet bowstring.', '他們的砲落後了。隊伍拉得跟濕弓弦一樣長。']] },
+      { title: '二 · 代善 · The first charge', goal: 'Hold the ridge and watch the pass', text: 'Daišan\'s banners strike the head of the column in the pass. Hold your place on the ridge until the conch.', start: [['release', 'daisan'], ['dir', 'daisan', 'hold', 0, -20]],
+        obj: { survive: 60 },
+        say: [[1, 'lookout', 'Daišan\'s banners in the pass! Red, and red bordered with white!', '大貝勒的旗進谷了！正紅，鑲紅！'],
+          [9, 'ulgen', 'The levies at their head are taking it. Look at them. They\'re holding.', '前頭的土兵頂住了。你看他們，還真頂住了。'],
+          [20, 'dabsun', 'Why are we waiting? They\'re fighting down there!', '我們還等什麼？下面打起來了！'],
+          [24, 'alin', 'Because a man who goes before the conch loses his head, nephew. Sit down.', '因為海螺沒響就衝的人要掉腦袋，外甥。坐下。'],
+          [40, 'niru', 'Tighten your girths. Archers, arrows on the string. Armoured men to the front.', '緊肚帶。弓手搭箭。披甲的站前頭。'],
+          [54, 'hong', 'Now. Down the ridge!', '就是現在。下嶺！']] },
+      { title: '三 · 下嶺 · Down the ridge', goal: 'Charge down into the column\'s flank', text: 'The conch. Hong Taiji\'s banners pour down the west ridge into the side of the column.', start: [['release', 'ridge'], ['dir', 'hong', 'attack'], ['dir', 'niru', 'attack'], ['dir', 'daisan', 'attack'], ['calm', 'kang', 30]],
+        obj: { survive: 70 },
+        at: [[30, ['kill', 'liu']], [42, ['wound', 5]]],
+        say: [[1, 'niru', 'Heavy armour in front, archers behind! Hit them before they can turn!', '重甲在前，弓手在後！趁他們還沒轉過身來！'],
+          [6, 'ulgen', 'Stay on my shoulder! Cut at the arms, the arms!', '跟緊我的肩膀！砍胳膊，砍胳膊！'],
+          [31, 'lookout', 'The big standard is down! Liu Ting is down!', '大纛倒了！劉綎倒了！'],
+          [44, 'sose', 'One of ours is down. Get him up, get him up!', '我們的人倒了！扶他起來，快！']] },
+      { title: '四 · 鴛鴦陣 · The duck teams', goal: 'Break the duck teams holding the road', text: 'The column is broken, but the southern infantry will not run. Their duck teams have closed up across the road. Break them.', show: ['road'],
+        start: [['dir', 'duck', 'hold', 0, -84], ['dir', 'niru', 'hold', 0, -82], ['dir', 'hong', 'hold', 0, -84]],
+        obj: { defeat: ['duck'], frac: 0.7 }, limit: 420, fail: 'Night fell with the southerners still standing across the road.',
+        at: [[14, ['promote']]],
+        say: [[2, 'muktan', 'Southerners. They fight in twelves: the shields, then those bamboo things, then the spears.', '南兵。他們十二個人一隊：藤牌在前，竹子在中間，長槍在後。'],
+          [6, 'ulgen', 'Don\'t go into the shields. Get round them. The bamboo can\'t turn quickly!', '別往藤牌上撞！繞過去，那竹子轉不快！'],
+          [15, 'soldier', 'Ulgen is down! The bošokū is down!', '烏勒根倒了！撥什庫倒了！'],
+          [18, 'niru', 'His file is yours now. Bring them in on the left!', '他的人歸你了。從左邊帶上去！'],
+          [60, 'lookout', 'They\'re not running. Heaven, they\'re not running.', '他們不跑。老天，他們不跑。']] },
+    ],
+    win: 'The southern infantry died where they stood. Nothing stood between Liu Ting\'s column and the mountains any more.',
+  },
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
@@ -2992,15 +3048,16 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'hide') { const z = this.missionZone(a[1]); if (z) z.hidden = true; }
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
   else if (a[0] === 'promote') this.zPromote();
+  else if (a[0] === 'lead') this.zPromote(true);
   else if (a[0] === 'break') this.mBreak(a[1]);
   else if (a[0] === 'calm') { const g = this.mg[a[1]]; if (g) { g.calm = a[2]; const p = this.players[g.p]; if (g.released && !g.broken) p.aggr = a[2]; } }
   else if (a[0] === 'wound') this.zWound(a[1] | 0);
   else if (a[0] === 'sector') { this.sector = a[1] | 0; if (a[2] && this.sg) for (const f of TERR.sditch.fills) if (!f.done) { f.done = true; this.sgRewater(f); this.events.push({ t: 'sgfill', x: f.x, z: TERR.sditch.zc }); } if (this.sg) { this.navBoxes(); this.siegeDirs(); } }
 };
 // the section chief falls and the file is yours: his squad passes to the man who is left
-Sim.prototype.zPromote = function () {
+Sim.prototype.zPromote = function (keep) {
   for (const p of this.players) { if (p.ai) continue; const q = this.squads[p.soldierSq]; if (!q) continue; const chief = this.units[q.unitIds[0]];
-    if (chief && !chief.dead && chief.ctrl < 0) this.applyDamage(chief, 1e6, -1, 0, 0, 0, 'arrow');
+    if (!keep && chief && !chief.dead && chief.ctrl < 0) this.applyDamage(chief, 1e6, -1, 0, 0, 0, 'arrow');
     if (q.owner >= 0 && q.owner !== p.idx) { const o = this.players[q.owner]; o.squads = o.squads.filter(id => id !== q.id); }
     q.owner = p.idx; for (const id of q.unitIds) this.units[id].owner = p.idx; if (!p.squads.includes(q.id)) p.squads.push(q.id); q.order = ORD_FOLLOW; p.commanderId = p.heroId;
     this.events.push({ t: 'zpromote', p: p.idx, sq: q.id, chief: chief ? chief.id : -1 }); }
