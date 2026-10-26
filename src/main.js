@@ -960,7 +960,7 @@ function updateHUD(dt) {
   state.hudT -= dt;
   if (state.hudT <= 0) {
     state.hudT = 0.4;
-    if (sim.phase === 1 && hero && !state.ended) { let near = 0; for (const v of sim.teamAlive[1 - me.team]) if (Math.abs(v.x - hero.x) + Math.abs(v.z - hero.z) < 40) near++; MUSIC.setIntensity(near > 3 ? 1 : 0.6); }
+    if (sim.phase === 1 && hero && !state.ended) { let near = 0; for (const v of sim.teamAlive[1 - me.team]) if (Math.abs(v.x - hero.x) + Math.abs(v.z - hero.z) < 40) near++; MUSIC.setIntensity(0.38 + Math.min(1, near / 12) * 0.62); }
     const a0 = sim.teamAlive[0].length, a1 = sim.teamAlive[1].length;
     $('status').innerHTML = `<span class="t0">${S.FACTION[0].jp} ${a0}</span><span class="vs">·</span><span class="t1">${a1} ${S.FACTION[1].jp}</span>`;
     if (sim.mission && sim.mission.beacon && typeof beaconGoal === 'function') $('status').innerHTML = beaconGoal();

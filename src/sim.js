@@ -1112,6 +1112,16 @@ class Sim {
       if (len(q.cx - tx, q.cz - tz) > 3) { q.order = ORD_MOVE; q.tx = tx; q.tz = tz; q.facing = ang; } else { if (q.order !== ORD_HOLD) { q.tx = q.cx; q.tz = q.cz; } q.order = ORD_HOLD; q.facing = ang; } });
     const h = pl && pl.ai ? this.units[pl.heroId] : null; if (h && !h.dead) { h.slotX = clamp(D.x - fx * 8, -HALF + 5, HALF - 5); h.slotZ = clamp(D.z - fz * 8, -HALF + 5, HALF - 5); }
   }
+  // one facing for a whole general's line at his post: toward the mass of the enemy there, kept steady (re-aimed at most
+  // every few seconds and only for a real change), so the line's wings don't swap sides each time a different enemy
+  // company happens to be nearest
+  dirAng(pl, enemies, px, pz, e) {
+    const k = pl.dAng; if (k && Math.abs(k.x - px) < 3 && Math.abs(k.z - pz) < 3 && this.tick - k.t < 150) return k.a;
+    let sx = 0, sz = 0, w = 0; for (const q of enemies) { const d = len(q.cx - px, q.cz - pz); if (d > 80) continue; const ww = (q.aliveCount || 1) / (10 + d); sx += q.cx * ww; sz += q.cz * ww; w += ww; }
+    let a = w > 0 ? atan2(sx / w - px, sz / w - pz) : atan2(e.cx - px, e.cz - pz);
+    if (k && Math.abs(k.x - px) < 3 && Math.abs(k.z - pz) < 3 && Math.abs(wrap(a - k.a)) < 0.6) a = k.a;
+    pl.dAng = { x: px, z: pz, a, t: this.tick }; return a;
+  }
   generalThink(team, squadIds, pl) {
     const enemies = []; for (let i = 0; i < this.squads.length; i++) { const s = this.squads[i]; if (s.alive && s.team !== team && !s.routing && !s.inactive) enemies.push(s); }
     if (!enemies.length) { for (let i = 0; i < this.squads.length; i++) { const s = this.squads[i]; if (s.alive && s.team !== team && !s.inactive) enemies.push(s); } }
@@ -1140,7 +1150,7 @@ class Sim {
         else {
           const close = !pl.fleeing && d < (def.ai === 'ranged' ? 0 : def.mounted ? (pl.aggr ? pl.aggr + 15 : 45) : (pl.aggr || 32)) && D.kind !== DIR_FLANK && !this.navBlockedLine(sq.cx, sq.cz, e.cx, e.cz);
           if (close) { sq.order = ORD_CHARGE; sq.tx = e.cx; sq.tz = e.cz; sq.facing = ang; continue; }
-          const eang = atan2(e.cx - px, e.cz - pz), rx = -cos(eang), rz = sin(eang), n = squadIds.length;
+          const eang = this.dirAng(pl, enemies, px, pz, e), rx = -cos(eang), rz = sin(eang), n = squadIds.length;
           const lat = (i - (n - 1) / 2) * 20, back = def.ai === 'cannon' ? (pl.standoff ? -70 : -14) : def.mounted ? -8 : (pl.standoff && def.ai === 'ranged' ? -38 : 0);
           const tx = px + rx * lat + sin(eang) * back, tz = pz + rz * lat + cos(eang) * back;
           if (len(sq.cx - tx, sq.cz - tz) > 3) { sq.order = ORD_MOVE; sq.tx = clamp(tx, -HALF + 5, HALF - 5); sq.tz = clamp(tz, -HALF + 5, HALF - 5); sq.facing = eang; }
@@ -3490,7 +3500,12 @@ Sim.prototype.assaultDirs = function () {
   if (this.mission.siege && this.sg && this.sector <= 1) return this.siegeDirs();
   const M = this.mission, A = M.attacker, keys = M.sectors[this.sector] || []; const zs = keys.map(k => this.missionZone(k)).filter(z => z && z.owner !== A);
   const zt = zs.length ? zs : keys.map(k => this.missionZone(k));
-  let i = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== A || g.broken) continue; const z = zt[i++ % zt.length]; if (z) { p.directive = { kind: DIR_HOLD, x: z.x, z: z.z, by: -1 }; p.standoff = true; } }
+  // a company keeps its point while that point is still a target; only when it falls is the company sent to the
+  // least-crowded remaining one (a broken company no longer shifts everyone after it to the other flank)
+  const load = {}; for (const gid in this.mg) { const g = this.mg[gid]; if (g.G.team !== A || g.broken) continue; if (g.zk && zt.some(z => z.key === g.zk)) load[g.zk] = (load[g.zk] || 0) + 1; else g.zk = null; }
+  for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== A || g.broken || !zt.length) continue;
+    if (!g.zk) { let best = zt[0], bl = 1e9; for (const z of zt) { const l = load[z.key] || 0; if (l < bl) { bl = l; best = z; } } g.zk = best.key; load[g.zk] = bl + 1; }
+    const z = zt.find(q => q.key === g.zk); if (z) { p.directive = { kind: DIR_HOLD, x: z.x, z: z.z, by: -1 }; p.standoff = true; } }
   // defenders: garrisons of this sector hold their points; garrisons of lost sectors fall back to the next line
   const D = 1 - A; let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D) continue; const di = +gid.slice(1), home = gid[0] === 'd' ? this.missionZone(this.defKey(di)) : null; if (home && home.owner === D) { p.directive = { kind: DIR_HOLD, x: home.x, z: home.z, by: -1 }; continue; } const nz = zt[j++ % zt.length]; if (nz) p.directive = { kind: DIR_HOLD, x: nz.x, z: nz.z, by: -1 }; }
 };
