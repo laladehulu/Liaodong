@@ -237,10 +237,10 @@ function empHUD(hero) {
   el.hidden = false; const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), gun = H.kind !== 'bow', deg = (x) => (x * 180 / Math.PI), e = deg(H.elev), w = deg(H.want), laying = Math.abs(w - e) > 0.6;
   const ticks = []; for (let d = -25; d <= 30; d += 5) ticks.push(`<i style="bottom:${((d + 25) / 55 * 100).toFixed(1)}%"${d === 0 ? ' class="z"' : ''}><b>${d > 0 ? '+' : ''}${d}°</b></i>`);
   el.innerHTML = `<div class="scale">${ticks.join('')}<u style="bottom:${((clamp(e, -25, 30) + 25) / 55 * 100).toFixed(1)}%"></u><s style="bottom:${((clamp(w, -25, 30) + 25) / 55 * 100).toFixed(1)}%"></s></div>`
-    + `<div class="rd"><b>${gun ? '砲' : '弩'}</b> 仰 ${e >= 0 ? '+' : ''}${e.toFixed(1)}°${laying ? ' · laying…' : ''}<br>${H.out ? 'beyond the field' : H.wall ? 'strikes the wall ahead' : `falls at ${Math.round(H.dist)} m`}</div>`;
+    + `<div class="rd"><b>${gun ? '砲' : '弩'}</b> 仰 ${e >= 0 ? '+' : ''}${e.toFixed(1)}°${laying ? ' · laying…' : ''}<br>${H.out ? 'beyond the field' : H.wall ? 'strikes the wall ahead' : `落 ${Math.round(H.dist / 1.6)} 步 · ${Math.round(H.dist)} m`}${H.foes ? ` · <b style="color:#ff8a6a">${H.foes} in the ring</b>` : ''}</div>`;
   $('weapon').textContent = gun ? '紅夷砲 · the gun' : '床弩 · bed crossbow';
   const ready = H.cd <= 0; $('ammoFill').style.width = (ready ? 100 : (1 - H.cd / H.cdMax) * 100).toFixed(0) + '%'; $('ammoText').textContent = ready ? 'Ready · LMB fire' : `${gun ? 'Sponging and loading' : 'Spanning the bow'}… ${Math.ceil(H.cd / 30)} s`;
-  $('dirText').textContent = 'Mouse lays the piece · RMB look closer · LMB fire · E leave it';
+  $('dirText').textContent = 'Mouse lays the piece · wheel fine elevation · RMB sight · LMB fire · E leave it';
 }
 function gunMode() { const h = localHero(); return h && ((h.weapon === 'rifle' && !Input.bayonet && !h.club) || h.weapon === 'revolver'); }
 document.addEventListener('keydown', (e) => {
@@ -486,6 +486,8 @@ function lineOrder(a, b) {
 }
 canvas.addEventListener('wheel', (e) => {
   if (state.screen !== 'game') return; e.preventDefault();
+  const mh = localHero();
+  if (mh && mh.manE >= 0 && !Input.cmdMode) { Input.pitch = Math.max(-1.45, Math.min(1.45, Input.pitch + (e.deltaY < 0 ? 1 : -1) * 0.0087)); return; } // on a gun the wheel lays it half a degree at a time
   if (Input.cmdMode) { const r = state.renderer; if (r) r.cmdCam.h = Math.max(22, Math.min(200, r.cmdCam.h * (e.deltaY > 0 ? 1.15 : 0.87))); }
   else if (!tapAttack(e.deltaY < 0 ? S.DIR_UP : S.DIR_DOWN)) { Input.pressed |= S.A_SWAP; Input.ads = false; }
 }, { passive: false });

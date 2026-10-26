@@ -860,7 +860,8 @@ class Sim {
     if (u.swapQ && (u.st === ST_RELOAD || u.st === ST_AIM)) { u.st = ST_IDLE; u.stT = 0; u.aiming = false; } // drawing the other weapon breaks off a reload
     if (u.swapQ && u.st === ST_IDLE) { u.swapQ = false; if (u.nextWeapon && u.nextWeapon !== u.weapon) { u.st = ST_SWAP; u.stT = 0; u.blocking = false; u.aiming = false; } }
     const gun = gunOf(u.def, u.weapon);
-    if (gun && this.phase === 1) {
+    if (gun && this.phase === 1 && u.weapon === 'bow' && !(gun.xbow)) this.heroBow(u, a, gun);
+    else if (gun && this.phase === 1) {
       u.aiming = !!(a & A_AIM) && (u.st === ST_IDLE || u.st === ST_RELOAD) && !(a & A_BLOCK); u.aimHold = u.aiming && u.st === ST_IDLE ? (u.aimHold || 0) + DT : 0;
       const have = u.weapon === 'revolver' ? u.ammoR : u.ammo;
       if ((a & A_RELOAD) && u.club) { u.club = false; this.events.push({ t: 'grip', id: u.id, club: false }); }
@@ -906,6 +907,7 @@ class Sim {
       let sp = u.def.speed * this.zoneSpeed(u.x, u.z, mx, mz);
       if ((keys & KEY_S) && !(keys & KEY_W)) sp *= 0.65;
       if (u.st === ST_WINDUP || u.st === ST_RELEASE) sp *= 0.7; else if (u.st === ST_STUN) sp = 0;
+      if (u.drawT > 0) sp *= 0.55; // a drawn bow: you walk, you don't run
       if (u.blocking) sp *= 0.85; if (u.aiming) sp *= 0.5; if (u.st === ST_RELOAD) sp *= 0.8;
       // sprint: hold Shift while moving forward; burns stamina, and a winded man must get his breath back
       if (u.champ) { if (u.sta < 4) u.winded = true; else if (u.sta > 30) u.winded = false; } else { if ((u.fat || 0) >= 96) u.winded = true; else if ((u.fat || 0) < 55) u.winded = false; }
@@ -1973,7 +1975,7 @@ class Sim {
               if (p.kind === 'arrow' && v.def.shield && !v.dead && v.st !== ST_RELEASE && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.1 && this.rng.next() < 0.75) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
               if (p.kind === 'arrow' && v.ctrl >= 0 && !v.dead && (v.iframe > 0 || (v.blocking && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.2 && this.rng.next() < (v.def.shield ? 1 : 0.8)))) { this.events.push({ t: v.iframe > 0 ? 'evade' : 'arrowstick', id: v.id, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); if (v.iframe <= 0) this.events.push({ t: 'block', x: p.x, y: p.y, z: p.z, perfect: false, by: v.id, att: -1, shield: !!v.def.shield }); done = true; break; } // you can slide under an arrow or turn it on your guard
               if (p.kind === 'arrow' && v.zfile && !v.dead && this.coverShield(v, p)) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
-              if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, this.units[p.owner].def.bow.dmg * (v.def.ai === 'cannon' ? 0.3 : 1) * (v.ctrl >= 0 && !(this.players[v.ctrl] && this.players[v.ctrl].ai) ? 0.65 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { if (this.xc) this.hitReact(v, this.units[p.owner], 'shot', false, false); else { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
+              if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, (p.dmg || (this.units[p.owner].def.bow || { dmg: 30 }).dmg) * (v.def.ai === 'cannon' ? 0.3 : 1) * (v.ctrl >= 0 && !(this.players[v.ctrl] && this.players[v.ctrl].ai) ? 0.65 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { if (this.xc) this.hitReact(v, this.units[p.owner], 'shot', false, false); else { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
               if (p.bolt) { v.lastShotBy = p; p.hits++; this.applyDamage(v, 80, p.owner, p.vx * 0.05, 1, p.vz * 0.05, 'arrow', p.x, p.y, p.z); if (!v.dead && v.mass < 5) v.downT = Math.max(v.downT, 0.8); this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); if (p.hits >= 3) { done = true; break; } continue; }
               // solid shot: bowl through
               const sp = len(p.vx, p.vz) || 1; const nx = p.vx / sp, nz = p.vz / sp;
@@ -3415,7 +3417,8 @@ Sim.prototype.assaultCap = function () {
   const humanMen = this.players.filter(p => !p.ai && p.team === A).reduce((s, p) => s + size(p), 0), humanDef = this.players.filter(p => !p.ai && p.team !== A).reduce((s, p) => s + size(p), 0);
   // attackers come as many small companies (about a fifth of the field each) so there are enough to fill the ditch,
   // push every engine and climb every ladder at once
-  const per = Math.max(8, Math.round(CAP / 3)); fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > per) this.mTrim(p, per, true);
+  // a siege needs more, smaller companies: one at each ditch, one at the ram, one at each tower
+  const per = Math.max(8, Math.round(CAP / (M.siege ? 5 : 3))); fit(groups(A, false), Math.max(16, CAP - humanMen)); if (M.siege) for (const p of groups(A, false)) if (size(p) > per) this.mTrim(p, per, true); for (const p of groups(A, true)) if (size(p) > per) this.mTrim(p, per, true);
   // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
   // (an assault needs odds: the attackers field the full cap, the defenders about 70% of it, as before the cap)
   fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, Math.round(CAP * 0.7) - humanDef));
@@ -3747,7 +3750,7 @@ Sim.prototype.assaultThink = function () {
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
   const CAP = M.cap || 64;
-  if (act + Math.round(CAP / 3) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  if (act + Math.round(CAP / (M.siege ? 5 : 3)) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
   // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
   let revivable = false;
   if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;
@@ -3790,6 +3793,28 @@ function siegeDitchH(d, x, z, h) { const dz = z - d.zc, ad = dz < 0 ? -dz : dz; 
 function siegeDitchWater(d, x, z) { const dz = z - d.zc, ad = dz < 0 ? -dz : dz; if (ad >= d.w * 0.8) return 0; const ax = x < 0 ? -x : x; if (ax < d.bridge) return -1;
   for (let i = 0; i < d.fills.length; i++) { const f = d.fills[i]; if (f.done && (x - f.x < 0 ? f.x - x : x - f.x) < f.hw) return 2; } return 1; }
 // a man on the wall top leans over the parapet in front of him to shoot down at the foot of the wall
+// a player's bow: hold to draw (A_AIM while the button is down), let go to loose (A_FIRE). The longer the draw, up to
+// about 0.8 s, the faster and harder the arrow; held at full draw past ~2.5 s the arm tires and the aim wavers. After
+// each arrow the next is nocked (about 0.8 s). Arrows come from his quiver (u.shots).
+Sim.prototype.heroBow = function (u, a, g) {
+  const FULL = 0.8, NOCK = 0.8;
+  if (u.st === ST_RELOAD || u.st === ST_SWAP || u.st === ST_STUN || u.downT > 0) { u.drawT = 0; u.aiming = false; return; }
+  if (u.ammo <= 0) { u.drawT = 0; u.aiming = false; if (u.st === ST_IDLE && (u.shots === undefined || u.shots > 0)) this.startReload(u, NOCK, true); return; }
+  const drawing = !!(a & A_AIM) && (u.st === ST_IDLE || u.st === ST_AIM) && !(a & A_BLOCK) && !u.club;
+  if (drawing) { if (!u.drawT) this.events.push({ t: 'bowdraw', id: u.id }); u.drawT = (u.drawT || 0) + DT; u.aiming = true; u.aimHold = u.drawT; }
+  if ((a & A_FIRE) && (u.drawT || 0) > 0.12) {
+    const p = clamp(u.drawT / FULL, 0.3, 1), tire = Math.max(0, u.drawT - 2.5), v = (g.speed || 40) * (0.55 + 0.45 * p);
+    let spread = 0.008 + (1 - p) * 0.03 + Math.min(0.06, tire * 0.02) + (u.speedNow || 0) * 0.004 + (u.mount >= 0 ? 0.012 : 0) + (u.airborne ? 0.03 : 0);
+    const ox = u.x + sin(u.yaw) * 0.5, oy = u.y + 1.55, oz = u.z + cos(u.yaw) * 0.5;
+    const yw = u.yaw + (this.rng.next() - 0.5) * spread, pt = u.pitch + (this.rng.next() - 0.5) * spread;
+    this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(yw) * cos(pt) * v, vy: sin(pt) * v, vz: cos(yw) * cos(pt) * v, team: u.team, owner: u.id, life: 0, hits: 0, dmg: g.dmg * (0.45 + 0.55 * p), over: this.overParapet(u) });
+    this.events.push({ t: 'arrow', id: u.id, x: ox, y: oy, z: oz, hero: true, pw: p });
+    u.ammo = 0; if (u.shots !== undefined) u.shots = Math.max(0, u.shots - 1); u.drawT = 0; u.aiming = false;
+    if (u.shots === undefined || u.shots > 0) this.startReload(u, NOCK, true);
+    return;
+  }
+  if (!drawing) { u.drawT = 0; u.aiming = false; }
+};
 Sim.prototype.overParapet = function (u) { const W = TERR.swall; if (!this.sg || !W) return false; return u.z > W.z0 + 0.4 && u.z < W.z1 + 0.5 && u.y > W.h - 1.2; };
 Sim.prototype.siegeInit = function () {
   const M = this.mission, A = M.attacker, D = 1 - A, W = TERR.swall; const sg = this.sg = { A, D, gateHp: 6000, gateMax: 6000, engines: [], lads: [], emp: [], holes: [], fired: false, oilT: 0, stoneT: 0, slipT: 0, ice: this.bdef.biome === 'winter', sec: -1 };
@@ -3975,7 +4000,7 @@ Sim.prototype.siegeDirs = function () {
   // every time an engine is hit or a ladder falls
   const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false, 'ram']);
   eng('tower').forEach((t, i) => jobs.push(t.docked ? [t.x, W.z0 + 2.5, false, 'tw' + t.id] : [t.x, t.z - 5, false, 'tw' + t.id]));
-  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, false, 'z' + k]; }); jobs.unshift(...dz, ...dz.map(j => [j[0], j[1], false, j[3] + 'b'])); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
+  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, false, 'z' + k]; }); jobs.unshift(...dz); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
   else { sg.lads.forEach((L, i) => jobs.push(L.up ? [L.x, W.z0 + 2.5, false, 'ld' + i] : [L.x, W.z0 - 3, false, 'ld' + i])); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false, 'ct' + c.id]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false, 'gate']); }
   const load = {}; for (const g of att) { const G = this.mg[g]; if (G.jid && G.jsec === s && jobs.some(j => j[3] === G.jid)) load[G.jid] = (load[G.jid] || 0) + 1; else { G.jid = null; G.jsec = s; } }
   att.forEach((g) => { const G = this.mg[g], p = this.players[G.p]; if (!jobs.length) return;

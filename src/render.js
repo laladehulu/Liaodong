@@ -675,13 +675,24 @@ class Renderer {
     function L0x(c) { return new THREE.MeshBasicMaterial({ color: c }); }
     this.sgv = true;
   }
+  // crewing a piece: the camera stands up and behind the gun (a little to the side) so the barrel never hides the field;
+  // RMB (empZoom) brings it back down to the sight. Blended in and out; the shot kicks it back.
+  empCam(hero, yaw, pitch, dt, look) {
+    const sg = this.sim.sg, e = sg && hero.manE >= 0 ? sg.emp[hero.manE] : null, on = !!(e && e.man === hero.id) && hero.downT <= 0;
+    const want = on && !this.empZoom ? 1 : 0; this.empK = (this.empK || 0) + (want - (this.empK || 0)) * (1 - Math.exp(-dt * 6)); const k0 = this.empK; if (k0 < 0.01 || !e) return;
+    const k = k0 * k0 * (3 - 2 * k0), cam = this.camera, fx = Math.sin(yaw), fz = Math.cos(yaw), kick = (this.empKick || 0) * (this.empKick || 0);
+    const bow = e.kind === 'bow', back = (bow ? 3.0 : 3.6) + kick * 0.6, up = (bow ? 2.2 : 2.7) + kick * 0.15, side = bow ? 0.7 : 0.9, gy = e.y + 1.2;
+    const px = e.x - fx * back - fz * side, py = gy + up, pz = e.z - fz * back + fx * side;
+    cam.position.set(lerp(cam.position.x, px, k), lerp(cam.position.y, py, k), lerp(cam.position.z, pz, k));
+    const lp = pitch - 0.16, cp = Math.cos(lp); look.set(lerp(look.x, cam.position.x + fx * cp * 10, k), lerp(look.y, cam.position.y + Math.sin(lp) * 10, k), lerp(look.z, cam.position.z + fz * cp * 10, k));
+  }
   // manning a bed crossbow or a gun: your own weapon is slung, your hands are on the piece (tiller and trigger bar, or the
   // two handspikes), and the ground shows where a shot at the present lay would first strike (Sim.sgPredict: the sim's own steps)
   empView(hero, dt) {
     const sg = this.sim.sg, e = sg && hero.manE >= 0 ? sg.emp[hero.manE] : null, on = !!(e && e.man === hero.id) && (this.tp || 0) < 0.3 && hero.downT <= 0;
     if (on && !this.vmEmp) this.buildEmpVM(hero);
     if (!this.vmEmp) return;
-    this.vmEmp.visible = on; this.empMark.visible = on; this.empArc.visible = on; if (!on) { this.empHud = null; return; }
+    this.vmEmp.visible = on && (this.empK || 0) < 0.4; this.empMark.visible = on; this.empArc.visible = on; if (!on) { this.empHud = null; return; }
     this.vm.visible = false; this.vmArms.visible = false; this.vmShield.visible = false; this.vmBow.visible = false;
     const bow = e.kind === 'bow'; this.vmEmpBow.visible = bow; this.vmEmpGun.visible = !bow;
     this.fovTarget = this.empZoom ? (bow ? 36 : 30) : 70;
@@ -689,10 +700,14 @@ class Renderer {
     this.vmEmp.position.set(0, -k * 0.06, k * 0.16); this.vmEmp.rotation.x = k * 0.12;
     this.empN = (this.empN || 0) + 1;
     if (this.empN % 3 === 1 || !this.empP) { const P = this.sim.sgPredict(e, e.yaw, e.pitch || 0); this.empP = P;
-      const gy = P.box ? P.y : SIM.terrainH(P.x, P.z); this.empMark.position.set(P.x, gy + 0.06, P.z); const dist = Math.hypot(P.x - e.x, P.z - e.z); const s = 0.8 + dist * 0.025; this.empMark.scale.set(s, s, s);
+      const gy = P.box ? P.y : SIM.terrainH(P.x, P.z); this.empMark.position.set(P.x, gy + 0.06, P.z); const dist = Math.hypot(P.x - e.x, P.z - e.z); 
       const A = this.empArc.geometry.attributes.position, n = Math.min(A.count, P.pts.length / 3); for (let i = 0; i < A.count; i++) { const j = Math.min(i, n - 1) * 3; if (n > 0) A.setXYZ(i, P.pts[j], P.pts[j + 1], P.pts[j + 2]); else A.setXYZ(i, e.x, e.y, e.z); } A.needsUpdate = true; this.empArc.geometry.setDrawRange(0, n); this.empArc.geometry.computeBoundingSphere();
-      this.empHud = { kind: e.kind, cd: e.cd, cdMax: e.cdMax || (bow ? 150 : 270), elev: e.pitch || 0, want: this._viewPitch, dist, wall: !!P.box, out: !!P.out }; }
+      // the ring: where a ball first strikes it skips and ploughs on (a bolt sticks), so mark the ground it can sweep; foes inside turn it red
+      const rr = bow ? 1.6 : 3.2; let foes = 0; if (!P.out) for (const u of this.sim.units) { if (u.dead || u.team === e.team || u.type === 'horse') continue; if (Math.hypot(u.x - P.x, u.z - P.z) < rr) foes++; }
+      this.empMark.scale.set(rr, rr, rr); this.empMark.children[0].material.color.setHex(foes ? 0xff6a4a : 0xffd27a);
+      this.empHud = { kind: e.kind, cd: e.cd, cdMax: e.cdMax || (bow ? 150 : 270), elev: e.pitch || 0, want: this._viewPitch, dist, wall: !!P.box, out: !!P.out, foes }; }
     else if (this.empHud) { this.empHud.cd = e.cd; this.empHud.elev = e.pitch || 0; this.empHud.want = this._viewPitch; }
+    { const m = this.empArc.material, tk = this.empK || 0; m.size = 0.16 + tk * 0.22; m.opacity = (e.cd > 0 ? 0.22 : 0.85) * (0.55 + 0.45 * tk); }
   }
   buildEmpVM(hero) {
     const g = new THREE.Group(); this.camera.add(g); this.vmEmp = g; const mk = (c) => new THREE.MeshLambertMaterial({ color: c, depthTest: false });
@@ -2225,6 +2240,7 @@ class Renderer {
       { const big = hero.champ && (hero.spinT > 0 || hero.dashT > 0 || hero.castT > 0 || hero.vault || hero.plunge); this.tp = (this.tp || 0) + ((big ? 1 : 0) - (this.tp || 0)) * (1 - Math.exp(-dt * (big ? 9 : 4)));
         if (this.tp > 0.01) { const k = this.tp * this.tp * (3 - 2 * this.tp); const back = 4.6 * k, up = 1.1 * k, side = 0.9 * k; const fx = Math.sin(yaw), fz = Math.cos(yaw);
           cam.position.set(cam.position.x - fx * back - fz * side, cam.position.y + up, cam.position.z - fz * back + fx * side); T.v.y -= 0.4 * k; T.v.x = lerp(T.v.x, hx + fx * 3, k); T.v.z = lerp(T.v.z, hz + fz * 3, k); T.v.y = lerp(T.v.y, hy + 1.4, k); } }
+      this.empCam(hero, yaw, pitch, dt, T.v);
       cam.lookAt(T.v); this.dodgeRoll = (this.dodgeRoll || 0) * Math.exp(-dt * 7); cam.rotateZ(this.recoilRoll * 0.03 + (hero.downT > 0 ? 0.6 : 0) + this.camRoll + this.dodgeRoll + (this.slideRoll || 0) + IM.r + flin * 0.03); cam.rotateX(this.camPitch); cam.translateZ(-this.camPush);
       this.fov += (this.fovTarget - this.fov) * (1 - Math.exp(-dt * 14));
       { const f = this.fov - IM.fov; if (Math.abs(cam.fov - f) > 0.05) { cam.fov = f; cam.updateProjectionMatrix(); } const vk = Math.min(1, Math.tan(cam.fov * PI / 360) / Math.tan(64 * PI / 360)); this.vmFov.scale.set(vk, vk, 1); }
@@ -2290,7 +2306,7 @@ class Renderer {
       const yaw = lerpA(u.pyaw, u.yaw, alpha);
       if (u.mounted) { const hs = this.horseSlot.get(u.id); this.drawHorse(hs, u, x, y, z, lerpA(u.phyaw, u.hyaw, alpha), u.speedNow, u.walk, false, 0); }
       const sy = u.champ && u.spinT > 0 ? yaw + (1 - clamp(u.spinT / 0.55, 0, 1)) * PI * 2 : yaw;
-      this.drawFigure(i, u, x, y, z, sy, alpha, far || (fp && i === heroId && (this.tp || 0) < 0.3));
+      this.drawFigure(i, u, x, y, z, sy, alpha, far || (fp && i === heroId && (this.tp || 0) < 0.3 && (this.empK || 0) < 0.35));
     }
     this.ownMarkEnd(om, capt, view);
     // dead horses
