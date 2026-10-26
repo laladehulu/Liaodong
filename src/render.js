@@ -336,7 +336,7 @@ const SP = (() => { const g = [-0.12, -0.42, 0.2], d = N3(0.3, -0.3, 0.9); const
 // the three-eyed gun (三眼銃) loaded properly, one barrel after another: muzzles tipped up with the pole's foot on the ground,
 // powder poured from the flask, ball and wad from the pouch, the rammer drawn and driven home in strokes and put back,
 // the touch-hole primed from the flask; when all three are loaded the slow-match is lifted and blown on to brighten it
-const SJR = { g: [-0.02, -0.56, 0.3], d: N3(0.06, 0.9, 0.42), flask: [-0.24, -0.5, 0.14], mouth: [-0.04, 0.16, 0.22], BT: 0.88 / 3 };
+const SJR = { g: [-0.28, -0.62, 0.14], d: N3(-0.08, 0.94, 0.33), flask: [-0.24, -0.5, 0.14], mouth: [-0.04, 0.16, 0.22], BT: 0.88 / 3 };
 function sjReload(t, tg, KW) {
   if (t >= 0.88) {
     const m = clamp((t - 0.88) / 0.12, 0, 1), G = KW.guard;
@@ -349,8 +349,8 @@ function sjReload(t, tg, KW) {
   const up = (h) => [g[0] + d[0] * (0.97 + h) + sx, g[1] + d[1] * (0.97 + h), g[2] + d[2] * (0.97 + h)];
   const at = (f, ox) => [g[0] + d[0] * f + ox, g[1] + d[1] * f, g[2] + d[2] * f];
   const rest = at(0.1, 0), stow = at(-0.22, 0.05), pan = at(0.5, -0.07);
-  keyPath(tg.rh, [[0, rest], [0.07, SJR.flask], [0.12, up(0.12)], [0.2, up(0.1)], [0.25, POUCH], [0.31, up(0.03)], [0.34, up(0.03)], [0.38, stow], [0.44, up(0.62)], [0.48, up(0.5)], [0.53, up(0.18)], [0.57, up(0.42)], [0.61, up(0.16)], [0.65, up(0.4)], [0.69, up(0.15)], [0.74, up(0.66)], [0.79, stow], [0.84, SJR.flask], [0.88, pan], [0.94, pan], [1, rest]], s);
-  return { rod: s > 0.38 && s < 0.79 ? 0.7 : -1, flask: (s > 0.06 && s < 0.24) || (s > 0.83 && s < 0.96) ? 1 : 0, blow: 0 };
+  keyPath(tg.rh, [[0, rest], [0.07, SJR.flask], [0.12, up(0.08)], [0.2, up(0.06)], [0.25, POUCH], [0.31, up(0.02)], [0.34, up(0.02)], [0.38, stow], [0.44, up(0.34)], [0.48, up(0.24)], [0.53, up(0.04)], [0.57, up(0.18)], [0.61, up(0.03)], [0.65, up(0.17)], [0.69, up(0.03)], [0.74, up(0.36)], [0.79, stow], [0.84, SJR.flask], [0.88, pan], [0.94, pan], [1, rest]], s);
+  return { rod: s > 0.38 && s < 0.79 ? 0.62 : -1, flask: (s > 0.06 && s < 0.24) || (s > 0.83 && s < 0.96) ? 1 : 0, blow: 0 };
 }
 const BOW = { idleL: [0.24, -0.5, 0.18], idleD: N3(0.2, 0.95, 0.25), aimL: [0.1, 0.03, 0.56], aimD: N3(-0.06, 1, 0.04), nock: [0.06, 0.05, 0.48], cheek: [-0.06, 0.15, 0.06], relL: [0.16, -0.24, 0.42], relD: N3(0, 1, 0.15) };
 BOW.keys = [[0, [0.09, -0.24, 0.38]], [0.25, [-0.22, 0.24, -0.18]], [0.5, [-0.22, 0.42, -0.22]], [0.82, [0.09, -0.24, 0.38]], [1, [0.09, -0.24, 0.38]]];
@@ -1775,7 +1775,11 @@ class Renderer {
         const kr = clamp((r - 0.05) / 0.5, 0, 1);
         for (let j = 0; j < 3; j++) { tg.wp[j] = lerp(lerp(KW.guard.g[j], KW.carry.g[j], r), G[j], kr); tg.wd[j] = lerp(lerp(KW.guard.d[j], KW.carry.d[j], r), D[j], kr); } nrm3(tg.wd);
         rateW = 20; }
-      else { lerp3(tg.wp, KW.guard.g, KW.carry.g, r); nrm3(lerp3(tg.wd, KW.guard.d, KW.carry.d, r)); tg.wp[1] += Math.abs(Math.sin(ph)) * 0.02 * mv; }
+      else { lerp3(tg.wp, KW.guard.g, KW.carry.g, r); nrm3(lerp3(tg.wd, KW.guard.d, KW.carry.d, r)); tg.wp[1] += Math.abs(Math.sin(ph)) * 0.02 * mv;
+        /* the duck team's long spear stands upright at rest and comes down to the level only when a foe is close */
+        if (w === 'yari' && (u.kitRole !== undefined ? u.kitRole : u.role) === 'spear') { const tgu = u.target >= 0 ? this.sim.units[u.target] : null, near = !!(tgu && !tgu.dead && (tgu.x - u.x) * (tgu.x - u.x) + (tgu.z - u.z) * (tgu.z - u.z) < 64) || u.blocking;
+          a.spUp = (a.spUp === undefined ? 1 : a.spUp) + ((near ? 0 : 1) - (a.spUp === undefined ? 1 : a.spUp)) * Math.min(1, dt * 4); const k = a.spUp;
+          if (k > 0.01) { const G = [-0.14, -0.22 + Math.sin(this.time * 1.3 + u.id) * 0.01, 0.14], D = N3(0.07, 0.97, 0.14); for (let j = 0; j < 3; j++) { tg.wp[j] = lerp(tg.wp[j], G[j], k); tg.wd[j] = lerp(tg.wd[j], D[j], k); } nrm3(tg.wd); } } }
       if (anchor === 'R') { set3(tg.rh, tg.wp); for (let j = 0; j < 3; j++) tg.lh[j] = tg.wp[j] + tg.wd[j] * KW.off2; }
     } else { fkR = true; fkL = true; }
     if (u.flinchT > 0 && !(u.hrA < 1)) { lean -= 0.3 * (u.flinchT / 0.35); }

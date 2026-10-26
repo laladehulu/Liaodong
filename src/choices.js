@@ -151,6 +151,7 @@ CHD.z1boy = {
     ] }),
   dream: (C, o) => o === 0 ? ['The night after', ['You dream of the well-house. A boy\'s bare foot in the snow, and Du Ajiu counting silver by the fire, and the count never ends.', 'Fifty. Fifty. Fifty.']]
     : o === 2 ? ['The night after', ['You dream that the boy comes back over the ridge with the banners behind him, and lifts his hand toward you.', 'You wake before you can tell whether he is pointing you out, or waving.']] : null,
+  murmur: (C, o) => o === 0 ? ['liu6', '那個孩子……他光著一隻腳。', 'That boy... he had one bare foot.'] : o === 2 ? ['du', '五十兩。跑了。', 'Fifty taels. Ran off into the dark.'] : null,
   end: (C, o) => o === 0 ? `Fifty taels. ${chAlive(C, 'du') ? 'Du Ajiu sent them home to Chunhua.' : 'Du Ajiu never spent them.'}` : o === 1 ? 'The chief knew where the banners were. Nobody above him listened. The clerk took the boy anyway.' : 'Somewhere north of the pass a boy got home. Chief Wu took twenty strokes for it, and died two days later at Abudali.',
   talk: (C, k, o) => ({
     liu6: o === 0 ? { q: 'Xiaoliu. About the boy...', a: [chL('……他跟我一樣大。', '...He was my age.'), chL('（他轉過身去睡了。）', '(He turns over and goes to sleep.)')] } : o === 2 ? { q: 'You think he got home?', bond: 1, a: [chL('他跑得比兔子還快。一定到家了。', 'He ran faster than a hare. He got home. He did.')] } : null,
@@ -185,10 +186,10 @@ const PI_ = Math.PI;
     if (ZHOOK.sleep || !ZC || ZC.night >= 2) return _s();
     const C = chCtx(); if (!C) return _s(); chData(C.S);
     if (ZC.night === 0 && chGot(C, 'z1boy') < 0) { chDecide(CHD.z1boy.build(C), () => _s()); return; }
-    if (ZC.night === 1 && chGot(C, 'z2road') < 0 && chZW(C)) { chDecide(CHD.z2road.build(C), (o) => {
+    if (ZC.night === 1 && chGot(C, 'z2road') < 0 && chZW(C)) { chDecide(CHD.z2road.build(C), (o) => chDream(() => {
       if (o === 2) return _s();
       const sc = o === 0 ? 'zford' : 'zfucha'; ZS.stage = sc; zSave();
-      zCards([{ title: o === 0 ? '南 · South' : '東 · East', year: 'April 1619', p: [o === 0 ? 'You march before light, the wounded man limping in the middle of the file, south toward the passes and the river beyond them.' : 'You march east along the valley toward the smoke of the Korean camp at Fucha.'], btn: 'March →' }], () => zGo(sc)); }); return; }
+      zCards([{ title: o === 0 ? '南 · South' : '東 · East', year: 'April 1619', p: [o === 0 ? 'You march before light, the wounded man limping in the middle of the file, south toward the passes and the river beyond them.' : 'You march east along the valley toward the smoke of the Korean camp at Fucha.'], btn: 'March →' }], () => zGo(sc)); })); return; }
     return chDream(() => _s()); }; }
 // the talk at the fire remembers: every answer can give a man something to say about it
 function chTalkAdd(D, k) {
@@ -215,9 +216,10 @@ CHD.z2road = {
           fx: (C) => { chLose(C, w, 'left', 'z2road'); for (const k in C.S.alive) if (C.S.alive[k] && k !== C.S.me && k !== 'me') chBond(C, k, -1); chRep(C, 'care', -2); } },
       ] }; },
   dream: (C, o) => { const w = (C.S.ch.z2road || {}).w, n = w ? chNm(C, w, true) : 'him';
-    if (o === 2) return ['Two years on', [`Water dripping somewhere in a ravine. ${n} calling your name, patiently, as if you had only stepped away for a moment.`, 'In the dream you always go back. You never get there.']];
+    if (o === 2) return ['Every night since', [`Water dripping somewhere in a ravine. ${n} calling your name, patiently, as if you had only stepped away for a moment.`, 'In the dream you always go back. You never get there.']];
     if (o === 1 && chGot(C, 'z2tent') === 1) return ['After Fucha', ['The flap of the Korean surgeon\'s tent, falling shut. Through the cloth, the shapes of men coming in, and no sound at all.']];
     return null; },
+  murmur: (C, o) => { const w = (C.S.ch.z2road || {}).w; if (!w) return null; const n = [chNm(C, w), chNm(C, w, true)]; return o === 2 ? ['he', `${n[0]}的刀……不知道他用了沒有。`, `${n[1]}'s knife... I wonder if he used it.`] : C.S.alive[w] ? [w, '四百里。我一步一步數的。', 'Four hundred li. I counted every step.'] : null; },
   end: (C, o) => { const w = (C.S.ch.z2road || {}).w, n = w ? chNm(C, w, true) : 'He';
     if (o === 2) return `${n} was left in the ravine above Abudali with water and a knife. Nobody knows what he did with the knife.`;
     if (o === 1) return chGot(C, 'z2tent') === 1 ? `${n} was left in the surgeons' tent at Fucha. The Jin killed every Ming soldier they found in the Korean camp.` : C.S.alive[w] ? `You carried ${n} out of Fucha when the Koreans gave up. He lived.` : `You went back for ${n} at Fucha. You could not get him out.`;
@@ -376,6 +378,7 @@ CHD.z3bridge = {
       { q: 'We stay with Qi Jin\'s wagons.', led: 'Stayed south of the river in Qi Jin\'s wagon camp.', a: [chL('……好吧。那就北岸見——不，那就之後見。給我們把橋口守住。', '...So be it. Then we\'ll see you after. Keep the bridge open for us.'), chL('（他走回橋上，沒有回頭。）', '(He walks back over the bridge and does not look round.)')], fx: (C) => { chBond(C, 'ran', -1); } },
     ] }),
   dream: (C, o) => o === 1 ? ['After the Hun River', ['White poles standing in the river ice like reeds, a hundred of them, a thousand. On one of them the white ring is still clean.', 'Ran Jiahu, from the far bank: "Keep the bridge open for us."']] : (C.S.flags.ranLived ? null : ['After the Hun River', ['The bridge end, and Ran Jiahu\'s back, and the white pole turning in his hands. You are walking away from him. In the dream the bridge is a thousand li long.']]),
+  murmur: (C, o) => C.S.flags.ranLived ? ['ran', '白杆兵，三千人過橋。回來的……', 'Three thousand White Poles went over that bridge. The ones who came back...'] : o === 1 ? ['fang', '他來請我們過河。我們沒去。', 'He came to ask us across. We didn\'t go.'] : null,
   end: (C, o) => o === 1 ? 'You stayed south of the river. The White Poles died on the north bank; Ran Jiahu among them.' : C.S.flags.ranLived ? 'You crossed with the White Poles. Ran Jiahu came back over the bridge with you, and lived.' : 'You crossed with the White Poles. Ran Jiahu stayed at the bridge end.',
   talk: (C, k, o) => k === 'ran' && C.S.flags.ranLived ? { g: chL('橋還在我夢裡。', 'I still see that bridge when I sleep.'), q: 'You lived.', bond: 1, a: [chL('秦將軍、周將軍都沒回來。三千白杆，過來的不到一百。', 'General Qin and General Zhou didn\'t come back. Three thousand White Poles; fewer than a hundred came over.'), chL('我欠你一條命。四川的人，欠了就記著。', 'I owe you a life. Sichuan men remember what they owe.')] }
     : (o === 1 && (k === 'xiaoman' || k === 'shao' || k === 'bao')) ? { q: 'Do you think we should have crossed?', a: [chL('那個白杆兵……他來請我們的時候，我就站在你旁邊。', 'That White Pole... I was standing next to you when he came to ask.'), chL('我不知道。我只知道我還活著。', 'I don\'t know. I only know I\'m alive.')] } : null,

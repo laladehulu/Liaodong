@@ -3298,7 +3298,8 @@ Sim.prototype.mBurn = function (x0, x1, z) {
 Sim.prototype.zWound = function (k) {
   for (const p of this.players) { if (p.ai) continue; const q = this.squads[p.soldierSq]; if (!q) continue; let u = this.units[q.unitIds[k]];
     if (!u || u.dead || u.ctrl >= 0) u = q.unitIds.map(id => this.units[id]).find(v => !v.dead && v.ctrl < 0 && !v.wounded) || null; if (!u) continue;
-    u.wounded = true; u.helpedBy = -1; u.hp = Math.max(u.hp, u.def.hp * 0.35); u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.downT = Math.max(u.downT, 1);
+    /* down on the ground like any man who falls, so E (or a medic) gets him up: the one way to help the wounded */
+    u.hp = 1; u.wounded = true; u.downed = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * (this.mission && this.mission.soft ? 240 : 60); u.medic = -1; u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.downT = Math.max(u.downT, 1.2); u.mx = 0; u.mz = 0;
     this.events.push({ t: 'zwound', p: p.idx, id: u.id, x: u.x, z: u.z }); }
 };
 Sim.prototype.helpWounded = function (u) { // E beside a downed or wounded comrade: haul him up, or get his arm over your shoulder
