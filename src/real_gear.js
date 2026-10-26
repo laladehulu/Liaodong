@@ -125,6 +125,10 @@ function realGear(u) {
     case 'jigen': mingKui(0x6e757c, 0x3a3a40, brass); dingjia(0x4a2024, 0x9a9ea6, [0.15, 0.06, -0.03, -0.12]); mirror(); break;
     case 'horokutai': mingHair(); b('h', [0, 0.115, 0], [0.285, 0.045, 0.285], red); robe(0x7a3422, 0x2a2a34); bombs(); y('c', [0.12, -0.02, -0.17], [0.2, 0.2, 0.2], 0x2a2a2e); break;
     case 'ronin': if (vr % 2 === 0) hatOn(() => c('h', [0, 0.16, 0], [0.8, 0.18, 0.8], 0x9a8058)); else { mingHair(); b('h', [0, 0.08, 0], [0.29, 0.07, 0.29], 0x2a3a5a); } robe(torsoColor(u), 0x5a4a3a); if (vr % 3 !== 1) straw(); break;
+  } else if (u.look && u.look.jin) { const L = u.look, cc = L.coat || bc;
+    if (L.jin === 'helm') jinHelm(L.iron || iron, cc, L.plume || red, L.tall); else if (L.jin === 'fur') furHat(L.fur || red); else if (L.jin === 'liang') liangmao();
+    queue(); if (L.armor === 'robe') robe(cc, L.sash || 0x26262c); else dingjia(cc, L.stud || 0xc9c0a8); hoof(cc); if (L.quiver) { quiver(); sadai(); } if (L.flag) backflag(bc);
+    R.lookGear(L, b, c, y, hatOn, 'body');
   } else switch (u.type) {
     case 'hero': jinHelm(0xc9a03a, 0xe8c040, red, 1.35); queue(); dingjia(0xe8c040, 0xa8201a, [0.15, 0.06, -0.03, -0.12]); hoof(0xe8c040); b('c', [0, -0.08, -0.18], [0.6, 0.95, 0.03], 0xa8201a, [-0.06, 0, 0]); break; // the Khan's yellow, under a red cloak
     case 'samurai': jinHelm(iron, bc, red); queue(); dingjia(bc, 0xc9c0a8); hoof(bc); break;

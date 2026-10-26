@@ -178,6 +178,10 @@ function gearFor(u) {
     case 'jigen': petalHelm(iron, 0x1a1a1a); dingjia(0x5a2226, 0x9a9ea6); mirror(); break;
     case 'horokutai': mingHair(); hachimaki(red); robe(0x7a3422, 0x2a2a34); b('p', [-0.24, -0.02, 0.04], [0.14, 0.18, 0.2], 0x6a5038); y('p', [0.24, -0.02, 0.06], [0.16, 0.14, 0.16], 0x2a2a2e); b('p', [0.24, 0.07, 0.06], [0.03, 0.06, 0.03], 0xe8e2cc); break;
     case 'ronin': if (vr % 2 === 0) hatOn(() => c('h', [0, 0.16, 0], [0.8, 0.18, 0.8], 0x9a8058)); else mingHair(); robe(torsoColor(u), 0x5a4a3a); break;
+  } else if (u.look && u.look.jin) { const L = u.look, cc = L.coat || bc;
+    if (L.jin === 'helm') jinHelm(L.iron || iron, L.plume); else if (L.jin === 'fur') furHat(L.fur || red); else if (L.jin === 'liang') liangmao();
+    queue(); if (L.armor === 'robe') robe(cc, L.sash || 0x26262c); else dingjia(cc, L.stud || 0xc9c0a8); if (L.quiver) quiver(); if (L.flag) backflag(bc);
+    lookGear(L, b, c, y, hatOn, 'body');
   } else switch (u.type) {
     case 'hero': jinHelm(0xc9a03a, red); queue(); dingjia(0xc9a03a, 0x8a5a20); b('c', [0, -0.02, -0.17], [0.52, 0.7, 0.03], 0x9a7a2a); break;
     case 'samurai': jinHelm(iron); queue(); dingjia(bc, 0xc9c0a8); break;

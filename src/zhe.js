@@ -6,8 +6,8 @@ const SPEECH = (() => {
   const v3 = new THREE.Vector3();
   const unit = (id) => state.sim && id >= 0 ? state.sim.units[id] : null;
   function nameOf(id) {
-    if (typeof ZB !== 'undefined' && ZB && ZB.map[id] !== undefined) { const r = ZR[ZB.map[id]]; return r ? { zh: r.zh, en: r.en } : null; }
-    if (typeof ZC !== 'undefined' && ZC && ZC.map[id] !== undefined) { const r = ZR[ZC.map[id]]; return r ? { zh: r.zh, en: r.en } : null; }
+    if (typeof ZB !== 'undefined' && ZB && ZB.map[id] !== undefined) { const r = (ZB.R || ZR)[ZB.map[id]]; return r ? { zh: r.zh, en: r.en } : null; }
+    if (typeof ZC !== 'undefined' && ZC && ZC.map[id] !== undefined) { const r = (ZC.R || ZR)[ZC.map[id]]; return r ? { zh: r.zh, en: r.en } : null; }
     if (typeof SOLD !== 'undefined' && SOLD && SOLD.map && SOLD.map[id]) return SOLD.map[id].name;
     return null;
   }
@@ -237,7 +237,7 @@ function zTags() {
   if (!ZTAG.v) ZTAG.v = new THREE.Vector3(); let n = 0;
   if (sim && r && map && state.screen === 'game' && !state.zheDlg && r.lastMode === 'fp') {
     const cam = r.camera, W = canvas.clientWidth, H = canvas.clientHeight, h = localHero(), al = r.alpha === undefined ? 1 : Math.max(0, Math.min(1, r.alpha));
-    for (const uid in map) { const u = sim.units[uid]; if (!u || u.dead || (h && +uid === h.id)) continue; const rr = ZR[map[uid]]; if (!rr || rr.k === 'me') continue;
+    for (const uid in map) { const u = sim.units[uid]; if (!u || u.dead || (h && +uid === h.id)) continue; const rr = ((ZB ? ZB.R : ZC && ZC.R) || ZR)[map[uid]]; if (!rr || rr.k === 'me') continue;
       if (typeof SPEECH !== 'undefined' && SPEECH.speaking && SPEECH.speaking(+uid)) continue;
       const v = ZTAG.v.set(u.px + (u.x - u.px) * al, u.py + (u.y - u.py) * al + (u.mounted ? 3.1 : 2.45), u.pz + (u.z - u.pz) * al); const d = cam.position.distanceTo(v); v.project(cam);
       if (v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue; const look = Math.abs(v.x) < 0.07 && Math.abs(v.y) < 0.2 && d < 32;
@@ -264,12 +264,17 @@ const ZR = [ // the file, in the order of the duck team's places (YY_ROLE)
   { k: 'du', zh: '杜阿九', en: 'Du Ajiu', role: 'trident', t: 'trident' },
   { k: 'zhu', zh: '朱胖子', en: 'Fatty Zhu', role: 'cook', t: 'cook · 伙夫' },
 ];
-const ZKEY = 'mingZhe';
+let ZKEY = 'mingZhe';
+// other story campaigns (shenji.js …) reuse this machinery: while one is running it sets ZKEY to its own save and fills
+// ZHOOK with its own talk / sleep / finish / speaker names / camp chatter
+const ZHOOK = {};
 let ZS = null, ZB = null, ZC = null; // save, battle mapping, camp mapping
 function zLoad() { try { return JSON.parse(localStorage.getItem(ZKEY) || 'null'); } catch (e) { return null; } }
 function zSave() { try { localStorage.setItem(ZKEY, JSON.stringify(ZS)); } catch (e) { } }
 function zFresh(name) { const s = { v: 1, stage: 'camp0', name: name || { zh: '阿明', en: 'Aming' }, alive: {}, fate: {}, bond: {}, talked: {}, flags: {}, me: 'me' }; for (const r of ZR) { s.alive[r.k] = true; s.bond[r.k] = 0; } return s; }
-const zRow = (k) => ZR.find(r => r.k === k);
+// the roster in play: another campaign's (ZB.R / ZC.R, set by jin.js or shenji.js) or the Zhejiang file
+const zRos = () => (ZB && ZB.R) || (ZC && ZC.R) || ZR;
+const zRow = (k) => zRos().find(r => r.k === k);
 const zName = (k) => k === 'me' ? ZS.name : zRow(k);
 
 // ---------- cards: exposition between scenes ----------
@@ -294,6 +299,7 @@ const INTRO = [
 // ---------- dialogue: who says what, the night before and the night after ----------
 // each topic: q (what you say), a: lines [zh, en], bond, flag
 function zTalk(k, night) {
+  if (ZHOOK.talk) return ZHOOK.talk(k, night);
   if (night >= 2) return zTalk2(k, night);
   const S0 = ZS, dead = (x) => !S0.alive[x], lost = ZR.filter(r => !r.ch && r.k !== 'me' && r.k !== k && !S0.alive[r.k]).map(r => r.zh);
   if (night === 0) return ({
@@ -397,7 +403,7 @@ function zLook() {
   if (Math.hypot(h.x - ZC.bed[0], h.z - ZC.bed[1]) < 1.9) return { bed: true };
   let best = null, bd = 0.5; const fx = Math.sin(Input.yaw), fz = Math.cos(Input.yaw);
   for (const u of sim.units) { if (!u.camp) continue; const dx = u.x - h.x, dz = u.z - h.z, d = Math.hypot(dx, dz); if (d > 3.4 || d < 0.3) continue; const off = 1 - (dx * fx + dz * fz) / d; if (off < bd) { bd = off; best = u; } }
-  return best ? { u: best, k: ZR[best.ci].k } : null;
+  return best ? { u: best, k: zRos()[best.ci].k } : null;
 }
 function zheKeyE() {
   if (!ZC || !state.sim || !state.sim.mission || !state.sim.mission.camp) return false;
@@ -406,6 +412,7 @@ function zheKeyE() {
   zDialog(t.k, t.u); return true;
 }
 function zSleep() {
+  if (ZHOOK.sleep) return ZHOOK.sleep();
   if (ZC.night >= 2) return zSleep2();
   if (ZC.night === 0) { ZS.stage = 'battle1'; zSave(); zCards([{ title: '黎明 · Dawn', year: 'April 1619', p: ['Drums before light. The column breaks camp and climbs on into the valleys. Ahead, somewhere, is Hetu Ala; behind, the guns and the grain carts are already falling back along the track.', 'Chief Wu walks down the file, tugging straps and checking match-cord. "Twelve men," he says. "One life."'], btn: 'March →' }], () => zGo('battle1')); }
   else { ZS.stage = 'end1'; zSave(); zCards([{ title: '第一章終 · End of Chapter One', year: 'Abudali Pass, April 1619', p: [`${ZR.filter(r => r.k !== 'me' && ZS.alive[r.k]).length} of your file sleep around the embers. In the morning you will walk south out of the mountains with the remnants of Liu Ting's army.`, 'What is left of the southern troops is spread among the northern garrisons. Your file is sent to Tieling, a walled town on the road between Shenyang and Kaiyuan.'], zh: '間章 · 開原道 · The Kaiyuan road, summer 1619', btn: 'Summer →' }], () => { zGo('kai'); }); }
@@ -439,9 +446,9 @@ document.addEventListener('keydown', (e) => { // the dialogue panel takes the ke
 // ---------- in battle ----------
 function zheSay(ev) { // scripted lines come out of a man's mouth when you are near enough to hear him; otherwise by runner
   const sim = state.sim, h = localHero(); if (!ZB) return false;
-  const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'], qi: ['戚金', 'General Qi Jin'], chen: ['陳策', 'General Chen Ce'], sichuan: ['周敦吉', 'Zhou Dunji of the White Poles'], col: ['', 'The column officer'], folk: ['', 'A woman from Kaiyuan'] }[ev.who] || ['', ev.who];
-  let id = -1; const zi = ZR.findIndex(r => r.k === ev.who && r.k !== 'me' && !r.guest);
-  if (zi >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === zi && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded) id = +uid; if (id >= 0) { W[0] = ZR[zi].zh; W[1] = ZR[zi].en; } else { W[0] = ''; W[1] = 'A soldier'; } }
+  const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'], qi: ['戚金', 'General Qi Jin'], chen: ['陳策', 'General Chen Ce'], sichuan: ['周敦吉', 'Zhou Dunji of the White Poles'], col: ['', 'The column officer'], folk: ['', 'A woman from Kaiyuan'] }[ev.who] || (ZHOOK.who && ZHOOK.who[ev.who]) || ['', ev.who];
+  let id = -1; const ZRR = zRos(), zi = ZRR.findIndex(r => r.k === ev.who && r.k !== 'me' && !r.guest);
+  if (zi >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === zi && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded) id = +uid; if (id >= 0) { W[0] = ZRR[zi].zh; W[1] = ZRR[zi].en; } else { W[0] = ''; W[1] = 'A soldier'; } }
   else if (ev.who === 'qi' && sim.mg.zhe && sim.mission.ch === 2) id = sim.players[sim.mg.zhe.p].heroId;
   else if (ev.who === 'liu') { const g = sim.mg.liu; id = g ? sim.players[g.p].heroId : -1; }
   else if (sim.mg[ev.who]) { const g = sim.mg[ev.who]; id = sim.players[g.p].heroId; }
@@ -463,7 +470,7 @@ function zheEvent(ev) {
     SPEECH.say(ev.id, '我的腿……走不了了！', 'My leg... I can\'t walk!', { prio: 3, dur: 4 }); toast(`${n ? n.zh + ' ' + n.en : 'A man of your file'} is hit and can't walk. Get to him and press E to get him up`); }
   else if (ev.t === 'zhelp' && ev.id === ZB.wounded) { ZS.flags[ZB.chK ? 'helpedK' : ZB.ch2 ? 'helped2' : 'helped6'] = true; feed(`You get ${(SPEECH.nameOf(ev.id) || { en: 'him' }).en}'s arm over your shoulder`, true); }
   else if (ev.t === 'zcarry' && ev.p === state.localIdx) { const k = ZB.map[ev.id]; ZB.fell = true; const prev = ZB.cur; if (prev && ZS.alive[prev] !== false) { ZB.deadMe = ZB.deadMe || []; ZB.deadMe.push(prev); }
-    ZB.cur = k !== undefined ? ZR[k].k : 'stranger'; const n = SPEECH.nameOf(ev.id); const h = sim.units[ev.id]; if (h) { Input.yaw = h.yaw; Input.pitch = 0; }
+    ZB.cur = k !== undefined ? zRos()[k].k : 'stranger'; const n = SPEECH.nameOf(ev.id); const h = sim.units[ev.id]; if (h) { Input.yaw = h.yaw; Input.pitch = 0; }
     toast(n ? `You fall. The fight goes on — you are ${n.zh} ${n.en} now` : 'You fall. The fight goes on — you are another man of the column now'); }
 }
 function zheObjLines() {
@@ -474,6 +481,7 @@ function zheObjLines() {
   return s;
 }
 function zheFinish(winner) {
+  if (ZHOOK.finish) return ZHOOK.finish(winner);
   if (ZB && state.sim.mission && state.sim.mission.ch === 2) return zheFinish2(winner);
   if (ZB && state.sim.mission && state.sim.mission.ch === 'k') return zheFinishK(winner);
   const sim = state.sim, h = localHero(); if (!ZB) return; const M = sim.mission, z = sim.missionZone('mouth'); const won = winner === M.side;
@@ -512,7 +520,7 @@ function zGrid(dt) {
   ZG.el.hidden = false; ZG.t -= dt; if (ZG.t > 0) return; ZG.t = 0.2;
   const h = localHero(), ids = Object.keys(ZB.map).map(Number).sort((a, b) => ZB.map[a] - ZB.map[b]);
   for (const uid of ids) {
-    const rr = ZR[ZB.map[uid]]; if (!rr) continue; let c = ZG.cells[uid];
+    const rr = (ZB.R || ZR)[ZB.map[uid]]; if (!rr) continue; let c = ZG.cells[uid]; // ZB.R: another campaign's roster (jin.js, shenji.js)
     if (!c) { c = document.createElement('div'); c.className = 'zc'; c.innerHTML = '<i></i><em></em><b></b><u><s></s></u>'; ZG.el.appendChild(c); ZG.cells[uid] = c; c.children[2].textContent = rr.zh; c.title = rr.en; }
     const u = sim.units[uid], f = c.firstChild;
     if (!u) { if (f._uid !== -1) setFaceZ(f, null); c.className = 'zc miss'; c.children[1].textContent = '?'; continue; }
@@ -541,12 +549,12 @@ function zheHUD(dt) {
   if (sim && sim.mission && sim.mission.camp) $('status').style.visibility = 'hidden';
   if (!sim || !sim.mission || !sim.mission.camp || !ZC || state.zheDlg) { if (pr) pr.hidden = true; return; }
   if (!pr) { pr = document.createElement('div'); pr.id = 'zhePrompt'; document.body.appendChild(pr); }
-  const t = zLook(); pr.hidden = !t; if (t) pr.innerHTML = t.bed ? '<kbd>E</kbd>Lie down on your bedroll' + (ZC.night ? '' : ' — march at dawn') : `<kbd>E</kbd>Talk to ${ZR[t.u.ci].zh} ${ZR[t.u.ci].en}`;
+  const t = zLook(); pr.hidden = !t; if (t) pr.innerHTML = t.bed ? '<kbd>E</kbd>Lie down on your bedroll' + (ZC.night ? '' : ' — march at dawn') : `<kbd>E</kbd>Talk to ${zRos()[t.u.ci].zh} ${zRos()[t.u.ci].en}`;
   // the camp murmurs: men talk to each other when you pass
   ZC.chatT -= dt; if (ZC.chatT <= 0) { ZC.chatT = 7 + Math.random() * 6; const h = localHero(); if (!h) return; const near = sim.units.filter(u => u.camp && Math.hypot(u.x - h.x, u.z - h.z) < 14); if (!near.length) return; const u = near[Math.floor(Math.random() * near.length)];
     const P0 = [['這鬼地方，四月還下雪。', 'Snow in April. What a place.'], ['明天走多少里？', 'How many li tomorrow?'], ['聽說赫圖阿拉的城是木頭的。', 'They say the walls of Hetu Ala are made of logs.'], ['腳上的凍瘡又裂了。', 'My chilblains have split open again.'], ['誰還有菸葉？', 'Anyone got tobacco?'], ['義烏這時候該插秧了。', 'Back in Yiwu they\'ll be planting the rice now.']];
     const P1 = [['……', '...'], ['火別讓它滅了。', 'Don\'t let the fire go out.'], ['明天往南走。', 'Tomorrow we go south.'], ['我閉上眼睛就看見西嶺上的旗。', 'When I close my eyes I see the banners on the west ridge.']];
-    const PL = ZC.night === 2 ? ZP2 : ZC.night === 3 ? ZP3 : ZC.night ? P1 : P0; const L = PL[Math.floor(Math.random() * PL.length)]; SPEECH.say(u.id, L[0], L[1], { prio: 0, cool: 10 }); }
+    const PL = ZHOOK.chatter ? ZHOOK.chatter(ZC.night) : ZC.night === 2 ? ZP2 : ZC.night === 3 ? ZP3 : ZC.night ? P1 : P0; const L = PL[Math.floor(Math.random() * PL.length)]; SPEECH.say(u.id, L[0], L[1], { prio: 0, cool: 10 }); }
 }
 function zMenu() {
   const s = zLoad(); const b = $('btnZhe'), nb = $('btnZheNew'); if (!b) return;
