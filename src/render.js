@@ -758,6 +758,7 @@ class Renderer {
     }
   }
   buildStructures() {
+    if (this.sim.battle === 'bjgate') this.buildBeijing();
     const boxes = this.sim.boxes; if (!boxes.length) return; this.buildSpecialStructures(boxes);
     const T = this.tmp; const snow = this.biome.snow;
     const wallMat = new THREE.MeshLambertMaterial({ color: 0xa9a49a }), roofMat = new THREE.MeshLambertMaterial({ color: snow ? 0xe6e9ec : 0x3e4044 }), plasterMat = new THREE.MeshLambertMaterial({ color: 0x9a958c }), capMat = new THREE.MeshLambertMaterial({ color: snow ? 0xeef0f2 : 0x34363a });
@@ -1697,7 +1698,7 @@ class Renderer {
     else { toRoot(a.lh, tmpA, 0); ik(0, 6, tmpA[0], tmpA[1], tmpA[2], 1); }
     if (fkR && w !== 'bow' && w !== '') { J[18] = J[15]; J[19] = J[16]; J[20] = J[17]; const fx = J[15] - J[12], fy = J[16] - J[13], fz = J[17] - J[14]; const l = Math.hypot(fx, fy, fz) || 1; const cdir = routing ? [fx / l * 0.3 - C[6], fy / l * 0.3 - C[7] - 0.4, fz / l * 0.3 - C[8]] : [C[6], C[7] + 0.3, C[8]]; const cl2 = Math.hypot(cdir[0], cdir[1], cdir[2]) || 1; J[21] = cdir[0] / cl2; J[22] = cdir[1] / cl2; J[23] = cdir[2] / cl2; }
     // ---------- to world ----------
-    const dp = down ? (u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : 0, cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
+    const dp = down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : 0, cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
     const oy = down ? 0.15 : 0;
     const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
     const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
@@ -2411,5 +2412,43 @@ class Renderer {
     return { x: clamp(px, -HALF, HALF), z: clamp(pz, -HALF, HALF) };
   }
 }
+// ---- Beijing seen from the Guangqu Gate suburb: a backdrop beyond the field's edge, never walked on ----
+// The outer-city wall (外城, 1553) runs off out of sight both ways with its bastions (馬面) and crenellations; the
+// Guangqu Gate stands in it as a barbican (甕城) with an arrow tower (箭樓) in front and the double-eaved gate tower
+// (城樓) on the wall; corner towers close the ends, and the towers of the inner city's gates rise in the haze beyond.
+Renderer.prototype.buildBeijing = function () {
+  const sc = this.scene, snow = this.biome.snow, grp = new THREE.Group(); sc.add(grp); this.beijing = grp;
+  const brick = new THREE.MeshLambertMaterial({ color: 0x6f6b64 }), brickD = new THREE.MeshLambertMaterial({ color: 0x5c5852 }), red = new THREE.MeshLambertMaterial({ color: 0x8a3226 }),
+    roof = new THREE.MeshLambertMaterial({ color: snow ? 0xc9ccd0 : 0x3d433e }), roofD = new THREE.MeshLambertMaterial({ color: 0x2c302c }), win = new THREE.MeshLambertMaterial({ color: 0x2a2420 });
+  const Z0 = 176, H = 13, T = 8, X0 = -330, X1 = 330, gx = 6, base = -8;
+  const box = (m, x, y, z, w, h, d, ry) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); if (ry) o.rotation.y = ry; grp.add(o); return o; };
+  // a hip roof (廡殿/歇山 read as a hip at this distance): a flattened four-sided cone rotated to sit square
+  const hip = (m, x, y, z, w, d, h) => { const o = new THREE.Mesh(new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1), m); o.rotation.y = Math.PI / 4; o.scale.set(w, h, d); o.position.set(x, y + h / 2, z); grp.add(o); return o; };
+  const tower = (x, z, w, d, storeys, s) => { // a gate or corner tower: brick platform part is the wall itself, then red-pillared storeys under deep eaves
+    let y = H; for (let k = 0; k < storeys; k++) { const sw = w * (1 - k * 0.12), sd = d * (1 - k * 0.12), bh = 5.2 * s;
+      box(red, x, y + bh / 2, z, sw, bh, sd); hip(roof, x, y + bh - 0.6 * s, z, sw * 1.32, sd * 1.4, (k === storeys - 1 ? 6.5 : 2.6) * s); y += bh + (k === storeys - 1 ? 0 : 1.6 * s); } };
+  const arrowTower = (x, z, w, d) => { // 箭樓: a tall brick box pierced with rows of arrow windows, a hip roof on top
+    const h = 13; box(brickD, x, H + h / 2, z, w, h, d); for (let row = 0; row < 4; row++) for (let c = 0; c < 12; c++) box(win, x - w / 2 + (c + 0.5) * w / 12, H + 2.2 + row * 2.8, z - d / 2 - 0.05, 0.9, 1.1, 0.2);
+    hip(roof, x, H + h - 0.4, z, w * 1.25, d * 1.5, 6); };
+  // the wall itself in 20 m lengths standing on the ground, so its foot follows the land; bastions every 80 m
+  for (let x = X0; x < X1; x += 20) { const cx = x + 10; if (Math.abs(cx - gx) < 12) continue; const y0 = Math.min(terrainH(Math.max(-HALF - 25, Math.min(HALF + 25, cx)), Z0 - T / 2), 0) + base; box(brick, cx, (y0 + H) / 2, Z0, 20.2, H - y0, T); }
+  for (let x = X0 + 40; x < X1; x += 80) { if (Math.abs(x - gx) < 40) continue; box(brick, x, (base + H) / 2, Z0 - T / 2 - 4, 12, H - base, 8); }
+  // crenellations (垛口) along the outer face, one instanced mesh
+  { const n = Math.floor((X1 - X0) / 2.4), im = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, 1.5, 0.7), brick, n), m = new THREE.Matrix4(); let k = 0;
+    for (let x = X0; x < X1 && k < n; x += 2.4) { if (Math.abs(x - gx) < 12) continue; m.makeTranslation(x, H + 0.75, Z0 - T / 2 + 0.35); im.setMatrixAt(k++, m); } im.count = k; grp.add(im); }
+  // the Guangqu Gate: the barbican in front, the arrow tower on its face, the gate tower on the wall behind
+  box(brick, gx - 20, (base + H) / 2, Z0 - 14, 4, H - base, 28); box(brick, gx + 20, (base + H) / 2, Z0 - 14, 4, H - base, 28); box(brick, gx, (base + H) / 2, Z0 - 27, 44, H - base, 5);
+  box(win, gx, 3.5, Z0 - 29.6, 6, 7 - base, 0.4);
+  arrowTower(gx, Z0 - 27, 30, 9);
+  box(brick, gx, (base + H) / 2, Z0, 24, H - base, T + 2); box(win, gx, 4, Z0 - T / 2 - 1.1, 6, 8 - base, 0.4); tower(gx, Z0, 26, 13, 2, 1);
+  // corner towers (角樓) where the wall turns away, and small watch towers (敵臺) on a few bastions
+  for (const s of [-1, 1]) { const x = gx + s * 300; box(brick, x, (base + H) / 2, Z0 - 6, 22, H - base, 20); arrowTower(x, Z0 - 6, 20, 16);
+    box(brick, x + s * 8, (base + H) / 2, Z0 + 60, 8, H - base, 120); }
+  for (const x of [gx - 200, gx - 120, gx + 120, gx + 200]) tower(x, Z0 - 6, 8, 6, 1, 0.7);
+  // the inner city beyond: gate towers of the Chongwen and Zhengyang gates and a long line of the inner wall, paler with distance
+  const far = new THREE.MeshLambertMaterial({ color: 0x8a8680 }), farR = new THREE.MeshLambertMaterial({ color: 0x8a5a50 });
+  box(far, -40, 6, 330, 900, 34, 10); for (const [x, s] of [[-170, 1.5], [120, 1.4], [-430, 1.2]]) { box(farR, x, 23 + 4 * s, 330, 22 * s, 8 * s, 11 * s); hip(roof, x, 23 + 7.4 * s, 330, 30 * s, 16 * s, 7 * s); }
+  grp.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+};
 return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, roundBox, uhash };
 })();

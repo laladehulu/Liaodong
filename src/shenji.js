@@ -97,7 +97,7 @@ const SJ_MISSIONS = (() => { const PI = Math.PI; const cartRow = (z, xs) => xs.m
   },
   // ----- chapter two: the Guangqu Gate, the twentieth day of the eleventh month (December 1629) -----
   sj2: {
-    title: '廣渠門 · The Guangqu Gate', year: 'December 1629', battle: 'aizu', side: 0, soldier: { group: 'sjf' }, hidden: true, ch: 'sj2',
+    title: '廣渠門 · The Guangqu Gate', year: 'December 1629', battle: 'bjgate', side: 0, soldier: { group: 'sjf' }, hidden: true, ch: 'sj2',
     bdef: { name: 'The Guangqu Gate', jp: '廣渠門', when: 'December 1629', biome: 'winter', fog: 0.15 },
     brief: 'The Jin army is under the walls of Beijing. Yuan Chonghuan\'s Liaodong horse have ridden round it to stand before the Guangqu Gate. Your gun team stands with them, outside the wall.',
     start: [6, 54, PI],

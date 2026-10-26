@@ -159,6 +159,7 @@ const BATTLES = {
   aizu:     { name: 'Liaoyang', jp: '遼陽', when: 'April 1621', biome: 'autumn', fog: 0.15, terrain: 0.6, features: ['castle', 'streets'], desc: 'The Liaodong capital: a gate tower on its stone base, ringed by a moat. Fight through the city streets to reach the gate.' },
   hakodate: { name: 'Ningyuan', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.05, terrain: 0.4, features: ['starfort', 'sea'], desc: 'Yuan Chonghuan\'s fortress by the Bohai Sea, its walls bristling with Portuguese-pattern cannon. The sea lies to the east.' },
   abudali:  { name: 'Abudali Pass', jp: '阿布達里岡', when: 'April 1619', biome: 'winter', fog: 0.3, terrain: 0.45, features: ['pass'], hidden: true, desc: 'A narrow valley in the mountains east of Hetu Ala, its slopes thick with pine and late snow.' },
+  bjgate:   { name: 'The Guangqu Gate', jp: '廣渠門', when: 'December 1629', biome: 'winter', fog: 0.15, terrain: 0.2, features: ['streets'], hidden: true, desc: 'The suburb outside the outer wall of Beijing. The wall and its gate towers stand behind, too big to see the end of.' },
   zroad:    { name: 'The road', jp: '道', when: '1619', biome: 'winter', fog: 0.2, terrain: 0.3, features: [], hidden: true, desc: 'A cart road through the Liaodong hills, a village by the way.' },
   zcamp:    { name: 'Camp', jp: '營', when: '1619', biome: 'night', fog: 0.2, terrain: 0.25, features: [], hidden: true, desc: 'A night camp in the hills.' },
   siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
@@ -313,6 +314,7 @@ class Sim {
     if (b === 'siegecity') { L.swall = { z0: SG.z0, z1: SG.z1, h: SG.h, gate: SG.gate, ramps: [-60, -12, 12, 60] }; L.sditch = { zc: SG.ditchZ, w: SG.ditchW, depth: 2.6, bridge: SG.gate, fills: SG.fills.map((f, i) => ({ x: f[0], hw: f[1], done: false, key: i ? 'ditchE' : 'ditchW' })) }; }
     if (b === 'abudali') { L.pass = { r0: 15, r1: 46, h: 24 }; L.hills.push({ x: -34, z: 6, r: 30, h: 6 }); L.hills.push({ x: 30, z: -48, r: 26, h: 5 }); }
     if (b === 'zroad') { L.hills.push({ x: -105, z: -30, r: 70, h: 13 }); L.hills.push({ x: 110, z: 50, r: 75, h: 15 }); L.hills.push({ x: -95, z: 110, r: 50, h: 9 }); L.hills.push({ x: 0, z: 70, r: 30, h: 2.5 }); }
+    if (b === 'bjgate') { L.hills.push({ x: -170, z: -40, r: 70, h: 5 }); L.hills.push({ x: 170, z: -90, r: 60, h: 4 }); }
     if (b === 'zcamp') { L.hills.push({ x: -90, z: 60, r: 70, h: 14 }); L.hills.push({ x: 100, z: -40, r: 80, h: 16 }); L.hills.push({ x: 0, z: 130, r: 70, h: 12 }); }
     // objectives worth holding
     const O = [];
@@ -370,6 +372,11 @@ class Sim {
       this.obstacles.push({ x: sx - rx * 1.6, z: sz - rz * 1.6, r: 0.35, kind: 2 });
       this.obstacles.push({ x: sx + sin(syaw) * 7, z: sz + cos(syaw) * 7, r: 3.2, kind: 3, yaw: syaw });
       keep.push({ x: sx, z: sz, r: 12 });
+    }
+    if (B === 'bjgate') { // the Guangqu Gate suburb: a road out of the gate, low courtyard houses in loose blocks either side, open ground before the gate
+      this.deco.push({ kind: 'road', x: 6, w: 8 }); this.roadX = 6; keep.push({ x: 6, z: 50, r: 26 });
+      for (let bx = -5; bx <= 5; bx++) for (let bz = -4; bz <= 1; bz++) { const x = 6 + bx * 21 + r.range(-2, 2), z = bz * 24 + 8 + r.range(-3, 3); if (Math.abs(x - 6) < 11 || r.next() < 0.3 || !clear(x, z, 6)) continue;
+        const two = r.next() < 0.45; this.boxes.push({ x: x - (two ? 3.6 : 0), z, hw: two ? 3 : 5, hd: 3.2, h: r.range(3, 3.6), kind: 'house' }); if (two) this.boxes.push({ x: x + 4, z: z + r.range(-1, 1), hw: 3, hd: 3, h: r.range(2.8, 3.4), kind: 'house' }); keep.push({ x, z, r: 8 }); }
     }
     if (B === 'zroad') { this.deco.push({ kind: 'road', x: 0, w: 6 }); this.roadX = 0;
       for (const [x, z, hw, hd] of [[-13, 22, 3.2, 2.6], [-14, 36, 2.8, 2.4], [-24, 30, 3, 2.6], [12.5, 26, 3, 2.5], [13.5, 41, 3.3, 2.7], [23, 33, 2.6, 2.4], [-12.5, 50, 2.6, 2.2]]) { this.boxes.push({ x, z, hw, hd, h: 3.3, kind: 'house' }); keep.push({ x, z, r: 6 }); }
@@ -3306,11 +3313,23 @@ Sim.prototype.aiMedic = function (u) {
   best.medic = u.id; u.medicOf = best.id; return true;
 };
 
+// a man down and waiting for help drags himself back toward his own people, slowly, and lies still when the enemy is
+// on top of him (playing dead); he stops once a comrade is within reach so whoever comes for him can find him
+Sim.prototype.zCrawl = function (u) {
+  if (this.tick % 6 === u.id % 6) { let best = null, bd = 45, foe = 99; const n = this.gatherNear(u.x, u.z, 45);
+    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.type === 'horse' || v.camp) continue; const d = len(v.x - u.x, v.z - u.z);
+      if (v.team !== u.team) { if (d < foe) foe = d; continue; } if (v.wounded || v.inactive) continue; const w = d - (v.squad === u.squad ? 6 : 0); if (w < bd) { bd = w; best = v; } }
+    u.crawlTo = best && foe > 3.2 && len(best.x - u.x, best.z - u.z) > 2.4 ? best.id : -1; u.crawling = u.crawlTo >= 0; }
+  if (!u.crawling) return; const v = this.units[u.crawlTo]; if (!v || v.dead) { u.crawling = false; return; }
+  const dx = v.x - u.x, dz = v.z - u.z, d = len(dx, dz); if (d < 2.4) { u.crawling = false; return; }
+  const sp = 0.45 * DT; u.x += dx / d * sp; u.z += dz / d * sp; u.y = terrainH(u.x, u.z); this.turnTo(u, atan2(dx, dz), 2 * DT);
+};
 Sim.prototype.woundedAI = function (u) {
   u.target = -1; u.blocking = false; if (u.st !== ST_IDLE && u.st !== ST_STUN) { u.st = ST_IDLE; u.stT = 0; }
   if (u.downed) { u.mx = 0; u.mz = 0; u.downT = Math.max(u.downT, 0.2);
     if (u.reviveBy >= 0) { const r = this.units[u.reviveBy]; if (!r || r.dead || r.wounded || len(r.x - u.x, r.z - u.z) > 2.9) { u.reviveBy = -1; u.reviveT = 0; } else if (++u.reviveT >= 45) { this.zRevive(u, r.id); return; } }
-    if (--u.bleed <= 0) { u.downed = false; this.kill(u, 0, 0, 0, 'bleed', -1); } return; }
+    if (--u.bleed <= 0) { u.downed = false; this.kill(u, 0, 0, 0, 'bleed', -1); return; }
+    if (u.reviveBy < 0 && u.ctrl < 0) this.zCrawl(u); return; }
   const h = u.helpedBy >= 0 ? this.units[u.helpedBy] : null; if (h && h.dead) u.helpedBy = -1;
   if (u.helpedBy < 0 || !h) { u.mx = 0; u.mz = 0; return; }
   const bx = h.x - sin(h.yaw) * 1.3 + cos(h.yaw) * 0.5, bz = h.z - cos(h.yaw) * 1.3 - sin(h.yaw) * 0.5, d = len(bx - u.x, bz - u.z);
