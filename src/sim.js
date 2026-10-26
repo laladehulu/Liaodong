@@ -710,7 +710,7 @@ class Sim {
   }
   // ---------- main step ----------
   step(inputs) {
-    this.tick++; this.events.length = 0; this.flowBudget = 3;
+    this.tick++; this.events.length = 0; this.flowBudget = 6;
     const units = this.units;
     for (let i = 0; i < units.length; i++) { const u = units[i]; u.px = u.x; u.py = u.y; u.pz = u.z; u.pyaw = u.yaw; u.phyaw = u.hyaw; }
     this.teamAlive[0].length = 0; this.teamAlive[1].length = 0;
@@ -1232,6 +1232,7 @@ class Sim {
     if (u.downT > 0 && u.type !== 'horse') { const k = u.downT; u.downT = 0; if (!u.dead && u.st !== ST_RELOAD) { u.st = ST_STUN; u.stT = 0; u.stunDur = Math.min(0.55, 0.25 + k * 0.15); u.blocking = false; u.aiming = false; } u.mx *= 0.3; u.mz *= 0.3; }
     if (u.downT > 0) { u.downT -= DT; u.blocking = false; u.aiming = false; if (u.st !== ST_RELOAD) { u.st = ST_IDLE; u.stT = 0; } u.mx = 0; u.mz = 0; if (u.mounted || u.type === 'horse') u.hspeed *= 0.8; }
     if (!u.ctrlActive) this.unitAI(u);
+    if (!u.ctrlActive && u.mount < 0 && !u.mounted && u.type !== 'horse' && !u.airborne && u.def.ai !== 'cannon') this.steerAround(u);
     this.updateCombatState(u);
     this.integrate(u);
   }
@@ -2045,7 +2046,7 @@ class Sim {
         while (id >= 0) {
           if (id > i) {
             const v = us[id];
-            if (!v.dead && v.mount < 0) {
+            if (!v.dead && v.mount < 0 && !(u.team === v.team && ((u.ghostT || 0) > 0 || (v.ghostT || 0) > 0))) {
               const dx = v.x - u.x, dz = v.z - u.z, rr = r + v.def.r; const d2 = dx * dx + dz * dz;
               if (d2 < rr * rr && Math.abs(v.y - u.y) < 2) {
                 let d = Math.sqrt(d2), nx, nz;
@@ -3417,6 +3418,49 @@ Sim.prototype.assaultCap = function () {
   // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
   // (an assault needs odds: the attackers field the full cap, the defenders about 70% of it, as before the cap)
   fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, Math.round(CAP * 0.7) - humanDef));
+};
+// ---------- getting round things instead of pushing into them ----------
+// Every walking AI man looks a few paces ahead along the way he means to go. A tree, rock, stake or the corner of a
+// house in his path: he bends his course to pass it on the roomy side, early and smoothly, instead of walking into it
+// and being shoved back. A comrade standing in the way, or coming head-on: step round him (head-on, both keep right).
+// And if for all that he has hardly moved for half a second while meaning to, he is stuck: he side-steps, re-plans his
+// route, and if it keeps happening he squeezes past his own men for a moment. Deterministic: no randomness, ids only.
+Sim.prototype.steerAround = function (u) {
+  if (u.ghostT > 0) u.ghostT -= DT; if (u.unstickT > 0) u.unstickT -= DT;
+  const sp = len(u.mx, u.mz);
+  if (sp < 0.35) { u.stkX = u.x; u.stkZ = u.z; u.stkK = this.tick; u.stkN = 0; return; }
+  let dx = u.mx / sp, dz = u.mz / sp; const nx = dz, nz = -dx, r = u.def.r; let ax = 0, az = 0;
+  // 1. trees, rocks and stakes
+  { const look = clamp(sp * 0.6, 1.4, 3.4), cs = this.cellSize, W = this.gridW; const cx = Math.floor((u.x + HALF + 5) / cs), cz = Math.floor((u.z + HALF + 5) / cs);
+    let bt = 1e9, bs = 0, br = 0;
+    for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) { const gx = cx + ox, gz = cz + oz; if (gx < 0 || gz < 0 || gx >= W || gz >= W) continue;
+      let oid = this.obsHead[gz * W + gx];
+      while (oid >= 0) { const o = this.obstacles[oid]; oid = this.obsNext[oid]; const rx = o.x - u.x, rz = o.z - u.z; const t = rx * dx + rz * dz; if (t < -0.1 || t > look + o.r) continue;
+        const s = rx * nx + rz * nz, clr = r + o.r + 0.15; if (s >= clr || s <= -clr) continue; if (t < bt) { bt = t; bs = s; br = clr; } } }
+    if (bt < 1e9) { const side = bs > 0.02 ? -1 : bs < -0.02 ? 1 : ((u.id & 1) ? 1 : -1); const w = 1 - clamp(bt / (look + 0.5), 0, 1); const k = (0.7 + 1.6 * w) * clamp((br - Math.abs(bs)) / br + 0.3, 0.3, 1.3); ax += nx * side * k; az += nz * side * k; } }
+  // 2. the corner or face of a house, wall or palisade just ahead: slide along it toward the nearer end
+  { const look = clamp(sp * 0.45, 1.0, 2.4), px = u.x + dx * look, pz = u.z + dz * look; const bl = this.boxCells[this.cellOf(px, pz)];
+    if (bl) for (let k = 0; k < bl.length; k++) { const b = this.boxes[bl[k]]; if (b.hw < 0.1 || b.kind === 'gate' || (b.lad && b.lad.up)) continue; const ex = b.hw + r + 0.1, ez = b.hd + r + 0.1;
+      if (Math.abs(px - b.x) >= ex || Math.abs(pz - b.z) >= ez) continue;
+      if (Math.abs(u.x - b.x) >= ex - 0.05) { const tz = Math.abs(dz) > 0.15 ? Math.sign(dz) : (u.z >= b.z ? 1 : -1); ax += -dx * 0.9; az += tz * 1.1; }
+      else { const tx = Math.abs(dx) > 0.15 ? Math.sign(dx) : (u.x >= b.x ? 1 : -1); ax += tx * 1.1; az += -dz * 0.9; }
+      break; } }
+  // 3. a comrade in the way
+  { const n = this.gatherNear(u.x, u.z, 1.8); let bt = 1e9, bs = 0, head = false;
+    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.team !== u.team || v.mount >= 0 || v.type === 'horse') continue;
+      const rx = v.x - u.x, rz = v.z - u.z, t = rx * dx + rz * dz; if (t <= 0.05 || t > 1.7) continue; const s = rx * nx + rz * nz, clr = r + v.def.r + 0.05; if (s >= clr || s <= -clr) continue;
+      const vv = len(v.mx, v.mz), along = vv > 0.3 ? (v.mx * dx + v.mz * dz) / vv : 0; if (along > 0.6 && vv > sp * 0.6) continue; // he is walking the same way: follow him
+      if (t < bt) { bt = t; bs = s; head = along < -0.4; } }
+    if (bt < 1e9) { const side = head ? 1 : bs > 0.02 ? -1 : bs < -0.02 ? 1 : ((u.id & 1) ? 1 : -1); const k = 0.9 * (1 - clamp(bt / 1.8, 0, 1)) + 0.25; ax += nx * side * k; az += nz * side * k; } }
+  // 4. stuck: meaning to move, hardly moving
+  if (u.stkK === undefined || this.tick - u.stkK > 30) { u.stkX = u.x; u.stkZ = u.z; u.stkK = this.tick; u.stkN = 0; }
+  else if (this.tick - u.stkK >= 15) { const moved = len(u.x - u.stkX, u.z - u.stkZ), want = sp * 0.5;
+    if (moved < want * 0.22) { u.stkN = (u.stkN || 0) + 1; u.unstickT = 0.6; u.unstickS = ((u.id + u.stkN) & 1) ? 1 : -1; u.navT = 0; if (u.stkN >= 2) u.ghostT = 0.7; } else u.stkN = 0;
+    u.stkX = u.x; u.stkZ = u.z; u.stkK = this.tick; }
+  if (u.unstickT > 0) { ax += nx * u.unstickS * 1.3 - dx * 0.2; az += nz * u.unstickS * 1.3 - dz * 0.2; }
+  if (ax === 0 && az === 0) return;
+  let fx = dx + ax, fz = dz + az; const fl = len(fx, fz); if (fl < 1e-4) { fx = nx; fz = nz; } else { fx /= fl; fz /= fl; }
+  u.mx = fx * sp; u.mz = fz * sp;
 };
 // a man you play gets his breath and some strength back once he's out of the fight: nobody hurt him for 6 s and no
 // enemy within 12 m; he mends about 4% of his health a second, up to full
