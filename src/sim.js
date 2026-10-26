@@ -2584,11 +2584,11 @@ const MISSIONS = {
       zhe: { team: 0, name: 'Qi Jin', zh: '戚金', army: ['yuanyang', 'rifle_imp', 'yuanyang', 'rifle_imp', 'samurai'], at: [58, -64, 0], dir: ['hold', 58, -60], stay: true },
       chen: { team: 0, name: 'Chen Ce', zh: '陳策', army: ['samurai', 'rifle_imp'], at: [70, -40, 0], dir: ['hold', 72, -38] },
       sichuan: { team: 0, name: 'Qin Bangping (White Poles)', zh: '秦邦屏', army: ['ashigaru', 'ashigaru', 'ashigaru', 'ashigaru', 'samurai'], at: [74, 30, 0], dir: ['hold', 74, 32] },
-      bayara: { team: 1, name: 'The red Bayara', zh: '紅巴牙喇', army: ['shinsengumi', 'shinsengumi', 'cavalry'], at: [60, 138, PI], reserve: true },
-      rw: { team: 1, name: 'The right wing', army: ['samurai', 'samurai', 'ashigaru', 'archer', 'cavalry'], at: [100, 138, PI], reserve: true },
+      bayara: { team: 1, name: 'The red Bayara', zh: '紅巴牙喇', army: ['shinsengumi', 'shinsengumi', 'cavalry'], at: [60, 138, PI], reserve: true, stay: true },
+      rw: { team: 1, name: 'The right wing', army: ['samurai', 'samurai', 'ashigaru', 'archer', 'cavalry'], at: [100, 138, PI], reserve: true, stay: true },
       guns: { team: 1, name: 'The Shenyang guns', army: ['cannon4', 'rifle_sho'], at: [86, 112, PI], reserve: true, stay: true, dir: ['hold', 86, 92] },
-      lw: { team: 1, name: 'The left wing', army: ['samurai', 'samurai', 'archer', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
-      east: { team: 1, name: 'Banners from the east', army: ['samurai', 'byakkotai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
+      lw: { team: 1, name: 'The left wing', army: ['samurai', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
+      east: { team: 1, name: 'Banners from the east', army: ['samurai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
       night: { team: 1, name: 'Daišan\'s banners', zh: '代善', army: ['shinsengumi', 'samurai', 'samurai', 'cavalry'], at: [140, -110, -PI / 2], reserve: true },
       cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
     },
@@ -2859,7 +2859,7 @@ Sim.prototype.missionThink = function () {
   if (M.soldier) { for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId];
       if (!h || h.dead) { if (!p.respawnT) p.respawnT = this.tick + 30 * 4; else if (this.tick >= p.respawnT) { p.respawnT = 0; const q = this.squads[p.soldierSq]; const mine = q && q.owner === p.idx; p.heroId = -1;
           const ok = this.possess(p, q && q.alive ? q : null) || this.possess(p, this.squads.find(s => s.team === p.team && s.alive && !s.inactive && s.def.ai !== 'cannon'));
-          if (!ok) { this.mOver(false, 'There is no one left to carry on.'); return; } if (mine) p.commanderId = p.heroId; this.events.push({ t: 'zcarry', p: p.idx, id: p.heroId }); } } }
+          if (!ok) { this.mOver(false, 'There is no one left to carry on.'); return; } if (mine) { p.commanderId = p.heroId; for (const id of p.squads) { const q2 = this.squads[id]; if (q2.alive) { q2.order = ORD_FOLLOW; q2.fAx = undefined; } } } this.events.push({ t: 'zcarry', p: p.idx, id: p.heroId }); } } }
   }
   else for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId];
     if (h && h.dead) { if (!p.respawnT) p.respawnT = this.tick + 30 * 10; else if (this.tick >= p.respawnT) { const q = p.squads.map(id => this.squads[id]).find(q => q.alive); const sx = q ? q.cx : M.start[0], sz = q ? q.cz - 6 : M.start[1];

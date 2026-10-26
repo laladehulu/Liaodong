@@ -124,7 +124,7 @@ function zTags() {
     const cam = r.camera, W = canvas.clientWidth, H = canvas.clientHeight, h = localHero(), al = r.alpha === undefined ? 1 : Math.max(0, Math.min(1, r.alpha));
     for (const uid in map) { const u = sim.units[uid]; if (!u || u.dead || (h && +uid === h.id)) continue; const rr = ZR[map[uid]]; if (!rr || rr.k === 'me') continue;
       if (typeof SPEECH !== 'undefined' && SPEECH.speaking && SPEECH.speaking(+uid)) continue;
-      const v = ZTAG.v.set(u.px + (u.x - u.px) * al, u.py + (u.y - u.py) * al + (u.mounted ? 2.7 : 1.95), u.pz + (u.z - u.pz) * al); const d = cam.position.distanceTo(v); v.project(cam);
+      const v = ZTAG.v.set(u.px + (u.x - u.px) * al, u.py + (u.y - u.py) * al + (u.mounted ? 3.1 : 2.45), u.pz + (u.z - u.pz) * al); const d = cam.position.distanceTo(v); v.project(cam);
       if (v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue; const look = Math.abs(v.x) < 0.07 && Math.abs(v.y) < 0.2 && d < 32;
       if (d > 12 && !look) continue;
       let e = ZTAG.pool[n]; if (!e) { e = document.createElement('div'); e.className = 'ztag'; document.body.appendChild(e); ZTAG.pool[n] = e; } n++;
