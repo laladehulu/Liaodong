@@ -673,7 +673,12 @@ class Renderer {
   }
   updateSiege(dt) {
     const sim = this.sim, sg = sim.sg, W = SIM.TERR.swall, T = this.tmp;
-    sg.engines.forEach((e, i) => { const g = this.sgEng[i]; if (!g) return; g.visible = e.hp > 0; if (e.hp <= 0) return; const y = SIM.terrainH(e.x, e.z); g.position.set(e.x, y, e.z);
+    sg.engines.forEach((e, i) => { const g = this.sgEng[i]; if (!g) return; g.visible = e.hp > 0; if (e.hp <= 0) return;
+      // the sim moves an engine in half-second steps; draw it rolling at a steady pace toward where the sim has it
+      const ud = g.userData; if (ud.dx === undefined) { ud.dx = e.x; ud.dz = e.z; ud.tx = e.x; ud.tz = e.z; ud.vel = 0; }
+      if (e.x !== ud.tx || e.z !== ud.tz) { ud.tx = e.x; ud.tz = e.z; ud.vel = Math.hypot(e.x - ud.dx, e.z - ud.dz) / 0.5; }
+      { const ddx = ud.tx - ud.dx, ddz = ud.tz - ud.dz, dd = Math.hypot(ddx, ddz); if (dd > 6) { ud.dx = ud.tx; ud.dz = ud.tz; } else if (dd > 1e-4) { const st = Math.min(dd, Math.max(ud.vel, 0.25) * dt); ud.dx += ddx / dd * st; ud.dz += ddz / dd * st; } }
+      const y = SIM.terrainH(ud.dx, ud.dz); g.position.set(ud.dx, y, ud.dz);
       if (e.kind === 'ram') { const sw = e.atGate && sg.gateHp > 0 ? Math.sin(this.time * 4.2) : 0; g.userData.log.position.z = sw * 0.9; }
       if (e.kind === 'tower') { const br = g.userData.bridge; const k = e.docked ? 1 : 0; br.rotation.x += ((k ? 0 : -1.4) - br.rotation.x) * Math.min(1, dt * 3); }
       if (e.burn > 0 && Math.random() < dt * 16) { const S = { ram: [1.4, 3, 3.6], tower: [2.4, 2.4, 10], cart: [1.6, 0.8, 2.6] }[e.kind]; this.sparks.spawn(e.x + rnd(-S[0], S[0]), y + rnd(0.5, S[2]), e.z + rnd(-S[1], S[1]), rnd(-0.4, 0.4), rnd(1.5, 3.5), rnd(-0.4, 0.4), rnd(0.5, 1.1), rnd(0.5, 1.1), 0.1, 1, 0.55, 0.15, 1, 0.8, -2, 0.9, 0.25, 0.05); if (Math.random() < 0.4) this.smoke.spawn(e.x, y + S[2], e.z, rnd(-0.3, 0.3), 1.5, rnd(-0.3, 0.3), 4, 0.8, 3.5, 0.18, 0.16, 0.15, 0.5, 0.8, 0); } });

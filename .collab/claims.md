@@ -7,5 +7,4 @@
 - story-road (fork): sim.js BATTLES.zroad + planTerrain/genMap zroad lines, MISSIONS roadA/roadB/roadC (inserted before ch3 nyz), setupMission one-line G.n trim hook + Sim.prototype.mTrim at end, zDown soft line; zhe.js new road block appended at end + routing lines in zStart/zheFinish/zMenu begin/INTRO2 end/zSleep2 end2
 - shenji (fork): NEW src/shenji.js (spliced in build.sh after zhe.js), sim_missions.js or sim.js new MISSIONS keys sj1/sj2/sj3 + BATTLES keys, small generalising hooks in zhe.js (save key/roster indirection), main menu button
 - jin-story (fork): NEW src/jin.js (Jin campaign); build.sh splice line (+jin.js); sim.js MISSIONS new keys jin1..jin4 appended before 'zcamp:' + setupCamp C.type/C.team (2 lines); zhe.js tiny roster hooks (ZB.R/ZC.R in SPEECH.nameOf, zTags, zGrid); render.js+real_gear.js one 'u.look.jin' branch before the Jin switch
-- main: assault field cap (sim.js setupMission ass block + assaultThink)
 - siegefix (fork): sim.js shot/arrow vs wall boxes, wall-top movement/fall; render.js siege engine interpolation
