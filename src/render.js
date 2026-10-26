@@ -2304,6 +2304,13 @@ class Renderer {
       o.material = t;
     });
     this.sleeveMat = cache.get(this.sleeveMat) || this.sleeveMat;
+    // grounding in the ink edition: a soft grey wash at the foot of every structure (no trodden-earth colour: the
+    // print keeps its own ground tones)
+    if (this.terrain && this.groundMap) { const tm = this.terrain.material = this.terrain.material.clone(), base = THREE.Material.prototype.onBeforeCompile, gMap = this.groundMap, gExt = this.groundExt;
+      tm.onBeforeCompile = function (sh, r) { if (base) base.call(this, sh, r); sh.uniforms.gMap = { value: gMap }; sh.uniforms.gExt = { value: gExt };
+        sh.vertexShader = 'varying vec3 vGW;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        sh.fragmentShader = 'varying vec3 vGW; uniform sampler2D gMap; uniform float gExt;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n { vec4 gm = texture2D(gMap, (vGW.xz + gExt) / (2.0 * gExt)); diffuseColor.rgb *= 1.0 - gm.r * 0.4; diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.86, 0.83, 0.78), smoothstep(0.35, 0.6, gm.g) * 0.5); }'); };
+      tm.needsUpdate = true; }
   }
   buildPost() {
     const b = this.renderer.getDrawingBufferSize(new THREE.Vector2());

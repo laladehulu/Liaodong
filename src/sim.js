@@ -1435,18 +1435,20 @@ class Sim {
         const xfr = this.xc && sq && sq.front && order === ORD_CHARGE && !isHero && !u.mounted; // in contact the line keeps its frontage
         const leash = (!sq || isHero || (order === ORD_CHARGE && !xfr) || u.mounted) ? 1e9 : order === ORD_FOLLOW ? 6 : xfr ? 3 : 4.5;
         const tsd = leash < 1e9 ? len(tgt.x - u.slotX, tgt.z - u.slotZ) : 0;
-        const xl = (this.xc && !isHero && !u.mounted && !u.champ && u.ctrl < 0 && tsd <= leash + reach) ? this.xcLine(u, sq, tgt, d, reach) : 0; // 1: waiting or breathing, 2: spear keeping his distance
-        if (tsd > leash + reach) { this.goSlot(u, sq, ang); if (u.spaceOf >= 0) u.spaceOf = -1; } // hold the formation: step out only for a foe who comes to the line, rear ranks wait their turn
+        const yy = !isHero && !u.mounted && u.role && sq && !sq.routing && sq.def.yuanyang && this.yyAI(u, sq, tgt, d, reach);
+        const xl = (!yy && this.xc && !isHero && !u.mounted && !u.champ && u.ctrl < 0 && tsd <= leash + reach) ? this.xcLine(u, sq, tgt, d, reach) : 0; // 1: waiting or breathing, 2: spear keeping his distance
+        if (yy) { }
+        else if (tsd > leash + reach) { this.goSlot(u, sq, ang); if (u.spaceOf >= 0) u.spaceOf = -1; } // hold the formation: step out only for a foe who comes to the line, rear ranks wait their turn
         else if (xl) { }
         else if (u.mounted) {
           if (u.ctrl < 0) this.cavCharge(u, tgt, d); // shock cavalry: run up, ride through, wheel, come again
           else { const desired = d > 9 ? def.speed : (d > reach ? 4 : 2.5); this.cavSteer(u, tgt.x, tgt.z, desired); }
         } else if (d > reach - 0.5) { const sp = def.speed * (u.st === ST_IDLE ? 1 : 0.6); this.steerFoot(u, tgt.x, tgt.z, sp); }
         else { u.mx = 0; u.mz = 0; }
-        if (u.role && sq && !sq.routing && !xl) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
+        if (u.role && sq && !sq.routing && !xl && !yy) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
         const eager = u.mounted ? 0.35 : u.role === 'spear' && tgt.entT > 0 ? 0.35 : u.role === 'brush' ? 0.2 : u.role === 'shield' ? 0.05 : 0.09;
-        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && this.rng.next() < eager && this.xcSpaceOk(u, tgt)) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
-        if (this.xc && u.circleT > 0 && !u.mounted && u.st === ST_IDLE && !xl) { u.circleT -= DT; const sd = (u.id & 1) ? 1 : -1, nx = dx / (d || 1), nz = dz / (d || 1), keep = reach + 1.1; const rad = (d - keep) * 1.6; u.mx = nx * rad + nz * sd * 1.4; u.mz = nz * rad - nx * sd * 1.4; if (!u.blocking && this.rng.next() < 0.02) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = 0.5; } }
+        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && !yy && this.rng.next() < eager && this.xcSpaceOk(u, tgt)) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
+        if (this.xc && u.circleT > 0 && !u.mounted && u.st === ST_IDLE && !xl && !yy) { u.circleT -= DT; const sd = (u.id & 1) ? 1 : -1, nx = dx / (d || 1), nz = dz / (d || 1), keep = reach + 1.1; const rad = (d - keep) * 1.6; u.mx = nx * rad + nz * sd * 1.4; u.mz = nz * rad - nx * sd * 1.4; if (!u.blocking && this.rng.next() < 0.02) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = 0.5; } }
         this.aiBlock(u, tgt);
       }
     } else {
@@ -1683,6 +1685,8 @@ class Sim {
     const canBlock = def_.blocking && def_.entT <= 0 && def_.flinchT <= 0 && def_.downT <= 0 && def_.type !== 'horse' && !behind;
     const shieldBlock = canBlock && def_.def.shield && dir !== DIR_DOWN;
     const omni = def_.ctrlActive; // human players hold one block that covers the front; AI still has to read the direction
+    if (canBlock && att.def.brush && def_.type !== 'horse' && (omni || def_.blockDir === counterDir(dir) || shieldBlock)) { // branches can't be parried clean: they wrap the guard
+      this.brushCatch(def_, att, nx, nz, true, hx, hy, hz); this.events.push({ t: 'block', x: hx, y: hy, z: hz, perfect: false, by: def_.id, att: att.id, shield: !!def_.def.shield }); att.heavy = false; return; }
     if (canBlock && (omni || def_.blockDir === counterDir(dir) || shieldBlock)) {
       const perfect = def_.blockT < (def_.def.parry || 0.16) * (omni ? 1.15 : 1) && (omni || def_.blockDir === counterDir(dir));
       if (perfect) { // a true parry: the attacker's balance is wrecked and the defender gets the initiative
@@ -1699,10 +1703,10 @@ class Sim {
     if ((def_.mounted || def_.type === 'horse' || def_.mount >= 0) && !(att.mounted || att.mount >= 0)) { const hs = def_.type === 'horse' ? def_ : def_.mounted ? def_ : this.units[def_.mount]; const fast = hs && Math.abs(hs.hspeed) > 5; dmg *= fast ? 0.95 : 1.4; if (hs) hs.hspeed *= fast ? 0.85 : 0.35; } // a galloping horseman is a glancing target; a halted one is cut down
     def_.lastAttacker = att.id;
     const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1);
-    if (att.def.brush && def_.type !== 'horse') { def_.entT = Math.max(def_.entT, def_.champ ? 0.6 : 1.8); this.posture(def_, 26, att); this.events.push({ t: 'entangle', id: def_.id, x: hx, y: hy, z: hz }); }
+    if (att.def.brush && def_.type !== 'horse') this.brushCatch(def_, att, nx, nz, false, hx, hy, hz);
     this.posture(def_, dmg * (heavy ? 0.9 : 0.45) * (att.def.posture || 1), att);
     this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz);
-    if (!def_.dead) { if (this.xc) this.hitReact(def_, att, dir === DIR_DOWN || att.weapon === 'yari' ? 'thrust' : 'cut', heavy, false); else { def_.flinchT = heavy ? 0.6 : 0.35; if (def_.st === ST_WINDUP || def_.st === ST_AIM) { def_.st = ST_IDLE; def_.stT = 0; } } }
+    if (!def_.dead && !att.def.brush && !(def_.entT > 0)) { if (this.xc) this.hitReact(def_, att, dir === DIR_DOWN || att.weapon === 'yari' ? 'thrust' : 'cut', heavy, false); else { def_.flinchT = heavy ? 0.6 : 0.35; if (def_.st === ST_WINDUP || def_.st === ST_AIM) { def_.st = ST_IDLE; def_.stT = 0; } } }
     if (att.ctrl >= 0 || def_.ctrl >= 0) this.events.push({ t: 'hitq', att: att.id, def: def_.id, q, heavy, x: hx, y: hy, z: hz });
     att.heavy = false;
   }
@@ -3780,6 +3784,74 @@ Sim.prototype.xcEbb = function () { // clash, pause, clash: count the blows each
 // Anti-lock: a running reaction is never extended or restarted; when it ends the man has 0.7 s in which further hits hurt but
 // cannot stagger him (only a cosmetic flinch); and he is never reeling for more than 0.6 s out of any 2 s.
 const HR_IMM = 0.7, HR_WIN = 60, HR_CAP = 0.6;
+// ---- 狼筅 · the wolf-brush and the mandarin duck team (紀效新書) ----
+// The brush does not kill: its spiked, layered branches catch a man at five metres, shove him back and hold him for a
+// moment, and the long spears behind step out and finish him. A man the brush has just let go of can't be caught again
+// at once (he tears free), so two brushes can't hold one man forever.
+Sim.prototype.brushCatch = function (v, b, nx, nz, blocked, hx, hy, hz) {
+  if (v.dead || v.type === 'horse') return;
+  const imm = (v.entImm || 0) > this.tick, m = 1 / (v.mass || 1);
+  if (imm) { v.vx += nx * 1.8 * m; v.vz += nz * 1.8 * m; return; }
+  const dur = v.champ ? 0.35 : blocked ? 0.42 : 0.65;
+  v.entT = Math.max(v.entT, dur); v.entImm = this.tick + Math.round((dur + 1.2) * 30); v.entBy = b.id;
+  v.vx += nx * (blocked ? 3.5 : 5.5) * m; v.vz += nz * (blocked ? 3.5 : 5.5) * m;
+  if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } v.blocking = false;
+  if (v.hrT > 0) v.hrT = 0;
+  this.posture(v, blocked ? 14 : 22, b);
+  this.events.push({ t: 'entangle', id: v.id, by: b.id, blocked: !!blocked, x: hx, y: hy, z: hz });
+};
+// the duck team fights as one body from its places: the brushes screen and sweep, the spears lunge at what the brushes
+// catch and step back, the shields and the leader step up a pace to meet whoever gets through, the tridents guard the
+// flanks and finish the fallen. Only a broken team (half gone) falls apart into single fights.
+Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
+  const r = u.role; if (!r || r === 'cook' || !sq.def.yuanyang) return false;
+  if (sq.aliveCount !== undefined && sq.count && sq.aliveCount < sq.count * 0.5) return false;
+  const sx = u.slotX, sz = u.slotZ, sd = len(sx - u.x, sz - u.z), sp = u.def.speed;
+  const home = (lim) => { if (sd > lim) this.steerFoot(u, sx, sz, sp * (sd > 3 ? 1 : 0.8)); else { u.mx = 0; u.mz = 0; } };
+  const idle = u.st === ST_IDLE && u.flinchT <= 0 && u.entT <= 0 && !(u.hrT > 0);
+  if (r === 'spear') {
+    if (u.yyL === 1) { const v = this.units[u.yyT];
+      if (!v || v.dead || u.st === ST_RECOVER || u.st === ST_STUN || (u.st === ST_IDLE && this.tick - u.yyS > 8)) { u.yyL = 2; u.yyB = this.tick; u.lunge = false; }
+      else { u.target = v.id; const dd = len(v.x - u.x, v.z - u.z); if (dd > reach - 0.4) this.steerFoot(u, v.x, v.z, sp * 1.7); else { u.mx = 0; u.mz = 0; } return true; } }
+    if (u.yyL === 2) { u.lunge = false; if (sd < 0.6 || this.tick - u.yyB > 75) u.yyL = 0; else { this.steerFoot(u, sx, sz, sp * 1.15); return true; } }
+    // notice what the brushes have caught: a held man within a lunge of this spear, at most two spears on one man
+    if (idle) { let best = null, bd = reach + 2.4; const n = this.gatherNear(u.x, u.z, reach + 2.6);
+      for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === u.team || v.dead || !(v.entT > 0.12) || v.type === 'horse') continue; const dv = len(v.x - u.x, v.z - u.z); if (dv >= bd || dv < 1.2) continue;
+        let k = 0; for (const id of sq.unitIds) { const w = this.units[id]; if (w !== u && w.yyL === 1 && w.yyT === v.id) k++; } if (k >= 2) continue; best = v; bd = dv; }
+      if (best) { u.yyL = 1; u.yyT = best.id; u.yyS = this.tick; u.target = best.id; this.startWindup(u, DIR_DOWN); u.heavy = true; u.aiHeavy = false; u.lunge = true;
+        const dx = best.x - u.x, dz = best.z - u.z, l = len(dx, dz) || 1; u.vx += dx / l * 5; u.vz += dz / l * 5; this.turnTo(u, atan2(dx, dz), 1);
+        this.events.push({ t: 'yylunge', id: u.id, at: best.id }); return true; } }
+    home(1.0); if (tgt && idle && d <= reach + 0.2 && this.rng.next() < 0.08) this.startWindup(u, DIR_DOWN); return true;
+  }
+  if (r === 'brush') { home(1.0);
+    if (tgt && idle) { const caught = tgt.entT > 0 || (tgt.entImm || 0) > this.tick + 12;
+      if (d <= reach + 0.3 && !caught && this.rng.next() < 0.3) this.startWindup(u, (u.id + (this.tick >> 4)) & 1 ? DIR_UP : DIR_DOWN);
+      else if (d < 11 && this.tick >= (u.yySw || 0)) { u.yySw = this.tick + 55 + (u.id % 5) * 7; this.startWindup(u, DIR_UP); } } // the brush is never still: it sweeps the front of the team
+    return true; }
+  if (r === 'shield' || r === 'lead') {
+    // a man who got past the brushes, close to the spears or the brushes: step up a pace, take him on the shield, cut him
+    let lk = null, ld = 99; const n = this.gatherNear(u.x, u.z, 6);
+    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === u.team || v.dead || v.type === 'horse' || v.wounded) continue;
+      let near = false; for (const id of sq.unitIds) { const w = this.units[id]; if (w.dead || (w.role !== 'spear' && w.role !== 'brush')) continue; if (len(v.x - w.x, v.z - w.z) < 2.6) { near = true; break; } }
+      const dv = len(v.x - u.x, v.z - u.z); if ((near || dv < reach + 0.6) && dv < ld) { ld = dv; lk = v; } }
+    if (lk) { u.target = lk.id; if (u.yyCov !== lk.id) { u.yyCov = lk.id; this.events.push({ t: 'yycover', id: u.id, at: lk.id }); }
+      const px = lk.x - u.slotX, pz = lk.z - u.slotZ, pl = len(px, pz) || 1, k = Math.min(1.5, pl - reach * 0.6), gx = u.slotX + px / pl * Math.max(0, k), gz = u.slotZ + pz / pl * Math.max(0, k);
+      if (len(gx - u.x, gz - u.z) > 0.4) this.steerFoot(u, gx, gz, sp); else { u.mx = 0; u.mz = 0; }
+      const open = lk.st === ST_RECOVER || lk.st === ST_STUN || lk.entT > 0 || lk.hrT > 0 || lk.openT > 0;
+      if (idle && !u.blocking && ld <= reach + 0.3 && this.rng.next() < (open ? 0.3 : 0.06)) this.startWindup(u, this.aiPickDir(u));
+      return true; }
+    home(0.8); if (tgt && idle && !u.blocking && d <= reach + 0.2 && this.rng.next() < 0.05) this.startWindup(u, this.aiPickDir(u)); return true;
+  }
+  if (r === 'trident') {
+    // the flanks, and the finishing of whoever the team has caught or knocked down
+    let fv = null, fd = 99; const n = this.gatherNear(u.x, u.z, reach + 2);
+    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === u.team || v.dead || v.type === 'horse') continue; const dv = len(v.x - u.x, v.z - u.z); if (dv > reach + 1.5) continue; const w = (v.entT > 0 || v.downT > 0 || v.hrT > 0) ? dv - 2 : dv; if (w < fd) { fd = w; fv = v; } }
+    if (fv) { u.target = fv.id; const dv = len(fv.x - u.x, fv.z - u.z); const gx = sx + (fv.x - sx) * 0.35, gz = sz + (fv.z - sz) * 0.35; if (dv > reach - 0.3 && len(gx - sx, gz - sz) < 1.5) this.steerFoot(u, gx, gz, sp); else home(1.5);
+      if (idle && dv <= reach + 0.2 && this.rng.next() < ((fv.entT > 0 || fv.downT > 0 || fv.hrT > 0) ? 0.35 : 0.08)) this.startWindup(u, DIR_DOWN); return true; }
+    home(1.0); return true;
+  }
+  return false;
+};
 Sim.prototype.hitReact = function (u, a, kind, heavy, blocked) {
   if (!this.xc || u.dead || u.type === 'horse' || u.def.ai === 'cannon' || u.champ) return false;
   if (u.hrA === undefined) { u.hrT = 0; u.hrImm = 0; u.hrA = 9; u.hrK = 0; u.hrD = 0.3; u.hrS = 1; u.hrL = []; u.hrF = 0; u.hrFS = 1; }
