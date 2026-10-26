@@ -2555,7 +2555,7 @@ const MISSIONS = {
       chase2: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'samurai'], at: [92, -118, -PI / 2], reserve: true },
     },
     phases: [
-      { title: '一 · 入谷 · Into the valley', text: 'March with the column up the valley toward Hetu Ala. Keep up with your file.',
+      { title: '一 · 入谷 · Into the valley', goal: 'Keep up with your file', text: 'March with the column up the valley toward Hetu Ala. Keep up with your file.',
         obj: { survive: 58 },
         at: [[18, ['dir', 'liu', 'hold', 0, -50]], [34, ['dir', 'liu', 'hold', 0, -32]], [34, ['dir', 'tusi', 'hold', 0, -4]]],
         say: [[2, 'liu', 'Three Jin stockades burned in three days and their villages empty. The slave chief is afraid of us!', '三日連破三寨，奴酋怯矣！'],
@@ -2564,19 +2564,19 @@ const MISSIONS = {
           [31, 'liu', 'Du Song takes the Khan\'s head while we crawl through these hills? Double pace! The guns can follow!', '杜松欲獨得首功耶？倍道而進！'],
           [40, 'fang', 'A rider from Du Song, come this way through Jin country? Who let him through the passes?', '杜總兵的人，怎麼從金人地界過來的？'],
           [50, 'chief', 'Double pace, and the guns half a li behind. This is how a column gets cut in pieces.', '倍道而進，砲落後半里……這是找死。']] },
-      { title: '二 · 代善 · The first charge', text: 'Banners in the pass ahead. The levies at the head of the column take the first shock; the duck teams close up behind them and wait for the gap.', start: [['release', 'daisan'], ['dir', 'liu', 'hold', 0, -36], ['dir', 'tusi', 'hold', 0, -10]],
+      { title: '二 · 代善 · The first charge', goal: 'Close up behind the levies and hold', text: 'Banners in the pass ahead. The levies at the head of the column take the first shock; the duck teams close up behind them and wait for the gap.', start: [['release', 'daisan'], ['dir', 'liu', 'hold', 0, -36], ['dir', 'tusi', 'hold', 0, -10]],
         obj: { survive: 66 },
         say: [[1, 'lookout', 'Banners in the pass ahead — red, and red bordered in white! Those are no Ming riders!', '前面有旗！紅旗，鑲紅！不是我們的人！'],
           [4, 'liu', 'Levies, hold them! Duck teams, close up behind and be ready!', '土兵頂住！鴛鴦陣隨後待命！'],
           [7, 'chief', 'Shields down! Brushes up! Spears behind me — as Marshal Qi taught us!', '藤牌在前，狼筅次之，長槍隨後！'],
           [52, 'chief', 'They give way! Hold the line — nobody chases!', '他們退了！穩住，不許追！']] },
-      { title: '三 · 皇太極 · The ridge', text: 'A second Jin host comes down the west ridge into the side of the column.', start: [['release', 'hong'], ['release', 'ridge'], ['dir', 'hong', 'attack']],
+      { title: '三 · 皇太極 · The ridge', goal: 'Stay with your file and live', text: 'A second Jin host comes down the west ridge into the side of the column.', start: [['release', 'hong'], ['release', 'ridge'], ['dir', 'hong', 'attack']],
         obj: { survive: 48 },
         at: [[13, ['kill', 'liu']], [17, ['promote']], [23, ['wound', 3]]],
         say: [[1, 'fang', 'The west ridge — more banners! The rider lied. Du Song is not coming!', '西嶺上還有！那人是假的，杜總兵不會來了！'],
           [6, 'lookout', 'Arrows from the east slope!', '東坡有弓手！'],
           [14, 'soldier', 'General Liu has fallen! Liu Ting is dead!', '劉總兵陣亡了！']] },
-      { title: '四 · 突圍 · Break out', text: 'The column is broken. Get your file back down the valley to the south gorge, where the Koreans are camped. Leave no one who can still walk.', show: ['mouth'],
+      { title: '四 · 突圍 · Break out', goal: 'Get your file out to the south gorge', text: 'The column is broken. Get your file back down the valley to the south gorge, where the Koreans are camped. Leave no one who can still walk.', show: ['mouth'],
         obj: { extract: 'mouth' }, limit: 420, fail: 'The valley closed behind you.',
         waves: [[3, 'chase', ['attack']], [30, 'chase2', ['attack']]],
         say: [[2, 'fang', 'The way we came — the gorge to the south! The Korean camp is beyond it!', '回頭，往南邊的峽口！朝鮮兵在那邊扎營！'],
@@ -2690,6 +2690,64 @@ const MISSIONS = {
     ],
     win: 'You brought your file back to Tieling.',
   },
+  // ===== 第三章 · Chapter Three: Ningyuan, the first month of 1626 (story-ch3) =====
+  // You lead your file on the west wall of Ningyuan. The siege engines, ladders, saltpeter, oil and guns are the siege
+  // system's (siegeInit runs for a story mission with `siege`); the phases follow the Ming record: the camp shelled
+  // inside the guns' range, the assault on the walls, the sappers at the wall foot, the guns, the withdrawal.
+  nyz: {
+    title: '寧遠 · Ningyuan', year: 'The first month of 1626', battle: 'siegecity', side: 0, soldier: { group: 'zhe' }, hidden: true, ch: 3, siege: true, attacker: 1,
+    brief: 'Nurhaci has crossed the Liao River with the Eight Banners. Every Ming fort beyond the Pass has been abandoned on orders from the new commissioner, except one: Ningyuan, where Yuan Chonghuan has refused to leave. You lead your file on the west wall.',
+    start: [-18, 60, Math.PI],
+    zones: [{ key: 'ditchW', x: -28, z: 22, r: 9, name: '壕 · The ditch (west)', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 9, name: '壕 · The ditch (east)', rate: 0.5 },
+      { key: 'wallW', x: -25, z: 43.5, r: 7, name: 'A · Your post: the west wall', owner: 0, rate: 0.35 }, { key: 'wallE', x: 25, z: 43.5, r: 7, name: 'B · The east wall', owner: 0, rate: 0.35 }],
+    sectors: [['ditchW', 'ditchE'], ['wallW', 'wallE']],
+    groups: {
+      zhe: { team: 0, name: 'Your company', army: ['yuanyang', 'rifle_imp'], at: [-18, 60, Math.PI], dir: ['hold', -25, 44.5], stay: true, free: true },
+      yuan: { team: 0, name: 'Yuan Chonghuan', zh: '袁崇煥', army: ['samurai'], at: [-7, 45, Math.PI], dir: ['hold', -7, 45], stay: true, free: true, officer: 4 },
+      ww: { team: 0, name: 'West wall garrison', army: ['rifle_imp', 'armstrong', 'rifle_spencer'], at: [-40, 44, Math.PI] },
+      ew: { team: 0, name: 'East wall garrison', army: ['rifle_imp', 'armstrong', 'samurai'], at: [28, 44, Math.PI] },
+      gate: { team: 0, name: 'The gate guard', army: ['samurai', 'rifle_imp'], at: [0, 58, Math.PI] },
+      camp: { team: 1, name: 'The Jin vanguard camp', army: ['cavalry', 'samurai', 'archer'], exit: [-30, -150], at: [-30, -110, 0], dir: ['hold', -30, -62], stay: true },
+      van: { team: 1, name: 'The Bordered banners', army: ['samurai', 'samurai', 'archer', 'archer'], exit: [-40, -150], at: [-40, -122, 0], reserve: true },
+      carts: { team: 1, name: 'The shield carts', army: ['samurai', 'ashigaru', 'archer', 'horokutai'], exit: [30, -150], at: [30, -122, 0], reserve: true },
+      sap: { team: 1, name: 'Sappers', zh: '穴城', army: ['ashigaru', 'ashigaru', 'samurai'], exit: [-20, -150], at: [-20, -120, 0], reserve: true },
+      guard: { team: 1, name: 'The Khan\'s guard', zh: '巴牙喇', army: ['shinsengumi', 'samurai', 'archer', 'archer'], exit: [0, -150], at: [0, -126, 0], reserve: true },
+    },
+    phases: [
+      { title: '一 · 清野 · Scorched earth', text: 'The houses outside the walls are ash; the people and the grain are inside. Take your file up the ramp onto the west wall.', show: ['wallW'],
+        obj: { all: [{ reach: 'wallW' }, { survive: 44 }] }, at: [[1, ['promote']], [8, ['dir', 'yuan', 'hold', -21, 45]], [36, ['dir', 'yuan', 'hold', 6, 45]], [30, ['dir', 'camp', 'hold', -30, -126]]],
+        say: [[3, 'captain', 'Up on the wall, west side. Nobody stays below tonight.', '上城，西面。今晚誰也不許待在下面。'],
+          [12, 'yuan', 'Zhejiang men? I am a southerner too. We are a long way from home, the two of us.', '浙兵？我也是南方人。咱們都離家很遠啊。'],
+          [18, 'yuan', 'Every fort beyond the Pass has been given up. This one will not be. I have written it in my own blood.', '關外諸城都撤了，這一座不撤。我刺血為書，與此城共存亡。'],
+          [25, 'yuan', 'Men who run will be cut down at Shanhai Pass — I have sent the order. So there is nowhere to run. Stand here with me.', '逃到山海關的，一律斬——我已經下了令。所以無處可逃。跟我站在這裡。'],
+          [28, 'lookout', 'They\'re making camp out on the plain — close, too close!', '他們在平地上紮營了——太近了！'],
+          [33, 'gunner', 'Inside the red cannon\'s reach! Light the match!', '進了紅夷砲的射程了！點火！'],
+          [40, 'lookout', 'They\'re pulling the camp back! They didn\'t know how far our guns carry!', '他們拔營往後退了！不知道我們的砲打多遠！']] },
+      { title: '二 · 攻城 · The assault', text: 'The Jin come on with shield carts and ladders. Hold the west wall: throw down any ladder that goes up (E at its top) and keep your file together.', show: ['ditchW', 'ditchE'],
+        start: [['release', 'van'], ['release', 'carts'], ['dir', 'yuan', 'hold', 0, 50]],
+        obj: { survive: 110, keep: 'wallW' }, at: [[40, ['sector', 1]], [74, ['wound', 4]]],
+        say: [[3, 'captain', 'Shield carts! They\'re filling the ditch!', '盾車！他們在填壕！'],
+          [20, 'yuan', 'Let them come close. Muskets and guns, all together when I give the word.', '放近了打。銃砲齊發，聽我號令。'],
+          [42, 'lookout', 'Ladders at the wall! Saltpeter at the foot — fire it!', '雲梯靠城了！城下的硝——點！'],
+          [60, 'captain', 'Throw the ladders down! Get to the top of them!', '把梯子推下去！上梯頭！']] },
+      { title: '三 · 穴城 · Under the wall', text: 'Under their carts, men are chiselling at the foot of the wall where arrows and stones cannot reach them. Hold your post while the wall burns them out.',
+        start: [['release', 'sap']],
+        obj: { survive: 110, keep: 'wallW' },
+        say: [[4, 'lookout', 'They\'re digging into the wall under the carts! We can\'t hit them from up here!', '他們躲在車底下鑿城！從上面打不著！'],
+          [14, 'yuan', 'Bedding! Quilts, straw, oil and powder — roll them up, light them, throw them down!', '把被褥、柴草拿來！澆油裹藥，點著了往下扔！'],
+          [40, 'soldier', 'It\'s caught under the cart — they\'re running out!', '燒到車底下了——他們往外跑了！'],
+          [75, 'captain', 'The cold\'s on our side. The ground is frozen hard as iron. Let them dig.', '天冷幫我們。地凍得跟鐵一樣。讓他們挖。']] },
+      { title: '四 · 紅夷砲 · The red cannon', text: 'The Khan\'s own guard comes at the walls. The guns are firing over your heads. Hold until they break.',
+        start: [['release', 'guard'], ['dir', 'yuan', 'hold', -14, 45]],
+        obj: { survive: 100, keep: 'wallW' }, at: [[66, ['break', 'guard']], [68, ['break', 'van']], [70, ['break', 'carts']], [72, ['break', 'sap']], [74, ['break', 'camp']]],
+        say: [[3, 'lookout', 'Yellow banners — the Khan\'s guard!', '黃旗！大汗的親兵！'],
+          [16, 'gunner', 'Again! Swab it, load it, again!', '再來！洗膛，裝藥，再來！'],
+          [58, 'lookout', 'A great chief is hit! They\'re carrying him off wrapped in red cloth!', '打中一個大頭目！他們用紅布裹著抬走了！'],
+          [70, 'lookout', 'They\'re pulling back! All along the line, they\'re pulling back!', '退了！整條線都在退！'],
+          [84, 'yuan', 'Let them go. Let them go. The city stands.', '讓他們走。讓他們走。城還在。']] },
+    ],
+    win: 'The Jin fell back from the walls of Ningyuan.',
+  },
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
@@ -2761,7 +2819,7 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   if (!ass && !M.soldier) { // campaign balance: the enemy rank and file are a little softer, your allies a little harder (officers excepted)
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
     for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, 0.82, 0.82) : tune(u.def, 1.12, 1.05); u.hp = u.def.hp; } }
-  if (ass && M.siege) this.siegeInit();
+  if (M.siege && (ass || M.soldier)) { if (!ass) this.sector = 0; this.siegeInit(); } // a story chapter on the walls uses the siege engines too
   if (ass) { let n = 0; for (const u of this.units) if (u.team === M.attacker && u.type !== 'horse' && u.type !== 'hero') n++; this.tickets = Math.round(n * 0.8); for (const o of this.objectives) o.rate *= 0.6; this.sector = 0; M.sectors[0].forEach(k => this.missionZone(k).hidden = false); this.assaultDirs(); this.mv.ph = 0; }
   // humans: in the campaign each leads a squad of the troops they chose (two when alone) and rides with it
   if (M.soldier) { // a story chapter: you are one man in a mandarin duck team of the named group
@@ -2822,6 +2880,7 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'promote') this.zPromote();
   else if (a[0] === 'break') this.mBreak(a[1]);
   else if (a[0] === 'wound') this.zWound(a[1] | 0);
+  else if (a[0] === 'sector') { this.sector = a[1] | 0; if (this.sg) this.siegeDirs(); }
 };
 // the section chief falls and the file is yours: his squad passes to the man who is left
 Sim.prototype.zPromote = function () {
@@ -3188,7 +3247,7 @@ Sim.prototype.siegeDirs = function () {
   att.forEach((g, i) => { const p = this.players[this.mg[g].p], j = jobs[i % jobs.length]; if (!j) return; p.directive = { kind: DIR_HOLD, x: clamp(j[0], -HALF + 3, HALF - 3), z: clamp(j[1], -HALF + 3, HALF - 3), by: -1 }; p.standoff = j[2]; });
   // defenders: the wall garrisons stand on the wall top above the ladders; the rest hold the gatehouse and the town
   const posts = [[-26, 43.6], [26, 43.6], [-14, 43.6], [14, 43.6], [0, W.z1 + 7], [-18, 80], [0, 110]];
-  let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D || g.broken) continue; const pt = posts[j++ % posts.length]; p.directive = { kind: DIR_HOLD, x: pt[0], z: pt[1], by: -1 }; }
+  let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D || g.broken || g.G.free) continue; const pt = posts[j++ % posts.length]; p.directive = { kind: DIR_HOLD, x: pt[0], z: pt[1], by: -1 }; }
 };
 
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, spacingOf, gunOf,
