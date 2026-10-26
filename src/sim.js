@@ -2751,7 +2751,7 @@ const MISSIONS = {
       col: { team: 0, name: 'The relief army', zh: '援兵', army: ['rifle_imp', 'samurai'], at: [0, -96, 0], dir: ['hold', 0, -92], stay: true },
       white: { team: 0, name: 'The White Poles', zh: '白杆兵', army: ['ashigaru', 'ashigaru'], at: [0, -146, 0], dir: ['hold', 0, -142], stay: true },
       folk: { team: 0, name: 'People on the road', zh: '流民', army: ['ronin'], n: 7, at: [0, 136, PI], reserve: true, stay: true },
-      des: { team: 1, name: 'Deserters', zh: '逃兵', army: ['ronin'], n: 4, at: [-126, 58, PI / 2], reserve: true, exit: [-148, 70] },
+      des: { team: 1, name: 'Deserters', zh: '逃兵', army: ['ronin'], n: 4, at: [-62, 44, PI / 2], reserve: true, exit: [-148, 70] },
     },
     phases: [
       { title: '一 · 北上 · North from Liaoyang', goal: 'Lead your file up the road behind the relief army', text: 'The relief army is on the road north to Shenyang. Your file marches in the middle of the column.', show: ['cart'],
@@ -2762,7 +2762,7 @@ const MISSIONS = {
         say: [[1, 'col', 'The powder cart\'s stuck in the rut! Southern men — lend a hand!', '火藥車陷住了！南兵，過來搭把手！'], [21, 'col', 'Good! You southern men have some muscle.', '好！南兵有力氣。']] },
       { title: '三 · 流民 · People on the road', goal: 'Keep the deserters off the people', text: 'People are coming down the road from the north, the farm villages around Shenyang emptying ahead of the Jin. Not everyone on the road means them well.', hide: ['cart'],
         start: [['release', 'folk'], ['dir', 'folk', 'hold', 0, -140], ['dir', 'col', 'hold', 0, 4]],
-        waves: [[12, 'des', ['attack']]],
+        waves: [[12, 'des', ['hold', -4, 26]]],
         obj: { all: [{ survive: 16 }, { defeat: ['des'], frac: 0.75 }] },
         say: [[2, 'lookout', 'People ahead — villagers, running south.', '前面有人——是百姓，往南逃的。'], [12, 'lookout', 'A gang out of the trees — deserters, robbing the people!', '林子裡出來一夥人——是逃兵，在搶百姓！']] },
       { title: '四 · 渾河 · The river', goal: 'March on to the camp by the Hun River', text: 'The road runs on north to the Hun River. Across it, Shenyang.', show: ['camp'],
