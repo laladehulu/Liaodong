@@ -98,7 +98,7 @@ function beaconVisuals(sim) {
 function beaconFrame() {
   requestAnimationFrame(beaconFrame);
   const sim = state.sim; if (!sim || !sim.mission || !sim.mission.beacon) { if (BCN.open) beaconShop(false); return; }
-  if (BCN.sim !== sim) { BCN.sim = sim; BCN.fires = -1; BCN.stage = ''; BCN.log = 0; BCN.vis = null; BCN.lastN = 0; }
+  if (BCN.sim !== sim) { BCN.sim = sim; BCN.sum = false; BCN.fires = -1; BCN.stage = ''; BCN.log = 0; BCN.vis = null; BCN.lastN = 0; }
   const B = sim.bc; const m = $('mobj'); if (m) m.style.display = 'none';
   if (!BCN.vis && state.renderer && state.renderer.scene) BCN.vis = beaconVisuals(sim);
   if (BCN.vis) { const now = performance.now() / 1000; BCN.vis.stoves.forEach((s, i) => { const on = !!B && i < B.fires; s.fl.visible = on; s.sm.visible = on;
@@ -117,6 +117,8 @@ function beaconFrame() {
   if (B.log.length && B.log[B.log.length - 1][0] !== BCN.log) { const L = B.log[B.log.length - 1]; BCN.log = L[0];
     if (L[4] === 'ready') toast('Ready. The raid comes on in three seconds'); else if (L[1] === state.localIdx) { if (!L[3]) toast(L[4] === 'none' ? 'The road has no more of those to send' : L[4] === 'fire' ? 'Light the fire first' : 'Not enough silver'); else if (L[2] === S.BEACON.SHOP.length) toast('Your men are bound up and fed'); }
     beaconShopDraw(); }
+  // the result card: what the tower did
+  if (sim.mwin !== undefined && !BCN.sum) { const r = $('result'), t = $('resultText'); if (r && !r.hidden && t && t.textContent) { BCN.sum = true; t.textContent += ` Fires lit: ${B.fires} of ${S.BEACON.NFIRE} · raids beaten: ${B.n - (B.stage === 'wave' ? 1 : 0)} · raiders slain: ${B.kills}.`; } }
   BCN.t -= 1 / 60; if (BCN.t <= 0) { BCN.t = 0.25; beaconShopDraw(); }
 }
 requestAnimationFrame(beaconFrame);

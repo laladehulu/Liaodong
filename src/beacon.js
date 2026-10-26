@@ -24,7 +24,7 @@
   ];
   const FINAL = [['FIN', 'N'], ['B', 'E'], ['H', 'W'], ['C', 'NE'], ['D', 'NW'], ['G', 'E']];
   // with two or more defenders each raid brings one more party, from another flank
-  const EXTRA = [['X1', 'E'], ['X2', 'W'], ['X1', 'N'], ['X2', 'E'], ['X1', 'W'], ['X2', 'NW'], ['X1', 'NE'], ['X2', 'NW']];
+  const EXTRA = [null, ['X1', 'W'], ['X1', 'N'], ['X2', 'E'], ['X1', 'W'], ['X2', 'NW'], ['X2', 'NE'], ['X2', 'NW']];
   // what the quartermaster can send up from the road: [type, cost, how many companies the road holds]
   const SHOP = [['ashigaru', 25, 2], ['rifle_imp', 35, 2], ['yuanyang', 45, 1], ['rifle_spencer', 40, 1], ['cavalry', 50, 1], ['gatling', 60, 1]];
   const MEND = 20, FALL = 20, WAVE_MAX = 180, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 55;
@@ -53,7 +53,7 @@
   const humans = (sim) => sim.players.filter(p => !p.ai);
   P.beaconInit = function () {
     const nh = humans(this).length;
-    this.bc = { stage: 'lull', n: 0, fires: 0, lit: false, light: 0, t0: this.tick, silver: 40 + 15 * (nh - 1), kills: 0, wave: [], log: [], relief: false, nh };
+    this.bc = { stage: 'lull', n: 0, fires: 0, lit: false, light: 0, t0: this.tick, silver: 40 + 25 * (nh - 1), kills: 0, wave: [], log: [], relief: false, nh };
     for (const k of ['stoves', 'tower']) { const z = this.missionZone(k); if (z) z.hidden = false; }
     for (const gid in this.mg) { if (gid === 'bandFIN' || gid === 'garrison') continue; const p = this.players[this.mg[gid].p];
       for (const uid of [p.heroId, p.horseId]) { const u = uid >= 0 ? this.units[uid] : null; if (u && !u.dead) { u.dead = true; u.hp = 0; u.inactive = true; u.bcCut = true; u.bcPaid = true; } } }
@@ -99,7 +99,7 @@
     g.G.exit = [sp[0], sp[1]]; this.mRelease(gid); this.mDir(gid, ['hold', 0, -4]); return gid;
   };
   P.beaconWave = function (i) {
-    const B = this.bc, fin = i < 0; const list = (fin ? FINAL : WAVES[i]).slice(); if (B.nh >= 2) list.push(EXTRA[fin ? 7 : i]);
+    const B = this.bc, fin = i < 0; const list = (fin ? FINAL : WAVES[i]).slice(); const ex = EXTRA[fin ? 7 : i]; if (B.nh >= 2 && ex) list.push(ex);
     B.wave = list.map(([k, side]) => this.beaconArm(k, side)).filter(Boolean); B.stage = fin ? 'final' : 'wave'; B.t0 = this.tick; if (!fin) B.n++;
     this.events.push({ t: 'bwave', n: fin ? -1 : B.n });
   };
