@@ -2779,7 +2779,10 @@ Sim.prototype.mObj = function (o, el) {
   if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; } if (a === 0) return -1; if (n < a) return 0; }
   if (o.survive) { if (el < o.survive) return 0; }
   if (o.never) return 0;
-  if (o.extract) { const z = this.missionZone(o.extract); let ok = false; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 1) ok = true; } if (!ok) return 0; }
+  if (o.extract) { const z = this.missionZone(o.extract); let ok = false; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 1) ok = true; } if (!ok) return 0;
+    // you are out: wait (up to 20 s) for the men of your file who are still on their feet and coming
+    if (this.mv.exT === undefined) { this.mv.exT = this.tick; this.events.push({ t: 'zwait', s: 20 }); }
+    if (this.tick - this.mv.exT < 30 * 20) { for (const u of this.units) { if (!u.zfile || u.dead || u.downed || u.ctrl >= 0) continue; if (u.wounded && u.helpedBy < 0) continue; if (len(u.x - z.x, u.z - z.z) > z.r + 10) return 0; } } }
   return 1;
 };
 Sim.prototype.missionThink = function () {
