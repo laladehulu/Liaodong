@@ -710,7 +710,7 @@ class Renderer {
       const vr = Math.max(rr, dist * 0.03), bt = Math.max(1, dist * 0.06), bh = 1 + dist * 0.06; this.empMark.scale.set(vr, 1, vr); this.empMark.children[0].material.color.setHex(foes ? 0xff6a4a : 0xffd27a); { const bm = this.empMark.children.find(c => c.userData.beam); if (bm) { bm.scale.set(bt / vr, bh, bt / vr); bm.position.y = 3 * bh; bm.material.color.setHex(foes ? 0xff6a4a : 0xffe2a0); } }
       this.empHud = { kind: e.kind, cd: e.cd, cdMax: e.cdMax || (bow ? 150 : 270), elev: e.pitch || 0, want: this._viewPitch, dist, wall: !!P.box, out: !!P.out, foes }; }
     else if (this.empHud) { this.empHud.cd = e.cd; this.empHud.elev = e.pitch || 0; this.empHud.want = this._viewPitch; }
-    { const m = this.empArc.material, tk = this.empK || 0; m.size = 3.5 + tk * 2.5; m.opacity = (e.cd > 0 ? 0.25 : 0.9) * (0.6 + 0.4 * tk); }
+    { const m = this.empArc.material, tk = this.empK || 0; m.size = 3.5 + tk * 2.5; m.opacity = (e.cd > 0 ? 0.4 : 0.95) * (0.6 + 0.4 * tk); }
   }
   buildEmpVM(hero) {
     const g = new THREE.Group(); this.camera.add(g); this.vmEmp = g; const mk = (c) => new THREE.MeshLambertMaterial({ color: c, depthTest: false });
