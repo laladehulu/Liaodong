@@ -12,7 +12,7 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
   if (h && !h.dead && beh !== 'idle') {
     const P = sim.mv.ph; let tx = 58, tz = -62;
     if (P === 1) { const z = sim.missionZone('sbridge'); tx = z.x; tz = z.z - 2; }
-    if (P === 3) { tx = -62; tz = -134; const w = wounded >= 0 ? sim.units[wounded] : null; if (beh === 'lead' && w && !w.dead && w.helpedBy < 0 && Math.hypot(w.x - h.x, w.z - h.z) < 40) { tx = w.x; tz = w.z; if (Math.hypot(w.x - h.x, w.z - h.z) < 2 && (t & 7) === 0) acts |= S.A_KICK; }
+    if (P === 3) { tx = -62; tz = -134; if (h.z > -80 && Math.abs(h.x - 58) < 20) { tx = 58; tz = -84; } const w = wounded >= 0 ? sim.units[wounded] : null; if (beh === 'lead' && w && !w.dead && w.helpedBy < 0 && Math.hypot(w.x - h.x, w.z - h.z) < 40) { tx = w.x; tz = w.z; if (Math.hypot(w.x - h.x, w.z - h.z) < 2 && (t & 7) === 0) acts |= S.A_KICK; }
       else if (beh === 'lead') { let n = 0, a = 0; for (const id of file) { const u = sim.units[id]; if (u.dead) continue; a++; if (Math.hypot(u.x - h.x, u.z - h.z) < 14) n++; } if (a && n < a * 0.6 && (t % 60) < 40) { tx = h.x; tz = h.z; } } }
     let enemy = null, ed = 1e9; for (const e of sim.teamAlive[1]) { const d = Math.hypot(e.x - h.x, e.z - h.z); if (d < ed) { ed = d; enemy = e; } }
     const fr = beh === 'reckless' ? 8 : 3;
