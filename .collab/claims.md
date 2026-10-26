@@ -10,3 +10,4 @@
 - sj-ambush (fork): shenji.js new mission sjamb in <sj-missions> + flow lines; sim.js BATTLES new key 'sjvil' (+planTerrain/genMap lines if needed)
 - aidpost (fork): sim.js zCrawl/woundedAI/aiMedic + new Sim.prototype.aidPost/orderlyAI/zAid at wounded section, 1-line unitAI orderly hook; render.js carry viewmodel + aided/carried poses (guarded); main.js/zhe.js goal line + hudMarks aid marker
 - shoulders (fork): render.js drawFigure shoulder/uarm + gear sl/sr parts, real_gear.js shoulder plates
+- grounding (fork): render.js new Renderer.prototype.buildGroundMap (end of file) + 1-line call before toonify, houses/walls sink+plinth and mantlet planks in buildStructures/buildSpecialStructures; realism.js terrain shader ground-map lines + post FXAA; stylized.js terrain ground-map lines + post FXAA
