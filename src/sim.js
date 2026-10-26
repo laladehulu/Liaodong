@@ -3018,7 +3018,7 @@ const MISSIONS = {
           [40, 'lier', 'The southerners call that one the ten-thousand-man enemy: a pot of powder that rolls along the ground.', '南邊人管那叫萬人敵，一罐火藥，在地上滾。'],
           [60, 'bahai', 'The cart\'s on fire! Get out from under it!', '車著火了！快從底下出來！']] },
       { title: '四 · 汗 · The Khan', goal: 'Get your file back to the camp, wounded too', text: 'Something has happened at the Khan\'s standard. The horns sound the withdrawal. Bring your file back across the plain to the camp, and leave no one who can still walk.', show: ['jcamp'],
-        start: [['sector', 2], ['break', 'van'], ['break', 'van2'], ['break', 'carts'], ['break', 'sap'], ['dir', 'niru', 'hold', -30, -110]], obj: { all: [{ extract: 'jcamp' }, { survive: 30 }] }, limit: 400, fail: 'The guns found you on the open plain.',
+        start: [['sector', 2], ['break', 'van'], ['break', 'van2'], ['break', 'carts'], ['break', 'sap'], ['dir', 'niru', 'hold', -30, -110]], obj: { extract: 'jcamp' }, limit: 400, fail: 'The guns found you on the open plain.',
         say: [[1, 'lookout', 'The Khan\'s standard is going back! They\'re carrying someone wrapped in red cloth!', '汗的大纛往後退了！他們用紅布裹著抬一個人！'],
           [6, 'niru', 'The horns! Back to the camp! Carry the wounded!', '號角響了！退回營去！把傷的抬上！'],
           [18, 'muktan', 'Twenty-five years of war, and the Khan has never once turned back from a wall.', '汗打了二十五年仗，從沒在一座城下退過。']] },

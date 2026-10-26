@@ -266,6 +266,9 @@ function sjRefill(ch) {
     const nr = pool[0]; if (!nr) continue; if (!ZS.lost.includes(k)) ZS.lost.push(k); ZS.team[i] = nr.k; ZS.alive[nr.k] = true; ZS.newMen.push(nr.k); }
   // you always stand in the second place; the senior living man is chief
   const mi = ZS.team.indexOf(ZS.me); if (mi > 1) { const t = ZS.team[1]; ZS.team[1] = ZS.me; ZS.team[mi] = t; } else if (mi === 0) { const t = ZS.team[1]; ZS.team[1] = ZS.me; ZS.team[0] = t; }
+  // a new draft is never made chief: the oldest hand left takes the first place (Old Gao, then Lin, then whoever)
+  if (sRow(ZS.team[0]).draft) { const pref = ['sj_gao', 'sj_lin', 'sj_ma', 'sj_zhao', 'sj_song', 'sj_qian', 'sj_wu', 'sj_tian']; const k = pref.find(x => ZS.team.includes(x) && ZS.alive[x] && x !== ZS.me) || ZS.team.slice(2).find(x => ZS.alive[x] && !sRow(x).draft);
+    if (k) { const i = ZS.team.indexOf(k); ZS.team[i] = ZS.team[0]; ZS.team[0] = k; ZS.flags.chief = k; } }
 }
 const sjLost = () => ZS.lost.filter(k => k !== ZS.me && !ZS.alive[k] && sRow(k));
 const sjFile = () => ZS.team.filter(k => k !== ZS.me && ZS.alive[k]);
@@ -281,7 +284,7 @@ const SJ_INTRO = [
     onNext: () => { const zh = ($('sjNm').value || '李順').trim().slice(0, 6), en = ($('sjNmEn').value || 'Li Shun').trim().slice(0, 14); ZS.name = { zh, en }; zSave(); }, btn: 'To the drill ground →' },
 ];
 function sjNewMenCard() { if (!ZS.newMen.length) return null;
-  return { title: '新兵 · New men', year: `${ZS.newMen.length} sent to fill the team`, p: ZS.newMen.map(k => { const r = sRow(k); return `<b>${r.zh} ${r.en}</b> — ${r.t.replace(/^new draft · /, '')}.`; }).concat(['Talk to them in camp. They take the places of the men who did not come back.']) }; }
+  return { title: '新兵 · New men', year: `${ZS.newMen.length} sent to fill the team`, p: ZS.newMen.map(k => { const r = sRow(k); return `<b>${r.zh} ${r.en}</b> — ${r.t.replace(/^new draft · /, '')}.`; }).concat(ZS.flags.chief && !ZS.alive.sj_hu ? [`Chief Hu is dead. <b>${sRow(ZS.flags.chief).en}</b> leads the team now.`] : []).concat(['Talk to them in camp. They take the places of the men who did not come back.']) }; }
 function sjTeamList(where) { return `<ul>${ZS.team.concat(ZS.lastDead || []).filter((k, i, a) => a.indexOf(k) === i).map(k => { const r = sRow(k); const f = k === ZS.me ? 'out' : ZS.fate[k] || 'out'; const nm = k === ZS.me ? `${ZS.name.zh} ${ZS.name.en} (you)` : `${r.zh} ${r.en}`; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${nm} — ${f === 'out' ? where : f === 'dead' ? 'killed' : 'missing'}</li>`; }).join('')}</ul>`; }
 
 // ---------- camp ----------
@@ -390,7 +393,10 @@ function sjTalk(k, night) {
       { q: 'Sir, aren\'t you a civil official?', bond: 1, a: [['六十歲的書生，穿著甲走路。好笑吧。', 'A sixty-year-old scholar walking about in armour. Funny, isn\'t it.'], ['可朝廷讓我來，我就來。祖大壽在等。', 'But the court sent me, so I came. Zu Dashou is waiting.']] },
       { q: 'Will we win?', a: [['吳襄的騎兵、宋偉的步兵、你們的銃。四萬人。', 'Wu Xiang\'s horse, Song Wei\'s foot, your guns. Forty thousand.'], ['……就看騎兵走不走。', '...It depends on whether the cavalry stays.']] }] },
   };
-  const T = [T0, T1, T2][night] || T0; return T[k] || (alive(k) ? { g: ['……', '...'], t: [] } : null);
+  const T = [T0, T1, T2][night] || T0; let R = T[k] || (alive(k) ? { g: ['……', '...'], t: [] } : null);
+  // when Chief Hu is gone, whoever leads the team now is the one who remembers the dead
+  if (R && night >= 1 && k === S.team[0] && k !== 'sj_hu') R = { g: R.g, t: R.t.concat(lost.slice(0, 2).map(r => ({ q: `About ${r.k === 'sj_hu' ? 'Chief Hu' : r.en}...`, bond: 1, a: [[`${r.zh}……`, `${r.en}...`], ['名字我記下了。回城我去他家。', 'I have written his name down. When we get back, I will go to his family.']] }))) };
+  return R;
 }
 function sjDraftTalk(k, night) {
   const r = sRow(k); if (!r || !r.draft) return null; const fresh = ZS.newMen.includes(k);
