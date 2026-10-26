@@ -32,10 +32,48 @@ const SPEECH = (() => {
     const t = cardEl.lastChild; t.children[0].textContent = who || ''; t.children[1].textContent = zh || ''; t.children[2].textContent = en || '';
     cardEl.classList.add('on'); cardT = dur || 5;
   }
+  // ---- three ways to lay out who-said-what; F9 cycles them (saved per browser) ----
+  //  A · 'stack'   : a ranked column on the left, at most 4 lines: orders and story first, alerts after, newest on top; each fades on its own clock
+  //  B · 'card'    : one large card for the line that matters (face + words), with a 3-line alert ticker under it
+  //  C · 'film'    : no panels: story lines as film subtitles at the bottom, alerts as bubbles pinned to the screen edge toward the speaker
+  const LAYOUTS = ['stack', 'card', 'film'], LNAME = { stack: 'A · ranked stack', card: 'B · speaker card + ticker', film: 'C · film subtitles + edge bubbles' };
+  let layout = 'stack'; try { const v = localStorage.getItem('ming_comms'); if (LAYOUTS.includes(v)) layout = v; } catch (e) { }
+  const RANK = { story: 0, alert: 1 }, LIFE = { story: 7, alert: 4.5 };
+  let stackEl = null, tickEl = null, subEl = null; const stack = []; // { key, tier, who, zh, en, url, t, dur, el }
+  function setLayout(v) { layout = v; try { localStorage.setItem('ming_comms', v); } catch (e) { } for (const s of stack) s.el.remove(); stack.length = 0; if (cardEl) cardEl.classList.remove('on'); if (subEl) subEl.classList.remove('on'); if (typeof toast === 'function') toast('Speech layout: ' + LNAME[v] + '  (F9 to change)'); }
+  function cycle() { setLayout(LAYOUTS[(LAYOUTS.indexOf(layout) + 1) % LAYOUTS.length]); }
+  function comms(u, tier, who, zh, en, dur) {
+    if (layout === 'card') { if (tier === 'story') card(u, who, zh, en, dur); else ticker(u, who, zh, en); return; }
+    if (layout === 'film') { if (tier === 'story') subtitle(who, zh, en, dur); return; } // film: alerts are edge bubbles, drawn in frame()
+    // stack: one line per speaker (a new line replaces his old one), ranked, at most 4
+    if (!stackEl) { stackEl = document.createElement('div'); stackEl.id = 'comms'; document.body.appendChild(stackEl); }
+    const key = u.id; let s = stack.find(x => x.key === key);
+    if (!s) { const el = document.createElement('div'); el.className = 'ce'; el.innerHTML = '<i></i><div><b></b><span class="z"></span><span class="e"></span></div>'; s = { key, el }; stack.push(s); }
+    Object.assign(s, { tier, who, zh, en, t: 0, dur: dur || LIFE[tier] }); s.el.className = 'ce ' + tier;
+    const url = face(u); s.el.firstChild.style.backgroundImage = url ? `url(${url})` : ''; const tx = s.el.lastChild; tx.children[0].textContent = who; tx.children[1].textContent = zh || ''; tx.children[2].textContent = tier === 'story' ? (en || '') : (en || '').slice(0, 60);
+    stack.sort((a, b) => RANK[a.tier] - RANK[b.tier] || a.t - b.t);
+    while (stack.length > 4) { const w = stack.pop(); w.el.remove(); }
+    stack.forEach(x => stackEl.appendChild(x.el));
+  }
+  function ticker(u, who, zh, en) {
+    if (!tickEl) { tickEl = document.createElement('div'); tickEl.id = 'ticker'; document.body.appendChild(tickEl); }
+    const row = document.createElement('div'); row.className = 'tk'; const url = face(u);
+    row.innerHTML = `<i style="${url ? `background-image:url(${url})` : ''}"></i><b></b><span></span>`; row.children[1].textContent = who ? who.split(' ')[0] : ''; row.children[2].textContent = (zh ? zh + '  ' : '') + (en || '');
+    tickEl.prepend(row); while (tickEl.children.length > 3) tickEl.lastChild.remove(); setTimeout(() => { row.classList.add('out'); setTimeout(() => row.remove(), 500); }, 4200);
+  }
+  let subT = 0;
+  function subtitle(who, zh, en, dur) {
+    if (!subEl) { subEl = document.createElement('div'); subEl.id = 'filmsub'; subEl.innerHTML = '<b></b><span class="z"></span><span class="e"></span>'; document.body.appendChild(subEl); }
+    subEl.children[0].textContent = who || ''; subEl.children[1].textContent = zh || ''; subEl.children[2].textContent = en || ''; subEl.classList.add('on'); subT = dur || 6;
+  }
+  function commsFrame(dt) {
+    for (let i = stack.length - 1; i >= 0; i--) { const s = stack[i]; s.t += dt; const left = s.dur - s.t; s.el.style.opacity = Math.max(0, Math.min(1, left / 0.6)).toFixed(2); if (left <= 0) { s.el.remove(); stack.splice(i, 1); } }
+    if (subEl && subT > 0) { subT -= dt; if (subT <= 0) subEl.classList.remove('on'); }
+  }
   function say(id, zh, en, o) {
     o = o || {}; const u = unit(id); const L = listener(); const now = performance.now() / 1000; const prio = o.prio || 0;
     const range = o.loud ? 48 : 26;
-    if (prio >= 3 && u && !u.dead) { const n0 = o.who || nameOf(id); card(u, typeof n0 === 'string' ? n0 : n0 ? n0.zh + ' ' + n0.en : '', zh, en, o.dur || Math.min(8, 3 + (en || '').length / 20)); if (!L || Math.hypot(u.x - L.x, u.z - L.z) > range) return true; }
+    if (prio >= 2 && u && !u.dead) { const n0 = o.who || nameOf(id); comms(u, prio >= 3 ? 'story' : 'alert', typeof n0 === 'string' ? n0 : n0 ? n0.zh + ' ' + n0.en : '', zh, en, o.dur || (prio >= 3 ? Math.min(8, 3 + (en || '').length / 20) : 4.5)); if (prio >= 3 && (!L || Math.hypot(u.x - L.x, u.z - L.z) > range)) return true; }
     if (!u || u.dead || !L || Math.hypot(u.x - L.x, u.z - L.z) > range) { if (o.radio && typeof radio === 'function' && typeof MIS !== 'undefined' && MIS) radio(o.who || 'Voice', `${zh ? zh + '  ' : ''}${en}`); return false; }
     if (prio < 2 && (cool[id] || 0) > now) return false; cool[id] = now + (o.cool || 6);
     for (let i = live.length - 1; i >= 0; i--) if (live[i].id === id) { kill(i); }
@@ -52,6 +90,7 @@ const SPEECH = (() => {
     const r = state.renderer; if (!r || !state.sim) { while (live.length) kill(0); return; }
     const cam = r.camera, W = canvas.clientWidth, H = canvas.clientHeight;
     if (cardEl && cardT > 0) { cardT -= dt; if (cardT <= 0) cardEl.classList.remove('on'); }
+    commsFrame(dt);
     const edgeUsed = { l: [], r: [] };
     for (let i = live.length - 1; i >= 0; i--) { const l = live[i]; l.t += dt; const u = unit(l.id);
       if (l.t > l.dur || !u || (u.dead && l.t > 0.8)) { kill(i); continue; }
@@ -60,7 +99,7 @@ const SPEECH = (() => {
       { const me = state.sim.players[state.localIdx]; if (me && l.id === me.heroId && r.lastMode === 'fp') { // your own voice: a subtitle at the bottom of the screen, not a caption over your own head
         l.e.style.transform = `translate(${(W / 2).toFixed(1)}px, ${(H * 0.8).toFixed(1)}px) translate(-50%, -100%)`; l.e.style.opacity = Math.min(1, l.t * 5, (l.dur - l.t) * 2).toFixed(2); continue; } }
       if (v3.z > 1 || Math.abs(v3.x) > 1.15 || Math.abs(v3.y) > 1.2) {
-        if (l.prio >= 2) { // a shout you need to hear (help, man down) stays on screen, pinned to the edge toward the speaker
+        if (l.prio >= 2 && layout === 'film') { // a shout you need to hear (help, man down) stays on screen, pinned to the edge toward the speaker
           const cv2 = v3.set(u.x, u.y + 1.8, u.z).applyMatrix4(cam.matrixWorldInverse); const right = cv2.x > 0; const U = edgeUsed[right ? 'r' : 'l'];
           let sy = H * 0.42; while (U.some(y0 => Math.abs(y0 - sy) < 54)) sy += 56; U.push(sy);
           l.e.classList.add('edge', right ? 'r' : 'l'); l.e.classList.remove(right ? 'l' : 'r');
@@ -127,7 +166,7 @@ const SPEECH = (() => {
     if (!heard && sqIds && sqIds.length) AUDIO.play(type === S.ORD_HOLD ? 'gong' : 'drum', undefined, 0, 0, 0.5);
   }
   const speaking = (id) => live.some(l => l.id === id);
-  return { say, frame, event, orderChain, nameOf, speaking };
+  return { say, frame, event, orderChain, nameOf, speaking, cycle, setLayout, get layout() { return layout; } };
 })();
 
 // ===== 浙兵 · The Zhejiang Company: a story campaign =====
@@ -495,7 +534,8 @@ function zStart2(scene) {
     const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; const meIdx = ZR.findIndex(r => r.k === (ZS.me || 'me'));
     ZB = { map: {}, sq: q.id, first: me.heroId, cur: ZS.me || 'me', fell: false, ch2: true };
     const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = meIdx;
-    for (const r of zFile2()) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } }
+    const left = []; for (const r of zFile2()) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } else left.push(r); }
+    for (const r of left) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role !== 'lead'); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } } // a place for every man, even if it is not his usual trade
     for (const uid in ZB.map) zDress(sim.units[uid], ZB.map[uid]);
     setTimeout(() => storyCard('Spring 1621. You lead your file in Qi Jin\'s wagon camp south of the Hun River. F follow me · H halt · C charge · Z form up where you look. The flag on your back is the file\'s.', '渾河 · The Hun River'), 700);
   }

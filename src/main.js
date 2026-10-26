@@ -261,6 +261,7 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
+  if (c === 'F9' && typeof SPEECH !== 'undefined') { e.preventDefault(); SPEECH.cycle(); return; }
   if (c === 'KeyM') { const on = MUSIC.toggle(); $('musicIn').checked = on; toast(on ? 'Music on' : 'Music off'); return; }
   if (c === 'KeyG') { if (e.repeat) return; if (Input.orderMode) closeOrders(); else { openOrders(); state.gDownT = performance.now(); } return; }
   if (Input.orderMode) { orderKey(c, e); return; }

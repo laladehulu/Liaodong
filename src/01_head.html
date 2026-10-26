@@ -353,6 +353,19 @@ body.deploying #sgbar, body.deploying #sgprompt { visibility: hidden; }
 .spk.edge { background: rgba(70,16,12,.82); border: 1px solid #e0705a; border-radius: 6px; padding: 5px 9px; white-space: normal; max-width: 230px; text-align: left; }
 .spk.edge.l { border-left: 4px solid #ff8a6a; } .spk.edge.r { border-right: 4px solid #ff8a6a; text-align: right; }
 .spk.edge .z { font-size: 15px; } .spk.edge .e { font-size: 11px; }
+#comms { position: fixed; left: 16px; top: 34%; z-index: 21; display: flex; flex-direction: column; gap: 6px; pointer-events: none; width: 360px; }
+#comms .ce { display: flex; gap: 9px; align-items: center; padding: 6px 10px 6px 6px; background: linear-gradient(90deg, rgba(16,12,9,.88), rgba(16,12,9,.55)); border-left: 3px solid #c8962e; border-radius: 4px; color: #f3e8cf; transition: opacity .3s; }
+#comms .ce.alert { border-left-color: #e0583e; padding: 4px 9px 4px 5px; }
+#comms .ce i { flex: none; width: 52px; height: 52px; border-radius: 4px; background: #2a2018 center/cover no-repeat; border: 1px solid #6a5236; }
+#comms .ce.alert i { width: 34px; height: 34px; }
+#comms .ce b { display: block; font: 600 10px sans-serif; color: #e8c27a; letter-spacing: .05em; } #comms .ce.alert b { color: #ff9a80; }
+#comms .ce .z { display: block; font: 700 15px 'Noto Serif CJK TC', serif; line-height: 1.25; } #comms .ce .e { display: block; font: 12px sans-serif; opacity: .85; line-height: 1.3; }
+#comms .ce.alert .z { font-size: 13px; } #comms .ce.alert .e { font-size: 11px; }
+#ticker { position: fixed; left: 18px; bottom: 112px; z-index: 21; display: flex; flex-direction: column; gap: 3px; pointer-events: none; width: 520px; }
+#ticker .tk { display: flex; gap: 7px; align-items: center; font: 12px sans-serif; color: #f6e2d8; background: rgba(60,14,10,.72); border-left: 3px solid #e0583e; border-radius: 3px; padding: 2px 8px 2px 3px; transition: opacity .5s; }
+#ticker .tk.out { opacity: 0; } #ticker .tk i { flex: none; width: 22px; height: 22px; border-radius: 3px; background: #2a2018 center/cover; } #ticker .tk b { color: #ff9a80; font-weight: 600; }
+#filmsub { position: fixed; left: 50%; bottom: 13%; transform: translateX(-50%); z-index: 21; text-align: center; pointer-events: none; color: #fbf3df; text-shadow: 0 2px 4px #000, 0 0 12px rgba(0,0,0,.8); opacity: 0; transition: opacity .3s; max-width: 70vw; }
+#filmsub.on { opacity: 1; } #filmsub b { display: block; font: 600 11px sans-serif; color: #e8c27a; letter-spacing: .12em; } #filmsub .z { display: block; font: 700 22px 'Noto Serif CJK TC', serif; } #filmsub .e { display: block; font: 15px Georgia, serif; font-style: italic; opacity: .9; }
 </style>
 <div id="app">
   <canvas id="c"></canvas>
