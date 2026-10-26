@@ -43,15 +43,14 @@ function beaconGoal() {
   let g;
   if (B.stage === 'lull') { const left = (B.n === 0 ? K.LULL0 : K.LULL) - el;
     if (!B.lit && B.fires < K.NFIRE) { const d = me && !me.dead ? Math.hypot(me.x - K.STOVES.x, me.z - K.STOVES.z) : 0;
-      g = B.light > 0 ? `Lighting the ${bcOrd(B.fires + 1)} fire… ${Math.min(99, Math.round(B.light / (K.LIGHT * 30) * 100))}%` : `Light the ${bcOrd(B.fires + 1)} fire at the stoves${d > K.STOVES.r ? ` · ${Math.round(d)} m` : ''} · ${bcClock(left)}`; }
-    else g = B.fires >= K.NFIRE ? `Five fires burn. Brace for the last assault · ${bcClock(left)}` : `Hire men with silver (I) · next raid ${bcClock(left)}`; }
-  else if (B.stage === 'final') g = B.relief ? `The relief is here. Break them · ${beaconLeft(sim)} left` : `Hold until the relief rides in · ${bcClock(K.RELIEF_AT - el)}`;
-  else g = `Hold the tower · ${beaconLeft(sim)} raiders left`;
-  if (B.press > 30) g = `They are taking the tower. Drive them out! · ${bcClock(K.FALL - B.press / 30)}`;
+      g = B.light > 0 ? `Lighting the fire… ${Math.min(99, Math.round(B.light / (K.LIGHT * 30) * 100))}%` : `Light fire ${B.fires + 1} at the stoves${d > K.STOVES.r ? ` · ${Math.round(d)} m` : ''} · ${bcClock(left)}`; }
+    else g = B.fires >= K.NFIRE ? `Brace for the last assault · ${bcClock(left)}` : `Hire men (I) · raid in ${bcClock(left)}`; }
+  else if (B.stage === 'final') g = B.relief ? `Break them · ${beaconLeft(sim)} left` : `Hold till the relief · ${bcClock(K.RELIEF_AT - el)}`;
+  else g = `Raid ${B.n}: hold the tower · ${beaconLeft(sim)} left`;
+  if (B.press > 30) g = `Drive them out of the tower! · ${bcClock(K.FALL - B.press / 30)}`;
   $('status').classList.toggle('bcpress', B.press > 30);
   const pips = Array.from({ length: K.NFIRE }, (_, i) => `<i class="${i < B.fires ? 'on' : ''}"></i>`).join('');
-  const wave = B.stage === 'final' ? 'Last assault' : B.n ? `Raid ${B.n}` : 'Before the raids';
-  return `<span class="bcf" title="Signal fires">${pips}</span><span class="bcs">銀 <b>${B.silver}</b></span><span class="bcw">${wave}</span><span class="goal">${escapeHtml(g)}</span>`;
+  return `<span class="bcf" title="Signal fires">${pips}</span><span class="bcs">銀 <b>${B.silver}</b></span><span class="goal">${escapeHtml(g)}</span>`;
 }
 // ---- the quartermaster ----
 function beaconShop(open) {
