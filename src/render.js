@@ -1747,7 +1747,7 @@ class Renderer {
       for (let j = 0; j < 10; j++) KD[j] = KG[j] + (KC[j] - KG[j]) * a.cw;
       const KS = [0.05, 0.1, -0.05, 0.1, 0.91, 0, 0, 0, 0, 0], KT = [0.35, 0.5, -0.25, 0.25, 0.84, 0.32, 0, 0.12 * sA, 0, 0], KN = [1.1, 1.5, 0.1, 1.6, 0.5, 0.25, 0, 0.1 * sA, 0, 0];
       const KB = [1.3, 0.55, 1.45, 0.3, 0.2, -1.25, 0.05, -0.12 * sA, 0, 0]; // sat down hard and going over backwards
-      { const rv = u.reviveBy >= 0 && u.downed ? clamp((u.reviveT || 0) / 45, 0, 1) : 0; if (rv > 0) for (let j = 0; j < 10; j++) KD[j] += (KN[j] - KD[j]) * rv * 0.75; } // a comrade pulling him up: up onto a knee as the bar fills
+      { const rv = u.downed ? (u.reviveBy >= 0 ? clamp((u.reviveT || 0) / 45, 0, 1) : 0) : (a.rvK || 0); a.rvK = rv; if (rv > 0) for (let j = 0; j < 10; j++) KD[j] += (KN[j] - KD[j]) * rv * 0.75; } // a comrade pulling him up: up onto a knee as the bar fills
       const KEYS = a.dUp ? [[0, KS], [0.45, KN], [1, KD]] : [[0, KS], [0.22, KT], [0.5, KN], [0.78, KB], [1, KD]];
       const w = a.dw, Q = this._dwq || (this._dwq = new Float64Array(10)); let i = 0; while (i < KEYS.length - 2 && w > KEYS[i + 1][0]) i++;
       const k0 = KEYS[i], k1 = KEYS[i + 1]; let s = clamp((w - k0[0]) / Math.max(1e-4, k1[0] - k0[0]), 0, 1); s = s * s * (3 - 2 * s);
