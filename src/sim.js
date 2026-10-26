@@ -1750,7 +1750,7 @@ class Sim {
     if (this.real) spread = spread * (1 + 2.2 * Math.max(0, 1 - (u.aimHold || 0) / 1.4)) + u.speedNow * 0.01 + ((u.fat || 0) > 50 ? 0.01 : 0);
     if (u.weapon === 'bow') { const v = g.speed || 50, cp = cos(u.pitch); const ox = u.x + sin(u.yaw) * 0.5, oy = u.y + 1.55, oz = u.z + cos(u.yaw) * 0.5; const sp2 = spread * 0.6;
       const yw = u.yaw + (this.rng.next() - 0.5) * sp2, pt = u.pitch + (this.rng.next() - 0.5) * sp2;
-      this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(yw) * cos(pt) * v, vy: sin(pt) * v, vz: cos(yw) * cos(pt) * v, team: u.team, owner: u.id, life: 0, hits: 0 });
+      this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(yw) * cos(pt) * v, vy: sin(pt) * v, vz: cos(yw) * cos(pt) * v, team: u.team, owner: u.id, life: 0, hits: 0, over: this.overParapet(u) });
       this.events.push({ t: 'arrow', id: u.id, x: ox, y: oy, z: oz }); }
     else if (u.weapon === 'rifle' && this.misfire(u)) this.events.push({ t: 'misfire', id: u.id, x: u.x, y: u.y + 1.5, z: u.z });
     else this.fireRifle(u, u.yaw, u.pitch, spread, g.dmg, true, g.range, u.weapon);
@@ -1837,7 +1837,7 @@ class Sim {
         bestT = t3; kind = o.kind === 1 ? 'rock' : o.kind === 0 ? 'tree' : 'wood'; victim = null;
       }
     }
-    for (let i = 0; i < this.boxes.length; i++) { const t = this.rayBox(ox, oy, oz, dx, dy, dz, this.boxes[i], bestT); if (t > 0 && t < bestT) { bestT = t; kind = this.boxes[i].kind === 'wall' ? 'rock' : 'wood'; victim = null; } }
+    for (let i = 0; i < this.boxes.length; i++) { if (this.boxes[i].kind === 'sface' && this.overParapet(u)) continue; const t = this.rayBox(ox, oy, oz, dx, dy, dz, this.boxes[i], bestT); if (t > 0 && t < bestT) { bestT = t; kind = this.boxes[i].kind === 'wall' ? 'rock' : 'wood'; victim = null; } }
     if (lost && kind === 'unit') { kind = 'none'; victim = null; }
     if (victim && victim.def.shield && victim.st !== ST_RELEASE && victim.downT <= 0 && Math.abs(wrap(atan2(u.x - victim.x, u.z - victim.z) - victim.yaw)) < 1.0 && this.rng.next() < 0.45) { kind = 'wood'; victim = null; }
     const hx = ox + dx * bestT, hy = oy + dy * bestT, hz = oz + dz * bestT;
@@ -1868,7 +1868,7 @@ class Sim {
     const dd = len(tgt.x - u.x, tgt.z - u.z), sc = (0.035 + dd * 0.0007) * (human && tgt.speedNow > 2 ? 1.8 : 1);
     const b = this.ballistic(u, tgt.x + tgt.mx * lead, tgt.z + tgt.mz * lead, bw.speed, 0.06); b.yaw += (this.rng.next() - 0.5) * sc * 2; b.ang += (this.rng.next() - 0.5) * sc;
     const ca = cos(b.ang), v = bw.speed; const ox = u.x + sin(b.yaw) * 0.6, oy = u.y + 1.5, oz = u.z + cos(b.yaw) * 0.6;
-    this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(b.yaw) * ca * v, vy: sin(b.ang) * v, vz: cos(b.yaw) * ca * v, team: u.team, owner: u.id, life: 0, hits: 0 });
+    this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(b.yaw) * ca * v, vy: sin(b.ang) * v, vz: cos(b.yaw) * ca * v, team: u.team, owner: u.id, life: 0, hits: 0, over: this.overParapet(u) });
     u.ammo--; this.events.push({ t: 'arrow', id: u.id, x: ox, y: oy, z: oz });
   }
   updateProjectiles() {
@@ -1886,7 +1886,7 @@ class Sim {
         const dt = DT / 3; p.vy -= GRAV * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.life += dt;
         const g = terrainH(p.x, p.z);
         // boxes stop everything
-        for (let b = 0; b < this.boxes.length && !done; b++) { const bx = this.boxes[b]; if (p.x > bx.x - bx.hw && p.x < bx.x + bx.hw && p.z > bx.z - bx.hd && p.z < bx.z + bx.hd && p.y < terrainH(bx.x, bx.z) + bx.h) { if (p.kind === 'shell') this.explode(p.x, p.y, p.z, p.team, p.owner, 7.5, 170); else if (p.kind === 'arrow') this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); else this.events.push({ t: 'bounce', x: p.x, y: p.y, z: p.z, big: true }); done = true; } }
+        for (let b = 0; b < this.boxes.length && !done; b++) { const bx = this.boxes[b]; if (p.over && bx.kind === 'sface') continue; if (p.x > bx.x - bx.hw && p.x < bx.x + bx.hw && p.z > bx.z - bx.hd && p.z < bx.z + bx.hd && p.y < terrainH(bx.x, bx.z) + bx.h) { if (p.kind === 'shell') this.explode(p.x, p.y, p.z, p.team, p.owner, 7.5, 170); else if (p.kind === 'arrow') this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); else this.events.push({ t: 'bounce', x: p.x, y: p.y, z: p.z, big: true }); done = true; } }
         if (done) break;
         if (p.y <= g) {
           if (p.kind === 'shell') { this.explode(p.x, g + 0.1, p.z, p.team, p.owner, 7.5, 170); done = true; break; }
@@ -1958,7 +1958,7 @@ class Sim {
       u.x += u.vx * DT; u.z += u.vz * DT;
       if (u.y <= ground) {
         u.y = ground;
-        if (u.vy < -8 && u.def.ai !== 'cannon') { u.downT = Math.max(u.downT, 1.2); this.events.push({ t: 'land', id: u.id, x: u.x, y: u.y, z: u.z, v: -u.vy }); if (u.vy < -11) this.applyDamage(u, (-u.vy - 11) * 7, -1, 0, 0, 0, 'fall'); }
+        if (u.vy < -8 && u.def.ai !== 'cannon') { u.downT = Math.max(u.downT, 1.2); this.events.push({ t: 'land', id: u.id, x: u.x, y: u.y, z: u.z, v: -u.vy }); if (u.vy < -13) this.applyDamage(u, (-u.vy - 13) * 2.4, -1, 0, 0, 0, 'fall'); }
         u.vy = 0; u.airborne = false; u.vx *= 0.5; u.vz *= 0.5;
       } else u.airborne = true;
     } else {
@@ -2016,6 +2016,7 @@ class Sim {
       if (bl) for (let k = 0; k < bl.length; k++) {
         const b = this.boxes[bl[k]]; if (b.kind === 'gate' && (u.type === 'hero' || b.hw < 0.1)) continue; if (b.lad && b.lad.up && Math.abs(u.x - b.lad.x) < (b.lad.w || 1.5)) continue;
         const ex = b.hw + r, ez = b.hd + r; const dx = u.x - b.x, dz = u.z - b.z;
+        if (b.kind === 'sface' && u.airborne && u.y > terrainH(b.x, b.z) + 0.3) continue;
         if (dx > -ex && dx < ex && dz > -ez && dz < ez) {
           const px = ex - Math.abs(dx), pz = ez - Math.abs(dz);
           if (px < pz) u.x = b.x + (dx < 0 ? -ex : ex); else u.z = b.z + (dz < 0 ? -ez : ez);
@@ -2876,6 +2877,7 @@ const MISSIONS = {
       liu: { team: 0, name: 'Liu Ting', zh: '劉綎', army: ['rifle_imp', 'ronin'], at: [0, -96, 0], dir: ['hold', 0, -64], stay: true },
       tusi: { team: 0, name: 'Sichuan and Miao levies', zh: '川黔土兵', army: ['ashigaru', 'ronin', 'ashigaru'], at: [0, -72, 0], dir: ['hold', 0, -40], stay: true },
       kang: { team: 0, name: 'Kang Yingqian\'s rearguard', zh: '康應乾', army: ['rifle_imp', 'ashigaru'], at: [0, -128, 0], dir: ['hold', 0, -112], stay: true },
+      amin: { team: 1, name: 'Amin', zh: '阿敏', army: ['samurai', 'cavalry', 'samurai'], at: [-104, -70, PI / 2], reserve: true },
       duck: { team: 0, name: 'The Zhejiang duck teams', zh: '浙兵鴛鴦陣', army: ['yuanyang', 'yuanyang', 'yuanyang'], at: [4, -126, 0], dir: ['hold', 0, -114], stay: true, reserve: true },
     },
     phases: [
@@ -2907,13 +2909,14 @@ const MISSIONS = {
           [44, 'sose', 'One of ours is down. Get him up, get him up!', '我們的人倒了！扶他起來，快！']] },
       { title: '四 · 鴛鴦陣 · The duck teams', goal: 'Break the duck teams holding the road', text: 'The column is broken, but the southern infantry will not run. Their duck teams have closed up across the road. Break them.', show: ['road'],
         start: [['break', 'liu'], ['break', 'tusi'], ['break', 'kang'], ['release', 'duck'], ['calm', 'duck', 40], ['dir', 'duck', 'hold', 0, -98], ['dir', 'niru', 'attack'], ['dir', 'hong', 'attack'], ['dir', 'daisan', 'attack']],
-        obj: { defeat: ['duck'], frac: 0.65 }, limit: 480, fail: 'Night fell with the southerners still standing across the road.',
+        obj: { defeat: ['duck'], frac: 0.65 }, waves: [[70, 'amin', ['attack']]],
         at: [[10, ['promote']]],
         say: [[2, 'muktan', 'Southerners. They fight in twelves: the shields, then those bamboo things, then the spears.', '南兵。他們十二個人一隊：藤牌在前，竹子在中間，長槍在後。'],
           [6, 'ulgen', 'Don\'t go into the shields. Get round them. The bamboo can\'t turn quickly!', '別往藤牌上撞！繞過去，那竹子轉不快！'],
           [11, 'soldier', 'Ulgen is down! The bošokū is down!', '烏勒根倒了！撥什庫倒了！'],
           [14, 'niru', 'His file is yours now. Bring them in on the left!', '他的人歸你了。從左邊帶上去！'],
-          [60, 'lookout', 'They\'re not running. Heaven, they\'re not running.', '他們不跑。老天，他們不跑。']] },
+          [60, 'lookout', 'They\'re not running. Heaven, they\'re not running.', '他們不跑。老天，他們不跑。'],
+          [71, 'lookout', 'Amin\'s banners on the ridge! More of ours coming down!', '二貝勒的旗下嶺了！我們的人來了！']] },
     ],
     win: 'The southern infantry died where they stood. Nothing stood between Liu Ting\'s column and the mountains any more.',
   },
@@ -3107,7 +3110,7 @@ Sim.prototype.assaultCap = function () {
   fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, CAP - humanDef));
 };
 Sim.prototype.mTrim = function (p, n, keepHero) {
-  let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
+  let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; u.trimmed = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
   if (!keepHero) for (const uid of [p.heroId, p.horseId]) { const u = uid >= 0 ? this.units[uid] : null; if (u) { u.dead = true; u.hp = 0; u.inactive = true; if (u.type !== 'horse') this.total[u.team]--; } }
 };
 Sim.prototype.coverShield = function (v, p) { // a rattan shield beside you turns the arrow meant for you
@@ -3244,10 +3247,10 @@ Sim.prototype.assaultThink = function () {
   // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
   let revivable = false;
   if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;
-    for (const u of this.units) { if (room <= 0) break; if (!u.dead || u.inactive || u.team !== A || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.def.ai === 'cannon' || u.ctrl >= 0) continue; revivable = true;
+    for (const u of this.units) { if (room <= 0) break; if (!u.dead || u.inactive || u.trimmed || u.team !== A || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.def.ai === 'cannon' || u.ctrl >= 0) continue; revivable = true;
       if (this.tick - (u.deathTick || 0) < 30 * 8) continue; const g = this.mg[this.players[this.squads[u.squad].owner] ? this.players[this.squads[u.squad].owner].gid : ''] ; if (g && !g.released) continue;
       this.reviveUnit(u, clamp(M.attAt[0] + ((k % 6) - 2.5) * 3, -HALF + 4, HALF - 4), clamp(M.attAt[1] + Math.floor(k / 6) * 3 * (A === 1 ? -1 : 1), -HALF + 4, HALF - 4)); k++; room--; } }
-  else if (this.tickets > 0) revivable = this.units.some(u => u.dead && !u.inactive && u.team === A && u.type !== 'horse' && u.type !== 'hero' && u.squad >= 0 && u.def.ai !== 'cannon');
+  else if (this.tickets > 0) revivable = this.units.some(u => u.dead && !u.inactive && !u.trimmed && u.team === A && u.type !== 'horse' && u.type !== 'hero' && u.squad >= 0 && u.def.ai !== 'cannon');
   if (keys.every(k => this.missionZone(k).owner === A)) {
     this.events.push({ t: 'msector', sector: this.sector, team: A });
     for (const k of keys) this.missionZone(k).hidden = true;
@@ -3259,7 +3262,7 @@ Sim.prototype.assaultThink = function () {
   }
   if (this.tick % 150 === 0) this.assaultDirs();
   if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(CAP, (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75)) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
-    for (const u of this.units) { if (!u.dead || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * 25) continue;
+    for (const u of this.units) { if (!u.dead || u.trimmed || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * 25) continue;
       const k = u.id % 9; this.reviveUnit(u, clamp(nz.x + (k % 3 - 1) * 3, -HALF + 4, HALF - 4), clamp(nz.z + fz * (14 + Math.floor(k / 3) * 3), -HALF + 4, HALF - 4)); } }
   const left = Object.keys(this.mg).some(g => this.mg[g].G.team === A && !this.mg[g].released);
   if (this.tickets <= 0 || (act < 8 && !left && !revivable)) { this.mwin = 1 - A; this.events.push({ t: 'mend', won: false, text: 'The attackers have no men left to send.', att: A }); }
@@ -3282,6 +3285,8 @@ function siegeWallH(w, x, z, h) {
 function siegeDitchH(d, x, z, h) { const dz = z - d.zc, ad = dz < 0 ? -dz : dz; if (ad >= d.w) return h; const ax = x < 0 ? -x : x; if (ax < d.bridge) return h; const t = 1 - (ad / d.w) * (ad / d.w); return h - d.depth * t; }
 function siegeDitchWater(d, x, z) { const dz = z - d.zc, ad = dz < 0 ? -dz : dz; if (ad >= d.w * 0.8) return 0; const ax = x < 0 ? -x : x; if (ax < d.bridge) return -1;
   for (let i = 0; i < d.fills.length; i++) { const f = d.fills[i]; if (f.done && (x - f.x < 0 ? f.x - x : x - f.x) < f.hw) return 2; } return 1; }
+// a man on the wall top leans over the parapet in front of him to shoot down at the foot of the wall
+Sim.prototype.overParapet = function (u) { const W = TERR.swall; if (!this.sg || !W) return false; return u.z > W.z0 + 0.4 && u.z < W.z1 + 0.5 && u.y > W.h - 1.2; };
 Sim.prototype.siegeInit = function () {
   const M = this.mission, A = M.attacker, D = 1 - A, W = TERR.swall; const sg = this.sg = { A, D, gateHp: 6000, gateMax: 6000, engines: [], lads: [], emp: [], holes: [], fired: false, oilT: 0, stoneT: 0, slipT: 0, ice: this.bdef.biome === 'winter', sec: -1 };
   // the gate in its passage through the rampart
