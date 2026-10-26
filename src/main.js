@@ -1002,8 +1002,9 @@ function frame(now) {
   const sim = state.sim, ls = state.ls, net = state.net;
   // game speed (solo only): more fixed-length ticks per frame; capped so a slow machine just runs slower
   const spd = state.net ? 1 : (state.speed || 1), maxS = Math.min(48, Math.max(2, Math.ceil(6 * spd)));
-  state.acc += dt * spd; let steps = 0;
+  state.acc += dt * spd; let steps = 0; const tStep = performance.now();
   while (state.acc >= DT && steps < maxS) {
+    if (spd > 1 && steps >= 2 && performance.now() - tStep > 14) { state.acc = 0; break; } // fast-forward never starves the frame: a slow machine just gets less speed
     if (!stepOnce()) { state.acc = Math.min(state.acc, DT); state.stalled = true; state.stallT += dt; break; }
     state.stalled = false; state.stallT = 0;
     state.acc -= DT; steps++;
