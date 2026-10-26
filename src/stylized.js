@@ -66,7 +66,7 @@
             vec4 gm = texture2D(gMap, (p + gExt) / (2.0 * gExt)); float dv = gm.g + (sV(p * 0.8) - 0.5) * 0.28; float aw = fwidth(dv) * 0.75 + 0.002;
             float dirt = smoothstep(0.42 - aw, 0.42 + aw, dv); c = mix(c, mix(gE, base, 0.25) * 0.95, dirt);
             float av = gm.r; float aw2 = fwidth(av) * 0.75 + 0.002; float ao = smoothstep(0.3 - aw2, 0.3 + aw2, av);
-            diffuseColor.rgb = mix(c, base, snowy); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.8, 0.77, 0.74), dirt * snowy * 0.6);
+            diffuseColor.rgb = mix(c, base, snowy); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.66, 0.62, 0.56), dirt * snowy * 0.8);
             diffuseColor.rgb *= 1.0 - ao * 0.3 - av * 0.12; }`); };
       tm.needsUpdate = true; }
     this.styleSetup();

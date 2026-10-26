@@ -92,8 +92,9 @@
               c = mix(c, trod, dirt * 0.9);
               // keep what the map painted on purpose: water margins, roads, rock, snow
               diffuseColor.rgb = mix(c, base, snowy);
-              diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.66, 0.62, 0.58), dirt * snowy * 0.55);
-              diffuseColor.rgb *= 1.0 - gm.r * 0.6; }`)
+              // on snow: trodden slush, grey-brown, round the foot of things
+              diffuseColor.rgb = mix(diffuseColor.rgb, mix(earth, vec3(0.62, 0.6, 0.57), 0.45 + 0.25 * gn), dirt * snowy * 0.8);
+              diffuseColor.rgb *= 1.0 - gm.r * 0.72; }`)
           .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
             { vec2 p = vWP.xz; float e = 0.06; float h0 = rF(p * 0.6); float hx = rF((p + vec2(e, 0.0)) * 0.6); float hz = rF((p + vec2(0.0, e)) * 0.6);
               vec3 bump = vec3((h0 - hx) / e, 0.0, (h0 - hz) / e) * 0.07;

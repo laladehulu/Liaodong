@@ -129,6 +129,15 @@ kbd { font-family: var(--font-ui); font-size: 11px; background: var(--ink); colo
 #pause.story .card { padding: 8px 18px; background: rgba(20,16,12,.72); border: 1px solid #6a5a44; color: #e8dcc0; box-shadow: none; }
 #pause.story h2 { font-size: 15px !important; margin: 0; letter-spacing: .08em; }
 #pause.story p { display: none; }
+#empAim { position: fixed; left: 50%; top: 50%; transform: translate(70px, -110px); pointer-events: none; z-index: 12; display: flex; gap: 10px; align-items: flex-end; font: 600 12px var(--font-ui, sans-serif); color: #f0dcae; text-shadow: 0 1px 2px #000; }
+#empAim .scale { position: relative; width: 46px; height: 220px; border-left: 2px solid rgba(240,220,174,.55); }
+#empAim .scale i { position: absolute; left: -2px; width: 8px; height: 1px; background: rgba(240,220,174,.6); }
+#empAim .scale i.z { width: 14px; background: #f0dcae; }
+#empAim .scale i b { position: absolute; left: 12px; top: -7px; font-weight: 500; font-size: 10px; opacity: .75; white-space: nowrap; }
+#empAim .scale u { position: absolute; left: -9px; width: 0; height: 0; border: 6px solid transparent; border-left-color: #ffd27a; transform: translateY(6px); }
+#empAim .scale s { position: absolute; left: -7px; width: 16px; height: 2px; background: rgba(255,255,255,.45); }
+#empAim .rd { background: rgba(20,16,12,.6); border: 1px solid rgba(240,220,174,.35); padding: 4px 8px; border-radius: 3px; line-height: 1.5; }
+#empAim .rd b { color: #ffd27a; margin-right: 4px; }
 #status .goal { font: 600 15px Georgia, 'Noto Serif CJK TC', serif; color: #f2cf6a; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0,0,0,.6); letter-spacing: .02em; }
 #status { left: 50%; top: max(14px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; gap: 14px; align-items: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .06em; white-space: nowrap; }
 #status .t0 { color: #ff8a92; } #status .t1 { color: #92afff; }

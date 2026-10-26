@@ -675,6 +675,45 @@ class Renderer {
     function L0x(c) { return new THREE.MeshBasicMaterial({ color: c }); }
     this.sgv = true;
   }
+  // manning a bed crossbow or a gun: your own weapon is slung, your hands are on the piece (tiller and trigger bar, or the
+  // two handspikes), and the ground shows where a shot at the present lay would first strike (Sim.sgPredict: the sim's own steps)
+  empView(hero, dt) {
+    const sg = this.sim.sg, e = sg && hero.manE >= 0 ? sg.emp[hero.manE] : null, on = !!(e && e.man === hero.id) && (this.tp || 0) < 0.3 && hero.downT <= 0;
+    if (on && !this.vmEmp) this.buildEmpVM(hero);
+    if (!this.vmEmp) return;
+    this.vmEmp.visible = on; this.empMark.visible = on; this.empArc.visible = on; if (!on) { this.empHud = null; return; }
+    this.vm.visible = false; this.vmArms.visible = false; this.vmShield.visible = false; this.vmBow.visible = false;
+    const bow = e.kind === 'bow'; this.vmEmpBow.visible = bow; this.vmEmpGun.visible = !bow;
+    this.fovTarget = this.empZoom ? (bow ? 36 : 30) : 70;
+    this.empKick = Math.max(0, (this.empKick || 0) - dt * 2.5); const k = this.empKick * this.empKick;
+    this.vmEmp.position.set(0, -k * 0.06, k * 0.16); this.vmEmp.rotation.x = k * 0.12;
+    this.empN = (this.empN || 0) + 1;
+    if (this.empN % 3 === 1 || !this.empP) { const P = this.sim.sgPredict(e, e.yaw, e.pitch || 0); this.empP = P;
+      const gy = P.box ? P.y : SIM.terrainH(P.x, P.z); this.empMark.position.set(P.x, gy + 0.06, P.z); const dist = Math.hypot(P.x - e.x, P.z - e.z); const s = 0.8 + dist * 0.025; this.empMark.scale.set(s, s, s);
+      const A = this.empArc.geometry.attributes.position, n = Math.min(A.count, P.pts.length / 3); for (let i = 0; i < A.count; i++) { const j = Math.min(i, n - 1) * 3; if (n > 0) A.setXYZ(i, P.pts[j], P.pts[j + 1], P.pts[j + 2]); else A.setXYZ(i, e.x, e.y, e.z); } A.needsUpdate = true; this.empArc.geometry.setDrawRange(0, n); this.empArc.geometry.computeBoundingSphere();
+      this.empHud = { kind: e.kind, cd: e.cd, cdMax: e.cdMax || (bow ? 150 : 270), elev: e.pitch || 0, want: this._viewPitch, dist, wall: !!P.box, out: !!P.out }; }
+    else if (this.empHud) { this.empHud.cd = e.cd; this.empHud.elev = e.pitch || 0; this.empHud.want = this._viewPitch; }
+  }
+  buildEmpVM(hero) {
+    const g = new THREE.Group(); this.camera.add(g); this.vmEmp = g; const mk = (c) => new THREE.MeshLambertMaterial({ color: c, depthTest: false });
+    const skin = mk(0xd2ac84), wood = mk(0x5a3a20), dark = mk(0x3a2616), iron = mk(0x4a4c50), sleeve = mk(torsoColor(hero));
+    const bx = (p, w, h, d, m, x, y, z, rx, ry, rz) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.rotation.set(rx || 0, ry || 0, rz || 0); o.renderOrder = 990; p.add(o); return o; };
+    const hand = (p, x, y, z, ry) => { const h = new THREE.Group(); h.position.set(x, y, z); h.rotation.y = ry || 0; p.add(h); bx(h, 0.085, 0.07, 0.11, skin, 0, 0, 0); bx(h, 0.09, 0.03, 0.05, skin, 0, 0.045, -0.03); bx(h, 0.1, 0.1, 0.42, sleeve, 0, -0.07, 0.24, 0.32); return h; };
+    // 床弩: the tiller running out ahead, its cross handle and the trigger lever under your right hand
+    const B = new THREE.Group(); g.add(B); this.vmEmpBow = B;
+    bx(B, 0.16, 0.12, 1.5, wood, 0, -0.4, -1.15); bx(B, 0.62, 0.06, 0.07, dark, 0, -0.32, -0.62); bx(B, 0.035, 0.16, 0.035, iron, 0.09, -0.42, -0.66, 0.4); bx(B, 0.02, 0.02, 1.3, mk(0xd8d0bc), 0, -0.33, -1.25);
+    hand(B, -0.24, -0.29, -0.62, 0.15); hand(B, 0.2, -0.3, -0.62, -0.15);
+    // a gun: both hands on the handspikes that lay the trail, the breech and its touch-hole ahead
+    const G = new THREE.Group(); g.add(G); this.vmEmpGun = G;
+    for (const s of [-1, 1]) bx(G, 0.06, 0.06, 1.2, wood, s * 0.24, -0.42, -0.85, -0.18, s * 0.28);
+    bx(G, 0.34, 0.3, 0.5, iron, 0, -0.55, -1.55); bx(G, 0.12, 0.12, 0.12, iron, 0, -0.42, -1.25); bx(G, 0.02, 0.03, 0.02, mk(0xff8a3a), 0, -0.38, -1.42);
+    hand(G, -0.27, -0.33, -0.55, 0.25); hand(G, 0.27, -0.33, -0.55, -0.25);
+    // where the shot will fall: a thin ring on the ground and a faint dotted arc
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 24), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    ring.rotation.x = -Math.PI / 2; const mark = new THREE.Group(); mark.add(ring); const dot = new THREE.Mesh(new THREE.CircleGeometry(0.18, 10), ring.material); dot.rotation.x = -Math.PI / 2; mark.add(dot); this.scene.add(mark); this.empMark = mark;
+    const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.BufferAttribute(new Float32Array(90 * 3), 3));
+    const arc = new THREE.Points(ag, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.16, transparent: true, opacity: 0.45, depthWrite: false, fog: false })); arc.frustumCulled = false; this.scene.add(arc); this.empArc = arc;
+  }
   updateSiege(dt) {
     const sim = this.sim, sg = sim.sg, W = SIM.TERR.swall, T = this.tmp;
     sg.engines.forEach((e, i) => { const g = this.sgEng[i]; if (!g) return; g.visible = e.hp > 0; if (e.hp <= 0) return;
@@ -794,7 +833,7 @@ class Renderer {
         const put = (m, idx, lx, ly, lz, sx, sy, sz, rx, rz) => { const e = T.e.set(tilt + (rx || 0), ry, rz || 0, 'YXZ'); q.setFromEuler(e); off.set(lx, ly, lz).applyQuaternion(T.q.setFromEuler(T.e.set(tilt, ry, 0, 'YXZ'))); const wx = b.x + off.x, wz = b.z + off.z;
           T.m.compose(T.v.set(wx, terrainH(wx, wz) + off.y, wz), q, T.v2.set(sx, sy, sz)); m.setMatrixAt(idx, T.m); T.e.order = 'XYZ'; };
         const n = nP[i], w = L / n;
-        for (let j = 0; j < n; j++) { const hj = uhash(i * 31 + j, 5), hh = b.h * (0.93 + 0.13 * hj) + 0.2; put(pm, pk, -L / 2 + (j + 0.5) * w, hh / 2 - 0.2, 0, w * 0.94, hh, 0.11, 0, (hj - 0.5) * 0.035); pm.setColorAt(pk++, T.c.setHSL(0.075 + hj * 0.02, 0.38 + hj * 0.1, 0.2 + uhash(i * 31 + j, 9) * 0.07)); }
+        for (let j = 0; j < n; j++) { const hj = uhash(i * 31 + j, 5), hh = b.h * (0.93 + 0.13 * hj) + 0.2; put(pm, pk, -L / 2 + (j + 0.5) * w, hh / 2 - 0.2, 0, w * 0.965, hh, 0.11, 0, (hj - 0.5) * 0.016); pm.setColorAt(pk++, T.c.setHSL(0.075 + hj * 0.012, 0.36 + hj * 0.06, 0.205 + uhash(i * 31 + j, 9) * 0.04)); }
         for (const k of [0, 1]) { put(bt, i * 2 + k, 0, k ? b.h * 0.78 : 0.32, -faceZ * 0.085, L * 0.97, 0.11, 0.05);
           put(fm, i * 2 + k, (k ? 0.25 : -0.25) * L, b.h * 0.62, faceZ * 0.065, L * 0.35, 0.18, 0.02); fm.setColorAt(i * 2 + k, T.c.set(b.z > 0 ? 0xb8262a : 0xd8b03c));
           put(sm2, i * 2 + k, (k ? 0.35 : -0.35) * L, 0.55, -faceZ * 0.5, 0.1, 1.3, 0.1, faceZ * 0.9 - tilt); } });
@@ -1441,7 +1480,7 @@ class Renderer {
         case 'sgdock': { const gy = SIM.terrainH(ev.x, ev.z); AUDIO.play('thud', ev.x, gy + 6, ev.z, 2); this.dust(ev.x, gy + 6.6, ev.z + 4, 14, 0, 0.5, 0, 2, 1.2, 0.5, 2); break; }
         case 'sgengine': { const gy = SIM.terrainH(ev.x, ev.z); for (let i = 0; i < 22; i++) this.spawnDebris('b', ev.x + rnd(-2, 2), gy + rnd(1, ev.kind === 'tower' ? 9 : 3), ev.z + rnd(-2, 2), rnd(-5, 5), rnd(2, 8), rnd(-5, 5), rnd(0.15, 0.45), rnd(0.8, 3), rnd(0.15, 0.4), 0x5a3a20, 1); this.puffSmoke(ev.x, gy + 2, ev.z, 40, 0, 2.5, 0, 4, 8, 1.5, 6, 0.25, 0.7); AUDIO.play('collapse', ev.x, gy + 2, ev.z, 1.3); break; }
         case 'sghit': { this.burstSparks(ev.x, ev.y, ev.z, ev.kind === 'arrow' ? 3 : 14, 5, 0.8, 0.6, 0.35, 0.35, 0.08); if (ev.kind !== 'arrow') { for (let i = 0; i < 5; i++) this.spawnDebris('b', ev.x, ev.y, ev.z, rnd(-3, 3), rnd(1, 4), rnd(-3, 3), 0.5, 0.06, 0.06, 0x6a4a2c, 1); AUDIO.play('thud', ev.x, ev.y, ev.z, 1.4); } break; }
-        case 'sgshot': { this.flash(ev.x, ev.y, ev.z, ev.gun ? 5 : 1.5, ev.gun ? 0.2 : 0.08); if (ev.gun) { this.puffSmoke(ev.x + ev.dx * 1.5, ev.y, ev.z + ev.dz * 1.5, 30, ev.dx * 3, 0.6, ev.dz * 3, 1.5, 5, 1, 4.5, 0.85, 0.7); AUDIO.play('cannon', ev.x, ev.y, ev.z, 1.6); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 40) this.shake = Math.max(this.shake, 0.6 * (1 - dc / 40)); } else AUDIO.play('thud', ev.x, ev.y, ev.z, 1.2); break; }
+        case 'sgshot': { this.flash(ev.x, ev.y, ev.z, ev.gun ? 5 : 1.5, ev.gun ? 0.2 : 0.08); if (ev.by === heroId && ev.by >= 0) { this.empKick = 1; this.recoil = 1; this.recoilRoll = rnd(-1, 1); this.shake = Math.max(this.shake, ev.gun ? 1 : 0.35); if (this.imp) this.imp.vp += ev.gun ? 2.2 : 0.8; } if (ev.gun) { this.puffSmoke(ev.x + ev.dx * 1.5, ev.y, ev.z + ev.dz * 1.5, 30, ev.dx * 3, 0.6, ev.dz * 3, 1.5, 5, 1, 4.5, 0.85, 0.7); AUDIO.play('cannon', ev.x, ev.y, ev.z, 1.6); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 40) this.shake = Math.max(this.shake, 0.6 * (1 - dc / 40)); } else AUDIO.play('thud', ev.x, ev.y, ev.z, 1.2); break; }
         case 'sgsaltpeter': AUDIO.play('fire', this.camera.position.x, 0, ev.z, 1.6); break;
         case 'sgram': { const gy = SIM.terrainH(ev.x, ev.z - 2); this.dust(ev.x, gy + 1.5, ev.z - 1, 10, 0, 1, -1, 2, 1, 0.4, 1.6); this.burstSparks(ev.x, gy + 1.8, ev.z - 0.5, 8, 4, 0.9, 0.7, 0.4, 0.3, 0.08); AUDIO.play('ram', ev.x, gy + 1.5, ev.z, 2); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 25) this.shake = Math.max(this.shake, 0.35 * (1 - dc / 25)); break; }
         case 'sgfill': AUDIO.play('thud', ev.x, 0, ev.z, 1.2); break;
@@ -2126,6 +2165,7 @@ class Renderer {
       this._jolt = IM.jolt + flin * 0.5; this._joltR = IM.r;
       this.updateViewmodel(hero, alpha, dt, clamp(hero.speedNow / 3.5, 0, 1), mounted);
       this.vm.visible = hero.downT <= 0 && (this.tp || 0) < 0.3; this.vmArms.visible = this.vm.visible; if (!this.vm.visible) { this.vmShield.visible = false; this.vmBow.visible = false; }
+      if (this.sim.sg || this.vmEmp) this.empView(hero, dt);
     } else {
       this.vm.visible = false; this.vmArms.visible = false; this.vmShield.visible = false; this.vmBow.visible = false; this.fovTarget = 60;
       this.fov += (this.fovTarget - this.fov) * (1 - Math.exp(-dt * 10)); if (Math.abs(cam.fov - this.fov) > 0.05) { cam.fov = this.fov; cam.updateProjectionMatrix(); }
@@ -2510,7 +2550,7 @@ Renderer.prototype.buildGroundMap = function () {
   this.groundMap = tex; this.groundExt = E;
   // loose stones and clods along the bases, half sunk
   if (stones.length) { const T = this.tmp, snow = this.biome.snow; const m = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), stones.length);
-    stones.forEach((s, i) => { const y = terrainH(s[0], s[1]); T.m.compose(T.v.set(s[0], y + 0.02, s[1]), T.q.setFromEuler(T.e.set(rr() * 3, rr() * 3, rr() * 3)), T.v2.set(s[2] * (0.8 + rr() * 0.5), s[2] * 0.6, s[2])); m.setMatrixAt(i, T.m);
+    stones.forEach((s, i) => { const y = terrainH(s[0], s[1]); T.m.compose(T.v.set(s[0], y - 0.03, s[1]), T.q.setFromEuler(T.e.set(rr() * 3, rr() * 3, rr() * 3)), T.v2.set(s[2] * (0.8 + rr() * 0.5), s[2] * 0.6, s[2])); m.setMatrixAt(i, T.m);
       m.setColorAt(i, T.c.setHSL(0.08, 0.08 + rr() * 0.08, (snow ? 0.42 : 0.3) + rr() * 0.14)); });
     if (m.instanceColor) m.instanceColor.needsUpdate = true; m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
 };

@@ -90,7 +90,63 @@ const MUSIC = (() => {
   const BAT_R = [1, 1, 6, 5, 1, 5, 6, 1, 6, 5, 6, 1, 1, 1, 5, 6];
   const SIEGE = mel("1:4 1:2 2:2 | 3:6 2~:2 | 1:2 6,:2 5,:4 | 6,:8 | 1:4 1:2 2:2 | 3:4 5~:4 | 6:2 5:2 3:2 2:2 | 3:8 | 5:4 6:2 5:2 | 3:6 5:2 | 6:2 1':2 6:2 5:2 | 3:8 | 2:4 3:2 2:2 | 1:4 6,~:4 | 5,:2 6,:2 1:2 2:2 | 1:8", 71);
   const SIEGE_R = [1, 1, 6, 6, 1, 1, 6, 3, 5, 3, 6, 3, 2, 6, 5, 1];
+  // ---------- the war engine (battle and siege): a live drum corps that follows the fight ----------
+  // 擊鼓而進: the big war drum (戰鼓) drives on the beat, the small drums (堂鼓) interlock on the sixteenths, cymbals (鈸)
+  // and gongs mark the phrases, a suona leads, the cello and zheng hold the ground under it. Three levels follow how close
+  // the fighting is: approach (heartbeat drums, a held erhu line), engaged (the full drive) and melee (double-time drums,
+  // doubled suona, horn calls). Every 8 bars a phrase: A, B, A', then a break (C) that drops to big hits and builds back.
+  const BAT_A = mel("5 5 6 5 3 2 1:2 | 2 3 5 6 5:4 | 1' 1' 6 5 3 5 6 3 | 2 3 5 3 2 1:3 | 5 5 6 5 3 2 1:2 | 2 3 5 6 1':4 | 2' 1' 6 1' 6 5 3:2 | 5 6 5 3 2:2 1:2", 71);
+  const BAT_B = mel("6 1' 2' 1' 6 5 3:2 | 5 6 1' 6 5 3 2:2 | 3 5 6 1' 2' 1' 6 5 | 3 2 3 5 1:2 -:2 | 1':2 -:2 1':2 -:2 | 6 5 3 2 1:4 | 2':2 1':2 6:2 5:2 | 6:6 -:2", 71);
+  const BAT_C = mel("1' 6 5 6 1':2 2':2 | 3':2 2' 1' 6:4 | 5 6 1' 2' 3' 2' 1' 6 | 5:6 3:2 | 2 3 5 6 5 3 2 3 | 5:4 6:2 5:2 | 3 2 1 2 3 5 2 3 | 1:6 -:2", 71);
+  const BAT_D = mel("5:8 | 6:4 5:4 | 3:8 | 2:4 3~:4 | 5:8 | 6:4 1':4 | 6:6 5:2 | 5:8", 71); // the break: long erhu tones over the hits
+  const SIG_A = mel("1:4 1:2 2:2 | 3:6 2~:2 | 1:2 6,:2 5,:4 | 6,:8 | 1:4 1:2 2:2 | 3:4 5~:4 | 6:2 5:2 3:2 2:2 | 3:8", 71);
+  const SIG_B = mel("5:4 6:2 5:2 | 3:6 5:2 | 6:2 1':2 6:2 5:2 | 3:8 | 2:4 3:2 2:2 | 1:4 6,~:4 | 5,:2 6,:2 1:2 2:2 | 1:8", 71);
+  const SIG_C = mel("6 6 5 3 5:2 6:2 | 1':4 6:4 | 5 3 2 3 5:2 3:2 | 2:8 | 3 3 2 1 2:2 3:2 | 5:4 6~:4 | 5 3 2 3 1:2 6,:2 | 1:8", 71);
+  const SIG_D = mel("1:8 | 6,:8 | 5,:8 | 6,~:8 | 1:8 | 2:8 | 3:4 2:4 | 1:8", 71);
+  const humanize = (t, j) => t + (Math.random() - 0.5) * (j || 0.008);
+  function warTrack(o) {
+    let lvl = 1, plan = 'ABAC', vary = 0;
+    return { bpm: o.bpm, len: 256, play(s, t, e8) {
+      const ph = Math.floor(s / 64) % 4, bar = Math.floor(s / 8) % 8, b8 = s % 8, e16 = e8 / 2;
+      if (s % 64 === 0) { plan = Math.random() < 0.3 ? 'ABCA' : 'ABAC'; vary = Math.random(); }
+      if (b8 === 0) lvl = I < 0.42 ? (lvl === 1 && I > 0.36 ? 1 : 0) : I < 0.78 ? (lvl === 2 && I > 0.72 ? 2 : 1) : 2; // with a little hysteresis
+      const sec = plan[ph], root = o.roots[(ph % 2) * 8 + bar], brk = sec === 'C' && lvl > 0, last = bar === 7, mel0 = { A: o.m[0], B: o.m[1], C: o.m[3] }[sec] || o.m[0];
+      const M = sec === 'A' && ph === 2 ? o.m[2] : mel0; // the third phrase carries the second tune
+      // --- phrase marks: gong and crash on the downbeat of a phrase, a horn call into the melee
+      if (s % 64 === 0) { if (lvl > 0) { hit(o.gong, t, 0.22 + lvl * 0.05); hit('bo_ff', t, 0.13 + lvl * 0.04, 1, 0.2); } else hit('gong_lt', t, 0.16); if (lvl === 2) suona(t + e8 * 0.1, 59, e8 * 5, 0.2); }
+      // --- drums, on a sixteenth grid (two per eighth)
+      for (let h = 0; h < 2; h++) { const k = b8 * 2 + h, tt = humanize(t + h * e16, h ? 0.01 : 0.004);
+        if (last && lvl > 0 && !(sec === 'C')) { // the fill: small drums roll up into the next phrase, the big drum lands on the last sixteenth
+          if (k >= 8) hit('tg_f', tt, 0.1 + (k - 8) * 0.025, 1, (k % 2 ? 0.25 : -0.25)); if (k % 4 === 0) dagu(tt, 'mf', 0.3 + k * 0.012); if (k === 15) { dagu(tt, 'ff', 0.55); hit('bd_ff', tt, 0.4, 0.85); } if (k < 8 && (k === 0 || k === 6)) dagu(tt, 'ff', 0.55); continue; }
+        if (brk) { // the break: two big hits a bar, a held drone; the last two bars build back
+          if (k === 0 || k === 11) { dagu(tt, 'ff', 0.62); hit('bd_ff', tt, 0.38, 0.8); } if (k === 0 && bar % 2 === 0) hit('gong_f', tt, 0.12);
+          if (bar >= 6) { if (bar === 7 || k % 2 === 0) hit('tg_f', tt, 0.06 + (bar - 6) * 0.06 + k * 0.006, 1, k % 2 ? 0.3 : -0.3); if (k % 4 === 0) dagu(tt, 'mf', 0.22 + (bar - 6) * 0.14 + k * 0.01); }
+          continue; }
+        const BIG = [[0, 10], [0, 6, 8, 11], [0, 3, 6, 8, 10, 11, 14]][lvl], MID = [[], [4, 12], [4, 12, 13]][lvl];
+        if (BIG.includes(k)) { dagu(tt, 'ff', lvl === 0 ? 0.32 : k === 0 ? 0.62 : 0.5); if (lvl === 2 && k === 0) hit('bd_ff', tt, 0.34, 0.8); }
+        if (MID.includes(k)) dagu(tt, 'mf', 0.36);
+        if (lvl === 1 && [2, 7, 9, 14, 15].includes(k)) hit('tg_f', tt, k === 15 ? 0.15 : 0.12, 1, k % 2 ? 0.28 : -0.28);
+        if (lvl === 2) { const acc = k % 4 === 2; hit(acc ? 'tg_f' : 'tg_p', tt, acc ? 0.17 : 0.1, 1, k % 2 ? 0.3 : -0.3); if (k === 4 || k === 12) dagu(tt, 'rim', 0.18); }
+        if (lvl === 0 && k === 6 && bar % 2) hit('tg_p', tt, 0.1, 1, 0.2); }
+      // --- cymbals
+      if (!brk && b8 === 0 && lvl === 1 && bar % 2 === 0 && bar) hit('bo_mf', t, 0.1, 1, -0.2);
+      if (!brk && lvl === 2) { if (b8 === 0 && bar) hit('bo_mf', t, 0.12, 1, bar % 2 ? 0.25 : -0.25); if (b8 === 6 && bar % 2) hit('bo_sh', t, 0.1, 1, 0.1); }
+      // --- the ground: cello pulse (or pedal) on the root, the zheng ostinato
+      if (lvl === 0 || brk) { if (b8 === 0 && bar % 2 === 0) drone(t, sdeg(root, 0, 35), e8 * 16, 0.16); }
+      else { const P = [0, 0, 5, 0, 0, 5, 4, 3]; cello(t, sdeg(root, P[b8], 35), b8 === 0 ? 0.3 : 0.2); }
+      if (lvl > 0 && !brk) zheng(humanize(t), sdeg(root, [0, 3, 5, 3, 6, 3, 5, 3][b8], 59), b8 === 0 ? 0.17 : 0.1);
+      if (brk && b8 === 0 && bar % 2 === 0) zhengTrem(t, sdeg(root, 5, 47), e8 * 15, 0.12);
+      // --- the voices
+      if (lvl === 0) { if (s % 2 === 0) { const n = M.get((s / 2) % M.total); if (n) erhu(t, n.m - 12, n.len * e8 * 2, 0.22); } } // the tune at half speed, an octave down: something coming
+      else if (brk) line('erhuD', o.m[3], s, t, e8, (tt, m, d, f) => erhu(tt, m, d, 0.28, f));
+      else { const quiet = vary > 0.7 && bar < 2; // sometimes the drums alone open a phrase
+        if (!quiet) line('suona', M, s, t, e8, (tt, m, d) => suona(tt, m, d * 0.95, 0.32));
+        if (lvl === 2 && !quiet) { line('suona2', M, s, t, e8, (tt, m, d) => suona(tt + 0.012, m - 12, d * 0.95, 0.15)); line('erhuB', M, s, t, e8, (tt, m, d) => erhu(tt, m - 12, d * 0.95, 0.13)); } }
+    } };
+  }
   const TRACKS = {
+    battle: warTrack({ bpm: 132, roots: BAT_R, m: [BAT_A, BAT_B, BAT_C, BAT_D], gong: 'gong_big' }),
+    siege: warTrack({ bpm: 112, roots: SIEGE_R, m: [SIG_A, SIG_B, SIG_C, SIG_D], gong: 'gong_big' }),
     menu: { bpm: 64, len: 256, rec: { key: 'mus_red_dawn', pure: true, e8: 0.47 }, play(s, t, e8) {
       if (REC && REC.pure) return;
       const sec = Math.floor(s / 64), bar = Math.floor(s / 8) % 8, b8 = s % 8, root = MENU_R[sec][bar];
@@ -114,7 +170,7 @@ const MUSIC = (() => {
       if (bar === 4 && b8 === 0) hit('bo_sh', t, 0.18);
     } },
     // battle and siege ride on a recorded war-drum ensemble (0 A.D., CC BY-SA); our instruments lock to its beat
-    battle: { bpm: 124, rec: { key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }, recs: [{ key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }, { key: 'mus_hill', pure: true, e8: 0.3076 }, { key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, { key: 'mus_red_dawn', pure: true, e8: 0.3076 }], len: 128, play(s, t, e8) {
+    battle0: { bpm: 124, rec: { key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }, recs: [{ key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }, { key: 'mus_hill', pure: true, e8: 0.3076 }, { key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, { key: 'mus_red_dawn', pure: true, e8: 0.3076 }], len: 128, play(s, t, e8) {
       if (REC && REC.pure) return;
       const bar = Math.floor(s / 8), b8 = s % 8, root = BAT_R[bar % 16];
       const pat = ['ff', 0, 'mf', 'rim', 'ff', 'rim', 'mf', 0][b8];
@@ -129,7 +185,7 @@ const MUSIC = (() => {
       else line('xunB', BAT, s, t, e8, (tt, m, d) => xun(tt, m, d * 0.95, 0.26));
       if (I > 0.82) line('erhuB', BAT, s, t, e8, (tt, m, d) => erhu(tt, m - 12, d * 0.95, 0.17));
     } },
-    siege: { bpm: 104, rec: { key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, recs: [{ key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, { key: 'mus_hill', pure: true, e8: 0.3104 }, { key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }], len: 128, play(s, t, e8) {
+    siege0: { bpm: 104, rec: { key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, recs: [{ key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, { key: 'mus_hill', pure: true, e8: 0.3104 }, { key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }], len: 128, play(s, t, e8) {
       if (REC && REC.pure) return;
       const bar = Math.floor(s / 8), b8 = s % 8, root = SIEGE_R[bar % 16];
       if (REC) { } else if (b8 === 0 || b8 === 4) dagu(t, 'ff', 0.6); if (b8 === 2 || b8 === 6) dagu(t, 'hand', 0.34); if (b8 === 7) dagu(t, 'rim', 0.22);

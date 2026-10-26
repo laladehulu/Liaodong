@@ -3117,7 +3117,7 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
   ningyuan_siege: {
     siege: true, title: '寧遠攻守 · The Siege of Ningyuan', year: 'February 1626', battle: 'siegecity', attacker: 1, tickets: 640,
     brief: 'Nurhaci brings the Eight Banners against Ningyuan in the depth of winter. Yuan Chonghuan has burned the suburbs, brought the people inside and mounted Western cannon on the walls. The Jin must fill the ditch, climb or break the walls, take the gatehouse and fight through the streets to the yamen.',
-    zones: [{ key: 'ditchW', x: -28, z: 22, r: 9, name: 'A · West ditch', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 9, name: 'B · East ditch', rate: 0.5 },
+    zones: [{ key: 'ditchW', x: -28, z: 22, r: 13, name: 'A · West ditch', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 13, name: 'B · East ditch', rate: 0.5 },
       { key: 'wallW', x: -25, z: 43.5, r: 7, name: 'A · West wall', owner: 0, rate: 0.6 }, { key: 'wallE', x: 25, z: 43.5, r: 7, name: 'B · East wall', owner: 0, rate: 0.6 },
       { key: 'gatehouse', x: 0, z: 55, r: 8, name: 'A · The gatehouse', owner: 0, rate: 0.5 },
       { key: 'street', x: -18, z: 80, r: 11, name: 'A · Drum-tower street', owner: 0, rate: 0.5 }, { key: 'yamen', x: 0, z: 112, r: 13, name: 'B · The yamen', owner: 0, rate: 0.4 }],
@@ -3729,11 +3729,16 @@ Sim.prototype.siegeDirs = function () {
   const att = Object.keys(this.mg).filter(g => this.mg[g].G.team === A && this.mg[g].released && !this.mg[g].broken);
   const jobs = [];
   const eng = (k) => sg.engines.filter(e => e.kind === k && e.hp > 0);
-  const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false]);
-  for (const t of eng('tower')) jobs.push(t.docked ? [t.x, W.z0 + 2.5, false] : [t.x, t.z - 5, false]);
-  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, true]; }); jobs.unshift(...dz); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false]); }
-  else { for (const L of sg.lads) jobs.push(L.up ? [L.x, W.z0 + 2.5, false] : [L.x, W.z0 - 3, false]); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false]); }
-  att.forEach((g, i) => { const p = this.players[this.mg[g].p], j = jobs[i % jobs.length]; if (!j) return; p.directive = { kind: DIR_HOLD, x: clamp(j[0], -HALF + 3, HALF - 3), z: clamp(j[1], -HALF + 3, HALF - 3), by: -1 }; p.standoff = j[2]; });
+  // each job has an id, and a company keeps its job while the job exists: nobody marches from one flank to the other
+  // every time an engine is hit or a ladder falls
+  const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false, 'ram']);
+  eng('tower').forEach((t, i) => jobs.push(t.docked ? [t.x, W.z0 + 2.5, false, 'tw' + t.id] : [t.x, t.z - 5, false, 'tw' + t.id]));
+  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, false, 'z' + k]; }); jobs.unshift(...dz, ...dz.map(j => [j[0], j[1], false, j[3] + 'b'])); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
+  else { sg.lads.forEach((L, i) => jobs.push(L.up ? [L.x, W.z0 + 2.5, false, 'ld' + i] : [L.x, W.z0 - 3, false, 'ld' + i])); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false, 'ct' + c.id]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false, 'gate']); }
+  const load = {}; for (const g of att) { const G = this.mg[g]; if (G.jid && jobs.some(j => j[3] === G.jid)) load[G.jid] = (load[G.jid] || 0) + 1; else G.jid = null; }
+  att.forEach((g) => { const G = this.mg[g], p = this.players[G.p]; if (!jobs.length) return;
+    if (!G.jid) { let best = jobs[0], bl = 1e9; for (const j of jobs) { const l = load[j[3]] || 0; if (l < bl) { bl = l; best = j; } } G.jid = best[3]; load[G.jid] = bl + 1; }
+    const j = jobs.find(q => q[3] === G.jid); p.directive = { kind: DIR_HOLD, x: clamp(j[0], -HALF + 3, HALF - 3), z: clamp(j[1], -HALF + 3, HALF - 3), by: -1 }; p.standoff = j[2]; });
   // defenders: the wall garrisons stand on the wall top above the ladders; the rest hold the gatehouse and the town
   const posts = [[-26, 43.6], [26, 43.6], [-14, 43.6], [14, 43.6], [0, W.z1 + 7], [-18, 80], [0, 110]];
   let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D || g.broken || g.G.free) continue; const pt = posts[j++ % posts.length]; p.directive = { kind: DIR_HOLD, x: pt[0], z: pt[1], by: -1 }; }

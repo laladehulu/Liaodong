@@ -14,3 +14,4 @@
 - brush-yy (fork): sim.js resolveMeleeHit brush entangle + block branch, unitAI yy hook (melee branch), new Sim.prototype.brushCatch/yyAI at end; test/zbrush.js
 - emplace (fork): sim manE input/fire (siege section), render viewmodel emplacement hands + aim aid, main.js HUD for manning
 - music fork: src/music.js (whole module), no sim
+- main: siegeDirs sticky jobs + ditch capture (sim.js siegeDirs, OPS.ningyuan_siege zones)

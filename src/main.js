@@ -227,6 +227,21 @@ function wpnName(h, w) {
 }
 function localHero() { const sim = state.sim; if (!sim) return null; const p = sim.players[state.localIdx]; return p ? sim.units[p.heroId] : null; }
 // a man whose only weapon is a gun (the three-eyed gun, a plain musket) turns it round with Q/X to fight with it as a club (sim: u.club)
+// manning a bed crossbow or a gun: the weapon panel shows the piece, and an elevation scale with the range of the fall of shot
+// sits under the sights (the renderer works out the fall with the sim's own projectile steps)
+function empHUD(hero) {
+  const r = state.renderer; let el = $('empAim'); const H = r && r.empHud; const on = !!(H && hero.manE >= 0 && !hero.dead && !Input.cmdMode);
+  if (r) r.empZoom = on && Input.rmb;
+  if (!on) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'empAim'; document.body.appendChild(el); }
+  el.hidden = false; const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), gun = H.kind !== 'bow', deg = (x) => (x * 180 / Math.PI), e = deg(H.elev), w = deg(H.want), laying = Math.abs(w - e) > 0.6;
+  const ticks = []; for (let d = -25; d <= 30; d += 5) ticks.push(`<i style="bottom:${((d + 25) / 55 * 100).toFixed(1)}%"${d === 0 ? ' class="z"' : ''}><b>${d > 0 ? '+' : ''}${d}°</b></i>`);
+  el.innerHTML = `<div class="scale">${ticks.join('')}<u style="bottom:${((clamp(e, -25, 30) + 25) / 55 * 100).toFixed(1)}%"></u><s style="bottom:${((clamp(w, -25, 30) + 25) / 55 * 100).toFixed(1)}%"></s></div>`
+    + `<div class="rd"><b>${gun ? '砲' : '弩'}</b> 仰 ${e >= 0 ? '+' : ''}${e.toFixed(1)}°${laying ? ' · laying…' : ''}<br>${H.out ? 'beyond the field' : H.wall ? 'strikes the wall ahead' : `falls at ${Math.round(H.dist)} m`}</div>`;
+  $('weapon').textContent = gun ? '紅夷砲 · the gun' : '床弩 · bed crossbow';
+  const ready = H.cd <= 0; $('ammoFill').style.width = (ready ? 100 : (1 - H.cd / H.cdMax) * 100).toFixed(0) + '%'; $('ammoText').textContent = ready ? 'Ready · LMB fire' : `${gun ? 'Sponging and loading' : 'Spanning the bow'}… ${Math.ceil(H.cd / 30)} s`;
+  $('dirText').textContent = 'Mouse lays the piece · RMB look closer · LMB fire · E leave it';
+}
 function gunMode() { const h = localHero(); return h && ((h.weapon === 'rifle' && !Input.bayonet && !h.club) || h.weapon === 'revolver'); }
 document.addEventListener('keydown', (e) => {
   if (state.screen !== 'game') return;
@@ -923,6 +938,7 @@ function updateHUD(dt) {
       else { $('ammoFill').style.width = (have / mag * 100).toFixed(0) + '%'; $('ammoText').textContent = mag > 1 ? `${'●'.repeat(have)}${'○'.repeat(mag - have)}${have === 0 ? ' · R reload · Q club' : ''}` : (have > 0 ? 'Loaded' : 'Empty · R reload' + (hero.def.weapons.length > 1 ? '' : ' · Q club')); }
     } else { $('ammoFill').style.width = (hero.st === S.ST_WINDUP ? Math.min(1, (hero.stT) / 0.28) * 100 : hero.blocking ? 100 : 0).toFixed(0) + '%'; $('ammoText').textContent = hero.st === S.ST_WINDUP ? `Winding up: ${DIRN[hero.atkDir]}` : hero.blocking ? `Blocking ${BLKN[hero.blockDir]}` : hero.st === S.ST_RECOVER ? 'Recovering' : ''; }
     $('dirText').textContent = (!hero.dead && !Input.cmdMode && !gunMode()) ? (hero.weapon === 'yari' ? 'LMB thrust · wheel↑ slam · RMB block · double-tap A/D slide' : 'LMB slash · hold heavy · wheel↑ overhead · R stab · RMB block · double-tap A/D slide') : (me.rallyT > 0 ? `rally in ${Math.ceil(me.rallyT / 30)}s` : 'V · rally');
+    empHUD(hero);
     { const fu = $('fury'); const full = me.fury >= S.FURY_MAX; fu.style.setProperty('--f', (me.fury / S.FURY_MAX * 100).toFixed(0) + '%'); fu.classList.toggle('full', full); fu.classList.toggle('on', hero.frenzyT > 0); fu.querySelector('span').textContent = hero.frenzyT > 0 ? `VALOR ${Math.ceil(hero.frenzyT)}s` : full ? 'Valor ready · V' : 'Fury'; $('bombs').textContent = `雷 ${'●'.repeat(me.bombs)}${'○'.repeat(S.BOMBS - me.bombs)} · 4`; }
   }
   { const fo = $('fporders'); const show = alive && !Input.cmdMode && !state.ended && sim.players[state.localIdx].squads.some(id => sim.squads[id].alive);
