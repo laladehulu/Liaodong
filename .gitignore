@@ -1,5 +1,6 @@
 dist/
 src/_mainfull.js
 src/snd_data.js
+src/voice_data.js
 node_modules/
 *.log

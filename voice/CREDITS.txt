@@ -1,0 +1,3 @@
+Voice clips in this folder are CC0 1.0 (public domain), from the "CC0 Public Domain Sounds" collection
+(github.com/lavenderdotpet/CC0-Public-Domain-Sounds): Warfork player sounds (CC0) and the "80 CC0 creature SFX" packs.
+Trimmed, loudness-normalised and re-encoded for this game. Shouts and orders are synthesised in src/voice.js.
