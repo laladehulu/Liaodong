@@ -422,7 +422,7 @@ function sjBattle(scene) {
   for (const uid in ZB.map) sDress(sim.units[uid], ZB.map[uid]);
   for (const [g, k] of B[3]) { const G = sim.mg[g]; if (G) sDress(sim.units[sim.players[G.p].heroId], sIdx(k)); }
   document.body.classList.add('sjstory'); sjVM(); sjProps(M);
-  if (scene === 'drill') setTimeout(() => storyCard(B[2], B[1]), 6500);
+  if (scene === 'drill') setTimeout(() => storyCard(B[2], B[1]), 11000);
 }
 function sjEvent(ev) {
   const sim = state.sim; if (!ZB || !ZB.sj || !sim) return;

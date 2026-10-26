@@ -125,6 +125,10 @@ kbd { font-family: var(--font-ui); font-size: 11px; background: var(--ink); colo
 #objbar .sc { font-family: var(--font-display); font-weight: 700; font-size: 15px; min-width: 30px; text-align: center; } #objbar .sc.t0 { color: #ff8a92; } #objbar .sc.t1 { color: #92afff; }
 #objbar small { color: var(--muted); font-size: 10px; }
 @media (max-width: 900px) { #objbar .obj { padding: 2px 4px; font-size: 10px; } }
+#pause.story { background: none; pointer-events: auto; align-items: flex-end; padding-bottom: 18vh; }
+#pause.story .card { padding: 8px 18px; background: rgba(20,16,12,.72); border: 1px solid #6a5a44; color: #e8dcc0; box-shadow: none; }
+#pause.story h2 { font-size: 15px !important; margin: 0; letter-spacing: .08em; }
+#pause.story p { display: none; }
 #status .goal { font: 600 15px Georgia, 'Noto Serif CJK TC', serif; color: #f2cf6a; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0,0,0,.6); letter-spacing: .02em; }
 #status { left: 50%; top: max(14px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; gap: 14px; align-items: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .06em; white-space: nowrap; }
 #status .t0 { color: #ff8a92; } #status .t1 { color: #92afff; }

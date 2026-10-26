@@ -26,8 +26,8 @@
   // with two or more defenders each raid brings one more party, from another flank
   const EXTRA = [['X1', 'E'], ['X2', 'W'], ['X1', 'N'], ['X2', 'E'], ['X1', 'W'], ['X2', 'NW'], ['X1', 'NE'], ['X2', 'NW']];
   // what the quartermaster can send up from the road: [type, cost, how many companies the road holds]
-  const SHOP = [['ashigaru', 20, 2], ['rifle_imp', 30, 2], ['yuanyang', 35, 1], ['rifle_spencer', 35, 1], ['cavalry', 40, 1], ['gatling', 50, 1]];
-  const MEND = 15, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 40;
+  const SHOP = [['ashigaru', 20, 3], ['rifle_imp', 30, 3], ['yuanyang', 35, 2], ['rifle_spencer', 35, 2], ['cavalry', 40, 2], ['gatling', 50, 1]];
+  const MEND = 15, FALL = 20, WAVE_MAX = 180, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 40;
   const groups = {
     garrison: { team: 0, name: 'Tower garrison', zh: '墩軍', army: ['rifle_imp', 'yuanyang'], at: [0, 0, 0], dir: ['hold', 0, 2], stay: true },
     relief: { team: 0, name: 'Guanning relief', zh: '關寧援兵', army: ['cavalry', 'cavalry', 'cavalry', 'rifle_imp'], at: [0, -132, 0], reserve: true, dir: ['hold', 0, 20] },
@@ -48,7 +48,7 @@
     phases: [{ title: '烽火 · The beacon', text: 'Light the first fire at the stoves by the north wall.', obj: { never: true } }],
     win: 'The relief rode in. The tower held.',
   };
-  S.BEACON = { SHOP, MEND, NFIRE, LULL, LULL0, LIGHT, RELIEF_AT, STOVES, WAVES: WAVES.length, ORD_BUY };
+  S.BEACON = { SHOP, MEND, FALL, WAVE_MAX, NFIRE, LULL, LULL0, LIGHT, RELIEF_AT, STOVES, WAVES: WAVES.length, ORD_BUY };
 
   const humans = (sim) => sim.players.filter(p => !p.ai);
   P.beaconInit = function () {
@@ -63,7 +63,11 @@
     // the purse: every raider who falls pays the garrison
     const dt = this.tick - (B.lastT === undefined ? this.tick : B.lastT); B.lastT = this.tick;
     for (const u of this.units) { if (u.team !== 1 || !u.dead || u.inactive || u.bcPaid || u.type === 'horse') continue; u.bcPaid = true; B.kills++; B.silver += u.type === 'hero' ? 10 : u.def.mounted ? 2 : 1; }
-    const tz = this.missionZone('tower'); if (tz && tz.owner === 1) { this.mOver(false, 'The Jin hold the tower. No more fires will burn on it.'); return; }
+    // the tower falls when the Jin hold it, or when they stand in it three to one for twenty seconds
+    const tz = this.missionZone('tower'); let m0 = 0, m1 = 0;
+    if (tz) for (const u of this.units) { if (u.dead || u.inactive || u.type === 'horse' || u.downed) continue; if (len(u.x - tz.x, u.z - tz.z) > tz.r) continue; if (u.team === 0) m0++; else m1++; }
+    B.m0 = m0; B.m1 = m1; B.press = m1 >= 4 && m1 >= 3 * m0 ? (B.press || 0) + dt : Math.max(0, (B.press || 0) - dt);
+    if ((tz && tz.owner === 1) || B.press >= FALL * 30) { this.mOver(false, 'The Jin hold the tower. No more fires will burn on it.'); return; }
     if (B.stage === 'lull') {
       // light the next fire: someone of the garrison stands at the stoves
       if (!B.lit && B.fires < NFIRE) { let on = false; for (const p of humans(this)) { const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - STOVES.x, h.z - STOVES.z) < STOVES.r) on = true; }
@@ -78,6 +82,8 @@
     // a raid: it is over when every party of it has broken
     { let done = true; for (const gid of B.wave) { const g = this.mg[gid]; if (!g || g.broken) continue; if (this.mGroupFrac(gid) < 0.2) { this.mBreak(gid); continue; } done = false; }
       if (B.stage === 'final' && !B.relief && el >= RELIEF_AT) { B.relief = true; this.mRelease('relief'); this.mDir('relief', ['hold', 0, 20]); this.events.push({ t: 'brelief' }); }
+      // a raid that cannot finish the tower and will not go home draws off with its plunder after three minutes
+      if (!done && B.stage === 'wave' && el >= WAVE_MAX) { for (const gid of B.wave) this.mBreak(gid); done = true; }
       if (done) { if (B.stage === 'final') { this.mOver(true, this.mission.win); return; } B.stage = 'lull'; B.lit = false; B.light = 0; B.t0 = this.tick; B.silver += 10; this.events.push({ t: 'bwaveend', n: B.n }); } }
   };
   // send a band (again): every man of it, fallen or not, comes back fresh at the edge of the field it approaches from
@@ -97,6 +103,9 @@
     B.wave = list.map(([k, side]) => this.beaconArm(k, side)).filter(Boolean); B.stage = fin ? 'final' : 'wave'; B.t0 = this.tick; if (!fin) B.n++;
     this.events.push({ t: 'bwave', n: fin ? -1 : B.n });
   };
+  // how many companies of a kind the road can still send (never sent, or sent and cut to the last man)
+  P.beaconStock = function (item) { const it = SHOP[item]; if (!it) return 0; let n = 0;
+    for (let k = 0; k < it[2]; k++) { const g = this.mg[`buy${item}_${k}`]; if (!g) continue; if (!g.used || g.sids.every(sid => this.squads[sid].unitIds.every(uid => this.units[uid].dead))) n++; } return n; };
   // the quartermaster: a company marches up the road from the south to whoever paid for it; or mend your men
   P.beaconBuy = function (p, item) {
     const B = this.bc; if (!B || !this.mission || !this.mission.beacon || this.mwin !== undefined || p.ai) return;

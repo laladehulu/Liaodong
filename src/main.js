@@ -474,9 +474,12 @@ canvas.addEventListener('wheel', (e) => {
 function requestLock() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
 document.addEventListener('pointerlockchange', () => {
   Input.locked = document.pointerLockElement === canvas;
-  if (state.screen === 'game' && !Input.cmdMode) $('pause').hidden = Input.locked || DEP.open || !!state.zheDlg;
+  if (state.screen === 'game' && !Input.cmdMode) { $('pause').hidden = Input.locked || DEP.open || !!state.zheDlg; pauseLook(); }
   if (!Input.locked) { Input.lmb = false; Input.rmb = false; Input.keys = 0; }
 });
+// in a story you are one soldier, not a commander: a small, quiet prompt that doesn't cover the scene
+function pauseLook() { const pz = $('pause'), M = state.sim && state.sim.mission, story = !!(M && (M.soldier || M.camp)); pz.classList.toggle('story', story);
+  const h = pz.querySelector('h2'), p = pz.querySelector('p'); if (story && h.dataset.k !== 's') { h.dataset.k = 's'; h.textContent = 'Click to continue'; p.textContent = ''; } else if (!story && h.dataset.k !== 'c') { h.dataset.k = 'c'; h.textContent = 'Click to take command'; p.innerHTML = 'The battle keeps running while you are away. Press <kbd>O</kbd> any time for the command view.'; } }
 $('pause').addEventListener('click', () => { if (state.screen === 'game') requestLock(); });
 function storyLock() { const s = state.sim; return !!(s && s.mission && (s.mission.soldier || s.mission.camp)); } // story chapters: no overview, no other men's bodies, no fleets
 function toggleCmd(force) {
@@ -620,7 +623,7 @@ function startGame(msg, me, net, delay) {
   state.selected = []; state.ended = false; state.acc = 0; state.stalled = false; state.started = true; state.slowT = 0;
   Input.cmdMode = false; Input.keys = 0; Input.lmb = false; Input.rmb = false; Input.ads = false; Input.pressed = 0; Input.cmds = []; Input.bayonet = false;
   const hero = localHero(); if (hero) { Input.yaw = hero.yaw; Input.pitch = 0; state.lastHeroId = hero.id; }
-  show('game'); $('cmdui').hidden = true; $('pause').hidden = false; $('vitals').hidden = false; $('army').hidden = false; $('cmdpanel').hidden = false; $('cmdtitle').textContent = 'Command view';
+  show('game'); $('cmdui').hidden = true; $('pause').hidden = false; setTimeout(pauseLook, 0); $('vitals').hidden = false; $('army').hidden = false; $('cmdpanel').hidden = false; $('cmdtitle').textContent = 'Command view';
   $('cmdhelp').textContent = 'Left-click or drag a box to select (Shift adds) · Right-click to move, right-drag to lay out a line · Right-click an enemy to charge';
   $('heroName').textContent = cfg.players[me].name; $('feed').innerHTML = '';
   const bd = state.sim ? state.sim.bdef : S.BATTLES[cfg.battle];
