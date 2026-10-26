@@ -61,12 +61,13 @@
   P.beaconTick = function () {
     if (this.mv.ph < 0) return; if (!this.bc) this.beaconInit(); const B = this.bc, el = (this.tick - B.t0) / 30;
     // the purse: every raider who falls pays the garrison
-    if (this.tick % 15 === 0) for (const u of this.units) { if (u.team !== 1 || !u.dead || u.inactive || u.bcPaid || u.type === 'horse') continue; u.bcPaid = true; B.kills++; B.silver += u.type === 'hero' ? 12 : u.def.mounted ? 4 : 2; }
+    const dt = this.tick - (B.lastT === undefined ? this.tick : B.lastT); B.lastT = this.tick;
+    for (const u of this.units) { if (u.team !== 1 || !u.dead || u.inactive || u.bcPaid || u.type === 'horse') continue; u.bcPaid = true; B.kills++; B.silver += u.type === 'hero' ? 10 : u.def.mounted ? 2 : 1; }
     const tz = this.missionZone('tower'); if (tz && tz.owner === 1) { this.mOver(false, 'The Jin hold the tower. No more fires will burn on it.'); return; }
     if (B.stage === 'lull') {
       // light the next fire: someone of the garrison stands at the stoves
       if (!B.lit && B.fires < NFIRE) { let on = false; for (const p of humans(this)) { const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - STOVES.x, h.z - STOVES.z) < STOVES.r) on = true; }
-        B.light = on ? B.light + 1 : Math.max(0, B.light - 2); if (B.light >= LIGHT * 30) { B.lit = true; B.fires++; B.light = 0; B.silver += 10; this.events.push({ t: 'bfire', n: B.fires }); } }
+        B.light = on ? B.light + dt : Math.max(0, B.light - dt * 2); if (B.light >= LIGHT * 30) { B.lit = true; B.fires++; B.light = 0; B.silver += 10; this.events.push({ t: 'bfire', n: B.fires }); } }
       if (el >= (B.n === 0 ? LULL0 : LULL)) {
         if (B.fires >= NFIRE) this.beaconWave(-1);
         else if (B.n >= WAVES.length) { this.mOver(false, 'Seven raids came and the fifth fire never burned. No signal reached Liaoyang.'); return; }
@@ -75,7 +76,7 @@
       return;
     }
     // a raid: it is over when every party of it has broken
-    if (this.tick % 15 === 0) { let done = true; for (const gid of B.wave) { const g = this.mg[gid]; if (!g || g.broken) continue; if (this.mGroupFrac(gid) < 0.2) { this.mBreak(gid); continue; } done = false; }
+    { let done = true; for (const gid of B.wave) { const g = this.mg[gid]; if (!g || g.broken) continue; if (this.mGroupFrac(gid) < 0.2) { this.mBreak(gid); continue; } done = false; }
       if (B.stage === 'final' && !B.relief && el >= RELIEF_AT) { B.relief = true; this.mRelease('relief'); this.mDir('relief', ['hold', 0, 20]); this.events.push({ t: 'brelief' }); }
       if (done) { if (B.stage === 'final') { this.mOver(true, this.mission.win); return; } B.stage = 'lull'; B.lit = false; B.light = 0; B.t0 = this.tick; B.silver += 10; this.events.push({ t: 'bwaveend', n: B.n }); } }
   };
@@ -103,11 +104,16 @@
     if (item === SHOP.length) { if (B.silver < MEND) return note(false, 'silver');
       B.silver -= MEND; for (const id of p.squads) { const q = this.squads[id]; if (!q || !q.alive) continue; for (const uid of q.unitIds) { const u = this.units[uid]; if (!u.dead) { u.hp = u.def.hp; u.fat = 0; } } } return note(true); }
     const it = SHOP[item]; if (!it) return; if (B.silver < it[1]) return note(false, 'silver');
-    let gid = null; for (let k = 0; k < it[2]; k++) { const g = this.mg[`buy${item}_${k}`]; if (g && !g.used) { gid = `buy${item}_${k}`; break; } } if (!gid) return note(false, 'none');
-    const g = this.mg[gid], ap = this.players[g.p]; g.used = true; B.silver -= it[1];
+    // a company the road has not sent yet, or one that was cut to the last man (the road raises it again)
+    let gid = null; for (let k = 0; k < it[2] && !gid; k++) { const g = this.mg[`buy${item}_${k}`]; if (!g) continue; if (!g.used) gid = `buy${item}_${k}`; else if (g.sids.every(sid => { const q = this.squads[sid]; return q.unitIds.every(uid => this.units[uid].dead); })) gid = `buy${item}_${k}`; }
+    if (!gid) return note(false, 'none');
+    const g = this.mg[gid], ap = this.players[g.p]; B.silver -= it[1];
+    if (!g.used) { g.used = true; g.sids = ap.squads.slice(); ap.squads = []; }
+    else for (const sid of g.sids) { const op = this.players[this.squads[sid].owner]; if (op) op.squads = op.squads.filter(x => x !== sid); }
     const sx = 0, sz = -34; let k = 0;
-    for (const sid of ap.squads.slice()) { const q = this.squads[sid]; ap.squads = ap.squads.filter(x => x !== sid); q.inactive = false; q.owner = p.idx; q.order = S.ORD_FOLLOW; p.squads.push(sid);
-      for (const uid of q.unitIds) { const u = this.units[uid]; if (u.dead) continue; u.inactive = false; u.owner = p.idx; u.x = u.px = clamp(sx + ((k % 6) - 2.5) * 1.6, -HALF + 3, HALF - 3); u.z = u.pz = clamp(sz - Math.floor(k / 6) * 1.8, -HALF + 3, HALF - 3); u.y = u.py = S.terrainH(u.x, u.z); u.vx = u.vz = 0; k++; }
+    for (const sid of g.sids) { const q = this.squads[sid]; q.inactive = false; q.alive = true; q.routing = false; q.morale = q.moraleMax; q.owner = p.idx; q.order = S.ORD_FOLLOW; p.squads.push(sid);
+      for (const uid of q.unitIds) { const u = this.units[uid]; const x = clamp(sx + ((k % 6) - 2.5) * 1.6, -HALF + 3, HALF - 3), z = clamp(sz - Math.floor(k / 6) * 1.8, -HALF + 3, HALF - 3); k++;
+        if (u.dead) this.reviveUnit(u, x, z); else { u.x = u.px = x; u.z = u.pz = z; u.y = u.py = S.terrainH(x, z); u.vx = u.vz = 0; } u.inactive = false; u.owner = p.idx; u.ctrl = -1; }
       this.events.push({ t: 'mspare', p: p.idx, sq: sid, levy: true, name: q.def.name }); }
     note(true);
   };

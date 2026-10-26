@@ -202,6 +202,94 @@ JCH[2] = {
         { q: 'You\'ve earned it.', bond: 1, a: [[A('dabsun') ? '帶著達布遜回家。我答應過他娘。' : '……我答應過他娘，要帶他回家的。', A('dabsun') ? 'And take Dabsun home. I promised his mother.' : '...I promised his mother I\'d bring him home.']] }] },
     })[k]; },
 };
+JCH[3] = {
+  mission: 'jin3', battle: 'siegecity',
+  intro: () => { const nw = JR.filter(r => JS.joined[r.k] === 3);
+    return [
+      { title: '寧遠 · Ningyuan', year: 'The first month of 1626 · 天命十一年', p: ['This winter the Ming commissioner ordered every fort beyond Shanhai Pass abandoned. One commander refused: Yuan Chonghuan, at Ningyuan. The Khan, sixty-seven years old, has crossed the frozen Liao River with the Eight Banners to take it.',
+        nw.length ? `New men fill the file\'s empty places: ${nw.map(r => `${r.zh} ${r.en}`).join(', ')}.` : 'No new men have come. The file is what it is.'], zh: '天命十一年正月，汗率大軍征寧遠。' },
+      { title: '城下 · Under the walls', year: 'Five li from the town', p: ['Tonight your niru camps on the plain outside Ningyuan. The suburbs are ash: the Ming burned them and took the people inside. On the walls, by torchlight, men are working around something long and dark.'], btn: 'To the camp →' }]; },
+  campTitle: '營 · Before Ningyuan', campCard: 'Your niru camps on the frozen plain outside Ningyuan. Talk with your file (E). When you are ready, lie down on your bedroll (E).',
+  guests: ['tobohui'],
+  chat: [['冷死了。', 'It\'s freezing.'], ['城上那些是什麼？大得跟牛一樣。', 'What are those things on the walls? Big as oxen.'], ['汗六十八了，還親自來。', 'The Khan is sixty-eight and still comes himself.'], ['明天把盾車推到壕邊。', 'Tomorrow we push the shield carts up to the ditch.'], ['聽說那砲是紅毛番造的，叫紅衣。', 'They say that gun was made by the red-haired barbarians.']],
+  dawn: { title: '黎明 · Dawn', year: 'The twenty-fourth day of the first month', p: ['The niru forms up behind the shield carts: heavy wooden frames on wheels, faced with hides and packed with earth. Ahead is the wall of Ningyuan, and on it the long dark muzzles of the red cannon.'], btn: 'To the walls →' },
+  battleCard: ['January 1626. Keep behind the carts. When the ditch is filled, raise a ladder at the foot of the wall (E).', '寧遠 · Ningyuan'],
+  who: { niru: ['托博輝', 'Tobohui, captain of the niru'], lookout: ['', 'A lookout'], soldier: ['', 'A bannerman'] },
+  fateText: { out: 'came back from the walls', dead: 'killed under the walls of Ningyuan', lost: 'left under the walls' },
+  after: (won, li, outN) => [
+    { title: '寧遠 · What happened', year: 'The first month of 1626', p: ['For two days the banners threw themselves at the walls, and the red cannon and the fire from the parapets broke every attack. For the first time in his life, Nurhaci could not take a town.',
+      'The Ming said a great chief was hit by a cannon ball and carried off in red cloth. No one in the niru could say whether it was the Khan. In the eighth month, at sixty-eight, he died.'], zh: '朕自二十五歲征伐以來，戰無不勝，攻無不克，何獨寧遠一城不能下耶。— attributed to Nurhaci' },
+    { title: '牛錄 · Your file', year: `${outN} came back`, html: `<ul>${li}</ul>`, btn: 'A new Khan →' },
+    { title: '皇太極 · Hong Taiji', year: '1626 – 1631', p: ['The princes chose Hong Taiji, the Fourth Beile, as Khan. He forced Korea to terms in 1627, and that summer was thrown back from Ningyuan and Jinzhou again by the same guns.',
+      'Then he did something new. He gathered Han craftsmen and had them cast cannon. In 1631 the first Jin red cannon came out of the mould in Shenyang, and a new corps of Han gunners, the Ujen Cooha, was formed to serve them.'], zh: '天聰五年，造紅衣大將軍砲成。', btn: 'Autumn 1631 →' },
+  ],
+  next: 'c4',
+  talk: (k) => { const A = (x) => JS.alive[x], dead = jDead();
+    return ({
+      tobohui: { g: ['你的人凍壞了沒有？', 'Are your men frozen through?'], t: [
+        { q: 'What do we do tomorrow?', a: [['先填壕，再豎梯。城上的砲……我們沒見過這麼大的。', 'Fill the ditch, then the ladders. The guns on the walls... we\'ve never seen guns that size.'], ['汗說，一座孤城，三天就下來。', 'The Khan says a town on its own falls in three days.']] },
+        { q: 'Do you believe that?', bond: 1, a: [['（他看著城牆上的火把，很久沒回答。）', '(He looks at the torches on the wall and does not answer for a long time.)']] }] },
+      dabsun: { g: ['我二十三了。', 'I\'m twenty-three now.'], t: [{ q: 'You\'ve become a good soldier.', bond: 1, a: [[A('alin') ? '舅舅說我還差得遠。' : '舅舅要是在，他會說我還差得遠。', A('alin') ? 'Uncle says I\'ve a long way to go.' : 'If Uncle were here he\'d say I\'ve a long way to go.']] }] },
+      sose: { g: ['我的手指凍得拉不開弓。', 'My fingers are too cold to draw the bow.'], t: [{ q: 'Warm them at the fire.', bond: 1, a: [['弓也冷。弓一冷，就會裂。', 'The bow\'s cold too. A cold bow cracks.'], ['明天別往城上射。射不著，留著箭。', 'Tomorrow don\'t shoot up at the walls. You won\'t hit anything. Save your arrows.']] }] },
+      ilan: { g: ['我給你算了一卦。明天大吉。', 'I cast your fortune. Tomorrow is lucky.'], t: [{ q: 'And yours?', bond: 1, a: [['我的？……我沒算。不敢算。', 'Mine? ...I didn\'t cast it. Didn\'t dare.']] }] },
+      bahai: { g: ['我能推盾車。一個人推一輛。', 'I can push a shield cart. One by myself.'], t: [{ q: 'Stay behind it, then.', bond: 1, a: [['放心。我這麼大個子，躲在後面正好。', 'Don\'t worry. A man my size fits nicely behind one.']] }] },
+      lier: { g: ['城裡也是漢人。', 'There are Han people in that town too.'], t: [{ q: 'Does it trouble you?', bond: 1, a: [['這五年，我殺過漢人，也救過漢人。汗殺漢人的那一年，我把一家人藏在馬棚裡。', 'In five years I\'ve killed Han men and saved Han men. The year the Khan had the Han killed, I hid a family in the horse shed.'], ['你不會說出去吧？', 'You won\'t tell anyone?']] }] },
+      bater: { g: ['草原上的冬天也冷，可沒有這種砲。', 'Winter on the grass is cold too, but there are no guns like these.'], t: [{ q: 'Will you go home one day?', bond: 1, a: [['回哪兒？科爾沁的台吉已經把女兒嫁給了貝勒。這裡就是家了。', 'Home where? The Khorchin taiji has married his daughter to a beile. This is home now.']] }] },
+      erde: { g: ['太平六歲了。會騎羊了。', 'Taiping is six. He can ride a sheep.'], t: [{ q: 'Tell me about him.', bond: 1, a: [['他問我，阿瑪，打仗是什麼樣的？我說，跟打獵一樣。', 'He asked me, Ama, what\'s war like? I said, like a hunt.'], ['我騙了他。', 'I lied to him.']] }] },
+      muktan: { g: ['帳越記越長了。', 'The tally keeps getting longer.'], t: [
+        { q: 'Who have we lost?', a: [[`${dead.map(r => r.zh).join('、') || '……'}。`, `${dead.map(r => r.en).join(', ') || '...'}.`], ['新字現在加了圈點，不會念錯了。可死人的名字，念對了又有什麼用。', 'The new script has dots and circles now, so nobody misreads it. But what use is reading a dead man\'s name right.']] }] },
+      manggu: { g: ['一座城，打它幹什麼？繞過去不就完了。', 'One town. Why fight it? Go round it.'], t: [{ q: 'That\'s not a bad idea.', bond: 1, a: [['我早就說過。沒人聽莽古的。', 'I\'ve always said so. Nobody listens to Manggu.']] }] },
+      alin: { g: ['我跟汗打了三十多年。他老了。', 'I\'ve fought for the Khan more than thirty years. He\'s old now.'], t: [{ q: 'So are you.', bond: 1, a: [['是啊。這是我最後一仗了。打完就回家。', 'Yes. This is my last fight. After this I go home.']] }] },
+    })[k]; },
+};
+JCH[4] = {
+  mission: 'jin4', battle: 'field',
+  intro: () => { const nw = JR.filter(r => JS.joined[r.k] === 4);
+    return [
+      { title: '大凌河 · Dalinghe', year: 'The eighth month of 1631 · 天聰五年', p: ['Hong Taiji has come back across the Liao River. This time he does not throw men at the walls. Around the new fortress of Dalinghe his men have dug a ditch and raised a wall of their own, and they are waiting while Zu Dashou\'s garrison starves inside.',
+        nw.length ? `New men fill the file\'s empty places: ${nw.map(r => `${r.zh} ${r.en}`).join(', ')}.` : 'No new men have come. The file is what it is.'], zh: '天聰五年八月，圍大凌河城。' },
+      { title: '援兵 · The relief army', year: 'The ninth month', p: ['From Jinzhou a Ming relief army is coming up, forty thousand men under Zhang Chun, with wagons and guns. Tonight your niru camps behind the siege lines. Tomorrow the Khan rides out to meet them, and the Plain White rides with him.'], btn: 'To the camp →' }]; },
+  campTitle: '營 · The lines at Dalinghe', campCard: 'Your niru camps behind the siege wall around Dalinghe. Talk with your file (E). When you are ready, lie down on your bedroll (E).',
+  guests: ['tobohui'],
+  chat: [['城裡的人在吃馬了。', 'They\'re eating the horses in the town.'], ['聽說城裡連馬都吃完了。', 'They say the horses in there are all eaten.'], ['我們自己的砲！真想看看。', 'Our own guns! I want to see them.'], ['汗不讓攻城，讓他們自己餓。', 'The Khan won\'t storm it. He lets them starve.'], ['秋天了。家裡在收糧。', 'Autumn. At home they\'re bringing in the grain.']],
+  dawn: { title: '黎明 · Dawn', year: 'The twenty-seventh day of the ninth month', p: ['The niru rides south toward the Xiaoling River with the Khan\'s own banners. Behind you, oxen drag the new red cannon out of the lines, and Han gunners in Jin helmets walk beside them.'], btn: 'To the river →' },
+  battleCard: ['October 1631. You lead your file: F follow me · H halt · C charge · Z form up where you look.', '長山 · Changshan'],
+  who: { niru: ['托博輝', 'Tobohui, captain of the niru'], hong: ['皇太極', 'Hong Taiji, the Khan'], lookout: ['', 'A lookout'], soldier: ['', 'A bannerman'] },
+  fateText: { out: 'came back from Changshan', dead: 'killed at Changshan', lost: 'missing by the Xiaoling River' },
+  after: (won, li, outN) => [
+    { title: '長山 · What happened', year: 'The ninth month of 1631', p: ['The relief army was destroyed on the long hill. Zhang Chun was taken alive and brought before the Khan. He would not kneel. Hong Taiji let him live, and he spent ten years in a temple in Shenyang and never served the Qing.',
+      'A month later, with nothing left to wait for and the town eating its dead, Zu Dashou surrendered Dalinghe.'], zh: '天聰五年九月，敗明援兵於長山，擒張春。' },
+    { title: '牛錄 · Your file', year: `${outN} came back`, html: `<ul>${li}</ul>` },
+    { title: '大清 · The Great Qing', year: '1635 – 1644', p: ['In 1635 Hong Taiji forbade the old name Jurchen: his people were to be called Manchu. In 1636 he took a new name for his state, the Great Qing, and the title of emperor.',
+      'He did not live to see Beijing. In 1644 the Ming capital fell to rebels, and the banners rode through Shanhai Pass. The niru that began with thirteen suits of armour ruled China for two hundred and sixty-eight years.'], zh: '崇德元年，改國號曰大清。' },
+    { title: '終 · The end', year: JS.name.zh + ' ' + JS.name.en, p: [jEpilogue()], btn: 'Close the tally' },
+  ],
+  next: 'done',
+  talk: (k) => { const A = (x) => JS.alive[x], dead = jDead();
+    return ({
+      tobohui: { g: ['你跟了我十二年了。', 'You\'ve been with me twelve years.'], t: [
+        { q: 'What will tomorrow be like?', a: [['明天汗要用自己的砲。漢人的砲手，戴著我們的盔。', 'Tomorrow the Khan uses his own guns. Han gunners in our helmets.'], ['十二年前我們拿弓箭跟砲打。這回輪到他們了。', 'Twelve years ago we fought guns with bows. Now it\'s their turn.']] },
+        { q: 'Thank you, Tobohui.', bond: 1, a: [['謝什麼。好好帶你的人回來。', 'For what. Bring your men back, that\'s all.']] }] },
+      dabsun: { g: ['我有媳婦了。今年秋天娶的。', 'I\'ve got a wife. We married this autumn.'], t: [{ q: 'Congratulations.', bond: 1, a: [[A('alin') ? '舅舅喝醉了，在婚禮上唱歌。' : '舅舅要是還在，會在婚禮上喝醉的。', A('alin') ? 'Uncle got drunk at the wedding and sang.' : 'If Uncle were alive, he\'d have got drunk at the wedding.']] }] },
+      sose: { g: ['他們說以後打仗靠砲，不靠弓了。', 'They say from now on wars are won by guns, not bows.'], t: [{ q: 'Will you give up the bow?', bond: 1, a: [['不。砲打不了貂。', 'No. A gun can\'t hunt sable.']] }] },
+      ilan: { g: ['我不賭了。真的。', 'I\'ve given up gambling. Really.'], t: [{ q: 'Since when?', bond: 1, a: [['從寧遠。在城下我跟老天打了個賭：讓我活著回去，我就不賭了。', 'Since Ningyuan. Under the walls I made a bet with Heaven: let me get home alive, and I\'d stop.'], ['老天贏了。', 'Heaven won.']] }] },
+      bahai: { g: ['又是秋天。松花江這時候冷了，摸不了珠了。', 'Autumn again. The Sungari is too cold for diving now.'], t: [{ q: 'Will you go back to it?', bond: 1, a: [['等太平了，我帶你去。你數到一百，我就上來。', 'When there\'s peace I\'ll take you. Count to a hundred and I\'ll come up.']] }] },
+      lier: { g: ['我現在是漢軍旗的人了。', 'I\'m in the Han banners now.'], t: [{ q: 'Is that better?', bond: 1, a: [['是自由人了。可是……城裡那些人，明天就跟我一樣了。', 'I\'m a free man now. But... the men in that town will be what I was, tomorrow.']] }] },
+      bater: { g: ['今天我給大家煮了羊。吃吧。', 'I cooked a sheep for everyone today. Eat.'], t: [{ q: 'Sing the white horse song.', bond: 1, a: [['（他唱完了整首。原來最後那匹白馬自己找到了回家的路。）', '(This time he sings it to the end. The white horse finds its own way home.)']] }] },
+      erde: { g: ['太平十二了。他想當兵。', 'Taiping is twelve. He wants to be a soldier.'], t: [{ q: 'Will you let him?', bond: 1, a: [['我給他起名叫太平，就是不想讓他當兵。', 'I named him Taiping because I didn\'t want him to be a soldier.'], ['可是他是旗人。旗人的兒子都要披甲。', 'But he\'s of the banners. Every banner son puts on armour.']] }] },
+      muktan: { g: ['你知道嗎，汗讓人把我們的帳譯成漢文了。', 'Did you know the Khan is having our tallies put into Chinese?'], t: [
+        { q: 'Will they remember us?', bond: 1, a: [[`${dead.length ? dead.slice(0, 4).map(r => r.zh).join('、') + '……' : ''}我把每一個名字都寫進去了。`, `${dead.length ? dead.slice(0, 4).map(r => r.en).join(', ') + '... ' : ''}I\'ve written every name in.`], ['帳在，人就在。', 'While the tally lasts, so do they.']] }] },
+      manggu: { g: ['砲。我們也有砲了。我早說過要有砲。', 'Guns. We\'ve got guns too now. I always said we needed guns.'], t: [{ q: 'You did say that.', bond: 1, a: [['（他滿意地點點頭，第一次沒有抱怨。）', '(He nods, satisfied, and for once has nothing to complain about.)']] }] },
+      alin: { g: ['我說寧遠是我最後一仗。我又來了。', 'I said Ningyuan was my last fight. And here I am again.'], t: [{ q: 'Why did you come?', bond: 1, a: [['那孩子還在這兒。', 'Because the boy is still here.']] }] },
+    })[k]; },
+};
+// the last card: who is left, and what became of them
+function jEpilogue() {
+  const alive = JR.filter(r => !r.guest && r.k !== JS.me && JS.alive[r.k]), dead = jDead();
+  const bits = []; if (JS.alive.erde && JS.flags.erdeson) bits.push('Erde went home to Taiping.'); if (JS.alive.dabsun) bits.push(JS.alive.alin ? 'Alin brought Dabsun home, as he had promised.' : 'Dabsun went home without his uncle.');
+  if (JS.alive.lier) bits.push('Li Er, a free man of the Han banners, settled near Fushun and never found his family.'); if (JS.alive.bater) bits.push('Bater kept his horses and his song.'); if (JS.alive.muktan) bits.push('Muktan\'s tally went into the archive in Mukden, with every name in it.');
+  return `${alive.length} of your file lived to see the Great Qing.${dead.length ? ` ${dead.length} did not.` : ''} ${bits.join(' ')}`;
+}
 // ---------- camp ----------
 const JCAMP = { fires: [[0, 0], [8, -5]], tents: [[-10, 4, 1.7, 2.5, 2.1], [-4.5, 10.5, 1.7, 2.5, 2.1], [4.5, 10.5, 1.7, 2.5, 2.1], [10, 4, 1.7, 2.5, 2.1]],
   props: [['pot', 8, -5, 0], ['banner', -3, -7.5, 0.3, '白'], ['rack', -7.5, -3.5, 0.9], ['log', 0, 2.9, 0], ['log', -2.6, -1.4, 1.1], ['log', 2.7, -1.2, -1.1]] };

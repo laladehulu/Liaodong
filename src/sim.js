@@ -3018,12 +3018,58 @@ const MISSIONS = {
           [40, 'lier', 'The southerners call that one the ten-thousand-man enemy: a pot of powder that rolls along the ground.', '南邊人管那叫萬人敵，一罐火藥，在地上滾。'],
           [60, 'bahai', 'The cart\'s on fire! Get out from under it!', '車著火了！快從底下出來！']] },
       { title: '四 · 汗 · The Khan', goal: 'Get your file back to the camp, wounded too', text: 'Something has happened at the Khan\'s standard. The horns sound the withdrawal. Bring your file back across the plain to the camp, and leave no one who can still walk.', show: ['jcamp'],
-        start: [['sector', 2], ['break', 'van'], ['break', 'van2'], ['break', 'carts'], ['break', 'sap'], ['dir', 'niru', 'hold', -30, -110]], obj: { extract: 'jcamp' }, limit: 400, fail: 'The guns found you on the open plain.',
+        start: [['sector', 2], ['break', 'van'], ['break', 'van2'], ['break', 'carts'], ['break', 'sap'], ['dir', 'niru', 'hold', -30, -110]], obj: { all: [{ extract: 'jcamp' }, { survive: 30 }] }, limit: 400, fail: 'The guns found you on the open plain.',
         say: [[1, 'lookout', 'The Khan\'s standard is going back! They\'re carrying someone wrapped in red cloth!', '汗的大纛往後退了！他們用紅布裹著抬一個人！'],
           [6, 'niru', 'The horns! Back to the camp! Carry the wounded!', '號角響了！退回營去！把傷的抬上！'],
           [18, 'muktan', 'Twenty-five years of war, and the Khan has never once turned back from a wall.', '汗打了二十五年仗，從沒在一座城下退過。']] },
     ],
     win: 'You brought your file back across the plain. Behind you the walls of Ningyuan still stood.',
+  },
+  // Chapter Four: Changshan by the Xiaoling River, the ninth month of 1631. Hong Taiji, Khan now, besieges Dalinghe; the
+  // Ming relief army under Zhang Chun forms a wagon camp on a long hill. The Jin bring their own red cannon for the first time.
+  jin4: {
+    title: '長山 · Changshan', year: 'The ninth month of 1631', battle: 'field', side: 1, soldier: { group: 'niru' }, hidden: true, ch: 'j4',
+    bdef: { name: 'Changshan', jp: '長山', when: 'October 1631', biome: 'autumn', fog: 0.1 },
+    brief: 'The Khan has walled in Dalinghe and is starving it. A Ming relief army of forty thousand has come up from Jinzhou. Ride out and meet it.',
+    start: [0, -112, 0],
+    zones: [{ key: 'ford', x: 0, z: -58, r: 16, name: 'The Xiaoling ford' }, { key: 'wagons', x: 0, z: 2, r: 20, name: 'Zhang Chun\'s wagon camp' }],
+    forts: [[0, 18, 15, 0.5, 1.6, 'palisade'], [-17, 2, 0.5, 13, 1.6, 'palisade'], [17, 2, 0.5, 13, 1.6, 'palisade'], [-9, -14, 6, 0.5, 1.6, 'palisade'], [9, -14, 6, 0.5, 1.6, 'palisade'],
+      [-2.5, -16, 1.6, 1.1, 1.4, 'mantlet'], [2.5, -16, 1.6, 1.1, 1.4, 'mantlet']],
+    groups: {
+      niru: { team: 1, name: 'Tobohui', zh: '托博輝', army: ['samurai'], at: [-6, -112, 0], dir: ['hold', -6, -96], stay: true },
+      hong: { team: 1, name: 'Hong Taiji', zh: '皇太極', army: ['cavalry', 'shinsengumi', 'samurai', 'cavalry'], at: [14, -120, 0], dir: ['hold', 14, -100], stay: true },
+      white: { team: 1, name: 'The Plain White banner', zh: '正白旗', army: ['samurai', 'samurai', 'archer', 'cavalry'], at: [-30, -116, 0], dir: ['hold', -30, -98], stay: true },
+      ujen: { team: 1, name: 'The Ujen Cooha', zh: '烏真超哈', army: ['cannon4', 'cannon4', 'rifle_sho', 'rifle_sho'], at: [0, -124, 0], reserve: true, stay: true, dir: ['hold', 0, -70] },
+      wu: { team: 0, name: 'Wu Xiang\'s cavalry', zh: '吳襄', army: ['cavalry', 'cavalry'], at: [10, -40, PI], dir: ['hold', 6, -70], exit: [60, 150] },
+      zhang: { team: 0, name: 'Zhang Chun', zh: '張春', officer: 2.5, wound: 0.35, army: ['rifle_imp', 'samurai', 'rifle_spencer'], at: [0, 4, PI], dir: ['hold', 0, 4], stay: true },
+      wagons: { team: 0, name: 'The wagon camp', zh: '車營', army: ['rifle_imp', 'armstrong', 'rifle_imp', 'ashigaru', 'rifle_spencer'], at: [0, -6, PI], dir: ['hold', 0, -8], stay: true },
+    },
+    phases: [
+      { title: '一 · 小凌河 · The Xiaoling River', goal: 'Ride out with the banners to the ford', text: 'The Ming relief army has crossed the Xiaoling River and halted on the long hill beyond. Their cavalry comes out to meet you at the ford.', show: ['ford'],
+        obj: { all: [{ reach: 'ford' }, { survive: 40 }] }, at: [[1, ['lead']], [2, ['dir', 'niru', 'hold', -4, -60]], [2, ['dir', 'hong', 'hold', 12, -64]], [2, ['dir', 'white', 'hold', -24, -62]], [32, ['break', 'wu']]],
+        say: [[3, 'niru', 'The Khan rides with us today. Show him what the Plain White are.', '今天汗親自出馬。讓他看看正白旗是什麼樣的。'],
+          [9, 'hong', 'Their horse first. Wu Xiang\'s men have run from us before. Make them run again.', '先打他們的馬兵。吳襄的人跑過一回，讓他們再跑一回。'],
+          [20, 'muktan', 'Forty thousand, they say. Come to save Zu Dashou, who\'s been eating horses inside Dalinghe for a month.', '說是四萬人，來救祖大壽。祖大壽在大凌河城裡吃馬已經吃了一個月了。'],
+          [33, 'lookout', 'Their horse is breaking! Wu Xiang is running!', '他們的馬兵散了！吳襄跑了！']] },
+      { title: '二 · 車營 · The wagon wall', goal: 'Charge the wagon line on the hill', text: 'The Ming infantry have closed their wagons on the long hill. Go up at them.', show: ['wagons'], hide: ['ford'],
+        start: [['dir', 'niru', 'hold', -4, -20], ['dir', 'white', 'hold', -16, -20], ['dir', 'hong', 'hold', 12, -22]], obj: { survive: 55 },
+        say: [[3, 'niru', 'Up the hill! Get in among the wagons before they can reload!', '上坡！趁他們裝藥，衝進車陣！'],
+          [18, 'lookout', 'Their guns! The whole wagon line is firing!', '開砲了！整條車陣都在打！'],
+          [40, 'niru', 'Back! Back down the hill! Wait for our own guns!', '退！退下坡！等我們自己的砲！']] },
+      { title: '三 · 風 · Fire and wind', goal: 'Hold below the hill while our guns break the wagons', text: 'For the first time the banners have red cannon of their own, cast in Shenyang and served by Han gunners. Hold below the hill while they fire.',
+        start: [['release', 'ujen'], ['dir', 'niru', 'hold', -6, -56], ['dir', 'white', 'hold', -22, -58], ['dir', 'hong', 'hold', 14, -60]], obj: { survive: 66 },
+        at: [[20, ['burn', -26, 26, -30]], [40, ['wound', 4]]],
+        say: [[3, 'sabu', 'Our guns! Lord Tong\'s guns! Look at them!', '我們的砲！佟大人的砲！你們看！'],
+          [10, 'anju', 'My brother died under guns like those, at Ningyuan.', '我哥就是死在這種砲底下的，在寧遠。'],
+          [21, 'lookout', 'They\'ve set the grass on fire to drive us off!', '他們放火燒草，要把我們逼退！'],
+          [32, 'bater', 'The wind\'s turned. It\'s carrying the fire up the hill, into their own wagons!', '風轉了！火往坡上燒，燒進他們自己的車陣了！'],
+          [52, 'niru', 'Their wagons are burning. Get ready.', '他們的車燒起來了。準備。']] },
+      { title: '四 · 張春 · Zhang Chun', goal: 'Storm the camp and take Zhang Chun alive', text: 'The wagon line is broken and burning. The Khan wants the Ming commander alive.',
+        start: [['dir', 'niru', 'attack'], ['dir', 'white', 'attack'], ['dir', 'hong', 'attack'], ['dir', 'ujen', 'hold', 0, -40]], obj: { officer: 'zhang' },
+        say: [[2, 'hong', 'Take the old man alive. I want to talk with him.', '那個老頭要活的。我要跟他說話。'],
+          [30, 'lookout', 'They\'re throwing down their guns!', '他們扔下火器了！']] },
+    ],
+    win: 'Zhang Chun was taken alive. The relief army was gone, and Dalinghe had no one left to wait for.',
   },
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };
@@ -3158,6 +3204,7 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
   else if (a[0] === 'promote') this.zPromote();
   else if (a[0] === 'lead') this.zPromote(true);
+  else if (a[0] === 'burn') this.mBurn(a[1], a[2], a[3]);
   else if (a[0] === 'break') this.mBreak(a[1]);
   else if (a[0] === 'calm') { const g = this.mg[a[1]]; if (g) { g.calm = a[2]; const p = this.players[g.p]; if (g.released && !g.broken) p.aggr = a[2]; } }
   else if (a[0] === 'wound') this.zWound(a[1] | 0);
@@ -3172,6 +3219,10 @@ Sim.prototype.zPromote = function (keep) {
     this.events.push({ t: 'zpromote', p: p.idx, sq: q.id, chief: chief ? chief.id : -1 }); }
 };
 // a man of your file is hit and cannot walk: someone has to get him up
+// a scripted grass fire along a line (jin.js chapter four): the field's own fire model takes it from there, wind and all
+Sim.prototype.mBurn = function (x0, x1, z) {
+  if (this.rain || !this.fireState) return; for (let x = x0; x <= x1; x += FIRE_CS * 0.9) { const c = this.fireCell(x, z); if (c < 0) continue; this.fuel[c] = Math.max(this.fuel[c], 1.4); this.fireState[c] = 1; this.burnT[c] = 420; this.events.push({ t: 'ignite', c, x, z }); }
+};
 Sim.prototype.zWound = function (k) {
   for (const p of this.players) { if (p.ai) continue; const q = this.squads[p.soldierSq]; if (!q) continue; let u = this.units[q.unitIds[k]];
     if (!u || u.dead || u.ctrl >= 0) u = q.unitIds.map(id => this.units[id]).find(v => !v.dead && v.ctrl < 0 && !v.wounded) || null; if (!u) continue;
@@ -3210,9 +3261,12 @@ Sim.prototype.assaultCap = function () {
   const groups = (team, res) => Object.keys(this.mg).filter(g => this.mg[g].G.team === team && !!this.mg[g].G.reserve === res).map(g => this.players[this.mg[g].p]);
   const fit = (list, budget) => { const tot = list.reduce((s, p) => s + size(p), 0); if (tot <= budget) return; for (const p of list) { const n = Math.max(4, Math.floor(size(p) * budget / tot)); this.mTrim(p, n, true); } };
   const humanMen = this.players.filter(p => !p.ai && p.team === A).reduce((s, p) => s + size(p), 0), humanDef = this.players.filter(p => !p.ai && p.team !== A).reduce((s, p) => s + size(p), 0);
-  fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > 22) this.mTrim(p, 22, true);
+  // attackers come as many small companies (about a fifth of the field each) so there are enough to fill the ditch,
+  // push every engine and climb every ladder at once
+  const per = Math.max(8, Math.round(CAP / 5)); fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, false).concat(groups(A, true))) if (size(p) > per) this.mTrim(p, per, true);
   // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
-  fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, CAP - humanDef));
+  // (an assault needs odds: the attackers field the full cap, the defenders about 70% of it, as before the cap)
+  fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, Math.round(CAP * 0.7) - humanDef));
 };
 Sim.prototype.mTrim = function (p, n, keepHero) {
   let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; u.trimmed = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
@@ -3349,7 +3403,7 @@ Sim.prototype.assaultThink = function () {
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
   const CAP = M.cap || 64;
-  if (act + 20 <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  if (act + Math.round(CAP / 5) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
   // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
   let revivable = false;
   if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;
@@ -3367,7 +3421,7 @@ Sim.prototype.assaultThink = function () {
     this.assaultDirs();
   }
   if (this.tick % 150 === 0) this.assaultDirs();
-  if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(CAP, (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75)) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
+  if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(Math.round(CAP * 0.7), (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75)) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
     for (const u of this.units) { if (!u.dead || u.trimmed || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * 25) continue;
       const k = u.id % 9; this.reviveUnit(u, clamp(nz.x + (k % 3 - 1) * 3, -HALF + 4, HALF - 4), clamp(nz.z + fz * (14 + Math.floor(k / 3) * 3), -HALF + 4, HALF - 4)); } }
   const left = Object.keys(this.mg).some(g => this.mg[g].G.team === A && !this.mg[g].released);
@@ -3552,7 +3606,7 @@ Sim.prototype.siegeDirs = function () {
   const eng = (k) => sg.engines.filter(e => e.kind === k && e.hp > 0);
   const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false]);
   for (const t of eng('tower')) jobs.push(t.docked ? [t.x, W.z0 + 2.5, false] : [t.x, t.z - 5, false]);
-  if (s === 0) { for (const k of M.sectors[0]) { const z = this.missionZone(k); jobs.push([z.x, z.z, true]); } for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false]); }
+  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, true]; }); jobs.unshift(...dz); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false]); }
   else { for (const L of sg.lads) jobs.push(L.up ? [L.x, W.z0 + 2.5, false] : [L.x, W.z0 - 3, false]); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false]); }
   att.forEach((g, i) => { const p = this.players[this.mg[g].p], j = jobs[i % jobs.length]; if (!j) return; p.directive = { kind: DIR_HOLD, x: clamp(j[0], -HALF + 3, HALF - 3), z: clamp(j[1], -HALF + 3, HALF - 3), by: -1 }; p.standoff = j[2]; });
   // defenders: the wall garrisons stand on the wall top above the ladders; the rest hold the gatehouse and the town
