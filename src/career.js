@@ -349,7 +349,7 @@ function banner(big, small, t) { const b = $('banner'); b.innerHTML = `${big}${s
 function missionEvent(ev) {
   if (!MIS) return; const sim = state.sim, M = sim.mission, me = sim.players[state.localIdx];
   if (ev.t === 'mphase' && M.camp) return;
-  if (ev.t === 'mphase' && M.soldier) { banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, ev.text, 5); if (ev.ph) MUSIC.accent('phase'); return; }
+  if (ev.t === 'mphase' && M.soldier) { const P = M.phases[ev.ph] || {}; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, P.goal || (ev.text || '').split(/(?<=[.!?])\s/)[0], 5); if (ev.ph) MUSIC.accent('phase'); return; }
   if (ev.t === 'msay' && M.soldier && typeof zheSay === 'function' && zheSay(ev)) return;
   if (ev.t === 'mphase') { const first = ev.ph === 0; storyCard(first ? `${M.brief}<br><br><b>${ev.title}.</b> ${ev.text}` : ev.text, first ? `${M.title} · ${M.year}` : ev.title); if (!first) { banner(ev.title.split(' · ')[1] || ev.title, 'New orders', 3); MUSIC.accent('phase'); } }
   else if (ev.t === 'msay') radio(ev.who, ev.text);
@@ -392,7 +392,8 @@ function missionHUD(dt) {
     if (P.limit) h += `<div class="ob"><i>⏳</i><span>${Math.max(0, Math.ceil(P.limit - el))} s left</span></div>`;
     h += `<div class="ob" style="opacity:.7"><i>·</i><span>Phase ${sim.mv.ph + 1} of ${M.phases.length}${me.spare !== undefined ? ` · reserve companies: ${me.spare}` : ''}</span></div>`;
   }
-  $('mobj').innerHTML = h; $('mobj').hidden = false;
+  // story: the golden line at the top is the objective; the panel would only repeat the phase text
+  $('mobj').innerHTML = h; $('mobj').hidden = !!M.soldier;
 }
 function missionFinish(winner) {
   if (state.sim.mission.soldier && typeof zheFinish === 'function') { $('mobj').hidden = true; $('radio').hidden = true; return zheFinish(winner); }

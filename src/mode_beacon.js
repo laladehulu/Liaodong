@@ -85,7 +85,15 @@ function beaconVisuals(sim) {
     const fl = new THREE.Mesh(new THREE.ConeGeometry(0.38, 1.4, 7), new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); fl.position.set(x, y + 1.8, z); fl.visible = false; grp.add(fl);
     const sm = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 0.5, 34, 10, 1, true), new THREE.MeshLambertMaterial({ color: 0x3a3632, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })); sm.position.set(x, y + 18.5, z); sm.visible = false; grp.add(sm);
     stoves.push({ fl, sm, y, seed: i * 1.7 }); }
-  return { grp, stoves };
+  // the tower itself (a solid rammed-earth 墩台): a crenellated parapet, a watch hut, the garrison's flag and the rope ladder
+  { const T = { x: -9, z: -12, hw: 3, h: 9 }, y0 = S.terrainH(T.x, T.z) + T.h, wall = new THREE.MeshLambertMaterial({ color: 0xa49a88 }), red = new THREE.MeshLambertMaterial({ color: 0x8a2a20 }), roof = new THREE.MeshLambertMaterial({ color: 0x3a3a3c }), wood = new THREE.MeshLambertMaterial({ color: 0x5a4028 });
+    const box = (m, x, y, z, sx, sy, sz) => { const o = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); o.position.set(x, y, z); o.castShadow = true; grp.add(o); return o; };
+    for (let k = -2; k <= 2; k++) for (const s of [-1, 1]) { box(wall, T.x + k * 1.3, y0 + 0.45, T.z + s * (T.hw - 0.15), 0.8, 0.9, 0.3); box(wall, T.x + s * (T.hw - 0.15), y0 + 0.45, T.z + k * 1.3, 0.3, 0.9, 0.8); }
+    box(red, T.x + 0.6, y0 + 1.1, T.z + 0.4, 2.4, 2.2, 2.2); const r = new THREE.Mesh(new THREE.ConeGeometry(2.1, 1.1, 4), roof); r.rotation.y = Math.PI / 4; r.position.set(T.x + 0.6, y0 + 2.75, T.z + 0.4); grp.add(r);
+    box(wood, T.x - 1.8, y0 + 3, T.z - 1.8, 0.12, 6, 0.12); const fl = box(new THREE.MeshLambertMaterial({ color: 0xc23a2a, side: THREE.DoubleSide }), T.x - 1.8 + 0.8, y0 + 5.2, T.z - 1.8, 1.5, 1.1, 0.04);
+    for (let k = 0; k < 2; k++) box(wood, T.x - 0.5 + k, S.terrainH(T.x, T.z - T.hw) + T.h / 2, T.z - T.hw - 0.12, 0.07, T.h, 0.07);
+    for (let k = 0; k < 12; k++) box(wood, T.x, S.terrainH(T.x, T.z - T.hw) + 0.5 + k * 0.72, T.z - T.hw - 0.12, 1.0, 0.06, 0.06);
+    return { grp, stoves, flag: fl }; }
 }
 function beaconFrame() {
   requestAnimationFrame(beaconFrame);
@@ -94,6 +102,7 @@ function beaconFrame() {
   const B = sim.bc; const m = $('mobj'); if (m) m.style.display = 'none';
   if (!BCN.vis && state.renderer && state.renderer.scene) BCN.vis = beaconVisuals(sim);
   if (BCN.vis) { const now = performance.now() / 1000; BCN.vis.stoves.forEach((s, i) => { const on = !!B && i < B.fires; s.fl.visible = on; s.sm.visible = on;
+      if (BCN.vis.flag) BCN.vis.flag.rotation.y = Math.sin(now * 1.3) * 0.25;
       if (on) { s.fl.scale.set(1 + Math.sin(now * 9 + s.seed) * 0.12, 1 + Math.sin(now * 13 + s.seed) * 0.2, 1); s.sm.rotation.y = now * 0.15 + s.seed; s.sm.material.opacity = 0.26 + Math.sin(now * 0.7 + s.seed) * 0.05; } }); }
   if (!B) return;
   if (BCN.fires >= 0 && B.fires > BCN.fires) { banner(['一炬', '二炬', '三炬', '四炬', '五炬'][B.fires - 1] + ' · The ' + bcOrd(B.fires) + ' fire', B.fires >= S.BEACON.NFIRE ? 'Five fires! Liaoyang will send its horse' : 'The next tower will see it. +10 silver', 3.5); AUDIO.play('ui'); }
