@@ -396,6 +396,7 @@ function missionHUD(dt) {
   $('mobj').innerHTML = h; $('mobj').hidden = !!M.soldier;
 }
 function missionFinish(winner) {
+  if (state.sim.mission.soldier && typeof arsRecord === 'function') { try { arsRecord(); } catch (e) { } }
   if (state.sim.mission.soldier && typeof zheFinish === 'function') { $('mobj').hidden = true; $('radio').hidden = true; return zheFinish(winner); }
   const sim = state.sim, me = sim.players[state.localIdx]; const won = winner === me.team; $('mobj').hidden = true; $('radio').hidden = true;
   if (MIS && MIS.endText) $('resultText').textContent = sim.mode === 'assault' ? `${MIS.endText} ${won ? 'Your side carries the day.' : 'Your side is beaten.'} You killed ${me.kills}.` : `${MIS.endText} You killed ${me.kills}.`;

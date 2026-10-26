@@ -625,8 +625,10 @@ function cmdCamUpdate(dt) {
 // ---------- game ----------
 function startGame(msg, me, net, delay) {
   if (msg.mode === 'beacon') msg = Object.assign({}, msg, { mode: 'campaign', mission: 'beacon' });
+  // a story battle: the weapons you chose from your arsenal come with you (solo; the choice rides in the config)
+  if (!net && msg.mode === 'campaign' && typeof arsKitFor === 'function' && S.MISSIONS[msg.mission] && S.MISSIONS[msg.mission].soldier) { const wk = arsKitFor(msg.mission); if (wk && msg.players[me | 0]) msg = Object.assign({}, msg, { players: msg.players.map((p, i) => i === (me | 0) ? Object.assign({}, p, { wkit: wk }) : p) }); }
   if (msg.mode === 'siege') msg = Object.assign({}, msg, { mode: 'assault', op: S.OPS[msg.op] && S.OPS[msg.op].siege ? msg.op : 'ningyuan_siege' }); // the Siege menu mode is an assault operation fought over a walled town
-  const cfg = { seed: msg.seed, battle: msg.battle || 'field', mode: msg.mode || 'standard', chapter: msg.chapter | 0, scen: msg.scen || 'ningyuan', players: msg.players.map(p => ({ name: p.name, team: p.team, army: p.army, mounted: p.mounted, hclass: p.hclass | 0, veterans: p.veterans, recruits: p.recruits, role: p.role, kit: p.kit, command: p.command | 0, arms: p.arms || null })) };
+  const cfg = { seed: msg.seed, battle: msg.battle || 'field', mode: msg.mode || 'standard', chapter: msg.chapter | 0, scen: msg.scen || 'ningyuan', players: msg.players.map(p => ({ name: p.name, team: p.team, army: p.army, mounted: p.mounted, hclass: p.hclass | 0, veterans: p.veterans, recruits: p.recruits, role: p.role, kit: p.kit, wkit: p.wkit, command: p.command | 0, arms: p.arms || null })) };
   if (msg.soldier) cfg.soldier = msg.soldier; if (msg.mission) cfg.mission = msg.mission; if (msg.op) cfg.op = msg.op; if (msg.camp) cfg.camp = msg.camp;
   msg.players.forEach((p, i) => { if (p.yyRole) cfg.players[i].yyRole = p.yyRole; });
   state.localIdx = me; state.delay = delay; state.peerNames = msg.players.map(p => p.name);

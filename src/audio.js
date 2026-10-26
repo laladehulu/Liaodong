@@ -115,7 +115,7 @@ const AUDIO = (() => {
     const L = listener, dx = x - L.x, dz = z - L.z, dist = Math.sqrt(dx * dx + dz * dz + (y - L.y) * (y - L.y));
     if (dist > 950) return;
     const rx = -Math.cos(L.yaw), rz = Math.sin(L.yaw), pan = dist > 0.5 ? Math.max(-1, Math.min(1, (dx * rx + dz * rz) / dist * 0.7)) : 0;
-    const g = vol / (1 + dist / 85), near = Math.max(0, 1 - dist / 70), air = 14000 / (1 + dist / 55);
+    const g = vol * 0.8 / (1 + dist / 85), near = Math.max(0, 1 - dist / 70), air = 14000 / (1 + dist / 55);
     const sp = { gain: g, pan, dist, wet: Math.min(0.9, 0.25 + dist / 250) }, t = ctx.currentTime + Math.min(2.8, dist / 343);
     const big = kind === 'hit' ? 0.55 : 1, S = SAMPLES.count ? SAMPLES : null;
     if (near > 0) noise(sp, t, 0.045, 'highpass', 2200, 0.7, g * near * 1.4 * big, 0.001);                                   // crack

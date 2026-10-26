@@ -25,3 +25,4 @@
 - cannonsnd (fork): audio.js cannon/explosion cases + new cannon helpers; render.js 'cannon'/'sgshot'/impact AUDIO lines
 - pathing (fork): sim.js navPoint/flowTo + new Sim.prototype.navAstar/navPath/avoid/unstick near end; steerFoot hook; separation push lines
 - arsenal (fork): sim.js new Sim.prototype.pk*/kit* at end + small hooks (kill → drop, E chain → pickup, swap/wsel → kit), render pickups, main HUD slots, zhe/jin/shenji arsenal hooks
+- lieposes (fork): render.js drawFigure downed/crawl/sleep pose block; camp NPC facing (sim camp / zhe camp)
