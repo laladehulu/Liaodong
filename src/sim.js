@@ -2624,7 +2624,7 @@ const MISSIONS = {
           [73, 'lookout', 'Qin Bangping is down! Zhou Dunji is down! The Sichuan men are coming back over the bridge!', '秦邦屏陣亡！周敦吉陣亡！川兵退過橋來了！']] },
       { title: '三 · 車營 · The wagon camp', text: 'The Jin left wing is over the river. Get your file back inside the camp and hold the line of wagons and palisades.', show: ['camp'], hide: ['sbridge'],
         start: [['release', 'lw'], ['dir', 'lw', 'hold', 58, -58], ['dir', 'chen', 'hold', 64, -56], ['dir', 'zhe', 'hold', 58, -60]],
-        obj: { all: [{ survive: 110 }, { reach: 'camp' }] }, waves: [[40, 'east', ['hold', 58, -60]]],
+        obj: { survive: 110 }, waves: [[40, 'east', ['hold', 58, -60]]],
         at: [[64, ['wound', 3]]],
         say: [[3, 'qi', 'Wagons together! Muskets to the palisade — let them come onto the guns.', '車並起來！銃手上柵——讓他們撞上來。'],
           [36, 'lookout', 'Shield carts! They are pushing shield carts at the ditch!', '盾車！他們推盾車來填壕了！'],

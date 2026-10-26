@@ -27,4 +27,5 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
 const h = sim.units[p.heroId], z = sim.missionZone('road'); const won = sim.mwin === 0; let out = 0, dead = 0, lost = 0;
 for (const id of file) { const u = sim.units[id]; if (u.dead) { dead++; continue; } const ok = !(u.wounded && u.helpedBy < 0) && (h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < (won ? 26 : 12)) || Math.hypot(u.x - z.x, u.z - z.z) < z.r + 10; if (ok) out++; else lost++; }
 let hurt = 0; for (const id of file) { const u = sim.units[id]; if (!u.dead && u.hp < u.def.hp * 0.5) hurt++; }
+if (process.env.DBG2) { const hh = sim.units[p.heroId]; console.log('hero', hh.x.toFixed(1), hh.z.toFixed(1), hh.dead, 'camp', JSON.stringify(sim.missionZone('camp')), 'mv', JSON.stringify(sim.mv).slice(0, 200)); }
 console.log(JSON.stringify({ seed, beh, won, downs, revs, hurt, kills: p.kills, end: Math.round(sim.tick / 30), phases: ph, promoted, helped, carry, out, dead, lost, of: file.length, deathsByPhase: fdp, alive: sim.teamAlive.map(a => a.length), meRole: sim.units[first].role }));
