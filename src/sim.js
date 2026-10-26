@@ -3450,7 +3450,7 @@ Sim.prototype.freeRun = function (u, hx, hz, L) {
 // with a limited acceleration (no sudden rushes), slows into the slot (no rocking back and forth around it), and a
 // man going more than a few paces faces the way he walks instead of skating backward.
 // u.pace (for the renderer's gait): 0 still, 1 walk, 2 jog, 3 run, 4 sprint
-const PACE_WALK = 0.5, PACE_JOG = 0.75;
+const PACE_WALK = 0.6, PACE_JOG = 0.85;
 Sim.prototype.paceMove = function (u) {
   if (u.dead || u.downed || u.wounded || u.inactive) { u.vs = 0; u.pace = 0; return; }
   const def = u.def, base = def.speed, m = len(u.mx, u.mz), sq = u.squad >= 0 ? this.squads[u.squad] : null, order = sq ? sq.order : ORD_HOLD;
@@ -3468,6 +3468,8 @@ Sim.prototype.paceMove = function (u) {
     if (sq.paceTk !== this.tick) { sq.paceTk = this.tick; let ax = 0, az = 0, bx = 0, bz = 0, k = 0; for (const id of sq.unitIds) { const v = this.units[id]; if (v.dead || v.ctrl >= 0 || v.downed || v.wounded) continue; ax += v.x; az += v.z; bx += v.slotX; bz += v.slotZ; k++; } sq.pcx = k ? ax / k : 0; sq.pcz = k ? az / k : 0; sq.psx = k ? bx / k : 0; sq.psz = k ? bz / k : 0; }
     const e = len((u.x - sq.pcx) - (u.slotX - sq.psx), (u.z - sq.pcz) - (u.slotZ - sq.psz));
     cap = order === ORD_FOLLOW ? (sd > 12 ? base : sd > 5 ? base * PACE_JOG : base * PACE_WALK) : sd > 35 ? base * PACE_JOG : base * PACE_WALK; // following his leader he keeps the leader's pace; otherwise the company marches
+    const lp = order === ORD_FOLLOW && sq.owner >= 0 ? this.players[sq.owner] : this.players.find(p => !p.ai && p.soldierSq === sq.id); // your own file in a story keeps your pace too
+    if (lp) { const L = this.units[lp.heroId]; if (L && !L.dead) { const lv = len(L.x - L.px, L.z - L.pz) / DT; if (lv > 0.5) cap = Math.max(cap, Math.min(base * 1.15, lv * 1.05)); } } // when you run, your men run with you
     const away = tgt && m > 0.01 && ((tgt.x - u.x) * u.mx + (tgt.z - u.z) * u.mz) < -0.3 * td * m; // falling back from the enemy: no strolling
     if (away && td < 40 && sd > 3) cap = base;
     else if (td < 30 && order !== ORD_FOLLOW) cap = base * PACE_WALK; // advancing to contact: the line walks in step
