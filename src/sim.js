@@ -887,7 +887,8 @@ class Sim {
     } else if (!blk) u.blocking = false;
     u.atkHeld = atk; u.blockHeld = blk;
   }
-  startWindup(u, dir) { if (u.hrT > 0) return; u.wMul = 1; if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; }
+  startWindup(u, dir) { if (u.hrT > 0) return; u.wMul = 1;
+    if (u.def.brush && dir === DIR_UP) dir = (u.windupId & 1) ? DIR_LEFT : DIR_RIGHT; // the wolf-brush pokes and sweeps side to side; it is never chopped down overhead if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; }
     if (this.xc && u.ctrl >= 0 && !u.champ) { // mashing: each swing in quick succession costs arm; past three in a breath the windups slow and telegraph
       u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + 1; u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
     u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
@@ -3953,8 +3954,8 @@ Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
     if (idle) { let c = null, cd = reach + 1.6, near = 99; const n = this.gatherNear(u.x, u.z, reach + 2);
       for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === u.team || v.dead || v.wounded || v.type === 'horse') continue; const dv = len(v.x - u.x, v.z - u.z); if (dv < near) near = dv;
         if (v.entT > 0 || (v.entImm || 0) > this.tick + 8 || dv >= cd || Math.abs(wrap(atan2(v.x - u.x, v.z - u.z) - u.yaw)) > 1.1) continue; c = v; cd = dv; }
-      if (c) { u.target = c.id; if (this.rng.next() < 0.45) this.startWindup(u, (u.id + (this.tick >> 4)) & 1 ? DIR_UP : DIR_DOWN); }
-      else if (tgt && d < 11 && near > reach + 1 && this.tick >= (u.yySw || 0)) { u.yySw = this.tick + 55 + (u.id % 5) * 7; this.startWindup(u, DIR_UP); } } // the brush is never still: it sweeps the front of the team
+      if (c) { u.target = c.id; if (this.rng.next() < 0.45) { const k = (u.id + (this.tick >> 4)) % 3; this.startWindup(u, k === 0 ? DIR_DOWN : k === 1 ? DIR_LEFT : DIR_RIGHT); } }
+      else if (tgt && d < 11 && near > reach + 1 && this.tick >= (u.yySw || 0)) { u.yySw = this.tick + 55 + (u.id % 5) * 7; this.startWindup(u, (u.yySw >> 3) & 1 ? DIR_LEFT : DIR_RIGHT); } } // the brush is never still: it sweeps the front of the team
     return true; }
   if (r === 'shield' || r === 'lead') {
     // a man who got past the brushes, close to the spears or the brushes: step up a pace, take him on the shield, cut him
