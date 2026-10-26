@@ -445,7 +445,7 @@ function sjEvent(ev) {
     r.dust(ev.x, ev.y + 0.2, ev.z, 22, 0, 6.5, 0, 2.6, 1.6, 0.5, 2.4); r.dust(ev.x, ev.y + 0.4, ev.z, 10, 0, 9, 0, 1.2, 1.1, 0.3, 1.2);
     const cart = sim.boxes.find(b => b.kind === 'mantlet' && Math.abs(ev.x - b.x) < b.hw + 2.5 && Math.abs(ev.z - b.z) < b.hd + 2.5);
     if (cart && r.burstSparks) r.burstSparks(ev.x, ev.y + 0.9, ev.z, 26, 7, 0.55, 0.38, 0.2, 1.1, 0.09);
-    if (d < 34) { const k = 1 - d / 34; r.shake = Math.max(r.shake, 1.25 * k); r.suppress = Math.min(1.2, (r.suppress || 0) + 0.8 * k); if (d < 12) { r.hitFlash = Math.max(r.hitFlash || 0, 0.18 * k); if (cart) feed('Splinters off the cart!', false); } AUDIO.play('explosion', ev.x, ev.y, ev.z, 0.35 + 0.5 * k); } }
+    if (d < 34) { const k = 1 - d / 34; r.shake = Math.max(r.shake, 1.25 * k); r.suppress = Math.min(1.2, (r.suppress || 0) + 0.8 * k); if (d < 12) { r.hitFlash = Math.max(r.hitFlash || 0, 0.18 * k); if (cart && !(ZB.splT > performance.now() - 8000)) { ZB.splT = performance.now(); feed('Splinters off the cart!', false); } } AUDIO.play('explosion', ev.x, ev.y, ev.z, 0.35 + 0.5 * k); } }
   if (ev.t === 'msay' && ev.who === 'sj_lin' && /^(Fire|First rank)/.test(ev.text)) banner(ev.text.startsWith('Fire') ? '放 · Fire!' : '舉銃 · Present!', ev.text.startsWith('Fire') ? 'Left mouse: three barrels, one after another · R to reload' : 'Raise your gun and wait for the drum', 3);
   if (ev.t === 'zhelp' && ev.id === ZB.wounded && ZB.scene === 'battle1' && ZB.map[ev.id] === sIdx('sj_zhao')) ZS.flags.helpedZhao = true;
   if (ev.t === 'zpromote' && ev.p === state.localIdx) { const n = SPEECH.nameOf(ev.chief); const q = sim.squads[ev.sq]; const w = q.unitIds.map(id => sim.units[id]).find(u => !u.dead && u.ctrl < 0 && !u.wounded);

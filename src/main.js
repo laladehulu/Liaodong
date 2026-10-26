@@ -226,6 +226,8 @@ function wpnName(h, w) {
   return w;
 }
 function localHero() { const sim = state.sim; if (!sim) return null; const p = sim.players[state.localIdx]; return p ? sim.units[p.heroId] : null; }
+// a man whose only weapon is a gun (the three-eyed gun, a plain musket) turns it round with Q to fight with it as a club
+function gripToggle() { const h = localHero(); if (!h || h.dead || h.weapon !== 'rifle' || h.def.weapons.length > 1) return false; Input.bayonet = !Input.bayonet; Input.ads = false; Input.lmb = false; return true; }
 function gunMode() { const h = localHero(); return h && ((h.weapon === 'rifle' && !Input.bayonet) || h.weapon === 'revolver'); }
 document.addEventListener('keydown', (e) => {
   if (state.screen !== 'game') return;
@@ -281,7 +283,7 @@ document.addEventListener('keydown', (e) => {
     case 'Space': Input.pressed |= S.A_JUMP; e.preventDefault(); break;
     case 'KeyE': { if (typeof zheKeyE === 'function' && zheKeyE()) break; const h = localHero(); const sim = state.sim; const nearHorse = h && (h.mount >= 0 || sim.units.some(v => v.type === 'horse' && !v.dead && v.rider < 0 && Math.abs(v.x - h.x) + Math.abs(v.z - h.z) < 4)); Input.pressed |= nearHorse ? S.A_MOUNT : S.A_KICK; break; }
     case 'KeyR': if (!tapAttack(S.DIR_DOWN)) Input.pressed |= S.A_RELOAD; break;
-    case 'KeyQ': case 'KeyX': Input.pressed |= S.A_SWAP; Input.ads = false; break;
+    case 'KeyQ': case 'KeyX': if (gripToggle()) break; Input.pressed |= S.A_SWAP; Input.ads = false; break;
     case 'Digit1': Input.wsel = 1; Input.ads = false; break;
     case 'Digit2': Input.wsel = 2; Input.ads = false; break;
     case 'Digit3': Input.wsel = 3; Input.ads = false; break;
@@ -469,7 +471,7 @@ function lineOrder(a, b) {
 canvas.addEventListener('wheel', (e) => {
   if (state.screen !== 'game') return; e.preventDefault();
   if (Input.cmdMode) { const r = state.renderer; if (r) r.cmdCam.h = Math.max(22, Math.min(200, r.cmdCam.h * (e.deltaY > 0 ? 1.15 : 0.87))); }
-  else if (!tapAttack(e.deltaY < 0 ? S.DIR_UP : S.DIR_DOWN)) { Input.pressed |= S.A_SWAP; Input.ads = false; }
+  else if (!tapAttack(e.deltaY < 0 ? S.DIR_UP : S.DIR_DOWN)) { if (!gripToggle()) { Input.pressed |= S.A_SWAP; Input.ads = false; } }
 }, { passive: false });
 function requestLock() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
 document.addEventListener('pointerlockchange', () => {
@@ -912,14 +914,14 @@ function updateHUD(dt) {
     { let sb = document.getElementById('stam'); if (!sb) { sb = document.createElement('div'); sb.id = 'stam'; sb.innerHTML = '<i></i>'; sb.style.cssText = 'position:fixed;left:50%;bottom:86px;width:180px;height:5px;margin-left:-90px;background:rgba(0,0,0,.45);border:1px solid rgba(240,230,210,.25);border-radius:3px;overflow:hidden;pointer-events:none;transition:opacity .4s;z-index:5'; sb.firstChild.style.cssText = 'display:block;height:100%;background:#d9cfb6'; document.body.appendChild(sb); }
       const st = hero.champ ? Math.min(1, Math.max(0, (hero.sta || 0) / 100)) : 1 - Math.min(1, Math.max(0, (hero.fat || 0) / 100)); const show = !hero.dead && !Input.cmdMode && (st < 0.97 || hero.sprint);
       sb.style.opacity = show ? 1 : 0; sb.firstChild.style.width = (st * 100).toFixed(1) + '%'; sb.firstChild.style.background = hero.winded ? '#c0452e' : '#d9cfb6'; }
-    const w = hero.weapon; $('weapon').textContent = hero.dead ? 'Fallen' : w === 'rifle' ? (Input.bayonet ? 'Musket · spike' : (hero.def.key === 'hero' ? (me.team === 0 ? 'Niaochong musket' : 'Heavy musket') : hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun' : 'Musket')) : w === 'revolver' ? 'Three-eyed hand cannon' : w === 'bow' ? 'Horn bow' : w === 'yari' ? 'Qiang spear' : 'Dao';
+    const w = hero.weapon; $('weapon').textContent = hero.dead ? 'Fallen' : w === 'rifle' ? (Input.bayonet ? (hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun · club (Q: shoot)' : 'Musket · club (Q: shoot)') : (hero.def.key === 'hero' ? (me.team === 0 ? 'Niaochong musket' : 'Heavy musket') : hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun' : 'Musket')) : w === 'revolver' ? 'Three-eyed hand cannon' : w === 'bow' ? 'Horn bow' : w === 'yari' ? 'Qiang spear' : 'Dao';
     const mounted = hero.mount >= 0 || hero.mounted;
     $('mode').textContent = hero.dead ? 'Commanding from above' : Input.cmdMode ? 'Command view' : mounted ? 'Mounted' : hero.st === S.ST_STUN ? 'Staggered' : hero.counterT > 0 ? 'Counter!' : hero.downT > 0 ? 'Knocked down' : '';
     const g = S.gunOf(hero.def, w);
     if (g) {
       const mag = g.mag || 1; const have = w === 'revolver' ? hero.ammoR : hero.ammo;
       if (hero.st === S.ST_RELOAD && hero.reloadT > 0.6) { $('ammoFill').style.width = (hero.stT / hero.reloadT * 100).toFixed(1) + '%'; $('ammoText').textContent = mag > 1 ? `Reloading… ${have}/${mag}` : 'Reloading…'; }
-      else { $('ammoFill').style.width = (have / mag * 100).toFixed(0) + '%'; $('ammoText').textContent = mag > 1 ? `${'●'.repeat(have)}${'○'.repeat(mag - have)}${have === 0 ? ' · R to reload' : ''}` : (have > 0 ? 'Loaded' : 'Empty · R to reload'); }
+      else { $('ammoFill').style.width = (have / mag * 100).toFixed(0) + '%'; $('ammoText').textContent = mag > 1 ? `${'●'.repeat(have)}${'○'.repeat(mag - have)}${have === 0 ? ' · R reload · Q club' : ''}` : (have > 0 ? 'Loaded' : 'Empty · R reload' + (hero.def.weapons.length > 1 ? '' : ' · Q club')); }
     } else { $('ammoFill').style.width = (hero.st === S.ST_WINDUP ? Math.min(1, (hero.stT) / 0.28) * 100 : hero.blocking ? 100 : 0).toFixed(0) + '%'; $('ammoText').textContent = hero.st === S.ST_WINDUP ? `Winding up: ${DIRN[hero.atkDir]}` : hero.blocking ? `Blocking ${BLKN[hero.blockDir]}` : hero.st === S.ST_RECOVER ? 'Recovering' : ''; }
     $('dirText').textContent = (!hero.dead && !Input.cmdMode && !gunMode()) ? (hero.weapon === 'yari' ? 'LMB thrust · wheel↑ slam · RMB block · double-tap A/D slide' : 'LMB slash · hold heavy · wheel↑ overhead · R stab · RMB block · double-tap A/D slide') : (me.rallyT > 0 ? `rally in ${Math.ceil(me.rallyT / 30)}s` : 'V · rally');
     { const fu = $('fury'); const full = me.fury >= S.FURY_MAX; fu.style.setProperty('--f', (me.fury / S.FURY_MAX * 100).toFixed(0) + '%'); fu.classList.toggle('full', full); fu.classList.toggle('on', hero.frenzyT > 0); fu.querySelector('span').textContent = hero.frenzyT > 0 ? `VALOR ${Math.ceil(hero.frenzyT)}s` : full ? 'Valor ready · V' : 'Fury'; $('bombs').textContent = `雷 ${'●'.repeat(me.bombs)}${'○'.repeat(S.BOMBS - me.bombs)} · 4`; }

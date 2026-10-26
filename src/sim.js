@@ -864,7 +864,10 @@ class Sim {
     } else if (!blk) u.blocking = false;
     u.atkHeld = atk; u.blockHeld = blk;
   }
-  startWindup(u, dir) { if (u.hrT > 0) return; u.wMul = 1; if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
+  startWindup(u, dir) { if (u.hrT > 0) return; u.wMul = 1; if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; }
+    if (this.xc && u.ctrl >= 0 && !u.champ) { // mashing: each swing in quick succession costs arm; past three in a breath the windups slow and telegraph
+      u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + 1; u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
+    u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
   footControl(u, keys, a, disabled) {
     if (!u.champ && u.dodgeT > 0) { const k = u.dodgeT / 0.32, sp = (this.real ? 10.5 : 12.5) * (0.55 + 0.75 * k); u.mx = u.dodgeX * sp; u.mz = u.dodgeZ * sp; return; } // a low slide: fast off the mark, bleeding speed // mid-dash: the body is committed
     if (disabled || u.airborne) { u.mx = 0; u.mz = 0; return; }
@@ -1332,7 +1335,9 @@ class Sim {
     if (Math.abs(wrap(atan2(dx, dz) - a.yaw)) > 0.9) return;
     const key = a.id * 100000 + a.windupId; if (u.reactKey === key) return; u.reactKey = key;
     if (u.entT > 0) return;
-    if (this.rng.next() < u.def.block + (u.squad >= 0 ? (this.squads[u.squad].stars || 0) * 0.05 : 0)) {
+    // a man who is being hammered by a masher reads him: the more the swings come in a rush, the surer the guard
+    const mash = this.xc && a.ctrl >= 0 ? Math.min(0.35, Math.max(0, (a.spamR || 0) - (this.tick - (a.spamTk || 0)) / 45 - 1.5) * 0.1) : 0;
+    if (this.rng.next() < u.def.block + mash + (u.squad >= 0 ? (this.squads[u.squad].stars || 0) * 0.05 : 0)) {
       u.blockPend = 0.1 + this.rng.next() * 0.2;
       u.blockPendDir = this.rng.next() < 0.78 ? counterDir(a.atkDir) : this.rng.int(4);
     }
@@ -1664,7 +1669,7 @@ class Sim {
       if (heavy && !def_.def.shield) { // a heavy blow crushes an ordinary guard: half comes through and the defender reels
         this.posture(def_, dmg * 1.4, att); def_.blocking = false; def_.flinchT = 0.45; this.events.push({ t: 'guardcrush', x: hx, y: hy, z: hz, by: def_.id, att: att.id });
         this.applyDamage(def_, dmg * 0.5, att.id, nx * 2.5, 0, nz * 2.5, 'melee', hx, hy, hz); att.heavy = false; return; }
-      att.st = ST_STUN; att.stT = 0; att.stunDur = 0.35; this.posture(def_, dmg * (heavy ? 1.6 : 1) * (def_.def.shield ? 0.6 : 1) * (att.def.posture || 1), att); this.posture(att, 6, def_);
+      att.st = ST_STUN; att.stT = 0; att.stunDur = 0.35; if (this.xc && att.ctrl >= 0 && (att.spamR || 0) > 3) { att.stunDur = 0.6; def_.counterT = Math.max(def_.counterT || 0, 0.6); } this.posture(def_, dmg * (heavy ? 1.6 : 1) * (def_.def.shield ? 0.6 : 1) * (att.def.posture || 1), att); this.posture(att, 6, def_);
       if (att.def.crush) this.applyDamage(def_, dmg * att.def.crush * (def_.def.shield ? 0.6 : 1), att.id, nx * 1.2, 0, nz * 1.2, 'melee', hx, hy, hz);
       if (this.xc) this.hitReact(def_, att, 'block', heavy, true);
       this.events.push({ t: 'block', x: hx, y: hy, z: hz, perfect: false, by: def_.id, att: att.id, shield: !!def_.def.shield }); att.heavy = false; return;
