@@ -771,3 +771,175 @@ function zheFinish2(winner) {
   ], () => zGo('camp3')); };
 }
 
+
+// ===================== 道 · On the road: short scenes between the camps and the battles (story-road) =====================
+// You march with your file. The men talk in twos and threes, and the talk knows who came out of the last fight and who did
+// not; now and then one of them turns to you (E to answer). A handful of raiders tests the column. Enter (twice) marches on.
+// Low stakes: in these scenes a man of the file is knocked down, never killed (the sim's `soft` missions).
+const ZRV = ['he', 'luo', 'lou', 'fang', 'wang', 'jin', 'ye', 'du', 'zhu', 'liu6'], ZRN = ['xiaoman', 'bao', 'shao'];
+const zrAny = (list) => ({ r: list }); // a slot filled by any one of these, at random
+// what a man was like, for the men who never knew him
+const ZTRAIT = {
+  liu6: ['十六歲，扛著一丈五的狼筅，從來不往後退。', 'Sixteen, carrying a fifteen-foot brush, and he never once stepped back.'],
+  lou: ['他懷裡揣著一封信，一直沒寄。', 'He carried a letter inside his coat, and never sent it.'],
+  luo: ['骰子不離手，嘴不饒人，刀也不饒人。', 'Never without his dice. A sharp tongue and a sharper blade.'],
+  jin: ['他總說山裡有東西。他說對了。', 'He always said there was something in those hills. He was right.'],
+  ye: ['他有個女兒。他沒看見她長大。', 'He had a daughter. He never saw her grow up.'],
+  wang: ['力氣大，飯量也大，可最後一口餅也肯分給你。', 'Strong as an ox and always hungry, and he would still give you his last bite.'],
+  fang: ['讀過書，什麼都懂，就是不懂怎麼怕。', 'He had read books and understood everything, except how to be afraid.'],
+  he: ['打過播州的老兵。我的盾是他教的。', 'A Bozhou veteran. He taught me the shield.'],
+  du: ['一心想拿一顆首級，回家娶春花。', 'All he wanted was one head, and to go home and marry Chunhua.'],
+  zhu: ['伙夫。粥稀，可從來沒讓我們餓著。', 'The cook. Thin gruel, but he never let us go hungry.'],
+  xiaoman: ['樓阿根的弟弟。倔，跟他哥一樣。', 'Lou Agen\'s little brother. Stubborn, like his brother.'],
+  bao: ['寧波撐船的。說什麼都是一根長桿子。', 'A Ningbo boatman. Everything was just a long pole to him.'],
+  shao: ['十七歲。這回是真的十七。', 'Seventeen. Really seventeen.'],
+};
+// the dead of the file, as the save remembers them (never the living)
+function zrDead() { return ZR.filter(r => !r.guest && r.k !== 'me' && r.k !== 'wu' && r.k !== ZS.me && ZS.alive[r.k] === false && (!r.ch || (ZS.fate2 && ZS.fate2[r.k]))); }
+function zrDead2() { const F = ZS.fate2 || {}; return ZR.filter(r => !r.guest && r.k !== 'me' && r.k !== ZS.me && F[r.k] && F[r.k] !== 'out' && ZS.alive[r.k] === false); }
+const ZROAD = {
+  A: { mission: 'roadA', next: 'camp0',
+    camp: { fires: [[-5, 124], [6, 119]], props: [['wagon', -7, 46, 1.2], ['log', 5, 30, 0.4], ['log', 4, 33, 1.5], ['banner', 3, 128, 0, '劉'], ['rack', -6, 116, 0.3], ['shields', 8, 114, 0.6]] },
+    card: ['March 1619. Liu Ting\'s column climbs north into the Jin hills. You march as a shield man in Chief Wu\'s file. Keep your place and listen to the men around you. E answers when one of them speaks to you; Enter (twice) marches on.', '寬甸道 · The Kuandian road'],
+    winT: '暮 · Dusk', winX: 'The column made camp in a fold of the hills.',
+    after: [{ title: '暮 · Dusk', year: 'March 1619', p: ['The column makes camp in a fold of the hills. The scouts have seen how many you are; somewhere ahead, someone is counting.', 'Chief Wu sets two extra sentries, and walks down the file one more time before dark.'], btn: 'Night →' }],
+    go: () => zGo('camp0'),
+    beats: [
+      { ph: 0, t: 5, who: { w: 'wu', l: 'luo', s: 'liu6' }, lines: [['w', '聽鼓就走，聽金就停。戚爺爺的規矩：行軍不許亂，不許喧嘩，不許私自離隊取水。', 'Drum, we march. Gong, we halt. Marshal Qi\'s rules: no straggling, no shouting, and nobody leaves the file to fetch water.'], ['l', '不許喧嘩？那駱鐵頭只好閉嘴了。', 'No shouting? Then Luo Tietou had better shut his mouth.'], ['s', '嘿嘿。', 'Heh.']] },
+      { ph: 0, t: 18, who: { s: 'liu6', l: 'luo' }, lines: [['s', '這狼筅扛一天，比打一仗還累。', 'A day of carrying this brush is worse than a battle.'], ['l', '跟我換根長槍？那你就得站前頭了。', 'Want to trade it for a spear? Then you\'d be standing in front.'], ['s', '……那我還是扛著吧。', '...I\'ll keep carrying it.']] },
+      { ph: 0, t: 31, who: { f: 'fang', h: 'he' }, lines: [['f', '出寬甸已經九天了。地圖上說，再翻三道嶺就是赫圖阿拉。', 'Nine days out of Kuandian. The map says three more ridges and we reach Hetu Ala.'], ['h', '地圖不打仗。', 'Maps don\'t fight.']],
+        reply: { q: 'Ask Fang where the other columns are', me: ['方秀才，別的幾路到哪了？', 'Fang, where are the other columns now?'], a: [['f', '沒有消息。這山裡，連信鴿都飛不過來。', 'No word. Not even a pigeon gets through these hills.']], bond: 'f' } },
+      { ph: 0, t: 44, who: { w: 'wang', z: 'zhu' }, lines: [['w', '胖子，鍋裡還有沒有？', 'Fatty, anything left in the pot?'], ['z', '鍋在我背上，粥在你夢裡。', 'The pot\'s on my back. The gruel\'s in your dreams.']] },
+      { ph: 1, t: 3, who: { w: 'wu', z: 'zhu' }, lines: [['w', '井水不許生喝。胖子，燒開了再分。金人退的時候，常往井裡下毒。', 'Nobody drinks raw from that well. Fatty, boil it, then share it out. When the Jin pull back they often foul the wells.'], ['z', '曉得，曉得。燒開了，一人一瓢。', 'I know, I know. Boiled, one ladle each.']] },
+      { ph: 1, t: 13, who: { j: 'jin', y: 'ye' }, lines: [['j', '門都沒閂。灶還是溫的。他們剛走不久。', 'The doors aren\'t even barred. The stove is still warm. They left only just now.'], ['y', '……帶著孩子走的吧。院子裡有個撥浪鼓。', '...They left with the children. There\'s a rattle-drum in the yard.']],
+        reply: { q: 'Tell Ye San to leave the rattle-drum where it is', me: ['放著吧，別動人家的東西。', 'Leave it. Don\'t touch their things.'], a: [['y', '嗯。……我女兒也有一個。', 'Mm. ...My daughter has one too.']], bond: 'y' } },
+      { ph: 1, t: 27, who: { d: 'du', h: 'he' }, lines: [['d', '空村子，連隻雞都沒留。這算什麼仗？', 'An empty village, not even a chicken left. What kind of war is this?'], ['h', '堅壁清野。播州的人也這麼幹：糧帶走，人躲進山，等我們走累了再來。', 'Strip the land and hide in the hills. They did it at Bozhou too: take the grain, vanish, and come back when we are worn out.']] },
+      { ph: 2, t: 5, who: { s: 'liu6' }, lines: [['s', '插住——插住——', 'Plant it — plant it —']] },
+      { ph: 3, t: 2, who: { l: 'luo', w: 'wu', s: 'liu6' }, lines: [['l', '跑了！看了看我們有多少人就跑了。', 'They\'re off! Took one look at how many we are and ran.'], ['w', '他們不是來打的，是來數的。今晚多放兩個哨。', 'They didn\'t come to fight. They came to count. Two extra sentries tonight.']],
+        reply: { q: 'Ask Chen Xiaoliu if he is all right', me: ['小六，沒事吧？', 'Xiaoliu, you all right?'], a: [['s', '沒……沒事。手在抖。可是我插住了一匹。', 'I\'m... fine. My hands are shaking. But I stopped one.']], bond: 's' } },
+      { ph: 3, t: 20, who: { f: 'fang' }, lines: [['f', '他們知道我們在哪。我們不知道他們在哪。', 'They know where we are. We don\'t know where they are.']] },
+      { ph: 3, t: 32, who: { o: 'lou' }, lines: [['o', '（樓阿根低聲哼起義烏的山歌。）', '(Lou Agen hums a Yiwu hill song under his breath.)']] },
+    ] },
+  B: { mission: 'roadB', next: 'camp2',
+    camp: { fires: [[-6, 124], [5, 121]], props: [['wagon', 6, -30, 0.15], ['banner', -3, 128, 0, '戚'], ['wagon', 10, 112, 1.4], ['wagon', -10, 112, -1.4], ['rack', 4, 126, 0]] },
+    card: ['The third month of 1621. The relief army marches north from Liaoyang toward Shenyang. You lead your file in the column. E answers when one of your men speaks to you; Enter (twice) marches on.', '遼陽道 · North from Liaoyang'],
+    winT: '渾河 · The Hun River', winX: 'The relief army reached the Hun River by evening.',
+    after: [{ title: '渾河 · The Hun River', year: 'The third month of 1621', p: ['By evening the relief army reaches the Hun River. The Sichuan White Poles make camp by the bridge; Qi Jin\'s Zhejiang men dig in five li to the south, behind wagons and a ditch.', 'Somewhere north of the river, the sky over Shenyang is red.'], btn: 'Night →' }],
+    go: () => zGo('camp2'),
+    beats: [
+      { ph: 0, t: 5, who: { s: 'shao', v: zrAny(ZRV) }, lines: [['s', '隊長，北邊是什麼樣的？', 'Chief, what is it like up north?']],
+        reply: { q: 'Tell Shao Afu what the north is like', me: ['冷。山多。金人的馬比你想的快。', 'Cold. Hills. Their horses are faster than you think.'], a: [['s', '……比我想的快多少？', '...How much faster than I think?'], ['v', '快到你來不及想。', 'Faster than you can think it.']], bond: 's' } },
+      { ph: 0, t: 19, who: { b: 'bao', x: 'xiaoman' }, lines: [['b', '這條路比寧波的河還彎。', 'This road bends more than the rivers at Ningbo.'], ['x', '你又沒在這條路上撐過船。', 'You never poled a boat up this road.'], ['b', '撐過就好了，至少能坐著。', 'I wish I had. At least I\'d be sitting down.']] },
+      { ph: 0, t: 33, who: { v: zrAny(ZRV), n: zrAny(ZRN) }, make: () => { const d = zrDead()[0];
+        if (!d) return { lines: [['v', '吳隊長要是還在，這會兒該罵我們走得慢了。', 'If Chief Wu were still here, he\'d be cursing us for walking slow.'], ['n', '吳隊長？', 'Chief Wu?'], ['v', '阿布達里岡。他老說：十二個人，一條命。', 'Abudali Pass. He always said: twelve men, one life.']] };
+        const T = ZTRAIT[d.k] || ['跟你一樣，什麼都不懂，可從來不往後退。', 'Like you. Knew nothing, and never once stepped back.'];
+        return { lines: [['v', `${d.zh}要是還在，這會兒該罵我們走得慢了。`, `If ${d.en} were still with us, he'd be cursing us for walking slow.`], ['n', '他是什麼樣的人？', 'What was he like?'], ['v', T[0], T[1]]] }; } },
+      { ph: 0, t: 47, who: { v: zrAny(ZRV) }, lines: [['v', '兩年前也是這個月，我們往北走。', 'Two years ago, this same month, we were walking north.']] },
+      { ph: 1, t: 3, who: { p: ['wang', 'bao', 'he', 'luo'], q: ['bao', 'xiaoman', 'shao', 'du'] }, lines: [['p', '讓開，讓我來。一、二——', 'Out of the way, let me at it. One, two —'], ['q', '起！', 'Heave!']] },
+      { ph: 1, t: 10, who: { c: ['zhu', 'shao', 'jin', 'du'] }, lines: [['c', '輪子底下墊草，墊草！', 'Straw under the wheel — straw!']] },
+      { ph: 1, t: 17, who: { v: zrAny(ZRV.concat(ZRN)) }, lines: [['v', '動了！動了！', 'It\'s moving! It\'s moving!']],
+        reply: { q: 'Order the men back into file', me: ['歸隊！別在路上站著。', 'Back in file! Don\'t stand about on the road.'], a: [['v', '是，隊長。', 'Yes, chief.']] } },
+      { ph: 2, t: 4, who: { s: ['shao', 'xiaoman', 'bao'], f: ['fang', 'he', 'lou', 'luo', 'wang'] }, lines: [['s', '這麼多人……他們從哪來的？', 'So many people... where are they from?'], ['f', '瀋陽北邊的屯子。金人一來，屯子就空了。', 'The farm villages north of Shenyang. When the Jin come, the villages empty.']] },
+      { ph: 2, t: 15, who: { v: zrAny(ZRV) }, lines: [['v', '穿著我們的號衣，搶自己人。', 'Wearing our coats, and robbing our own.']] },
+      { ph: 3, t: 2, who: { x: ['xiaoman', 'shao', 'bao'], v: zrAny(ZRV) }, lines: [['x', '那些人……也是當兵的吧？', 'Those men... they were soldiers too, weren\'t they?'], ['v', '是。跑了，就什麼都不是了。', 'They were. A man who runs is nothing at all.']],
+        reply: { q: 'Tell them: we don\'t run', me: ['我們不跑。阿布達里岡沒跑，這回也不跑。', 'We don\'t run. We didn\'t run at Abudali, and we won\'t now.'], a: [['x', '……是，隊長。', '...Yes, chief.']], bond: 'x' } },
+      { ph: 3, t: 17, who: { f: ['fang', 'he', 'lou', 'luo', 'jin'] }, lines: [['f', '前面就是渾河。過了河，就是瀋陽。', 'Up ahead is the Hun River. Across it, Shenyang.']] },
+    ] },
+  C: { mission: 'roadC', next: 'end2',
+    camp: { fires: [[-2, 3], [-7, 126], [7, 126]], props: [['banner', -9, 129, 0, '明'], ['banner', 9, 129, 0, '袁'], ['rack', 3, 12, 1.2], ['log', -3, 6, 0.2], ['shields', 4, 3, 0.8]] },
+    pre: [{ title: '五年 · Five years', year: '1621 – 1625', p: ['Liaoyang fell days after the Hun River, and with it everything east of the Liao River. The next winter Guangning was lost too, and the Ming fell back on a line of forts along the Bohai coast toward Shanhai Pass.', 'What was left of your file was kept on in the coastal garrisons, mending walls and drilling the new men.'], btn: 'Winter 1625 →' }],
+    card: ['Winter 1625. Every fort beyond the Pass is being abandoned on the new commissioner\'s orders — except one. Your file walks the coast road to Ningyuan by night. E answers; Enter (twice) marches on.', '寧遠道 · The road to Ningyuan'],
+    winT: '寧遠 · Ningyuan', winX: 'Your file walked in through the gate of Ningyuan before dawn.',
+    after: [{ title: '寧遠 · Ningyuan', year: 'The twelfth month of 1625', p: ['That autumn the new commissioner, Gao Di, ordered every fort beyond Shanhai Pass abandoned. The garrisons burned what they could not carry and streamed back toward the Pass, and the people of the forts went with them; many died on the road in the cold.',
+      'One man refused. Yuan Chonghuan, the intendant at Ningyuan, stayed with fewer than twenty thousand men in a small walled town on the Bohai coast, far from any help.', 'Your file walks in through the gate before dawn. In a few weeks Nurhaci will cross the frozen Liao River with the Eight Banners.'],
+      zh: '我寧前道也，官此，當死此，我必不去。— Yuan Chonghuan, in the History of Ming', btn: 'To be continued →' }],
+    go: () => { if (typeof zStart3 === 'function') zStart3('ch3'); else location.reload(); },
+    beats: [
+      { ph: 0, t: 5, who: { a: zrAny(ZRV.concat(ZRN)), b: zrAny(ZRV.concat(ZRN)), f: ['fang', 'he', 'lou', 'luo', 'bao', 'xiaoman', 'shao', 'wang', 'jin', 'ye', 'du', 'zhu', 'liu6'] }, lines: [['a', '五年了。遼陽沒了，廣寧也沒了。', 'Five years. Liaoyang is gone. Guangning too.'], ['b', '高經略說關外不守了，全撤回山海關。', 'Commissioner Gao says nothing beyond the Pass is to be held. Everyone back to Shanhai Pass.'], ['f', '只有袁道台不走。他說：「我寧前道也，官此，當死此，我必不去。」', 'Only Intendant Yuan won\'t go. He said: "I am the intendant of Ning-Qian. My post is here, and here I will die. I will not leave."']] },
+      { ph: 0, t: 24, who: { v: zrAny(ZRV.concat(ZRN)), w: zrAny(ZRV.concat(ZRN)) }, make: () => { const d = zrDead2()[0];
+        if (!d) return { lines: [['v', '渾河那天，我們一個都沒丟。', 'At the Hun River we didn\'t lose a single man.'], ['w', '五年了，就這件事，我服你。', 'Five years, and that\'s the one thing I\'ll give you.']] };
+        return { lines: [['v', `渾河那天，${d.zh}……`, `That day at the Hun River, ${d.en}...`], ['w', '別說了。看路。', 'Don\'t. Watch the road.']],
+          reply: { q: `Say ${d.en}'s name`, me: [`${d.zh}。我記得。`, `${d.en}. I remember.`], a: [['v', '我們都記得。', 'We all remember.']] } }; } },
+      { ph: 0, t: 40, who: { s: ['bao', 'xiaoman', 'shao', 'luo', 'jin'] }, lines: [['s', '海風好冷。寧波的海是暖的。', 'The sea wind is so cold. The sea at home is warm.']] },
+      { ph: 1, t: 15, who: { v: zrAny(ZRV.concat(ZRN)) }, lines: [['v', '別開銃！看清楚再說。', 'Don\'t fire! Look first.']] },
+      { ph: 1, t: 24, who: { l: ['luo', 'du', 'wang', 'bao'], s: ['shao', 'xiaoman', 'liu6', 'ye'] }, lines: [['l', '鹿都比人膽子大，敢在這地方走。', 'Even the deer are braver than men, walking about out here.'], ['s', '嘿。', 'Heh.']],
+        reply: { q: 'Tell the sentries to stay sharp', me: ['別鬆勁。鹿不會半夜來，人會。', 'Stay sharp. Deer don\'t come at midnight. Men do.'], a: [['l', '是。', 'Yes.']] } },
+      { ph: 2, t: 3, who: { v: zrAny(ZRV.concat(ZRN)) }, lines: [['v', '別讓他們摸到路上來！', 'Don\'t let them onto the road!']] },
+      { ph: 3, t: 2, who: { v: zrAny(ZRV.concat(ZRN)), f: ['fang', 'he', 'lou', 'luo', 'bao', 'xiaoman', 'shao'] }, lines: [['v', '他們回去報信了。大軍不遠了。', 'They\'ve gone back to report. The main army isn\'t far behind.'], ['f', '那就進城吧。寧遠的牆，是袁道台這幾年一塊磚一塊磚修起來的。', 'Then into the town. Intendant Yuan has spent these years building Ningyuan\'s walls up brick by brick.']] },
+      { ph: 3, t: 22, who: { a: zrAny(ZRV.concat(ZRN)) }, lines: [['a', '看——城上有燈。', 'Look — lights on the wall.']] },
+    ] },
+};
+const ZRD = { on: false, key: '', q: [], qT: 0, wait: null, prompt: null, done: {}, skipT: 0, el: null, hint: null, last: 0 };
+// the living man of the file for a slot: a roster key, a list (the first of them on his feet), or zrAny(list) (any of them)
+function zrUnit(spec, taken) {
+  const sim = state.sim, h = localHero(); if (spec === 'me') return h && !h.dead ? h.id : -1;
+  let keys = typeof spec === 'string' ? [spec] : spec.r ? spec.r.slice().sort(() => Math.random() - 0.5) : spec;
+  for (const k of keys) for (const uid in ZB.map) { const r = ZR[ZB.map[uid]], u = sim.units[uid]; if (!r || r.k !== k || !u || u.dead || u.downed || u.wounded || taken[uid] || (h && +uid === h.id)) continue; return +uid; }
+  return -1;
+}
+function zrSay(id, zh, en) {
+  const sim = state.sim, u = sim && sim.units[id]; if (!u || u.dead || u.downed) return; const h = localHero(); const me = h && id === h.id;
+  SPEECH.say(id, zh, en, { prio: 3, who: me ? `${ZS.name.zh} ${ZS.name.en}` : undefined, dur: Math.min(7.5, 2.8 + en.length / 20) });
+}
+function zrQueue(lines, ids) { for (const [s, zh, en] of lines) { const id = s === 'me' ? (localHero() || {}).id : ids[s]; if (id === undefined || id < 0) continue; ZRD.q.push({ id, zh, en, gap: Math.min(6.5, 2.2 + en.length / 24) }); } }
+function zrBond(ids, s) { const k = ids[s] !== undefined && ZB.map[ids[s]] !== undefined ? ZR[ZB.map[ids[s]]].k : null; if (k) { ZS.bond[k] = (ZS.bond[k] || 0) + 1; zSave(); } }
+function zRoadUI() {
+  if (!ZRD.el) { const e = document.createElement('div'); e.id = 'zroadPr'; document.body.appendChild(e); ZRD.el = e; const k = document.createElement('div'); k.id = 'zroadHint'; k.innerHTML = '<kbd>Enter</kbd> march on'; document.body.appendChild(k); ZRD.hint = k; }
+}
+function zRoadStop() { ZRD.on = false; ZRD.q.length = 0; ZRD.prompt = null; if (ZRD.el) ZRD.el.hidden = true; if (ZRD.hint) ZRD.hint.hidden = true; }
+function zRoadTick(dt) {
+  const sim = state.sim, D = ZROAD[ZRD.key]; if (!ZRD.on || !sim || !sim.mission || !sim.mission.road || !D) return;
+  if (state.ended) { zRoadStop(); return; }
+  ZRD.hint.hidden = false; if (ZRD.skipT > 0) ZRD.skipT -= dt;
+  if (ZRD.q.length) { ZRD.qT -= dt; if (ZRD.qT <= 0) { const L = ZRD.q.shift(); zrSay(L.id, L.zh, L.en); ZRD.qT = L.gap; } return; }
+  if (ZRD.qT > 0) { ZRD.qT -= dt; return; }
+  if (ZRD.wait) { ZRD.prompt = ZRD.wait; ZRD.wait = null; ZRD.prompt.t = 9; ZRD.el.innerHTML = `<kbd>E</kbd>${ZRD.prompt.q}`; ZRD.el.hidden = false; }
+  if (ZRD.prompt) { ZRD.prompt.t -= dt; if (ZRD.prompt.t <= 0) { ZRD.prompt = null; ZRD.el.hidden = true; } return; }
+  const ph = sim.mv.ph; if (ph < 0) return; const el = (sim.tick - sim.mv.t0) / 30, h = localHero(); if (!h || h.dead) return;
+  for (let i = 0; i < D.beats.length; i++) { const b = D.beats[i]; if (ZRD.done[i] || b.ph !== ph || el < b.t) continue;
+    if (el > b.t + 25) { ZRD.done[i] = 1; continue; }
+    const ids = {}, taken = {}; let ok = true; for (const s in b.who) { const id = zrUnit(b.who[s], taken); if (id < 0) { ok = false; break; } ids[s] = id; taken[id] = 1; }
+    if (!ok) continue;
+    let near = true; for (const s in ids) { const u = sim.units[ids[s]]; if (Math.hypot(u.x - h.x, u.z - h.z) > 18) near = false; } if (!near && el < b.t + 10) continue;
+    ZRD.done[i] = 1; const m = b.make ? b.make() : b; if (!m) continue;
+    zrQueue(m.lines || [], ids); if (m.reply) ZRD.wait = Object.assign({ ids }, m.reply); ZRD.qT = 0; break; }
+}
+function zRoadKey(e) {
+  if (!ZRD.on || !state.sim || !state.sim.mission || !state.sim.mission.road || state.ended || Input.cmdMode) return;
+  if (e.code === 'KeyE' && ZRD.prompt) { e.preventDefault(); e.stopImmediatePropagation(); const P = ZRD.prompt; ZRD.prompt = null; ZRD.el.hidden = true;
+    ZRD.q.push({ id: localHero().id, zh: P.me[0], en: P.me[1], gap: Math.min(6.5, 2.2 + P.me[1].length / 24) }); zrQueue(P.a, P.ids); if (P.bond) zrBond(P.ids, P.bond); ZRD.qT = 0; return; }
+  if (e.code === 'Enter' && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); const sim = state.sim, h = localHero();
+    const foe = h && sim.teamAlive[1].some(u => !u.inactive && Math.hypot(u.x - h.x, u.z - h.z) < 45);
+    if (foe) { toast('Not with the enemy this close'); return; }
+    if (ZRD.skipT <= 0) { ZRD.skipT = 3; toast('Press Enter again to march on'); return; }
+    zRoadSkip(); }
+}
+window.addEventListener('keydown', zRoadKey, true);
+function zRoadDone() { const D = ZROAD[ZRD.key]; ZS.flags['road' + ZRD.key] = 1; ZS.stage = D.next; zSave(); zRoadStop(); }
+function zRoadSkip() { const D = ZROAD[ZRD.key]; zRoadDone(); state.ended = true; zCards(D.after, D.go); }
+function zStartR(scene) {
+  ZS = zLoad(); if (!ZS) { ZS = zFresh(); }
+  const key = scene.slice(4), D = ZROAD[key]; if (!D) return;
+  $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
+  if (D.pre && !ZS.flags['pre' + key]) { ZS.flags['pre' + key] = 1; zSave(); zCards(D.pre, () => zStartR(scene)); return; }
+  const lead = key !== 'A', seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: lead ? 'lead' : 'shield', connected: true }];
+  startGame({ seed, battle: 'zroad', mode: 'campaign', mission: D.mission, camp: D.camp, players: pl }, 0, null, 1);
+  const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; const meK = lead ? (ZS.me || 'me') : 'me', meIdx = ZR.findIndex(r => r.k === meK);
+  ZB = { map: {}, sq: q.id, first: me.heroId, cur: meK, fell: false, ch2: lead, road: key };
+  const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = meIdx;
+  const file = lead ? zFile2().filter(r => ZS.alive[r.k] !== false) : ZR.filter(r => !r.ch && r.k !== 'me' && ZS.alive[r.k] !== false);
+  const left = []; for (const r of file) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } else left.push(r); }
+  for (const r of left) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role !== 'lead'); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } }
+  for (const uid in ZB.map) zDress(sim.units[uid], ZB.map[uid]);
+  zRoadUI(); Object.assign(ZRD, { on: true, key, q: [], qT: 0, wait: null, prompt: null, done: {}, skipT: 0, last: performance.now() });
+  const loop = () => { if (state.sim !== sim || !ZRD.on) return; const now = performance.now(); zRoadTick(Math.min(0.1, (now - ZRD.last) / 1000)); ZRD.last = now; requestAnimationFrame(loop); }; requestAnimationFrame(loop);
+  setTimeout(() => storyCard(D.card[0], D.card[1]), 700);
+}
+function zheFinishR(winner) {
+  const sim = state.sim, D = ZROAD[ZB.road]; ZRD.key = ZB.road; const won = winner === sim.mission.side; zRoadDone();
+  let hurt = 0; for (const uid in ZB.map) { const u = sim.units[uid]; if (u && (u.downed || u.wounded || u.dead)) hurt++; }
+  $('resultTitle').textContent = won ? D.winT : '散 · Scattered on the road'; $('resultTitle').className = won ? 'win' : 'lose';
+  $('resultText').innerHTML = `${won ? D.winX : 'The column picked up what was left of you on the road.'}${hurt ? ` ${hurt} of your file ${hurt > 1 ? 'were' : 'was'} knocked about, and walk on bandaged.` : ''}`;
+  $('btnNext').hidden = false; $('btnNext').textContent = 'On →';
+  $('btnNext').onclick = () => { $('result').hidden = true; zCards(D.after, D.go); };
+}
