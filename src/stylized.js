@@ -98,7 +98,7 @@
           float aw = fwidth(n) * 1.5 + 0.004; float cloud = smoothstep(0.56 - aw, 0.56 + aw, n) * smoothstep(0.0, 0.06, h);
           float shade = smoothstep(0.62 - aw, 0.62 + aw, n2);
           c = mix(c, mix(cs, cl, shade), cloud * (night > 0.5 ? 0.6 : 0.95));
-          float s = dot(d, normalize(sunDir)); float disc = smoothstep(0.9988, 0.99895, s);
+          float s = dot(d, normalize(sunDir)); float disc = smoothstep(0.9994, 0.99948, s);
           c = mix(c, sunCol * (night > 0.5 ? 1.0 : 1.08), disc * (1.0 - cloud * 0.8));
           c += sunCol * pow(max(s, 0.0), 24.0) * 0.12 * (1.0 - night);
           if (night > 0.5) { vec2 sp = floor(d.xz / max(0.2, h + 0.3) * 260.0); float st = step(0.996, sH(sp)) * smoothstep(0.1, 0.4, h) * (1.0 - cloud); c += vec3(0.85, 0.88, 1.0) * st * 0.8; }
@@ -123,6 +123,7 @@
   };
   // ---- distant burning: stacked low-poly smoke puffs that drift upward (flat toon grey, no soft texture)
   R.buildPuffColumns = function () {
+    if (this.biome.night) return;
     let seed = 31 + (this.sim.seed & 255); const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     const N = 5, P = 9, g = new THREE.IcosahedronGeometry(1, 1); const night = !!this.biome.night;
     const mesh = new THREE.InstancedMesh(g, new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: this.styGrad, fog: false }), N * P); mesh.frustumCulled = false;

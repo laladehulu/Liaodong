@@ -3103,7 +3103,8 @@ Sim.prototype.assaultCap = function () {
   const fit = (list, budget) => { const tot = list.reduce((s, p) => s + size(p), 0); if (tot <= budget) return; for (const p of list) { const n = Math.max(4, Math.floor(size(p) * budget / tot)); this.mTrim(p, n, true); } };
   const humanMen = this.players.filter(p => !p.ai && p.team === A).reduce((s, p) => s + size(p), 0), humanDef = this.players.filter(p => !p.ai && p.team !== A).reduce((s, p) => s + size(p), 0);
   fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > 22) this.mTrim(p, 22, true);
-  fit(groups(1 - A, false), Math.max(16, Math.round(CAP * 0.85) - humanDef)); for (const p of groups(1 - A, true)) if (size(p) > 14) this.mTrim(p, 14, true);
+  // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
+  fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, CAP - humanDef));
 };
 Sim.prototype.mTrim = function (p, n, keepHero) {
   let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
