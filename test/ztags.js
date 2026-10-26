@@ -8,6 +8,7 @@ const path = require('path'); const out = process.argv[2], build = process.argv[
   await page.goto(url, { waitUntil: 'load' }); await page.evaluate(() => localStorage.setItem('mingZheGo', 'battle1'));
   await page.goto(url, { waitUntil: 'load' }); await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; });
   await page.waitForTimeout(4000);
+  await page.evaluate(() => { const sim = window.__boshin.state.sim, h = sim.units[sim.players[0].heroId]; let k = 0; for (const u of sim.units) if (u.look && u !== h && k < 5) { const x = h.x + Math.sin(h.yaw) * (5 + k) + (k - 2) * 1.5, z = h.z + Math.cos(h.yaw) * (5 + k); u.x = u.px = x; u.z = u.pz = z; u.y = u.py = SIM.terrainH(x, z); k++; } }); await page.waitForTimeout(300);
   const info = await page.evaluate(() => { document.getElementById('pause').hidden = true; document.getElementById('storycard').style.display = 'none';
     const sim = window.__boshin.state.sim; const K = RENDER.GEAR_K; const over = [];
     for (const u of sim.units) if (u.look) { const g = RENDER.gearFor(u), c = { b: 0, c: 0, y: 0 }; for (const p of g.parts) c[p.m]++; if (c.b > K.b || c.c > K.c || c.y > K.y) over.push(u.look.id + JSON.stringify(c)); }
