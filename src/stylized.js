@@ -105,6 +105,8 @@
           gl_FragColor = vec4(c, 1.0); }` });
     if (this.tracerMesh) { this.tracerMesh.material = this.tracerMesh.material.clone(); this.tracerMesh.material.transparent = true; this.tracerMesh.material.opacity = 0.6; }
     if (this.trailMesh) { this.trailMesh.material.opacity = 0.45; }
+    // campfire light: a softer warm pool that falls off quickly, so faces by the fire keep their bands
+    for (const f of this.campFires || []) { f.lt.color.set(0xffb27a); f.lt.decay = 2.2; f.lt.distance = 20; }
     this.buildPuffColumns();
   };
 
