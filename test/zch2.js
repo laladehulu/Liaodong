@@ -12,7 +12,7 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
   if (h && !h.dead && beh !== 'idle') {
     const P = sim.mv.ph; let tx = 58, tz = -62;
     if (P === 1) { const z = sim.missionZone('sbridge'); tx = z.x; tz = z.z - 2; }
-    if (P === 3) { tx = -62; tz = -134; if (h.z > -49 && Math.abs(h.x - 58) < 20) { tx = 58; tz = -46; if (Math.abs(h.x - 58) < 2) tz = -84; } else if (h.z > -80 && Math.abs(h.x - 58) < 20) { tx = 58; tz = -84; } const w = wounded >= 0 ? sim.units[wounded] : null; if (beh === 'lead' && w && !w.dead && w.helpedBy < 0 && Math.hypot(w.x - h.x, w.z - h.z) < 40) { tx = w.x; tz = w.z; if (Math.hypot(w.x - h.x, w.z - h.z) < 2 && (t & 7) === 0) acts |= S.A_KICK; }
+    if (P === 3) { tx = -88; tz = -136; if (h.z > -49 && Math.abs(h.x - 58) < 20) { tx = 58; tz = -46; if (Math.abs(h.x - 58) < 2) tz = -84; } else if (h.z > -80 && Math.abs(h.x - 58) < 20) { tx = 58; tz = -84; } const w = wounded >= 0 ? sim.units[wounded] : null; if (beh === 'lead' && w && !w.dead && w.helpedBy < 0 && Math.hypot(w.x - h.x, w.z - h.z) < 40) { tx = w.x; tz = w.z; if (Math.hypot(w.x - h.x, w.z - h.z) < 2 && (t & 7) === 0) acts |= S.A_KICK; }
       else if (beh === 'lead') { let n = 0, a = 0; for (const id of file) { const u = sim.units[id]; if (u.dead) continue; a++; if (Math.hypot(u.x - h.x, u.z - h.z) < 14) n++; } if (a && n < a * 0.6 && (t % 60) < 40) { tx = h.x; tz = h.z; } } }
     let enemy = null, ed = 1e9; for (const e of sim.teamAlive[1]) { const d = Math.hypot(e.x - h.x, e.z - h.z); if (d < ed) { ed = d; enemy = e; } }
     const fr = beh === 'reckless' ? 8 : 3;
@@ -25,6 +25,6 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
     if (e.t === 'death' && file.includes(e.id)) fdp[Math.max(0, sim.mv.ph)]++; }
 }
 const h = sim.units[p.heroId], z = sim.missionZone('road'); const won = sim.mwin === 0; let out = 0, dead = 0, lost = 0;
-for (const id of file) { const u = sim.units[id]; if (u.dead) { dead++; continue; } const ok = (h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < (won ? 26 : 12)) || Math.hypot(u.x - z.x, u.z - z.z) < z.r + 10; if (ok) out++; else lost++; }
+for (const id of file) { const u = sim.units[id]; if (u.dead) { dead++; continue; } const ok = !(u.wounded && u.helpedBy < 0) && (h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < (won ? 26 : 12)) || Math.hypot(u.x - z.x, u.z - z.z) < z.r + 10; if (ok) out++; else lost++; }
 let hurt = 0; for (const id of file) { const u = sim.units[id]; if (!u.dead && u.hp < u.def.hp * 0.5) hurt++; }
 console.log(JSON.stringify({ seed, beh, won, downs, revs, hurt, kills: p.kills, end: Math.round(sim.tick / 30), phases: ph, promoted, helped, carry, out, dead, lost, of: file.length, deathsByPhase: fdp, alive: sim.teamAlive.map(a => a.length), meRole: sim.units[first].role }));
