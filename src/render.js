@@ -786,10 +786,19 @@ class Renderer {
     const box = new THREE.BoxGeometry(1, 1, 1), pyr = new THREE.ConeGeometry(0.72, 1, 4);
     // Liaoyang gate tower: a massive grey brick base, then a two-storey red timber tower under double hip roofs
     // mantlets: plank shields on props, painted with each army's colours
-    { const ms = boxes.filter(q => q.kind === 'mantlet'); if (ms.length) { const pm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x6a4a2c }), ms.length), fm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff }), ms.length * 2), sm2 = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x4a3420 }), ms.length * 2);
-      ms.forEach((b, i) => { const y = terrainH(b.x, b.z); T.m.compose(T.v.set(b.x, y + b.h / 2, b.z), T.q.setFromEuler(T.e.set(-0.08 * Math.sign(b.z || 1), 0, 0)), T.v2.set(b.hw * 2, b.h, 0.12)); pm.setMatrixAt(i, T.m);
-        const faceZ = b.z > 0 ? -1 : 1; for (const k of [0, 1]) { T.m.compose(T.v.set(b.x + (k ? 0.5 : -0.5) * b.hw, y + b.h * 0.62, b.z + faceZ * 0.07), T.q.identity(), T.v2.set(b.hw * 0.7, 0.18, 0.02)); fm.setMatrixAt(i * 2 + k, T.m); fm.setColorAt(i * 2 + k, T.c.set(b.z > 0 ? 0xb8262a : 0xd8b03c)); T.m.compose(T.v.set(b.x + (k ? 0.7 : -0.7) * b.hw, y + 0.55, b.z - faceZ * 0.5), T.q.setFromEuler(T.e.set(faceZ * 0.9, 0, 0)), T.v2.set(0.1, 1.3, 0.1)); sm2.setMatrixAt(i * 2 + k, T.m); } });
-      if (fm.instanceColor) fm.instanceColor.needsUpdate = true; for (const m of [pm, fm, sm2]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); } } }
+    // a mantlet is a wall of planks, no two quite alike, their feet dug into the ground, held by two cross battens behind
+    { const ms = boxes.filter(q => q.kind === 'mantlet'); if (ms.length) { const nP = ms.map(b => Math.max(3, Math.round(Math.max(b.hw, b.hd) * 2 / 0.3))), NP = nP.reduce((a, c) => a + c, 0);
+      const pm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff }), NP), bt = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x3e2c1c }), ms.length * 2), fm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff }), ms.length * 2), sm2 = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x4a3420 }), ms.length * 2);
+      const q = new THREE.Quaternion(), off = new THREE.Vector3(); let pk = 0;
+      ms.forEach((b, i) => { const along = b.hw >= b.hd, L = (along ? b.hw : b.hd) * 2, faceZ = along ? (b.z > 0 ? -1 : 1) : (b.x > 0 ? -1 : 1), ry = along ? 0 : HPI, tilt = 0.08 * faceZ;
+        const put = (m, idx, lx, ly, lz, sx, sy, sz, rx, rz) => { const e = T.e.set(tilt + (rx || 0), ry, rz || 0, 'YXZ'); q.setFromEuler(e); off.set(lx, ly, lz).applyQuaternion(T.q.setFromEuler(T.e.set(tilt, ry, 0, 'YXZ'))); const wx = b.x + off.x, wz = b.z + off.z;
+          T.m.compose(T.v.set(wx, terrainH(wx, wz) + off.y, wz), q, T.v2.set(sx, sy, sz)); m.setMatrixAt(idx, T.m); T.e.order = 'XYZ'; };
+        const n = nP[i], w = L / n;
+        for (let j = 0; j < n; j++) { const hj = uhash(i * 31 + j, 5), hh = b.h * (0.93 + 0.13 * hj) + 0.2; put(pm, pk, -L / 2 + (j + 0.5) * w, hh / 2 - 0.2, 0, w * 0.94, hh, 0.11, 0, (hj - 0.5) * 0.035); pm.setColorAt(pk++, T.c.setHSL(0.075 + hj * 0.02, 0.38 + hj * 0.1, 0.2 + uhash(i * 31 + j, 9) * 0.07)); }
+        for (const k of [0, 1]) { put(bt, i * 2 + k, 0, k ? b.h * 0.78 : 0.32, -faceZ * 0.085, L * 0.97, 0.11, 0.05);
+          put(fm, i * 2 + k, (k ? 0.25 : -0.25) * L, b.h * 0.62, faceZ * 0.065, L * 0.35, 0.18, 0.02); fm.setColorAt(i * 2 + k, T.c.set(b.z > 0 ? 0xb8262a : 0xd8b03c));
+          put(sm2, i * 2 + k, (k ? 0.35 : -0.35) * L, 0.55, -faceZ * 0.5, 0.1, 1.3, 0.1, faceZ * 0.9 - tilt); } });
+      for (const m of [pm, fm]) if (m.instanceColor) m.instanceColor.needsUpdate = true; for (const m of [pm, bt, fm, sm2]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); } } }
     // siege engines: the battering ram's roofed cart and the scaling ladders
     if (this.sim.ram) { const g = new THREE.Group(); const wood = new THREE.MeshLambertMaterial({ color: 0x5a3a20 }), hide = new THREE.MeshLambertMaterial({ color: 0x7a6040 }), iron = new THREE.MeshLambertMaterial({ color: 0x3a3a3c });
       const mb = (w, h, d, m, x, y, z, rx, rz) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; o.castShadow = true; g.add(o); return o; };
