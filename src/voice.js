@@ -106,7 +106,10 @@ const VOICE = (() => {
   const curves = {}; function curve(a) { const k = Math.round(a * 10); if (curves[k]) return curves[k]; const n = 256, c = new Float32Array(n), d = 1 + k * 0.8; for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * d) / Math.tanh(d); } return (curves[k] = c); }
   // ---- the mix: a handful of voices at a time, nearest and most important first ----
   const active = []; const MAX = 7;
+  // only cries of pain, death cries and calls for help: no effort grunts on swings, no spoken (synthetic) words, no breathing
+  const KEEP = { pain: 1, death: 1, help: 1 };
   function say(cat, u, prio, x, y, z, volMul) {
+    if (!KEEP[cat]) return false;
     if (!on || !build()) return false; const now = ctx.currentTime; x = x === undefined ? u.x : x; z = z === undefined ? u.z : z; y = y === undefined ? (u.y || 0) + 1.5 : y;
     const v = u ? vp(u) : { rate: 0.9 + Math.random() * 0.25, rasp: 0.3, eqF: 1500, eqG: 0, gain: 0.9, fav: (Math.random() * 99) | 0, next: 0 };
     if (u && now < v.next && prio < 4) return false;

@@ -1000,13 +1000,15 @@ function frame(now) {
   Input.decay(dt);
   if (state.slowT > 0) { state.slowT -= dt; dt *= state.slowT > 0.6 ? 0.25 : 0.25 + (0.6 - state.slowT) / 0.6 * 0.75; }
   const sim = state.sim, ls = state.ls, net = state.net;
-  state.acc += dt; let steps = 0;
-  while (state.acc >= DT && steps < 6) {
+  // game speed (solo only): more fixed-length ticks per frame; capped so a slow machine just runs slower
+  const spd = state.net ? 1 : (state.speed || 1), maxS = Math.min(48, Math.max(2, Math.ceil(6 * spd)));
+  state.acc += dt * spd; let steps = 0;
+  while (state.acc >= DT && steps < maxS) {
     if (!stepOnce()) { state.acc = Math.min(state.acc, DT); state.stalled = true; state.stallT += dt; break; }
     state.stalled = false; state.stallT = 0;
     state.acc -= DT; steps++;
   }
-  if (steps >= 6) state.acc = 0;
+  if (steps >= maxS) state.acc = 0;
   const hero = localHero();
   if (hero && hero.dead && !Input.cmdMode && !state.ended && state.sim.mode !== 'assault') { toggleCmd(true); toast(state.sim.heroMode ? 'You have fallen. You will return in a few moments' : 'You have fallen'); }
   if (hero && !hero.dead && Input.cmdMode && (state.sim.heroMode || state.sim.mode === 'assault') && !state.ended && !(typeof DEP !== 'undefined' && DEP.open)) toggleCmd(false);
