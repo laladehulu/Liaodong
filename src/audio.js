@@ -87,6 +87,14 @@ const AUDIO = (() => {
       case 'swish': { if (!P('swing')) return false; if (!at(vol * 0.6, 40)) return true; samp(sp, t, P('swing'), rr(0.9, 1.15), sp.gain); return true; }
       case 'thrust': { if (!P('thrust')) return false; if (!at(vol * 0.6, 40)) return true; samp(sp, t, P('thrust'), rr(0.92, 1.1), sp.gain); return true; }
       case 'flesh': { if (!P('flesh')) return false; if (!at(vol * 0.85, 60)) return true; samp(sp, t, P('flesh'), rr(0.85, 1.1), sp.gain); return true; }
+      // a landed blow: the cut (flesh sample, pitched down) with a short low body thump under it; heavier blows go lower and longer;
+      // on armour a dull metal knock rides on top
+      case 'strike': case 'strikeheavy': case 'strikearmor': { if (!P('flesh')) return false; const hv = name === 'strikeheavy'; if (!at(vol * (hv ? 1.15 : 0.95), 70)) return true;
+        samp(sp, t, P('flesh'), rr(0.72, 0.86) * (hv ? 0.85 : 1), sp.gain * 1.15); samp(sp, t + 0.012, P('flesh'), rr(1.15, 1.3), sp.gain * 0.35);
+        tone(sp, t, hv ? 0.2 : 0.12, 'sine', hv ? 95 : 120, hv ? 34 : 48, sp.gain * (hv ? 1.1 : 0.8)); noise({ ...sp, wet: 0.05 }, t, hv ? 0.1 : 0.06, 'lowpass', hv ? 700 : 1100, 0.8, sp.gain * 0.5, 0.002);
+        if (name === 'strikearmor') { if (P('ametal')) samp(sp, t + 0.004, P('ametal'), rr(0.6, 0.72), sp.gain * 0.55); if (P('clash')) samp(sp, t, P('clash'), rr(0.55, 0.65), sp.gain * 0.3); }
+        return true; }
+      case 'killcue': { const s0 = { gain: 0.32 * vol, pan: 0, wet: 0.2 }; tone(s0, t, 0.09, 'triangle', 330, 300, s0.gain); tone(s0, t + 0.07, 0.22, 'triangle', 220, 196, s0.gain * 0.9); noise(s0, t, 0.08, 'lowpass', 400, 0.7, s0.gain * 0.6, 0.003); return true; }
       case 'death': case 'scream': { if (!P('death')) return false; if (!at(vol * (name === 'death' ? 0.55 : 0.65), 70)) return true; samp(sp, t, P('death'), rr(0.9, 1.06), sp.gain); return true; }
       case 'twang': { if (!P('bow')) return false; if (!at(vol * 0.7, 60)) return true; samp(sp, t, P('bow'), rr(0.95, 1.08), sp.gain); return true; }
       case 'arrow': { if (!P('arrowfly')) return false; if (!at(vol * 0.5, 40)) return true; samp(sp, t, P('arrowfly'), rr(0.95, 1.1), sp.gain); return true; }
@@ -142,10 +150,10 @@ const AUDIO = (() => {
     if (name === 'cannon' || name === 'cannonhit') { boom(x, y, z, vol === undefined ? 1 : vol, name === 'cannonhit' ? 'hit' : 'fire'); if (name === 'cannonhit' && SAMPLES.count) { sampled('dirt', x, y, z, (vol || 1) * 1.6); const sp = spatial(x, y, z, (vol || 1) * 0.9, 120), d = SAMPLES.pick('debris'); if (sp && d) samp(sp, ctx.currentTime + Math.min(1, sp.dist / 343) + 0.03, d, rr(0.9, 1.1), sp.gain * 0.8); } return; }
     if (name === 'ballwhistle') { whistle(x, y, z, vol === undefined ? 1 : vol); return; }
     const now = performance.now(); if (now - lastFrame > 40) { budget = 16; lastFrame = now; }
-    if (budget-- <= 0 && name !== 'explosion' && name !== 'collapse' && name !== 'siegehit') return;
+    if (budget-- <= 0 && name !== 'explosion' && name !== 'collapse' && name !== 'siegehit' && name !== 'killcue' && !(name.startsWith('strike') && (vol || 1) > 1)) return;
     vol = vol === undefined ? 1 : vol;
     if (SAMPLES.count && sampled(name, x, y, z, vol)) return;
-    name = { flesh: 'thud', shield: 'clang', thrust: 'swish', woodhit: 'dirt', gatehit: 'thud', ram: 'thud', collapse: 'explosion', siegehit: 'explosion', horsedie: 'death', arrow: 'whiz' }[name] || name;
+    name = { strike: 'thud', strikeheavy: 'thud', strikearmor: 'clang', killcue: 'hitmark', flesh: 'thud', shield: 'clang', thrust: 'swish', woodhit: 'dirt', gatehit: 'thud', ram: 'thud', collapse: 'explosion', siegehit: 'explosion', horsedie: 'death', arrow: 'whiz' }[name] || name;
     const t0 = ctx.currentTime; let t = t0;
     const late = (sp) => { t = t0 + Math.min(1.2, sp.dist / 343); };   // sound travels at 343 m/s
     switch (name) {

@@ -1406,9 +1406,24 @@ class Renderer {
         case 'swing': { const u = units[ev.id]; if (u) AUDIO.play(u.weapon === 'yari' ? 'thrust' : 'swish', ev.x, ev.y + 1.3, ev.z, ev.id === heroId ? 1.3 : 0.9); break; }
         case 'windup': { const u = units[ev.id]; if (u && ev.id !== heroId && u.team !== this.localTeam) { const dc = Math.hypot(u.x - this.camera.position.x, u.z - this.camera.position.z); if (dc < 14) { const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw); this.sparks.spawn(u.x + fx * 0.5 - Math.cos(u.yaw) * 0.3, u.y + 1.9, u.z + fz * 0.5 + Math.sin(u.yaw) * 0.3, 0, 0.3, 0, 0.18, 0.9, 0.2, 1, 0.45, 0.35, 1, 1, 0, 1, 0.2, 0.1); } } break; }
         case 'hit': {
-          if (ev.cause === 'melee' || ev.cause === 'trample') { this.blood(ev.x, ev.y, ev.z, 10, 0, 1, 0); AUDIO.play('flesh', ev.x, ev.y, ev.z, 1); }
+          { // a blow that lands has weight: the struck man is shoved and bends away, the blade bites with a thud, a little blood and grit fly
+            const vic = units[ev.id], att = ev.att >= 0 ? units[ev.att] : null, mine = ev.att === heroId && ev.id !== heroId;
+            let dx = vic && att ? vic.x - att.x : 0, dz = vic && att ? vic.z - att.z : 1; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
+            const melee = ev.cause === 'melee' || ev.cause === 'trample' || ev.cause === 'spear', shot = ev.cause === 'shot' || ev.cause === 'headshot' || ev.cause === 'arrow';
+            const heavyB = !!(att && (att.heavy || att.lunge)) || (ev.dmg || 0) >= 60, armd = !!(vic && vic.def && (vic.def.hp >= 115 || vic.type === 'hero'));
+            const k = vic && vic.def ? clamp((ev.dmg || 20) / Math.max(40, vic.def.hp * 0.5), 0.3, 1.5) * (heavyB ? 1.35 : 1) * (ev.killed ? 1.3 : 1) : 0.6;
+            if (melee) {
+              this.blood(ev.x, ev.y, ev.z, mine ? (heavyB ? 16 : 11) : 7, dx * 2.2, 1, dz * 2.2);
+              if (armd) this.burstSparks(ev.x, ev.y, ev.z, mine ? 10 : 5, 4, 1, 0.8, 0.45, 0.25, 0.07);
+              if (heavyB && vic) this.dust(vic.x, vic.y + 0.15, vic.z, 4, dx * 1.2, 0.5, dz * 1.2, 0.6, 0.5, 0.25, 0.7);
+              AUDIO.play(armd ? 'strikearmor' : heavyB ? 'strikeheavy' : 'strike', ev.x, ev.y, ev.z, mine ? 1.25 : 0.95);
+            } else if (shot && vic) { this.dust(ev.x, ev.y, ev.z, 3, dx * 0.6, 0.4, dz * 0.6, 0.25, 0.45, 0.12, 0.45); this.blood(ev.x, ev.y, ev.z, 4, dx * 2.5, 0.6, dz * 2.5); AUDIO.play('strike', ev.x, ev.y, ev.z, 0.5); }
+            if (vic && ev.id !== heroId && (melee || shot)) this.hitImpulse(ev.id, dx, dz, k * (shot ? 0.6 : 1), heavyB);
+            if (mine && melee) { this.recoil = Math.max(this.recoil, heavyB ? 0.75 : 0.45); this.recoilRoll = (Math.random() - 0.5) * (heavyB ? 1.4 : 0.8); this.shake = Math.max(this.shake, heavyB || ev.killed ? 0.35 : 0.18);
+              if (this.imp) { this.imp.fov = Math.min(9, this.imp.fov + (heavyB ? 3 : 1.2)); this.imp.vp -= heavyB ? 2.2 : 1.1; }
+              this.hitMarkPop = ev.killed ? 2 : 1; if (ev.killed) AUDIO.play('killcue', undefined, 0, 0, 0.9); } }
           if (ev.id === heroId) { this.hitFlash = 0.6; this.shake = Math.max(this.shake, 0.6); const hh = units[heroId], a = ev.att >= 0 ? units[ev.att] : null; if (hh && ev.cause !== 'fire') { const k = clamp((ev.dmg || 20) / Math.max(40, hh.def.hp * 0.45), 0.25, 1.4) * (ev.cause === 'trample' || ev.cause === 'explosion' ? 1.4 : 1); this.impact(a ? a.x : ev.x, a ? a.z : ev.z + 0.01, k, ev.cause === 'trample' || ev.cause === 'explosion'); } }
-          if (ev.att === heroId && ev.cause === 'melee') { this.hitMark = 0.3; this.hitMarkHead = false; AUDIO.play('hitmark', undefined, 0, 0, 0.8); this.hitstop = Math.max(this.hitstop, ev.killed ? 0.05 : 0.03); }
+          if (ev.att === heroId && ev.id !== heroId && (ev.cause === 'melee' || ev.cause === 'spear')) { const at0 = units[heroId], hv = !!(at0 && (at0.heavy || at0.lunge)) || (ev.dmg || 0) >= 60; this.hitMark = ev.killed ? 0.5 : 0.32; this.hitMarkHead = false; AUDIO.play('hitmark', undefined, 0, 0, 0.8); this.hitstop = Math.max(this.hitstop, ev.killed ? 0.09 : hv ? 0.075 : 0.05); }
           break;
         }
         case 'block': {
@@ -1680,6 +1695,10 @@ class Renderer {
       if (anchor === 'R') { set3(tg.rh, tg.wp); for (let j = 0; j < 3; j++) tg.lh[j] = tg.wp[j] + tg.wd[j] * KW.off2; }
     } else { fkR = true; fkL = true; }
     if (u.flinchT > 0 && !(u.hrA < 1)) { lean -= 0.3 * (u.flinchT / 0.35); }
+    if (a.hiOn) { // hit impulse (hitImpulse): critically damped springs on a shove offset and a bend away from the blow
+      const n = Math.max(1, Math.ceil(dt / 0.01)), h = dt / n; for (let i = 0; i < n; i++) { a.kbVx -= (a.kbX * 90 + a.kbVx * 19) * h; a.kbVz -= (a.kbZ * 90 + a.kbVz * 19) * h; a.kbX += a.kbVx * h; a.kbZ += a.kbVz * h; a.hbV -= (a.hb * 110 + a.hbV * 21) * h; a.hb += a.hbV * h; a.hsV -= (a.hs * 110 + a.hsV * 21) * h; a.hs += a.hsV * h; }
+      x += a.kbX; z += a.kbZ; lean += a.hb; twist += a.hs * 0.7; roll += a.hs * 0.45;
+      if (Math.abs(a.kbX) + Math.abs(a.kbZ) + Math.abs(a.hb) + Math.abs(a.hs) + Math.abs(a.kbVx) + Math.abs(a.hbV) < 0.002) a.hiOn = false; }
     if (u.champ) { // acrobatics: low dodges, a tucked leap, a coiled spin, a long lunge
       if (u.dodgeT > 0) { const k = Math.sin(clamp(u.dodgeT / 0.34, 0, 1) * PI); lean += (u.dodgeFwd ? 0.45 : -0.2) * k; crouch += 0.22 * k; twist += 0.25 * k * (u.dodgeX * Math.cos(yaw) - u.dodgeZ * Math.sin(yaw) > 0 ? -1 : 1) * (u.dodgeFwd ? 0 : 1); rateB = 24; }
       if (u.airborne) { crouch += u.plunge ? 0.05 : 0.18; lean += u.plunge ? 0.35 : 0.08; rateB = 18; }
@@ -2070,6 +2089,14 @@ class Renderer {
     this.hitstop = Math.max(this.hitstop || 0, heavy ? 0.07 : 0.035 * k);
     if (heavy || k > 0.9) { AUDIO.shellshock(Math.min(0.75, 0.3 * k)); this.shake = Math.max(this.shake, 0.9 * k); }
     AUDIO.play('thud', undefined, 0, 0, 0.5 + 0.6 * k);
+  }
+  // a blow on another man: an additive shove (m/s into a spring) and a bend (rad/s), consumed in drawFigure; an animation rig
+  // can read a.kbX/a.kbZ (shove offset), a.hb (bend back, rad, negative = away from the front) and a.hs (twist/side bend) instead
+  hitImpulse(id, dx, dz, k, heavy) {
+    const u = this.sim.units[id]; if (!u || u.type === 'horse') return; const a = this.anim(id); if (!a.hiOn) { a.kbX = a.kbZ = a.kbVx = a.kbVz = a.hb = a.hbV = a.hs = a.hsV = 0; } a.hiOn = true;
+    const sp = (heavy ? 3.2 : 2.0) * k; a.kbVx += dx * sp; a.kbVz += dz * sp;
+    const fwd = dx * Math.sin(u.yaw) + dz * Math.cos(u.yaw), side = dx * -Math.cos(u.yaw) + dz * Math.sin(u.yaw); // the blow's direction in his own frame
+    a.hbV += (fwd >= 0 ? 1 : -1) * Math.abs(fwd) * (heavy ? 9 : 6) * k - 2 * k; a.hsV += side * (heavy ? 8 : 5.5) * k;
   }
   impStep(dt) { // critically-damped-ish springs, sub-stepped so a long frame can't explode them
     const I = this.imp, n = Math.max(1, Math.ceil(dt / 0.008)), h = dt / n;

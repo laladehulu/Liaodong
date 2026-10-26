@@ -936,6 +936,7 @@ function updateHUD(dt) {
   $('suppress').style.opacity = Input.cmdMode ? 0 : Math.min(0.85, r.suppress);
   $('speedlines').style.opacity = (r.speedLines > 0.01 && !Input.cmdMode) ? r.speedLines : 0;
   const hm = $('hitmark'); hm.style.opacity = r.hitMark > 0 ? Math.min(1, r.hitMark * 4) : 0; hm.classList.toggle('head', r.hitMarkHead);
+  if (r.hitMarkPop) { hm.classList.remove('pop', 'kill'); void hm.offsetWidth; hm.classList.add(r.hitMarkPop === 2 ? 'kill' : 'pop'); r.hitMarkPop = 0; }
   const alive = hero && !hero.dead;
   if (alive && !Input.cmdMode) {
     const gun = gunMode(); const cur = Input.currentDir();
