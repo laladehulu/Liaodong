@@ -1760,7 +1760,8 @@ class Renderer {
           else if (st2 === 3) { G = [-0.12, -0.04 + 0.03 * sw2, 0.26 + 0.03 * sw]; D = N3(0.12, 0.93, 0.25); } // both hands, blade held upright before the face
           else { two = false; G = [-0.24, -0.3 + 0.03 * sw2, 0.3 + 0.06 * sw]; D = N3(0.05, -0.22, 1); } // one hand, point thrust out ahead, low and eager
           if (u.def.shield) two = false; }
-        else if (w === 'yari') { const st2 = charge ? 0 : Math.floor(runH * 4);
+        else if (w === 'yari') { const lsp = (u.kitRole !== undefined ? u.kitRole : u.role) === 'spear', st2 = charge ? 0 : lsp ? 4 : Math.floor(runH * 4); /* the long spear is carried upright on the march */
+          if (st2 === 4) { G = [-0.14, -0.2 + 0.03 * sw2, 0.14]; D = N3(0.1, 0.96, 0.18); } else
           if (st2 === 0) { G = [-0.2, -0.27 + 0.04 * sw2, 0.06 + 0.05 * sw]; D = N3(0.05, 0.03 + 0.04 * sw2, 1); } // point levelled for the charge
           else if (st2 === 1) { G = [-0.15, -0.1 + 0.04 * sw2, 0.18]; D = N3(0.35, 0.85, 0.22); } // sloped on the shoulder
           else if (st2 === 2) { two = false; G = [-0.25, -0.45 + 0.03 * sw2, 0.02 - 0.12 * sw]; D = N3(0.02, 0.2, 1); } // trailed in one hand at the balance, swinging with the stride
