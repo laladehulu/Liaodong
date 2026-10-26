@@ -22,7 +22,6 @@
 - campLife (fork): sim.js camp NPC think (new Sim.prototype.campThink + 1 hook in unitAI), render.js drawFigure camp pose hook + new campPose fn, props
 - melee-anim (fork): render.js POSES/KF attack keyframes, drawFigure attack pose/torso twist, viewmodel swing
 - debug (fork): NEW src/debug.js; build.sh splice; sim.js Sim.prototype.mJump + one applyCommand case; tiny hooks main.js/zhe.js/jin.js/shenji.js
-- cannonsnd (fork): audio.js cannon/explosion cases + new cannon helpers; render.js 'cannon'/'sgshot'/impact AUDIO lines
 - pathing (fork): sim.js navPoint/flowTo + new Sim.prototype.navAstar/navPath/avoid/unstick near end; steerFoot hook; separation push lines
 - arsenal (fork): sim.js new Sim.prototype.pk*/kit* at end + small hooks (kill → drop, E chain → pickup, swap/wsel → kit), render pickups, main HUD slots, zhe/jin/shenji arsenal hooks
 - lieposes (fork): render.js drawFigure downed/crawl/sleep pose block; camp NPC facing (sim camp / zhe camp)
