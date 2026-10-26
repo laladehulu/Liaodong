@@ -2235,12 +2235,12 @@ class Renderer {
     vm.updateMatrix();
     // forearms run from the hands down and back toward the bottom corners of the view
     const elbowA = [new THREE.Vector3(0.24, -0.5, -0.16), new THREE.Vector3(-0.24, -0.52, -0.18)];
-    const shoulder = [new THREE.Vector3(0.3, -0.75, -0.06), new THREE.Vector3(-0.3, -0.75, -0.08)];
+    const shoulder = [new THREE.Vector3(0.32, -0.84, -0.02), new THREE.Vector3(-0.32, -0.84, -0.04)]; // longer arms in first person too
     const hands = [this.vmHandR.position.clone().applyMatrix4(vm.matrix), this.vmHandL.position.clone().applyMatrix4(vm.matrix)];
     for (let i = 0; i < 2; i++) {
       const vis = i === 0 || two; this.vmFore[i].visible = vis; this.vmUpper[i].visible = vis; if (!vis) continue;
       const h = hands[i]; const dir = elbowA[i].clone().sub(h); const dl = dir.length(); dir.normalize();
-      const e = h.clone().addScaledVector(dir, Math.min(0.27, dl));
+      const e = h.clone().addScaledVector(dir, Math.min(0.31, dl));
       this.placeSeg(this.vmFore[i], h, e, 0.042); this.placeSeg(this.vmUpper[i], e, shoulder[i], 0.05);
     }
   }
