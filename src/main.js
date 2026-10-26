@@ -284,7 +284,8 @@ document.addEventListener('keydown', (e) => {
   if (c === 'KeyG') { if (e.repeat) return; if (Input.orderMode) closeOrders(); else { openOrders(); state.gDownT = performance.now(); } return; }
   if (Input.orderMode) { orderKey(c, e); return; }
   // quick orders straight from first person, no menu needed
-  if (/^Digit\d$/.test(c) && (e.shiftKey || fpSquads().length)) { quickSelect(+c.slice(5)); return; }
+  { const kh = localHero(); const kit = kh && kh.kit && kh.kit.length > 1; // carrying several weapons: 1-4 pick a weapon, Shift+number picks squads
+    if (/^Digit\d$/.test(c) && (e.shiftKey || (fpSquads().length && !(kit && /^Digit[1-4]$/.test(c))))) { quickSelect(+c.slice(5)); return; } }
   if (!e.repeat) switch (c) {
     case 'KeyZ': if (fpReady()) { state.zHeld = true; } return;
     case 'KeyC': if (fpReady()) fpCharge(); return;
@@ -303,6 +304,7 @@ document.addEventListener('keydown', (e) => {
     case 'Digit1': Input.wsel = 1; Input.ads = false; break;
     case 'Digit2': Input.wsel = 2; Input.ads = false; break;
     case 'Digit3': Input.wsel = 3; Input.ads = false; break;
+    case 'Digit4': Input.wsel = 4; Input.ads = false; break;
     case 'KeyV': Input.pressed |= S.A_RALLY; break;
     case 'Enter': Input.pressed |= S.A_READY; break;
     case 'KeyY': if (!storyLock()) toggleAuto(); break;

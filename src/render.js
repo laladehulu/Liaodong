@@ -1556,6 +1556,7 @@ class Renderer {
     const stT = u.st === ST_IDLE ? 0 : u.stT + alpha * DT;
     const mounted = u.mounted || u.mount >= 0, wnd = !!(u.wounded && !u.dead) && !mounted;
     // a wounded man going down (and being got up again) is animated, not snapped: a.dw runs 0 (on his feet) to 1 (on the ground)
+    if (a.dw === undefined) a.dw = 0;
     if (wnd || a.dw > 0) { const want = wnd && u.downed ? 1 : 0;
       if (!wnd) a.dw = 0;
       else if (want > a.dw) { if (!(a.dw > 0)) { a.dw = 0; a.dV = uhash(u.id, 23) < 0.5 ? 1 : -1; } a.dUp = false; a.dw = Math.min(1, a.dw + dt / 1.05); }
