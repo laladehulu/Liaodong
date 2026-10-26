@@ -24,7 +24,7 @@ const SPEECH = (() => {
   function bustInit() {
     const cv = document.createElement('canvas'); cv.id = 'bustcv'; document.body.appendChild(cv);
     const r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true }); r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); r.setClearColor(0x000000, 0); r.autoClear = false;
-    const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xe8e4dc, 0x3a3028, 0.85)); const d = new THREE.DirectionalLight(0xfff0dc, 0.75); d.position.set(0.6, 1.2, 1.4); sc.add(d);
+    const sc = new THREE.Scene(); const hm = new THREE.HemisphereLight(0xe8e4dc, 0x3a3028, 0.85); sc.add(hm); const d = new THREE.DirectionalLight(0xfff0dc, 0.75); d.position.set(0.6, 1.2, 1.4); sc.add(d); BUST.hemi = hm; BUST.dir = d;
     const R = RENDER.roundBox; BUST.geo = { b: R(0.3, 6, 4), c: new THREE.ConeGeometry(0.5, 1, 10), y: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), head: R(0.62, 10, 7), torso: R(0.38, 10, 6), limb: R(0.5, 6, 4) };
     BUST.r = r; BUST.cv = cv; BUST.scene = sc; BUST.cam = new THREE.PerspectiveCamera(26, 1, 0.05, 10); BUST.cam.position.set(0.16, 0.5, 1.28); BUST.cam.lookAt(0, 0.4, 0);
   }
@@ -57,6 +57,7 @@ const SPEECH = (() => {
       if (u.dead || u.downed || u.wounded) b.head.rotation.set(0.2, 0, 0.25);
       r.setViewport(rc.left, H - rc.bottom, rc.width, rc.height); r.setScissor(rc.left, H - rc.bottom, rc.width, rc.height); BUST.cam.aspect = rc.width / rc.height; BUST.cam.updateProjectionMatrix();
       if (u.dead) { if (!BUST.grey) BUST.grey = new THREE.MeshLambertMaterial({ color: 0x5a5856 }); BUST.scene.overrideMaterial = BUST.grey; b.head.rotation.set(0.35, 0, 0.3); }
+      { const quiet = !!el.closest('#zgrid') && !el.closest('.talk, .down, .rise'); BUST.hemi.intensity = quiet ? 0.42 : 0.85; BUST.dir.intensity = quiet ? 0.28 : 0.75; } // the squad grid sits muted until a man speaks or needs you
       r.render(BUST.scene, BUST.cam); BUST.scene.overrideMaterial = null; b.grp.visible = false; }
   }
   function pump() { }
