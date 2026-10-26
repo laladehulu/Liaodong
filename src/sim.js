@@ -424,7 +424,7 @@ class Sim {
     }
     for (let i = 0; i < 38; i++) {
       const x = r.range(-HALF + 8, HALF - 8), z = r.range(-105, 105);
-      if (!clear(x, z, 4)) continue;
+      if (!clear(x, z, 4)) continue; if (B === 'siegecity' && z > -14) continue;
       this.obstacles.push({ x, z, r: r.range(0.7, 2.3), kind: 1, rot: r.range(0, TAU) });
     }
   }
@@ -1874,6 +1874,7 @@ class Sim {
         if (p.y <= g) {
           if (p.kind === 'shell') { this.explode(p.x, g + 0.1, p.z, p.team, p.owner, 7.5, 170); done = true; break; }
           if (p.kind === 'arrow') { this.events.push({ t: 'arrowstick', x: p.x, y: g, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); this.ignite(p.x, p.z, 0.025); done = true; break; }
+          if (p.bolt) { this.events.push({ t: 'arrowstick', x: p.x, y: g, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
           // solid shot: bounce while fast, then stop
           const hs = len(p.vx, p.vz);
           if (hs > 9 && p.vy < 0) { p.y = g + 0.15; p.vy = -p.vy * 0.32; p.vx *= 0.72; p.vz *= 0.72; this.events.push({ t: 'bounce', x: p.x, y: g, z: p.z, big: false }); }
@@ -1886,6 +1887,7 @@ class Sim {
             const v = this.units[this.nearBuf[k]]; if (v.dead || v.id === p.owner) continue;
             if (p.kind === 'arrow' && v.team === p.team) continue;
             if (p.kind === 'solid' && v.lastShotBy === p) continue;
+            if (p.bolt && v.team === p.team) continue;
             const h = (v.mounted || v.type === 'horse') ? 1.2 : v.def.ai === 'cannon' ? 0.7 : v.downT > 0 ? 0.3 : 0.9;
             const dx = v.x - p.x, dy = (v.y + h) - p.y, dz = v.z - p.z; const rr = v.def.r + rad;
             if (dx * dx + dz * dz < rr * rr && Math.abs(dy) < 1.3 + v.def.r) {
@@ -1893,6 +1895,7 @@ class Sim {
               if (p.kind === 'arrow' && v.def.shield && !v.dead && v.st !== ST_RELEASE && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.1 && this.rng.next() < 0.75) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
               if (p.kind === 'arrow' && v.zfile && !v.dead && this.coverShield(v, p)) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
               if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, this.units[p.owner].def.bow.dmg * (v.def.ai === 'cannon' ? 0.3 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
+              if (p.bolt) { v.lastShotBy = p; p.hits++; this.applyDamage(v, 80, p.owner, p.vx * 0.05, 1, p.vz * 0.05, 'arrow', p.x, p.y, p.z); if (!v.dead && v.mass < 5) v.downT = Math.max(v.downT, 0.8); this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); if (p.hits >= 3) { done = true; break; } continue; }
               // solid shot: bowl through
               const sp = len(p.vx, p.vz) || 1; const nx = p.vx / sp, nz = p.vz / sp;
               v.lastShotBy = p; p.hits++;
@@ -2637,6 +2640,20 @@ const MISSIONS = {
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
+  ningyuan_siege: {
+    siege: true, title: '寧遠攻守 · The Siege of Ningyuan', year: 'February 1626', battle: 'siegecity', attacker: 1, tickets: 640,
+    brief: 'Nurhaci brings the Eight Banners against Ningyuan in the depth of winter. Yuan Chonghuan has burned the suburbs, brought the people inside and mounted Western cannon on the walls. The Jin must fill the ditch, climb or break the walls, take the gatehouse and fight through the streets to the yamen.',
+    zones: [{ key: 'ditchW', x: -28, z: 22, r: 9, name: 'A · West ditch', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 9, name: 'B · East ditch', rate: 0.5 },
+      { key: 'wallW', x: -25, z: 43.5, r: 7, name: 'A · West wall', owner: 0, rate: 0.6 }, { key: 'wallE', x: 25, z: 43.5, r: 7, name: 'B · East wall', owner: 0, rate: 0.6 },
+      { key: 'gatehouse', x: 0, z: 55, r: 8, name: 'A · The gatehouse', owner: 0, rate: 0.5 },
+      { key: 'street', x: -18, z: 80, r: 11, name: 'A · Drum-tower street', owner: 0, rate: 0.5 }, { key: 'yamen', x: 0, z: 112, r: 13, name: 'B · The yamen', owner: 0, rate: 0.4 }],
+    forts: [],
+    sectors: [['ditchW', 'ditchE'], ['wallW', 'wallE'], ['gatehouse'], ['street', 'yamen']],
+    def: [[['rifle_imp', 'rifle_imp', 'armstrong'], -28, 43.6], [['rifle_imp', 'rifle_spencer', 'armstrong'], 28, 43.6], [['samurai', 'ashigaru'], -14, 43.6], [['samurai', 'yuanyang'], 14, 43.6], [['samurai', 'ashigaru', 'rifle_imp'], 0, 58], [['ronin', 'ashigaru'], -18, 82], [['samurai', 'rifle_imp', 'jigen'], 0, 112]],
+    defRes: [[['samurai', 'rifle_imp'], 0, 96, 2], [['cavalry', 'samurai'], 0, 124, 3]],
+    att: [['samurai', 'samurai', 'archer', 'archer'], ['samurai', 'ashigaru', 'archer', 'horokutai'], ['shinsengumi', 'samurai', 'archer', 'archer'], ['samurai', 'byakkotai', 'archer'], ['samurai', 'samurai', 'archer', 'horokutai'], ['shinsengumi', 'samurai', 'archer']],
+    attAt: [0, -122, 0],
+  },
   liaoyang: {
     title: '遼陽之戰 · Assault on Liaoyang', year: 'April 1621', battle: 'aizu', attacker: 1, tickets: 520,
     brief: 'The Jin storm Liaoyang, capital of Liaodong. Three lines stand between the banners and the keep: the outer trenches, the market quarter and the city gate.',
