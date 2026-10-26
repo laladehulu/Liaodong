@@ -8,7 +8,7 @@ const JKEY = 'mingJin', JGO = 'mingJinGo';
 const JR = [ // the file. Index 0 is the man in the squad's first place (the bošokū while he lives)
   { k: 'ulgen', zh: '烏勒根', en: 'Ulgen', t: 'bošokū (sergeant) · 撥什庫 · a Hada man' },
   { k: 'me', zh: '', en: '', t: 'armoured man · 披甲' },
-  { k: 'dabsun', zh: '達布遜', en: 'Dabsun', t: 'armoured man · 16 · Alin\'s nephew' },
+  { k: 'dabsun', zh: '達布遜', en: 'Dabsun', t: 'armoured man · Alin\'s nephew' },
   { k: 'sose', zh: '索色', en: 'Sose', t: 'archer · sable hunter' },
   { k: 'ilan', zh: '伊蘭', en: 'Ilan', t: 'armoured man · the third son' },
   { k: 'bahai', zh: '巴海', en: 'Bahai', t: 'armoured man · pearl diver from the Sungari' },
@@ -19,7 +19,7 @@ const JR = [ // the file. Index 0 is the man in the squad's first place (the bo�
   { k: 'manggu', zh: '莽古', en: 'Manggu', t: 'armoured man · never satisfied' },
   { k: 'alin', zh: '阿林', en: 'Alin', t: 'armoured man · served since Tulun' },
   // men who join the file between chapters, in this order, as the dead leave places
-  { k: 'tuhe', zh: '圖赫', en: 'Tuhe', t: 'new man · Ula born, 17', draft: true },
+  { k: 'tuhe', zh: '圖赫', en: 'Tuhe', t: 'new man · Ula born', draft: true },
   { k: 'wangsi', zh: '王四', en: 'Wang Si', t: 'new man · a Liaoyang Han who shaved his head', draft: true },
   { k: 'dorji', zh: '多爾濟', en: 'Dorji', t: 'new man · Khalkha Mongol horse-breaker', draft: true },
   { k: 'jala', zh: '扎拉', en: 'Jala', t: 'new man · Erde\'s cousin', draft: true },
