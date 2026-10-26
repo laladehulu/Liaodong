@@ -44,20 +44,21 @@ const SPEECH = (() => {
   function cycle() { setLayout(LAYOUTS[(LAYOUTS.indexOf(layout) + 1) % LAYOUTS.length]); }
   function comms(u, tier, who, zh, en, dur) {
     if (layout === 'card') { if (tier === 'story') card(u, who, zh, en, dur); else ticker(u, who, zh, en); return; }
+    if (!u && layout === 'film') { subtitle(who, zh, en, dur); return; }
     if (layout === 'film') { if (tier === 'story') subtitle(who, zh, en, dur); return; } // film: alerts are edge bubbles, drawn in frame()
     // stack: one line per speaker (a new line replaces his old one), ranked, at most 4
     if (!stackEl) { stackEl = document.createElement('div'); stackEl.id = 'comms'; document.body.appendChild(stackEl); }
-    const key = u.id; let s = stack.find(x => x.key === key);
+    const key = u ? u.id : 'n:' + who; let s = stack.find(x => x.key === key);
     if (!s) { const el = document.createElement('div'); el.className = 'ce'; el.innerHTML = '<i></i><div><b></b><span class="z"></span><span class="e"></span></div>'; s = { key, el }; stack.push(s); }
     Object.assign(s, { tier, who, zh, en, t: 0, dur: dur || LIFE[tier] }); s.el.className = 'ce ' + tier;
-    const url = face(u); s.el.firstChild.style.backgroundImage = url ? `url(${url})` : ''; const tx = s.el.lastChild; tx.children[0].textContent = who; tx.children[1].textContent = zh || ''; tx.children[2].textContent = tier === 'story' ? (en || '') : (en || '').slice(0, 60);
+    const url = u ? face(u) : null; s.el.firstChild.style.backgroundImage = url ? `url(${url})` : ''; s.el.firstChild.className = url ? '' : 'none'; const tx = s.el.lastChild; tx.children[0].textContent = who; tx.children[1].textContent = zh || ''; tx.children[2].textContent = tier === 'story' ? (en || '') : (en || '').slice(0, 60);
     stack.sort((a, b) => RANK[a.tier] - RANK[b.tier] || a.t - b.t);
     while (stack.length > 4) { const w = stack.pop(); w.el.remove(); }
     stack.forEach(x => stackEl.appendChild(x.el));
   }
   function ticker(u, who, zh, en) {
     if (!tickEl) { tickEl = document.createElement('div'); tickEl.id = 'ticker'; document.body.appendChild(tickEl); }
-    const row = document.createElement('div'); row.className = 'tk'; const url = face(u);
+    const row = document.createElement('div'); row.className = 'tk'; const url = u ? face(u) : null;
     row.innerHTML = `<i style="${url ? `background-image:url(${url})` : ''}"></i><b></b><span></span>`; row.children[1].textContent = who ? who.split(' ')[0] : ''; row.children[2].textContent = (zh ? zh + '  ' : '') + (en || '');
     tickEl.prepend(row); while (tickEl.children.length > 3) tickEl.lastChild.remove(); setTimeout(() => { row.classList.add('out'); setTimeout(() => row.remove(), 500); }, 4200);
   }
@@ -66,6 +67,8 @@ const SPEECH = (() => {
     if (!subEl) { subEl = document.createElement('div'); subEl.id = 'filmsub'; subEl.innerHTML = '<b></b><span class="z"></span><span class="e"></span>'; document.body.appendChild(subEl); }
     subEl.children[0].textContent = who || ''; subEl.children[1].textContent = zh || ''; subEl.children[2].textContent = en || ''; subEl.classList.add('on'); subT = dur || 6;
   }
+  // a voice with no body in earshot (a runner, a messenger, the radio of old): straight into the comms layout
+  function note(who, text, dur) { const i = (text || '').indexOf('  '), zh = i > 0 && /[\u3400-\u9fff]/.test(text.slice(0, i)) ? text.slice(0, i) : '', en = zh ? text.slice(i + 2) : text; comms(null, 'story', who, zh, en, dur || Math.min(8, 3 + en.length / 20)); }
   function commsFrame(dt) {
     for (let i = stack.length - 1; i >= 0; i--) { const s = stack[i]; s.t += dt; const left = s.dur - s.t; s.el.style.opacity = Math.max(0, Math.min(1, left / 0.6)).toFixed(2); if (left <= 0) { s.el.remove(); stack.splice(i, 1); } }
     if (subEl && subT > 0) { subT -= dt; if (subT <= 0) subEl.classList.remove('on'); }
@@ -166,7 +169,7 @@ const SPEECH = (() => {
     if (!heard && sqIds && sqIds.length) AUDIO.play(type === S.ORD_HOLD ? 'gong' : 'drum', undefined, 0, 0, 0.5);
   }
   const speaking = (id) => live.some(l => l.id === id);
-  return { say, frame, event, orderChain, nameOf, speaking, cycle, setLayout, get layout() { return layout; } };
+  return { say, frame, event, orderChain, nameOf, speaking, cycle, setLayout, note, get layout() { return layout; } };
 })();
 
 // ===== 浙兵 · The Zhejiang Company: a story campaign =====
