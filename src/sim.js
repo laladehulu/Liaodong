@@ -10,7 +10,7 @@ const TICK = 30, DT = 1 / 30, HALF = 150, GRAV = 22;
 const KEY_W = 1, KEY_S = 2, KEY_A = 4, KEY_D = 8, KEY_SPRINT = 16;
 const A_ATK = 1, A_BLOCK = 2, A_FIRE = 4, A_AIM = 8, A_KICK = 16, A_MOUNT = 32, A_JUMP = 64, A_SWAP = 128, A_RELOAD = 256, A_CMD = 512, A_RALLY = 1024, A_READY = 2048, A_THROW = 4096, A_DUEL = 8192;
 const BOMBS = 0, FURY_MAX = 100, AIM_RAISE = 0.6;
-const A_AB1 = 16384, A_AB2 = 32768, A_AB3 = 65536, A_ULT = 131072, A_DODGE = 262144, A_DASHL = 524288, A_DASHR = 1048576, ORD_CLASS = 11;
+const A_AB1 = 16384, A_AB2 = 32768, A_AB3 = 65536, A_ULT = 131072, A_DODGE = 262144, A_DASHL = 524288, A_DASHR = 1048576, A_GRIP = 2097152, ORD_CLASS = 11;
 const HAB = [{ key: 'whirl', name: 'Whirlwind', cd: 8 }, { key: 'dash', name: 'Dragon charge', cd: 10 }, { key: 'guard', name: 'Iron guard', cd: 12 }, { key: 'cry', name: 'War cry', cd: 25 }];
 const DIR_UP = 0, DIR_RIGHT = 1, DIR_DOWN = 2, DIR_LEFT = 3;
 const ST_IDLE = 0, ST_WINDUP = 1, ST_RELEASE = 2, ST_RECOVER = 3, ST_STUN = 4, ST_RELOAD = 5, ST_AIM = 6, ST_SWAP = 7, ST_KICK = 8, ST_BURST = 9;
@@ -855,7 +855,8 @@ class Sim {
     const kitH = u.kit ? this.kitInput(u, a, wsel) : false; const ws = kitH ? [u.weapon] : u.def.weapons;
     if ((a & A_SWAP) && ws.length > 1) { u.nextWeapon = ws[(ws.indexOf(u.weapon) + 1) % ws.length]; u.swapQ = true; }
     // a man with only a gun turns it round to fight with it as a club (and back); turning it breaks off a reload
-    else if (!kitH && (a & A_SWAP) && ws.length === 1 && u.weapon === 'rifle' && (u.st === ST_IDLE || u.st === ST_RELOAD || u.st === ST_AIM)) { u.club = !u.club; u.aiming = false; u.fireQ = 0; if (u.st !== ST_IDLE) { u.st = ST_IDLE; u.stT = 0; } this.events.push({ t: 'grip', id: u.id, club: u.club }); }
+    /* Q switches weapons; X turns a gun round to club with it (and back), whatever else he carries */
+    if ((a & A_GRIP) && u.weapon === 'rifle' && (u.st === ST_IDLE || u.st === ST_RELOAD || u.st === ST_AIM)) { u.club = !u.club; u.aiming = false; u.fireQ = 0; if (u.st !== ST_IDLE) { u.st = ST_IDLE; u.stT = 0; } this.events.push({ t: 'grip', id: u.id, club: u.club }); }
     if (wsel > 0 && wsel <= ws.length) { const w = ws[wsel - 1]; if (w !== u.weapon) { u.nextWeapon = w; u.swapQ = true; } else u.swapQ = false; }
     if (u.swapQ && (u.st === ST_RELOAD || u.st === ST_AIM)) { u.st = ST_IDLE; u.stT = 0; u.aiming = false; } // drawing the other weapon breaks off a reload
     if (u.swapQ && u.st === ST_IDLE) { u.swapQ = false; if (u.nextWeapon && u.nextWeapon !== u.weapon) { u.st = ST_SWAP; u.stT = 0; u.blocking = false; u.aiming = false; } }
@@ -4273,7 +4274,7 @@ Sim.prototype.hrTick = function (u) {
   if (u.hrA < 5) u.hrA += DT;
 };
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, YY_SLOT, FORM_COLUMN, WPN, spacingOf, gunOf,
-  KEY_W, KEY_S, KEY_A, KEY_D, A_ATK, A_BLOCK, A_FIRE, A_AIM, A_KICK, A_MOUNT, A_JUMP, A_SWAP, A_RELOAD, A_CMD, A_RALLY, A_READY, A_THROW, A_DUEL, AIM_RAISE, A_AB1, A_AB2, A_AB3, A_ULT, A_DODGE, A_DASHL, A_DASHR, KEY_SPRINT, ORD_SPAWN, ORD_CLASS, HCLASS, HAB, SCEN, BOMBS, FURY_MAX, SROLE, ARMS, RANGED, MISSIONS, OPS,
+  KEY_W, KEY_S, KEY_A, KEY_D, A_ATK, A_BLOCK, A_FIRE, A_AIM, A_KICK, A_MOUNT, A_JUMP, A_SWAP, A_RELOAD, A_CMD, A_RALLY, A_READY, A_THROW, A_DUEL, AIM_RAISE, A_AB1, A_AB2, A_AB3, A_ULT, A_DODGE, A_DASHL, A_DASHR, A_GRIP, KEY_SPRINT, ORD_SPAWN, ORD_CLASS, HCLASS, HAB, SCEN, BOMBS, FURY_MAX, SROLE, ARMS, RANGED, MISSIONS, OPS,
   DIR_UP, DIR_RIGHT, DIR_DOWN, DIR_LEFT, ST_IDLE, ST_WINDUP, ST_RELEASE, ST_RECOVER, ST_STUN, ST_RELOAD, ST_AIM, ST_SWAP, ST_KICK, ST_BURST,
   ORD_WAVE, ORD_MOVE, ORD_CHARGE, ORD_HOLD, ORD_FOLLOW, ORD_FORM, ORD_FIRE, ORD_CONTROL, ORD_AUTO, ORD_ABILITY, ORD_NAVAL, ORD_DIRECTIVE, DIR_ATTACK, DIR_HOLD, DIR_SUPPORT, DIR_FLANK, AI_NAMES, MODES, SCORE_WIN, FIRE_CS, abilityOf, ABILITY, FORM_LINE, FORM_COLUMN, FORM_WEDGE, FORM_LOOSE, RELEASE_T, KICK_T, SWAP_T };
 })();

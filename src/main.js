@@ -226,7 +226,7 @@ function wpnName(h, w) {
   return w;
 }
 function localHero() { const sim = state.sim; if (!sim) return null; const p = sim.players[state.localIdx]; return p ? sim.units[p.heroId] : null; }
-// a man whose only weapon is a gun (the three-eyed gun, a plain musket) turns it round with Q/X to fight with it as a club (sim: u.club)
+// a man whose only weapon is a gun (the three-eyed gun, a plain musket) turns it round with X to fight with it as a club (sim: u.club)
 // manning a bed crossbow or a gun: the weapon panel shows the piece, and an elevation scale with the range of the fall of shot
 // sits under the sights (the renderer works out the fall with the sim's own projectile steps)
 function empHUD(hero) {
@@ -300,7 +300,8 @@ document.addEventListener('keydown', (e) => {
     case 'Space': Input.pressed |= S.A_JUMP; e.preventDefault(); break;
     case 'KeyE': { if (typeof zheKeyE === 'function' && zheKeyE()) break; const h = localHero(); const sim = state.sim; const nearHorse = h && (h.mount >= 0 || sim.units.some(v => v.type === 'horse' && !v.dead && v.rider < 0 && Math.abs(v.x - h.x) + Math.abs(v.z - h.z) < 4)); Input.pressed |= nearHorse ? S.A_MOUNT : S.A_KICK; break; }
     case 'KeyR': if (!tapAttack(S.DIR_DOWN)) Input.pressed |= S.A_RELOAD; break;
-    case 'KeyQ': case 'KeyX': Input.pressed |= S.A_SWAP; Input.ads = false; break;
+    case 'KeyQ': Input.pressed |= S.A_SWAP; Input.ads = false; break;
+    case 'KeyX': Input.pressed |= S.A_GRIP; Input.ads = false; break; /* X: turn the gun round to club with it, and back to shoot */
     case 'Digit1': Input.wsel = 1; Input.ads = false; break;
     case 'Digit2': Input.wsel = 2; Input.ads = false; break;
     case 'Digit3': Input.wsel = 3; Input.ads = false; break;
@@ -958,7 +959,7 @@ function updateHUD(dt) {
     { let sb = document.getElementById('stam'); if (!sb) { sb = document.createElement('div'); sb.id = 'stam'; sb.innerHTML = '<i></i>'; sb.style.cssText = 'position:fixed;left:50%;bottom:86px;width:180px;height:5px;margin-left:-90px;background:rgba(0,0,0,.45);border:1px solid rgba(240,230,210,.25);border-radius:3px;overflow:hidden;pointer-events:none;transition:opacity .4s;z-index:5'; sb.firstChild.style.cssText = 'display:block;height:100%;background:#d9cfb6'; document.body.appendChild(sb); }
       const st = hero.champ ? Math.min(1, Math.max(0, (hero.sta || 0) / 100)) : 1 - Math.min(1, Math.max(0, (hero.fat || 0) / 100)); const show = !hero.dead && !Input.cmdMode && (st < 0.97 || hero.sprint);
       sb.style.opacity = show ? 1 : 0; sb.firstChild.style.width = (st * 100).toFixed(1) + '%'; sb.firstChild.style.background = hero.winded ? '#c0452e' : '#d9cfb6'; }
-    const w = hero.weapon; $('weapon').textContent = hero.dead ? 'Fallen' : w === 'rifle' ? (Input.bayonet || hero.club ? (hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun · club (Q: shoot)' : 'Musket · club (Q: shoot)') : (hero.def.key === 'hero' ? (me.team === 0 ? 'Niaochong musket' : 'Heavy musket') : hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun' : 'Musket')) : w === 'revolver' ? 'Three-eyed hand cannon' : w === 'bow' ? 'Horn bow' : w === 'yari' ? 'Qiang spear' : 'Dao';
+    const w = hero.weapon; $('weapon').textContent = hero.dead ? 'Fallen' : w === 'rifle' ? (Input.bayonet || hero.club ? (hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun · club (X: shoot)' : 'Musket · club (X: shoot)') : (hero.def.key === 'hero' ? (me.team === 0 ? 'Niaochong musket' : 'Heavy musket') : hero.def.rifle && hero.def.rifle.mag > 1 ? 'Three-eyed gun' : 'Musket')) : w === 'revolver' ? 'Three-eyed hand cannon' : w === 'bow' ? 'Horn bow' : w === 'yari' ? 'Qiang spear' : 'Dao';
     const mounted = hero.mount >= 0 || hero.mounted;
     $('mode').textContent = hero.dead ? 'Commanding from above' : Input.cmdMode ? 'Command view' : mounted ? 'Mounted' : hero.st === S.ST_STUN ? 'Staggered' : hero.counterT > 0 ? 'Counter!' : hero.downT > 0 ? 'Knocked down' : '';
     const g = S.gunOf(hero.def, w);
@@ -968,7 +969,7 @@ function updateHUD(dt) {
         if (hero.st === S.ST_RELOAD) { $('ammoFill').style.width = (hero.stT / Math.max(0.1, hero.reloadT) * 100).toFixed(0) + '%'; $('ammoText').textContent = 'Nocking…' + q; }
         else { $('ammoFill').style.width = (hero.ammo > 0 ? (d > 0 ? d * 100 : 100) : 0).toFixed(0) + '%'; $('ammoText').textContent = (hero.ammo > 0 ? (d > 0 ? (d >= 1 ? 'Full draw · let go' : 'Drawing…') : 'Hold LMB to draw') : 'No arrow') + q; } }
       else if (hero.st === S.ST_RELOAD && hero.reloadT > 0.6) { $('ammoFill').style.width = (hero.stT / hero.reloadT * 100).toFixed(1) + '%'; $('ammoText').textContent = mag > 1 ? `Reloading… ${have}/${mag}` : 'Reloading…'; }
-      else { $('ammoFill').style.width = (have / mag * 100).toFixed(0) + '%'; $('ammoText').textContent = mag > 1 ? `${'●'.repeat(have)}${'○'.repeat(mag - have)}${have === 0 ? ' · R reload · Q club' : ''}` : (have > 0 ? 'Loaded' : 'Empty · R reload' + (hero.def.weapons.length > 1 ? '' : ' · Q club')); }
+      else { $('ammoFill').style.width = (have / mag * 100).toFixed(0) + '%'; $('ammoText').textContent = mag > 1 ? `${'●'.repeat(have)}${'○'.repeat(mag - have)}${have === 0 ? ' · R reload · X club' : ''}` : (have > 0 ? 'Loaded' : 'Empty · R reload' + (hero.def.weapons.length > 1 ? '' : ' · X club')); }
     } else { $('ammoFill').style.width = (hero.st === S.ST_WINDUP ? Math.min(1, (hero.stT) / 0.28) * 100 : hero.blocking ? 100 : 0).toFixed(0) + '%'; $('ammoText').textContent = hero.st === S.ST_WINDUP ? `Winding up: ${DIRN[hero.atkDir]}` : hero.blocking ? `Blocking ${BLKN[hero.blockDir]}` : hero.st === S.ST_RECOVER ? 'Recovering' : ''; }
     $('dirText').textContent = (!hero.dead && !Input.cmdMode && !gunMode()) ? (hero.weapon === 'yari' ? 'LMB thrust · wheel↑ slam · RMB block · double-tap A/D slide' : 'LMB slash · hold heavy · wheel↑ overhead · R stab · RMB block · double-tap A/D slide') : (me.rallyT > 0 ? `rally in ${Math.ceil(me.rallyT / 30)}s` : 'V · rally');
     empHUD(hero);

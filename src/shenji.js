@@ -467,7 +467,7 @@ const SJBAT = {
   battle1: ['sj1', '順義 · Shunyi', 'November 1629. Your team marches behind the carts. Stay with your team: the chief calls the drill. Fire when the drum rolls, then swing the empty gun.', [['sjf', 'sjf'], ['mangui', 'mangui']]],
   battle2: ['sj2', '廣渠門 · The Guangqu Gate', 'The twentieth day of the eleventh month. Before the Guangqu Gate with Yuan Chonghuan\'s Liaodong men. Fire by ranks; never all at once.', [['sjf', 'sjf'], ['yuan', 'yuan'], ['zu', 'zu']]],
   battle3: ['sj3', '長山 · Changshan', 'October 1631. The cart camp on the long hill. Hold the north carts with your team.', [['sjf', 'sjf'], ['zhang', 'zhang']]],
-  battleA: ['sjamb', '村 · The village', 'A village east of Tongzhou, on the road back to Beijing. Search it with your team. Point-blank, the three barrels; then turn the gun round (Q) and swing it.', [['sjf', 'sjf']]],
+  battleA: ['sjamb', '村 · The village', 'A village east of Tongzhou, on the road back to Beijing. Search it with your team. Point-blank, the three barrels; then turn the gun round (X) and swing it.', [['sjf', 'sjf']]],
   drill: ['sjdrill', '校場 · The drill ground', 'The autumn review. Stay with your team and march on the drum. Left mouse fires the three barrels one after another; R reloads.', [['sjf', 'sjf']]],
 };
 function sjBattle(scene) {
