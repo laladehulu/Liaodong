@@ -57,9 +57,10 @@
     if (this.fig.head) { this.fig.head.material.roughness = 0.96; } for (const k of ['hand', 'foot', 'kepi', 'cap', 'jingasa', 'band']) if (this.fig[k] && this.fig[k].material.roughness !== undefined) this.fig[k].material.roughness = 0.97; // matte skin and cloth: no sun glare off faces and hats
     // the battlefield floor: churned mud, trampled grass, puddles and stones
     if (this.terrain) { const tm = this.terrain.material; tm.roughness = 0.97;
-      const snowF = this.biome.snow ? 1 : -1; tm.onBeforeCompile = (sh) => { sh.uniforms.rTime = RT.time; sh.uniforms.rSnow = { value: snowF };
+      const snowF = this.biome.snow ? 1 : -1; const gMap = this.groundMap || new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat), gExt = this.groundExt || 1; gMap.needsUpdate = true;
+      tm.onBeforeCompile = (sh) => { sh.uniforms.rTime = RT.time; sh.uniforms.rSnow = { value: snowF }; sh.uniforms.gMap = { value: gMap }; sh.uniforms.gExt = { value: gExt };
         sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-        sh.fragmentShader = 'varying vec3 vWP; uniform float rSnow;\n' + NOISE + TCELL + sh.fragmentShader
+        sh.fragmentShader = 'varying vec3 vWP; uniform float rSnow; uniform sampler2D gMap; uniform float gExt;\n' + NOISE + TCELL + sh.fragmentShader
           .replace('#include <color_fragment>', `#include <color_fragment>
             { vec2 p = vWP.xz;
               float big = rF(p * 0.035), mid = rF(p * 0.21), fine = rV(p * 1.7) * 0.6 + rV(p * 0.9 + 4.0) * 0.4;
@@ -84,8 +85,15 @@
                 cc *= 1.0 - seam * 0.035; cc = mix(cc, mix(vec3(0.22, 0.2, 0.16), vec3(0.42, 0.4, 0.35), step(0.6, cl2.w)), grit * 0.4);
                 c = mix(c, cc, near); }
               float stones = smoothstep(0.88, 0.94, rV(p * 1.9)) * (1.0 - churn); c = mix(c, vec3(0.42, 0.4, 0.37), stones * 0.6);
+              // grounding: trodden bare earth round every structure (an uneven edge cut by noise), and a contact shadow at the foot
+              vec4 gm = texture2D(gMap, (p + gExt) / (2.0 * gExt)); float gn = rV(p * 1.4) * 0.6 + rV(p * 4.3 + 9.0) * 0.4;
+              float dirt = smoothstep(0.34, 0.5, gm.g + (gn - 0.5) * 0.5);
+              vec3 trod = mix(earth, mud, 0.3 + 0.45 * fine) * (0.88 + 0.2 * gn); trod = mix(trod, vec3(0.4, 0.38, 0.34), grit * 0.5 * near);
+              c = mix(c, trod, dirt * 0.9);
               // keep what the map painted on purpose: water margins, roads, rock, snow
-              diffuseColor.rgb = mix(c, base, snowy); }`)
+              diffuseColor.rgb = mix(c, base, snowy);
+              diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.66, 0.62, 0.58), dirt * snowy * 0.55);
+              diffuseColor.rgb *= 1.0 - gm.r * 0.6; }`)
           .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
             { vec2 p = vWP.xz; float e = 0.06; float h0 = rF(p * 0.6); float hx = rF((p + vec2(e, 0.0)) * 0.6); float hz = rF((p + vec2(0.0, e)) * 0.6);
               vec3 bump = vec3((h0 - hx) / e, 0.0, (h0 - hz) / e) * 0.07;
@@ -253,10 +261,24 @@
         float h1(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
         float lin(vec2 uv){ float d = texture2D(tDep, uv).x; return (near * far) / (far - d * (far - near)); }
         vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+        // FXAA: the scene is drawn into a texture with no multisampling, so long straight edges (walls, boards, poles)
+        // would stair-step; this smooths them along their own direction
+        vec3 fxaa(vec2 uv){ vec2 px = 1.0 / res; vec3 L = vec3(0.299, 0.587, 0.114);
+          vec3 cM = texture2D(tCol, uv).rgb; float lM = dot(min(cM, 1.0), L);
+          float lNW = dot(min(texture2D(tCol, uv + vec2(-1.0, -1.0) * px).rgb, 1.0), L), lNE = dot(min(texture2D(tCol, uv + vec2(1.0, -1.0) * px).rgb, 1.0), L);
+          float lSW = dot(min(texture2D(tCol, uv + vec2(-1.0, 1.0) * px).rgb, 1.0), L), lSE = dot(min(texture2D(tCol, uv + vec2(1.0, 1.0) * px).rgb, 1.0), L);
+          float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE))), lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+          if (lMax - lMin < max(0.04, lMax * 0.1)) return cM;
+          vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));
+          float red = max((lNW + lNE + lSW + lSE) * 0.03125, 0.0078125); float rcp = 1.0 / (min(abs(dir.x), abs(dir.y)) + red);
+          dir = clamp(dir * rcp, -8.0, 8.0) * px;
+          vec3 A = 0.5 * (texture2D(tCol, uv + dir * (1.0 / 3.0 - 0.5)).rgb + texture2D(tCol, uv + dir * (2.0 / 3.0 - 0.5)).rgb);
+          vec3 B = A * 0.5 + 0.25 * (texture2D(tCol, uv - dir * 0.5).rgb + texture2D(tCol, uv + dir * 0.5).rgb);
+          float lB = dot(min(B, 1.0), L); return (lB < lMin || lB > lMax) ? A : B; }
         void main(){
           vec2 q = vUv - 0.5; float r2 = dot(q, q);
           // a little lens: chromatic fringe toward the corners
-          vec2 ca = q * r2 * 0.012; vec3 c = vec3(texture2D(tCol, vUv + ca).r, texture2D(tCol, vUv).g, texture2D(tCol, vUv - ca).b);
+          vec2 ca = q * r2 * 0.012; vec3 c0 = texture2D(tCol, vUv).rgb; vec3 c = fxaa(vUv); c.r += texture2D(tCol, vUv + ca).r - c0.r; c.b += texture2D(tCol, vUv - ca).b - c0.b;
           // bloom from fire, flashes and the sun through smoke (cheap 12-tap gather of bright light)
           vec3 bl = vec3(0.0); vec2 px = 1.0 / res;
           for (int i = 0; i < 12; i++) { float a = float(i) * 2.39996; float rr = (3.0 + float(i) * 2.2); vec3 s = texture2D(tCol, vUv + vec2(cos(a), sin(a)) * rr * px * 1.6).rgb; bl += max(s - vec3(0.9), vec3(0.0)); }

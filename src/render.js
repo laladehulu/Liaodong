@@ -527,6 +527,7 @@ class Renderer {
     this.ragNext = 0;
     this.buildEnvironment(); this.buildWater();
     { const n = sim.units.length; this.fog = !!(window.__boshin && window.__boshin.state && window.__boshin.state.fog) && !sim.heroMode && !sim.chaos; this.seen = new Uint8Array(n).fill(1); this.wasSeen = new Uint8Array(n).fill(1); this.reveal = new Float32Array(n); this.seenSq = new Uint8Array(sim.squads.length).fill(1); this.lastSeen = []; }
+    this.buildGroundMap();
     if (!this.lowfx) { this.toonify(); this.buildPost(); }
     AUDIO.setRain(!!sim.rain);
     this.resize();
@@ -764,14 +765,18 @@ class Renderer {
     const wallMat = new THREE.MeshLambertMaterial({ color: 0xa9a49a }), roofMat = new THREE.MeshLambertMaterial({ color: snow ? 0xe6e9ec : 0x3e4044 }), plasterMat = new THREE.MeshLambertMaterial({ color: 0x9a958c }), capMat = new THREE.MeshLambertMaterial({ color: snow ? 0xeef0f2 : 0x34363a });
     const houses = boxes.filter(b => b.kind === 'house' || b.kind === 'hall'), walls = boxes.filter(b => b.kind === 'wall');
     const hm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), wallMat, houses.length + 1), rm = new THREE.InstancedMesh(new THREE.ConeGeometry(0.72, 1, 4), roofMat, houses.length + 1);
+    // each house stands on a low stone plinth (台基) whose foot goes down to the lowest corner of the slope
+    const plm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: snow ? 0x8a8780 : 0x75706a }), houses.length + 1);
     houses.forEach((b, i) => {
-      const y = terrainH(b.x, b.z); const wh = b.h * 0.62;
-      T.m.compose(T.v.set(b.x, y + wh / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, wh, b.hd * 2)); hm.setMatrixAt(i, T.m);
+      const y = terrainH(b.x, b.z); const wh = b.h * 0.62, fy = this.footY(b), pt = y + 0.32;
+      T.m.compose(T.v.set(b.x, (fy + pt) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.36, pt - fy, b.hd * 2 + 0.36)); plm.setMatrixAt(i, T.m);
+      T.m.compose(T.v.set(b.x, (pt - 0.05 + y + wh) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, y + wh - pt + 0.05, b.hd * 2)); hm.setMatrixAt(i, T.m);
       T.m.compose(T.v.set(b.x, y + wh + b.h * 0.2, b.z), T.q.setFromEuler(T.e.set(0, PI / 4, 0)), T.v2.set(Math.max(b.hw, b.hd) * 2 * 1.15, b.h * 0.42, Math.max(b.hw, b.hd) * 2 * 1.15)); rm.setMatrixAt(i, T.m);
     });
     const wm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), plasterMat, walls.length + 1), cm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), capMat, walls.length + 1);
-    walls.forEach((b, i) => { const y = terrainH(b.x, b.z); T.m.compose(T.v.set(b.x, y + b.h / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, b.h, b.hd * 2)); wm.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.08, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.3, 0.18, b.hd * 2 + 0.3)); cm.setMatrixAt(i, T.m); });
-    for (const m of [hm, rm, wm, cm]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
+    walls.forEach((b, i) => { const y = terrainH(b.x, b.z), fy = this.footY(b); T.m.compose(T.v.set(b.x, (fy + y + b.h) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, y + b.h - fy, b.hd * 2)); wm.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.08, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.3, 0.18, b.hd * 2 + 0.3)); cm.setMatrixAt(i, T.m); });
+    houses.length || plm.setMatrixAt(0, T.zero); for (let i = houses.length; i < houses.length + 1; i++) plm.setMatrixAt(i, T.zero);
+    for (const m of [hm, rm, wm, cm, plm]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
     const temple = this.sim.deco.find(d => d.kind === 'temple');
     if (temple) { const g = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 4.2, 8), new THREE.MeshLambertMaterial({ color: 0xb8402a })); const y = terrainH(temple.x, temple.z - 20); g.position.set(temple.x - 3.2, y + 2.1, temple.z - 20); this.scene.add(g); const g2 = g.clone(); g2.position.x = temple.x + 3.2; this.scene.add(g2); const beam = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.5, 0.6), new THREE.MeshLambertMaterial({ color: 0x2b2420 })); beam.position.set(temple.x, y + 4.4, temple.z - 20); this.scene.add(beam); const gr = new THREE.Mesh(new THREE.ConeGeometry(5.6, 1.4, 4), new THREE.MeshLambertMaterial({ color: this.biome.snow ? 0xe6e9ec : 0x2f5a4a })); gr.rotation.y = PI / 4; gr.scale.set(1.2, 1, 0.45); gr.position.set(temple.x, y + 5.3, temple.z - 20); this.scene.add(gr); }
   }
@@ -2450,5 +2455,50 @@ Renderer.prototype.buildBeijing = function () {
   box(far, -40, 6, 330, 900, 34, 10); for (const [x, s] of [[-170, 1.5], [120, 1.4], [-430, 1.2]]) { box(farR, x, 23 + 4 * s, 330, 22 * s, 8 * s, 11 * s); hip(roof, x, 23 + 7.4 * s, 330, 30 * s, 16 * s, 7 * s); }
   grp.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
 };
+// ---- grounding: where things meet the earth ----
+// One ground map for the whole field, painted once when the battle is built: R = contact shadow (ambient occlusion
+// round every house, wall, palisade, mantlet, tent, rock and trunk), G = trodden earth (an uneven skirt of bare,
+// trampled ground round each structure). The realism and stylized ground shaders read it, so every object stands in
+// the ground instead of slicing through it along a perfect line. A few loose stones break up the base as well.
+Renderer.prototype.buildGroundMap = function () {
+  const E = HALF + 30, N = this.lowfx ? 1024 : 2048, k = N / (2 * E), sim = this.sim;
+  const mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, N, N); return [c, g]; };
+  const [dc, dg] = mk(), [ac, ag] = mk();
+  let seed = 4711 + (sim.seed & 1023); const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const X = (x) => (x + E) * k, Zc = (z) => (z + E) * k;
+  // [dirt margin m, contact strength] per kind of structure
+  const KIND = { house: [1.1, 0.8], hall: [1.3, 0.85], wall: [0.7, 0.65], palisade: [0.85, 0.6], mantlet: [0.95, 0.65], tent: [0.7, 0.5], rampart: [1.4, 0.45], gate: [1.3, 0.8], keep: [1.6, 0.85] };
+  const blob = (g, cx, cz, hw, hd, m, a, jag) => { // an uneven rounded outline round a footprint, grown by m
+    const pts = [], per = 2 * (hw + hd) + 4 * m, n = Math.max(10, Math.min(64, Math.round(per / 0.7)));
+    for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+      // a rounded rectangle (superellipse) through the grown footprint, pushed in and out a little
+      const ex = (hw + m) * Math.sign(c) * Math.pow(Math.abs(c), 0.35), ez = (hd + m) * Math.sign(s) * Math.pow(Math.abs(s), 0.35), j = 1 + (rr() - 0.5) * jag;
+      pts.push([cx + ex * j, cz + ez * j]); }
+    g.globalAlpha = a; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Zc(p[1])) : g.moveTo(X(p[0]), Zc(p[1]))); g.closePath(); g.fill(); };
+  dg.fillStyle = '#fff'; ag.fillStyle = '#fff'; const stones = [];
+  for (const b of sim.boxes) { const K = KIND[b.kind]; if (!K) continue; const tall = Math.min(1, (b.h || 2) / 3);
+    blob(dg, b.x, b.z, b.hw, b.hd, K[0], 1, 0.45);
+    blob(ag, b.x, b.z, b.hw, b.hd, 0.12 + 0.18 * tall, K[1] * (0.6 + 0.4 * tall), 0.1);
+    if (b.kind !== 'tent' && b.kind !== 'rampart') { const n = Math.max(2, Math.min(9, Math.round((b.hw + b.hd) * 1.1)));
+      for (let i = 0; i < n; i++) { const t = rr() * Math.PI * 2, c = Math.cos(t), s = Math.sin(t), o = 0.12 + rr() * 0.45;
+        stones.push([b.x + Math.sign(c) * Math.min(Math.abs(c) * 3, 1) * (b.hw + o), b.z + Math.sign(s) * Math.min(Math.abs(s) * 3, 1) * (b.hd + o), 0.45 + rr() * 0.9]); } } }
+  for (const o of sim.obstacles) { const r = o.kind === 1 ? 0.9 * (o.scale || 1) : 0.45 * (o.scale || 1); blob(ag, o.x, o.z, r * 0.5, r * 0.5, r * 0.6, o.kind === 1 ? 0.55 : 0.35, 0.2); if (o.kind === 1) blob(dg, o.x, o.z, r * 0.6, r * 0.6, 0.5, 0.6, 0.5); }
+  for (const f of sim.deco.filter(d => d.kind === 'fence')) { const dx = Math.sin(f.yaw), dz = Math.cos(f.yaw);
+    for (const [g, w, a] of [[dg, 1.1, 0.7], [ag, 0.35, 0.35]]) { g.globalAlpha = a; g.lineWidth = w * 2 * k; g.lineCap = 'round'; g.strokeStyle = '#fff'; g.beginPath(); g.moveTo(X(f.x), Zc(f.z)); g.lineTo(X(f.x + dx * f.len), Zc(f.z + dz * f.len)); g.stroke(); } }
+  if (!stones.length && !sim.boxes.some(b => KIND[b.kind]) && !sim.obstacles.length) return;
+  // soften: the trodden ground fades over ~0.4 m (the shaders cut it with noise), the contact shadow over ~0.35 m
+  const soft = (src, px) => { const [c, g] = mk(); g.filter = `blur(${px.toFixed(1)}px)`; g.drawImage(src, 0, 0); return g.getImageData(0, 0, N, N).data; };
+  const D = soft(dc, 0.42 * k), A = soft(ac, 0.32 * k), px = new Uint8Array(N * N * 4);
+  for (let i = 0; i < N * N; i++) { px[i * 4] = A[i * 4]; px[i * 4 + 1] = D[i * 4]; px[i * 4 + 3] = 255; }
+  const tex = new THREE.DataTexture(px, N, N, THREE.RGBAFormat); tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true; tex.needsUpdate = true;
+  this.groundMap = tex; this.groundExt = E;
+  // loose stones and clods along the bases, half sunk
+  if (stones.length) { const T = this.tmp, snow = this.biome.snow; const m = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), stones.length);
+    stones.forEach((s, i) => { const y = terrainH(s[0], s[1]); T.m.compose(T.v.set(s[0], y + 0.02, s[1]), T.q.setFromEuler(T.e.set(rr() * 3, rr() * 3, rr() * 3)), T.v2.set(s[2] * (0.8 + rr() * 0.5), s[2] * 0.6, s[2])); m.setMatrixAt(i, T.m);
+      m.setColorAt(i, T.c.setHSL(0.08, 0.08 + rr() * 0.08, (snow ? 0.42 : 0.3) + rr() * 0.14)); });
+    if (m.instanceColor) m.instanceColor.needsUpdate = true; m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
+};
+// where a footprint meets sloping ground: the lowest corner, so walls and plinths go down into the earth, not float
+Renderer.prototype.footY = function (b) { let y = Infinity; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) y = Math.min(y, terrainH(b.x + sx * b.hw, b.z + sz * b.hd)); return y - 0.08; };
 return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, roundBox, uhash };
 })();
