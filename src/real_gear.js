@@ -7,7 +7,7 @@ const R = RENDER, HPI = Math.PI / 2, BANNER = R.BANNER, torsoColor = R.torsoColo
 const RG_CACHE = new Map();
 function realGear(u) {
   const vr = u.type === 'byakkotai' ? (u.id % 2) * 4 : u.id % 6; const key = u.type + ':' + (u.role || '') + ':' + u.team + ':' + vr + ':' + (u.team === 1 ? ((u.squad >= 0 ? u.squad : u.id) * 7 + 3) % 4 : 0) + (u.look ? ':L' + u.look.id : ''); let g = RG_CACHE.get(key); if (g) return g;
-  const imp = u.team === 0, team = imp ? 0xb3262f : 0x2f55b8, P = [];
+  const imp = u.team === 0 || !!(u.look && u.look.ming), team = imp ? 0xb3262f : 0x2f55b8, P = [];
   let HAT = false; const b = (f, o, s, k, r) => P.push({ m: 'b', f, o, s, k, r, hat: HAT && f === 'h' }), c = (f, o, s, k, r) => P.push({ m: 'c', f, o, s, k, r, hat: HAT && f === 'h' }), y = (f, o, s, k, r) => P.push({ m: 'y', f, o, s, k, r, hat: HAT && f === 'h' });
   const hatOn = (fn) => { HAT = true; fn(); HAT = false; };
   const seg = (a, z, t0, t1, w, d, k) => P.push({ m: 'b', f: 'seg', a, z, t0, t1, w, d, k });

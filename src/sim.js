@@ -1424,7 +1424,7 @@ class Sim {
         else { u.mx = 0; u.mz = 0; }
         if (u.role && sq && !sq.routing && !xl) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
         const eager = u.mounted ? 0.35 : u.role === 'spear' && tgt.entT > 0 ? 0.35 : u.role === 'brush' ? 0.2 : u.role === 'shield' ? 0.05 : 0.09;
-        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && this.rng.next() < eager) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
+        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && this.rng.next() < eager && this.xcSpaceOk(u, tgt)) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
         if (this.xc && u.circleT > 0 && !u.mounted && u.st === ST_IDLE && !xl) { u.circleT -= DT; const sd = (u.id & 1) ? 1 : -1, nx = dx / (d || 1), nz = dz / (d || 1), keep = reach + 1.1; const rad = (d - keep) * 1.6; u.mx = nx * rad + nz * sd * 1.4; u.mz = nz * rad - nx * sd * 1.4; if (!u.blocking && this.rng.next() < 0.02) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = 0.5; } }
         this.aiBlock(u, tgt);
       }
@@ -3635,6 +3635,12 @@ Sim.prototype.xcSpaces = function () { // spaces held on each man this tick, cou
   for (const v of this.units) { if (!(v.spaceOf >= 0)) continue; const t = this.units[v.spaceOf];
     if (v.dead || v.wounded || v.downed || !t || t.dead || v.target !== v.spaceOf) { v.spaceOf = -1; continue; } this.spN[v.spaceOf]++; }
   return this.spN;
+};
+// a man who reaches a foe by another road (his formation slot, a push) still needs a free space on him to strike
+Sim.prototype.xcSpaceOk = function (u, tgt) {
+  if (!this.xc || u.ctrl >= 0 || u.mounted || u.champ || u.spaceOf === tgt.id) return true;
+  const N = this.xcSpaces(), n = N[tgt.id] || 0; if (n >= this.xcLim(tgt)) return false;
+  u.spaceOf = tgt.id; N[tgt.id] = n + 1; return true;
 };
 Sim.prototype.xcHold = function (u, tgt, d, nx, nz, keep, spd) { // stand off at a distance from the foe, facing him
   const e = d - keep, sp = u.def.speed * spd;

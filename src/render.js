@@ -100,7 +100,8 @@ function lookGear(L, b, c, y, hatOn, part) {
 function gearFor(u) {
   if (GEAR_HOOK.fn) { const g = GEAR_HOOK.fn(u); if (g) return g; }
   const vr = u.type === 'byakkotai' ? (u.id % 2) * 4 : u.id % 6; const key = u.type + ':' + (u.role || '') + ':' + u.team + ':' + vr + ':' + (u.team === 1 ? ((u.squad >= 0 ? u.squad : u.id) * 7 + 3) % 4 : 0) + (u.look ? ':L' + u.look.id : ''); let g = GEAR_CACHE.get(key); if (g) return g;
-  const imp = u.team === 0, team = imp ? 0xb3262f : 0x2f55b8, P = [];
+  // look.ming: men of the other side who are Ming soldiers all the same (the Dengzhou mutineers of 1632) wear Ming kit
+  const imp = u.team === 0 || !!(u.look && u.look.ming), team = imp ? 0xb3262f : 0x2f55b8, P = [];
   let HAT = false; const b = (f, o, s, k, r) => P.push({ m: 'b', f, o, s, k, r, hat: HAT && f === 'h' }), c = (f, o, s, k, r) => P.push({ m: 'c', f, o, s, k, r, hat: HAT && f === 'h' }), y = (f, o, s, k, r) => P.push({ m: 'y', f, o, s, k, r, hat: HAT && f === 'h' });
   const hatOn = (fn) => { HAT = true; fn(); HAT = false; };
   const seg = (a, z, t0, t1, w, d, k) => P.push({ m: 'b', f: 'seg', a, z, t0, t1, w, d, k });
@@ -1936,6 +1937,8 @@ class Renderer {
     { const arm = hero.def.arm, K = this.vmKatana.scale; if (arm === 'guandao') K.set(1.1, 1.8, 2.2); else if (arm === 'mace') K.set(3, 0.72, 1.3); else if (arm === 'jian') K.set(0.75, 1.15, 0.6); else K.set(1, 1, 1); }
     { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * 14); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
     const yrole = w === 'yari' ? hero.role : null; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
+    // a three-eyed gun model added by a campaign (vmSj) replaces the musket parts every frame, whoever you now are
+    if (this.vmSj) { const on = hero.type === 'rifle_spencer'; this.vmSj.visible = on; for (const c of this.vmRifle.children) { if (c === this.vmSj) continue; if (c === this.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; } }
     this.sleeveMat.color.setHex(torsoColor(hero));
     let target, speed = 14, two = true, cart = false, rod = false, breechOpen = 0, cylOut = 0, shake = 0;
     let camRoll = 0, camPitch = 0, camPush = 0;

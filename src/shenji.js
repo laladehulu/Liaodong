@@ -314,7 +314,7 @@ function sjCamp(night) {
   const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, connected: true }];
   const camp = sjCampCfg(night); startGame({ seed, battle: 'zcamp', mode: 'campaign', mission: 'zcamp', camp, players: pl }, 0, null, 1);
   for (const u of state.sim.units) if (u.camp) { ZC.map[u.id] = u.ci; sDress(u, u.ci); } { const me = state.sim.units[state.sim.players[0].heroId]; sDress(me, sIdx(ZS.me)); me.def = Object.assign({}, me.def, { hp: me.def.hp * 1.5 }); me.hp = me.def.hp; }
-  document.body.classList.add('sjstory');
+  document.body.classList.add('sjstory'); sjVM(); setTimeout(sjVM, 400);
   MUSIC.play('menu'); MUSIC.setIntensity(0.15); AUDIO.setFire(0.6); $('army').hidden = true;
   setTimeout(() => storyCard(SJCAMPTXT[night][1], SJCAMPTXT[night][0]), 900);
 }
