@@ -60,7 +60,7 @@ function beaconShop(open) {
 function beaconShopDraw() {
   const el = $('bcshop'), sim = state.sim, B = sim && sim.bc; if (!el || el.hidden || !B) return; const K = S.BEACON;
   const rows = K.SHOP.map((it, i) => { const d = S.defFor(it[0], 0), n = sim.beaconStock(i), ok = n > 0 && B.silver >= it[1];
-    return `<div class="it${ok ? '' : ' no'}"><kbd>${i + 1}</kbd><span>${d.jp} ${d.name}<small>${d.count} men · ${n ? `${n} on the road` : 'none left'}</small></span><b>${it[1]}</b></div>`; });
+    return `<div class="it${ok ? '' : ' no'}"><kbd>${i + 1}</kbd><span>${d.jp} ${d.name}<small>${d.count > 1 ? `${d.count} men` : 'one rocket cart'} · ${n ? `${n} on the road` : 'none left'}</small></span><b>${it[1]}</b></div>`; });
   rows.push(`<div class="it${B.silver >= K.MEND ? '' : ' no'}"><kbd>${K.SHOP.length + 1}</kbd><span>醫 Mend your men<small>Every man of yours back to full strength</small></span><b>${K.MEND}</b></div>`);
   el.innerHTML = `<h4>糧餉 · Quartermaster · 銀 ${B.silver}</h4>${rows.join('')}<div class="ft">Hired companies march up the south road to you. I or Esc to close.</div>`;
 }
