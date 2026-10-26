@@ -1,0 +1,5 @@
+dist/
+src/_mainfull.js
+src/snd_data.js
+node_modules/
+*.log

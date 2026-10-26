@@ -1,0 +1,31 @@
+const { chromium } = require('/opt/npm-tools/node_modules/playwright-core');
+const path = require('path');
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
+  const errors = []; const shot = async (page, n) => { try { await page.screenshot({ path: path.resolve(__dirname, 'v2_' + n + '.png'), timeout: 60000 }); } catch (e) { console.log('fail', n); } };
+  let page = await browser.newPage({ viewport: { width: 1200, height: 650 } });
+  page.on('pageerror', e => errors.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
+  await page.goto('file://' + path.resolve(__dirname, '..', 'dist', 'test.html'), { waitUntil: 'load' }); await page.waitForTimeout(300);
+  await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; });
+  await page.click('#modeSeg button[data-m="story"]'); await page.waitForTimeout(300); await shot(page, 'storymenu');
+  await page.click('#btnSolo'); await page.waitForTimeout(1500);
+  await shot(page, 'storyintro');
+  const r = await page.evaluate(() => { const d = window.__boshin, sim = d.state.sim; d.Input.pressed |= 2048; d.stepN(5); for (let i = 0; i < 2000 && sim.phase === 0; i++) d.stepN(1); d.stepN(30 * 45); return { battle: sim.battle, name: d.state.peerNames[0], players: sim.players.length, card: document.getElementById('storycard').innerText.slice(0, 80) }; });
+  console.log(r); await page.waitForTimeout(400); await shot(page, 'storybeat');
+  // weapons in first person
+  await page.evaluate(() => { const d = window.__boshin; d.Input.locked = true; d.Input.pitch = -0.05; }); await page.waitForTimeout(800); await shot(page, 'dao');
+  await page.keyboard.press('Digit2'); await page.waitForTimeout(1200); await shot(page, 'musket');
+  await page.keyboard.press('Digit3'); await page.waitForTimeout(1200); await shot(page, 'threeeyed');
+  await page.evaluate(() => { const d = window.__boshin, sim = d.state.sim; sim.winner = 0; sim.events.push({ t: 'end', winner: 0 }); d.handleEvents([{ t: 'end', winner: 0 }]); });
+  await page.waitForTimeout(4000); await shot(page, 'storywin');
+  console.log('next', await page.evaluate(() => document.getElementById('btnNext').hidden ? 'hidden' : document.getElementById('btnNext').textContent));
+  await page.close();
+  page = await browser.newPage({ viewport: { width: 1200, height: 650 } });
+  page.on('pageerror', e => errors.push('officers ' + e.message));
+  await page.goto('file://' + path.resolve(__dirname, '..', 'dist', 'test.html'), { waitUntil: 'load' }); await page.waitForTimeout(300);
+  await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; const s = window.__boshin.state; s.army = ['gatling']; s.battle = 'field'; });
+  await page.click('#modeSeg button[data-m="officers"]'); await page.click('#btnSolo'); await page.waitForTimeout(1000);
+  const o = await page.evaluate(() => { const d = window.__boshin, sim = d.state.sim; d.Input.pressed |= 2048; d.stepN(5); for (let i = 0; i < 2000 && sim.phase === 0; i++) d.stepN(1); sim.players[0].auto = true; for (let i = 0; i < 2500; i++) { d.stepN(1); if (sim.events.some(e => e.t === 'shot' && e.weapon === 'gatling')) break; } const g = sim.squads[sim.players[0].squads[0]]; const r = d.state.renderer; d.Input.cmdMode = true; r.cmdCam.x = g.cx + 6; r.cmdCam.z = g.cz + 12; r.cmdCam.h = 12; r.cmdCam.yaw = Math.PI * 0.9; return { mine: sim.players[0].squads.map(id => sim.squads[id].def.name), players: sim.players.map(p => p.name) }; });
+  console.log(o); await page.waitForTimeout(300); await shot(page, 'rockets');
+  console.log('errors', errors); await browser.close();
+})();

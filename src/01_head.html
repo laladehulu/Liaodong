@@ -1,0 +1,521 @@
+<title>Ming Dynasty 1619</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a lacquer-black field with paper panels; faction colors are the only strong hues. */
+:root {
+  --bg: #0f0d0c; --lacquer: #16130f; --paper: #e9e1cf; --paper2: #dcd2bc; --ink: #1d1a17; --ink2: #5a534a; --muted: #9a9183;
+  --fg: #ece6da; --line: #3a342d; --line-paper: #b9ad94;
+  --imp: #c23a44; --sho: #3f66c8; --gold: #d2a94c; --ok: #8fcf6a; --warn: #e8a23b; --danger: #e04a3a;
+  --font-display: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; overflow: hidden; }
+#app { position: fixed; inset: 0; }
+canvas#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #c9d0d2; }
+button { font-family: var(--font-ui); cursor: pointer; }
+.screen { position: absolute; inset: 0; overflow: auto; display: flex; align-items: flex-start; justify-content: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: radial-gradient(ellipse at 50% 20%, #221c17 0%, var(--bg) 60%); box-sizing: border-box; }
+.panel { width: min(980px, 100%); background: var(--paper); color: var(--ink); border: 1px solid var(--line-paper); box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.4); padding: 28px 28px 24px; box-sizing: border-box; position: relative; }
+.panel::before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(90,80,60,.35); pointer-events: none; }
+.title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px 22px; margin: 0 0 6px; }
+.title h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 60px); margin: 0; letter-spacing: .02em; line-height: 1; color: var(--ink); }
+.title .en { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 2.2vw, 22px); letter-spacing: .28em; text-transform: uppercase; color: var(--imp); }
+.sub { margin: 0 0 20px; color: var(--ink2); max-width: 65ch; line-height: 1.5; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-bottom: 14px; }
+label.lbl { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); min-width: 72px; }
+input[type=text] { font-family: var(--font-ui); font-size: 15px; padding: 8px 10px; border: 1px solid var(--line-paper); background: #fff9ec; color: var(--ink); min-width: 0; }
+input[type=text]:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1px solid var(--ink); }
+.seg button { background: transparent; border: 0; padding: 8px 16px; font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: .02em; }
+.seg.modes button.on { background: var(--ink); color: #f3ecdc; }
+.seg button.on[data-f="0"] { background: var(--imp); color: #fff; }
+.seg button.on[data-f="1"] { background: var(--sho); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.builder { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin: 10px 0 16px; }
+@media (max-width: 720px) { .builder { grid-template-columns: 1fr; } }
+.builder > div { min-width: 0; }
+.builder h3 { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 8px; color: var(--ink2); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.budget { font-family: var(--font-ui); font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.budget.over { color: var(--danger); }
+.roster { display: flex; flex-direction: column; gap: 6px; }
+.unit { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line-paper); background: #f3ecdc; }
+.unit .n { font-weight: 600; }
+.unit .n .jp { font-family: var(--font-display); color: var(--ink2); font-weight: 500; margin-left: 6px; }
+.unit .d { grid-column: 1; font-size: 12px; color: var(--ink2); }
+.unit .meta { grid-column: 1; font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.unit button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+.btn { background: var(--ink); color: var(--paper); border: 1px solid var(--ink); padding: 8px 14px; font-size: 13px; font-weight: 600; letter-spacing: .04em; }
+.btn:hover { background: #2e2924; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.primary { background: var(--imp); border-color: var(--imp); color: #fff; }
+.btn.primary:hover { background: #d7474f; }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.sm { padding: 5px 10px; font-size: 12px; }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.army { display: flex; flex-direction: column; gap: 6px; min-height: 120px; }
+.army .sq { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--line-paper); background: #fff9ec; }
+.army .sq .num { font-family: var(--font-display); font-weight: 700; color: var(--imp); margin-right: 8px; }
+.army .empty { color: var(--ink2); font-style: italic; padding: 8px 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-top: 1px solid var(--line-paper); padding-top: 16px; }
+.actions .spacer { flex: 1; }
+.msg { margin-top: 12px; color: var(--danger); min-height: 1.2em; }
+.note { font-size: 12px; color: var(--ink2); margin-top: 10px; line-height: 1.5; }
+details { margin-top: 14px; }
+summary { cursor: pointer; font-weight: 600; color: var(--ink2); }
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 18px; margin-top: 8px; font-size: 13px; }
+.keys div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dotted var(--line-paper); padding: 3px 0; }
+kbd { font-family: var(--font-ui); font-size: 11px; background: var(--ink); color: var(--paper); padding: 1px 6px; border-radius: 2px; white-space: nowrap; }
+.players { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 16px; }
+.players .pl { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line-paper); background: #fff9ec; }
+.players .pl .tag { font-size: 11px; font-weight: 700; letter-spacing: .1em; padding: 3px 8px; color: #fff; }
+.players .pl .tag.t0 { background: var(--imp); } .players .pl .tag.t1 { background: var(--sho); }
+.players .pl .squads { font-size: 12px; color: var(--ink2); }
+.code { font-family: var(--font-display); font-size: clamp(34px, 7vw, 56px); letter-spacing: .3em; font-weight: 800; color: var(--ink); margin: 2px 0 2px; user-select: all; }
+/* HUD */
+#hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--font-ui); }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+#crosshair .dot { position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: 0 0 2px #000; }
+#crosshair .arr { position: absolute; width: 0; height: 0; border: 7px solid transparent; opacity: .35; transition: opacity .08s, border-color .08s; filter: drop-shadow(0 0 1px #000); }
+#crosshair .arr.up { left: -7px; top: -34px; border-bottom-color: #fff; border-top: 0; }
+#crosshair .arr.down { left: -7px; top: 22px; border-top-color: #fff; border-bottom: 0; }
+#crosshair .arr.left { left: -34px; top: -7px; border-right-color: #fff; border-left: 0; }
+#crosshair .arr.right { left: 22px; top: -7px; border-left-color: #fff; border-right: 0; }
+#crosshair .arr.sel { opacity: 1; }
+#crosshair .arr.atk.up { border-bottom-color: var(--danger); } #crosshair .arr.atk.down { border-top-color: var(--danger); } #crosshair .arr.atk.left { border-right-color: var(--danger); } #crosshair .arr.atk.right { border-left-color: var(--danger); }
+#crosshair .arr.blk.up { border-bottom-color: #6fb6ff; } #crosshair .arr.blk.down { border-top-color: #6fb6ff; } #crosshair .arr.blk.left { border-right-color: #6fb6ff; } #crosshair .arr.blk.right { border-left-color: #6fb6ff; }
+#hitmark { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; opacity: 0; }
+#hitmark::before, #hitmark::after { content: ""; position: absolute; left: 50%; top: 50%; width: 24px; height: 2px; background: #fff; box-shadow: 0 0 2px #000; margin: -1px 0 0 -12px; }
+#hitmark::before { transform: rotate(45deg); } #hitmark::after { transform: rotate(-45deg); }
+#hitmark.head::before, #hitmark.head::after { background: var(--danger); }
+#speedlines { position: absolute; inset: -20%; opacity: 0; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0) 0deg 5deg, rgba(255,255,255,.55) 5deg 5.6deg, rgba(255,255,255,0) 5.6deg 11deg, rgba(255,255,255,.3) 11deg 11.3deg); -webkit-mask: radial-gradient(circle at 50% 50%, transparent 30%, black 72%); mask: radial-gradient(circle at 50% 50%, transparent 30%, black 72%); pointer-events: none; }
+#suppress { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(20,14,10,.85) 100%); }
+#vignette { position: absolute; inset: 0; box-shadow: inset 0 0 180px rgba(200,20,10,.9); opacity: 0; }
+#parry { position: absolute; inset: 0; box-shadow: inset 0 0 160px rgba(255,220,120,.9); opacity: 0; }
+.hudbox { position: absolute; background: rgba(14,12,10,.62); border: 1px solid rgba(233,225,207,.18); color: var(--fg); padding: 8px 12px; backdrop-filter: blur(3px); }
+#vitals { left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); min-width: 240px; }
+#vitals .name { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .06em; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 10px; }
+#vitals .name .t0 { color: #ff7d86; } #vitals .name .t1 { color: #8aa9ff; }
+.bar { height: 8px; background: rgba(255,255,255,.12); margin: 4px 0; position: relative; overflow: hidden; }
+.bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); width: 100%; transition: width .12s; }
+.bar.hp > i { background: linear-gradient(90deg, #d93f3f, #e8a23b 60%, #8fcf6a); }
+.bar.ammo > i { background: var(--gold); }
+#vitals .line { display: flex; justify-content: space-between; font-size: 12px; color: #d5cdbd; font-variant-numeric: tabular-nums; }
+#vitals .line b { color: #fff; font-weight: 600; }
+#weapon { font-weight: 600; letter-spacing: .04em; }
+#mode { font-size: 11px; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; }
+#army { right: max(16px, env(safe-area-inset-right, 0px)); top: max(16px, env(safe-area-inset-top, 0px)); min-width: 230px; max-height: 45vh; overflow: hidden; }
+#army h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+#army .sqrow { display: grid; grid-template-columns: 1fr auto auto 76px; gap: 10px; font-size: 12px; padding: 2px 0; font-variant-numeric: tabular-nums; }
+.lab.ghost { opacity: .45; border-style: dashed !important; }
+.vet { color: #f0c860 !important; letter-spacing: -1px; }
+#army .sqrow .ord { color: var(--gold); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; min-width: 52px; text-align: right; }
+#army .sqrow.dead { opacity: .4; text-decoration: line-through; }
+#army .sqrow.sel { color: #c8ff9e; }
+#army .sqrow .ab { font-size: 10px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+#army .sqrow .ab.ready { color: #f0d080; } #army .sqrow .ab.on { color: #fff2b8; text-shadow: 0 0 6px #e8b040; }
+#army .sqrow.naval { margin-top: 6px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 5px; }
+#objbar { left: 50%; top: max(48px, calc(env(safe-area-inset-top, 0px) + 48px)); transform: translateX(-50%); display: flex; gap: 6px; align-items: center; font-size: 11px; white-space: nowrap; padding: 4px 8px; }
+#objbar .obj { padding: 2px 8px; border-radius: 3px; background: rgba(90,84,74,.6); color: #f4ecdc; border: 1px solid rgba(255,255,255,.15); }
+#objbar .obj.o0 { border-color: #ff8a92; box-shadow: 0 0 0 1px #b0263a inset; } #objbar .obj.o1 { border-color: #92afff; box-shadow: 0 0 0 1px #2f55b8 inset; }
+#objbar .obj.cap { animation: objpulse .6s ease-in-out infinite alternate; }
+@keyframes objpulse { from { filter: brightness(1); } to { filter: brightness(1.5); } }
+#objbar .sc { font-family: var(--font-display); font-weight: 700; font-size: 15px; min-width: 30px; text-align: center; } #objbar .sc.t0 { color: #ff8a92; } #objbar .sc.t1 { color: #92afff; }
+#objbar small { color: var(--muted); font-size: 10px; }
+@media (max-width: 900px) { #objbar .obj { padding: 2px 4px; font-size: 10px; } }
+#status { left: 50%; top: max(14px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; gap: 14px; align-items: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .06em; white-space: nowrap; }
+#status .t0 { color: #ff8a92; } #status .t1 { color: #92afff; }
+#status .vs { color: var(--muted); font-size: 11px; letter-spacing: .2em; }
+#netbox { left: max(16px, env(safe-area-inset-left, 0px)); top: max(16px, env(safe-area-inset-top, 0px)); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#netbox .warn { color: var(--warn); } #netbox .bad { color: var(--danger); font-weight: 700; }
+#fury { position: relative; height: 14px; margin: 6px 0 4px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.12); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #f2e6cc; text-align: center; line-height: 13px; overflow: hidden; }
+#fury::before { content: ''; position: absolute; inset: 0; width: var(--f, 0%); background: linear-gradient(90deg, #6a1414, #c8281e); transition: width .3s; }
+#fury span { position: relative; }
+#fury.full::before { background: linear-gradient(90deg, #c8281e, #f0b040); animation: objpulse .5s ease-in-out infinite alternate; }
+#fury.on::before { width: 100%; background: #e0401e; animation: objpulse .25s ease-in-out infinite alternate; }
+#fporders { left: 50%; top: max(80px, calc(env(safe-area-inset-top, 0px) + 80px)); transform: translateX(-50%); display: flex; gap: 9px; align-items: center; font-size: 11px; color: #d5cdbd; white-space: nowrap; padding: 5px 10px; }
+#fporders b { color: var(--gold); font-weight: 700; letter-spacing: .06em; } #fporders .to { color: #fff; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+#fporders .sqs i { font-style: normal; font-size: 10px; padding: 0 3px; margin: 0 1px; border-radius: 2px; color: #8a8478; } #fporders .sqs i.on { background: var(--gold); color: #1d1a17; } #fporders .sqs i.rout { color: #ff8a80; }
+#fporders kbd { margin-right: 3px; }
+@media (max-width: 1100px) { #fporders { font-size: 10px; gap: 6px; } #fporders .sqs { display: none; } }
+#hint { left: 50%; bottom: max(110px, calc(env(safe-area-inset-bottom, 0px) + 110px)); transform: translateX(-50%); font-size: 13px; color: var(--gold); text-align: center; white-space: nowrap; }
+#ordermenu { position: absolute; left: 50%; bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 96px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: calc(100% - 32px); }
+#osquads { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.osq { background: rgba(14,12,10,.72); border: 1px solid rgba(233,225,207,.25); color: #d5cdbd; font-size: 12px; padding: 4px 8px; white-space: nowrap; }
+.osq.on { background: #8fcf6a; color: #10200a; border-color: #c8ff9e; font-weight: 600; }
+.osq.rout { border-color: var(--danger); }
+.osq kbd { margin-right: 5px; }
+.osq small { opacity: .75; font-variant-numeric: tabular-nums; }
+.ohelp { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; font-size: 11px; color: #ece6da; background: rgba(14,12,10,.6); padding: 4px 10px; text-shadow: 0 1px 2px #000; }
+.ohelp b { color: var(--gold); font-weight: 600; }
+#feed { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); font-size: 12px; color: #d5cdbd; text-align: right; display: flex; flex-direction: column; gap: 2px; max-width: 45vw; }
+#feed div { opacity: .9; }
+#feed .me { color: var(--gold); }
+/* Command mode */
+#cmdui { position: absolute; inset: 0; pointer-events: none; }
+#labels .lab { position: absolute; transform: translate(-50%, -100%); font-size: 11px; font-weight: 600; padding: 2px 7px; background: rgba(14,12,10,.7); border: 1px solid rgba(255,255,255,.2); color: #fff; white-space: nowrap; pointer-events: none; letter-spacing: .03em; }
+#labels .lab.t0 { border-color: #ff8a92; } #labels .lab.t1 { border-color: #92afff; }
+#labels .lab.own.sel { background: #8fcf6a; color: #10200a; border-color: #c8ff9e; }
+#selbox { position: absolute; border: 1px solid #c8ff9e; background: rgba(143,207,106,.14); pointer-events: none; }
+#labels .lab small { font-weight: 400; color: #d5cdbd; margin-left: 5px; font-variant-numeric: tabular-nums; }
+#cmdpanel { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); pointer-events: auto; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: calc(100% - 300px); background: rgba(14,12,10,.7); border: 1px solid rgba(233,225,207,.2); padding: 5px 6px; backdrop-filter: blur(4px); }
+#cmdpanel button { background: #26211c; color: var(--fg); border: 1px solid #4a423a; padding: 4px 7px; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+#cmdpanel button:hover { background: #3a332c; }
+#cmdpanel button.on { background: var(--gold); color: #1d1a17; border-color: var(--gold); }
+#cmdpanel button.danger { border-color: #8a3a32; }
+#cmdpanel button.gold { border-color: #b8923a; }
+#cmdpanel button kbd { margin-left: 3px; background: #000; font-size: 10px; padding: 0 4px; }
+#cmdpanel .sep { width: 1px; background: #4a423a; margin: 0 3px; }
+#cmdtitle { position: absolute; left: 50%; top: max(84px, calc(env(safe-area-inset-top, 0px) + 84px)); transform: translateX(-50%); font-family: var(--font-display); font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); pointer-events: none; white-space: nowrap; }
+#cmdhelp { position: absolute; left: 50%; top: max(104px, calc(env(safe-area-inset-top, 0px) + 104px)); transform: translateX(-50%); font-size: 12px; color: #d5cdbd; pointer-events: none; text-align: center; white-space: nowrap; }
+/* overlays */
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,9,8,.55); text-align: center; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.overlay .card { background: var(--paper); color: var(--ink); padding: 26px 34px; border: 1px solid var(--line-paper); box-shadow: 0 30px 80px rgba(0,0,0,.6); max-width: 520px; }
+.overlay h2 { font-family: var(--font-display); font-size: 42px; margin: 0 0 6px; letter-spacing: .1em; }
+.overlay h2.win { color: #2f7a2a; } .overlay h2.lose { color: var(--imp); } .overlay h2.draw { color: var(--ink2); }
+.overlay p { margin: 6px 0 14px; color: var(--ink2); line-height: 1.5; }
+#toast { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 90px); font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: .12em; color: var(--gold); text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.6); opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+#toast.show { opacity: 1; }
+#mobile-note { font-size: 12px; color: var(--ink2); margin-top: 8px; }
+h3.sect { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin: 6px 0 8px; color: var(--ink2); }
+.seg.modes { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.seg.modes button { flex: 1 1 150px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 10px; }
+.seg.modes button small { font-size: 11px; opacity: .75; font-weight: 400; }
+#cmdui.chaos #cmdpanel button:not([data-cmd=control]):not([data-cmd=commander]):not([data-cmd=fp]), #cmdui.chaos #cmdpanel .sep, #cmdui.chaos #cmdhelp, #fporders.chaos { display: none !important; }
+#abil { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
+#abil .ab { position: relative; width: 104px; padding: 6px 8px 5px; background: rgba(20,16,12,.78); border: 1px solid rgba(255,255,255,.14); color: #d5cdbd; font-size: 11px; overflow: hidden; }
+#abil .ab b { display: block; color: #f2e6cc; font-size: 12px; margin: 2px 0; } #abil .ab small { display: block; font-size: 9.5px; line-height: 1.25; color: var(--muted); min-height: 24px; }
+#abil .ab i { position: absolute; left: 0; bottom: 0; height: 3px; width: calc(100% - var(--p)); background: var(--gold); }
+#abil .ab.ready { border-color: rgba(216,176,74,.7); } #abil .ab.sta i { background: #7ac46a; } #abil .ab.sta.low i { background: #e0503a; } #abil .ab.sta { width: 150px; } #abil .ab.on { border-color: #ff8a3a; box-shadow: 0 0 10px rgba(255,138,58,.5); }
+@media (max-width: 1000px) { #abil .ab { width: 92px; } #abil .ab small { display: none; } }
+#stamina { position: absolute; left: calc(50% + 46px); top: 50%; transform: translateY(-50%); width: 9px; height: 120px; border-radius: 6px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.25); overflow: hidden; transition: opacity .5s; pointer-events: none; }
+#stamina i { position: absolute; left: 0; right: 0; bottom: 0; height: var(--s, 100%); background: linear-gradient(0deg, #3f9a4a, #9be36a); border-radius: 5px; transition: height .12s; }
+#stamina span { position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); font-size: 12px; color: #c8f0b0; text-shadow: 0 1px 2px #000; }
+#stamina.low i { background: linear-gradient(0deg, #a8281e, #f06a3a); animation: objpulse .3s ease-in-out infinite alternate; } #stamina.full { opacity: .25; }
+#herosel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(720px, 92vw); padding: 16px 18px; background: rgba(20,16,12,.88); border: 1px solid rgba(216,176,74,.5); color: #f2e6cc; pointer-events: none; }
+#herosel h4 { margin: 0 0 10px; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+#herosel .hc { display: grid; grid-template-columns: 34px 1fr; gap: 0 8px; padding: 6px 4px; border-top: 1px solid rgba(255,255,255,.08); } #herosel .hc.on { background: rgba(216,176,74,.16); }
+#herosel .hc kbd { grid-row: span 3; align-self: center; } #herosel .hc b span { color: var(--gold); font-weight: 400; margin-left: 6px; } #herosel .hc small { color: #cfc6b4; } #herosel .hc em { color: var(--muted); font-style: normal; font-size: 11px; }
+#allies { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); pointer-events: auto; font-size: 12px; max-width: 420px; }
+#allies h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); } #allies h4 small { display: block; letter-spacing: 0; text-transform: none; color: var(--muted); font-weight: 400; }
+#allies .ally { display: flex; align-items: center; gap: 4px; padding: 3px 0; } #allies .ally.dead { opacity: .5; }
+#allies .an { flex: 1; min-width: 120px; } #allies .an small { display: block; color: var(--muted); font-size: 10px; }
+#allies button { background: #26211c; color: var(--fg); border: 1px solid #4a423a; padding: 3px 6px; font-size: 10px; cursor: pointer; } #allies button.on { background: var(--gold); color: #1d1a17; border-color: var(--gold); }
+#warchest { margin: 4px 0 14px; } #warchest h3 { margin: 6px 0; } #warchest .vets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; } .vet-sq { border: 1px solid var(--line-paper); background: #f3ecdc; padding: 4px 8px; font-size: 12px; } .vet-sq small { margin-left: 6px; color: var(--ink2); } .vet-sq.new { border-style: dashed; cursor: pointer; } #warchest .recruit { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; } #warchest .vet { color: #b8862a !important; }
+.chapters { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.chapter { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line-paper); background: #f3ecdc; color: var(--ink); cursor: pointer; }
+.chapter.on { border-color: var(--imp); background: #fff5ee; box-shadow: inset 0 0 0 1px var(--imp); } .chapter.locked { opacity: .45; cursor: not-allowed; }
+.chapter .cn { font-weight: 700; } .chapter .cn small { margin-left: 8px; font-weight: 400; color: var(--ink2); } .chapter .cw { font-size: 12px; color: var(--imp); } .chapter .cd { font-size: 12px; color: var(--ink2); line-height: 1.4; }
+#storycard { position: fixed; left: 50%; top: 22%; transform: translate(-50%, -10px); max-width: min(640px, 90vw); padding: 16px 22px; background: rgba(20,16,12,.82); border: 1px solid rgba(216,176,74,.5); color: #f2e6cc; font-size: 15px; line-height: 1.55; text-align: center; opacity: 0; transition: opacity .6s, transform .6s; pointer-events: none; z-index: 30; }
+#storycard.show { opacity: 1; transform: translate(-50%, 0); } #storycard b { display: block; color: var(--gold); font-family: var(--font-display); letter-spacing: .14em; text-transform: uppercase; font-size: 12px; margin-bottom: 8px; }
+.battles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.battle { text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border: 1px solid var(--line-paper); background: #f3ecdc; color: var(--ink); cursor: pointer; min-width: 0; }
+.battle.on { border-color: var(--imp); background: #fff5ee; box-shadow: inset 0 0 0 1px var(--imp); }
+.battle .bn { font-weight: 700; } .battle .bn .jp { font-family: var(--font-display); font-weight: 500; color: var(--ink2); margin-left: 6px; }
+.battle .bw { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
+.battle .bd { font-size: 12px; color: var(--ink2); line-height: 1.4; }
+.battle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.m-low { color: var(--warn) !important; } .m-mid { color: #e6d27a !important; } .m-rout { color: var(--danger) !important; font-weight: 700; }
+#army .sqrow.rout { color: #ffb0a8; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+#hitq{position:fixed;left:50%;top:58%;transform:translateX(-50%);font:700 18px/1 serif;letter-spacing:2px;text-shadow:0 2px 6px #000;opacity:0;pointer-events:none;transition:opacity .1s;z-index:20}
+#posture{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:220px;height:6px;background:#0008;border:1px solid #d9b25a88;pointer-events:none;z-index:20}
+#posture i,#tposture i{display:block;height:100%;width:0;background:linear-gradient(90deg,#d9b25a,#ff8a3a);transition:width .08s}
+#posture.hot i{background:#ff4a3a}
+#tposture{position:fixed;left:50%;top:40%;transform:translateX(-50%);width:120px;height:5px;background:#0008;border:1px solid #fff4;pointer-events:none;z-index:20}
+#tposture span{position:absolute;top:-15px;left:0;right:0;text-align:center;font:600 10px sans-serif;color:#ddd;text-transform:uppercase;letter-spacing:1px}
+#tposture.open i{background:#ffd36a;box-shadow:0 0 8px #ffd36a}
+#zheCta { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 16px; margin: 4px 0 16px; border: 1px solid #8a6a3c; background: linear-gradient(100deg, rgba(150,30,24,.16), rgba(40,30,20,.06)); flex-wrap: wrap; }
+#zheCta b { font-size: 19px; letter-spacing: .04em; } #zheCta small { display: block; color: var(--ink2); max-width: 64ch; margin-top: 3px; } #zheCta .btns { display: flex; gap: 8px; }
+#zheCard { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(22,16,12,.94), rgba(6,4,3,.985)); color: #efe6d0; font-family: 'Noto Serif CJK TC', Georgia, serif; }
+#zheCard .in { max-width: 680px; padding: 34px 40px; } #zheCard h2 { font-size: 30px; margin: 0 0 4px; letter-spacing: .08em; } #zheCard .yr { opacity: .6; font: 13px sans-serif; letter-spacing: .12em; margin-bottom: 18px; }
+#zheCard p { font-size: 16.5px; line-height: 1.62; margin: 0 0 12px; } #zheCard p.zh { font-size: 15px; opacity: .72; } #zheCard .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; font: 12px sans-serif; opacity: .9 }
+#zheCard button { all: unset; cursor: pointer; padding: 10px 22px; border-radius: 4px; background: #b8322a; color: #fff3e4; font: 700 15px sans-serif; letter-spacing: .05em; } #zheCard button:hover { background: #cf3b31 }
+#zheCard ul { margin: 6px 0 12px; padding-left: 18px; font-size: 15.5px; line-height: 1.6 } #zheCard li.dead { opacity: .55; text-decoration: line-through } #zheCard li.out b { color: #e8c27a }
+#zhePrompt { position: fixed; left: 50%; top: 58%; transform: translateX(-50%); font: 600 14px sans-serif; color: #f3e8cc; text-shadow: 0 1px 4px #000; pointer-events: none; z-index: 21; text-align: center; }
+#zhePrompt kbd { background: #f3e8cc; color: #1a1410; border-radius: 3px; padding: 1px 6px; margin-right: 6px; }
+#zheDlg { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(760px, 92vw); z-index: 40; background: linear-gradient(180deg, rgba(20,15,11,.93), rgba(12,9,7,.96)); border: 1px solid #6a5232; border-radius: 6px; padding: 16px 20px 14px; color: #efe6d0; font-family: 'Noto Serif CJK TC', Georgia, serif; box-shadow: 0 8px 30px rgba(0,0,0,.6) }
+#zheDlg .who { font: 700 15px sans-serif; color: #e0b46a; letter-spacing: .04em } #zheDlg .who small { font-weight: 400; color: #b8a888; margin-left: 8px }
+#zheDlg .zh { font-size: 19px; margin: 8px 0 2px; } #zheDlg .en { font-size: 15px; opacity: .82; line-height: 1.5; margin-bottom: 10px; }
+#zheDlg .ch { display: flex; flex-direction: column; gap: 5px; } #zheDlg .ch button { all: unset; cursor: pointer; padding: 7px 10px; border-radius: 4px; background: #241b14; border: 1px solid #4a3a28; font: 14px sans-serif; } #zheDlg .ch button:hover { border-color: #b08a4a; background: #2e2218 }
+#zheDlg .ch button kbd { color: #e0b46a; margin-right: 8px; font: 700 12px sans-serif }
+.spk { position: fixed; left: 0; top: 0; z-index: 19; pointer-events: none; text-align: center; transform: translate(-50%, -100%); color: #fbf3df; text-shadow: 0 1px 3px #000, 0 0 8px rgba(0,0,0,.7); white-space: nowrap; transition: opacity .25s; }
+.spk .n { font: 600 10px sans-serif; color: #e8c27a; letter-spacing: .05em; display: block; } .spk .z { font: 700 17px 'Noto Serif CJK TC', serif; display: block; } .spk .e { font: 12px sans-serif; opacity: .85; display: block; max-width: 340px; white-space: normal; }
+#soldierPanel .career-cta { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--line-paper, #cbbf9f); background: rgba(194,58,68,.06); margin-bottom: 12px; flex-wrap: wrap; }
+#soldierPanel .career-cta small { display: block; color: var(--ink2); max-width: 60ch; margin-top: 2px; }
+.roles button.on { outline: 2px solid var(--imp); }
+.chk { display: flex; gap: 8px; align-items: center; margin: 10px 0; font-size: 13px; }
+#drill { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); font: 700 26px/1.1 serif; color: #f4ead2; text-shadow: 0 2px 10px #000, 0 0 2px #000; opacity: 0; pointer-events: none; text-align: center; z-index: 21; letter-spacing: 3px; transition: opacity .25s; }
+#drill small { display: block; font: 600 12px sans-serif; letter-spacing: 2px; color: #d9cfb6; margin-top: 4px; text-transform: uppercase; }
+#fallen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: radial-gradient(ellipse at center, rgba(20,0,0,.55), rgba(0,0,0,.92)); color: #eadfc6; z-index: 30; pointer-events: none; font-family: serif; }
+#fallen b { font-size: 30px; letter-spacing: 3px; } #fallen span { font: 600 18px sans-serif; color: #e0a84a; } #fallen small { color: #aaa093; font-size: 13px; }
+#suppress { position: fixed; inset: 0; pointer-events: none; z-index: 19; opacity: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(10,8,6,.85) 100%); }
+#career { background: radial-gradient(ellipse at 50% 10%, #2a221a 0%, #0f0d0c 70%); }
+.cpanel { width: min(1320px, 100%); padding: 18px 20px 16px; }
+.chead { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.ctitle { font-family: var(--font-display, serif); font-size: 34px; margin: 0; letter-spacing: .08em; }
+.cdate { color: var(--ink2); font-size: 13px; }
+.crank { margin-left: auto; text-align: right; font-size: 13px; color: var(--ink2); }
+.crank b { display: block; font: 700 20px serif; color: var(--imp); }
+.cgrid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .cgrid { grid-template-columns: minmax(0, 1fr); } }
+.cmapwrap { position: relative; }
+#cMap { width: 100%; height: auto; display: block; border: 1px solid #b9ab88; background: #e8dcbc; cursor: pointer; }
+.cmaphint { font-size: 12px; color: var(--ink2); margin-top: 4px; }
+.cplace h3 { margin: 0; font: 700 22px serif; } .cplace p { margin: 4px 0 10px; color: var(--ink2); font-size: 13px; line-height: 1.45; }
+.cacts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.cacts button { text-align: left; padding: 8px 10px; font-size: 13px; line-height: 1.25; }
+.cacts button small { display: block; opacity: .72; font-size: 11px; font-weight: 400; }
+.cacts button.hot { border-color: var(--imp); background: rgba(194,58,68,.1); }
+.csheet { font-size: 13px; display: grid; gap: 10px; }
+.csheet .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-variant-numeric: tabular-nums; }
+.csheet .kv span { color: var(--ink2); }
+.csheet .bar { height: 6px; background: #d6caa9; border-radius: 3px; overflow: hidden; margin-top: 3px; } .csheet .bar i { display: block; height: 100%; background: var(--imp); }
+.csheet h4 { margin: 0 0 4px; font: 700 12px sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); }
+.comrades { display: flex; flex-wrap: wrap; gap: 4px 8px; } .comrades span { font-size: 12px; padding: 2px 6px; border: 1px solid #c8bb98; border-radius: 3px; } .comrades span.dead { text-decoration: line-through; color: #8a7f6b; }
+.clog { margin-top: 12px; max-height: 150px; overflow: auto; font-size: 13px; line-height: 1.5; border-top: 1px solid #c8bb98; padding-top: 8px; color: #3a342c; }
+.clog p { margin: 0 0 4px; } .clog p b { color: var(--imp); font-weight: 600; }
+.cmodal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 40; padding: 16px; }
+.cmodal .card { max-width: 560px; width: 100%; } .cmodal .card p { line-height: 1.5; }
+.shop { display: grid; gap: 6px; } .shop button { text-align: left; } .shop button small { display: block; color: var(--ink2); font-weight: 400; }
+#armsRow select { font: inherit; padding: 6px 8px; background: var(--paper2, #dcd2bc); border: 1px solid #b9ab88; color: var(--ink); max-width: 100%; }
+#hitdir { position: fixed; left: 50%; top: 50%; width: 240px; height: 240px; margin: -120px 0 0 -120px; pointer-events: none; opacity: 0; z-index: 22; transition: opacity .2s; }
+#hitdir i { position: absolute; left: 50%; top: 0; width: 90px; height: 24px; margin-left: -45px; border-top: 5px solid rgba(225,40,28,.95); border-radius: 50% 50% 0 0; filter: drop-shadow(0 0 4px rgba(0,0,0,.8)); }
+#hitby { position: fixed; left: 50%; top: 62%; transform: translateX(-50%); font: 600 13px sans-serif; color: #f0c6b8; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 22; opacity: 0; transition: opacity .3s; white-space: nowrap; }
+#mobj { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); top: 120px; width: min(300px, 70vw); background: rgba(16,13,10,.72); border-left: 3px solid #c23a44; color: #efe6d0; padding: 10px 12px; font-size: 13px; line-height: 1.4; z-index: 18; pointer-events: none; }
+#mobj b { display: block; font: 700 14px serif; letter-spacing: .04em; margin-bottom: 3px; color: #f4d9a0; }
+#mobj .ob { display: flex; gap: 6px; margin-top: 4px; } #mobj .ob i { font-style: normal; width: 14px; flex: none; color: #e0a84a; } #mobj .ob.done { opacity: .55; text-decoration: line-through; }
+#mobj .bar { height: 4px; background: rgba(255,255,255,.15); margin-top: 3px; } #mobj .bar i { display: block; height: 100%; background: #e0a84a; }
+#radio { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 200px; max-width: min(460px, 80vw); background: rgba(16,13,10,.78); color: #efe6d0; padding: 8px 12px; font-size: 14px; line-height: 1.45; z-index: 18; pointer-events: none; border-left: 3px solid #e0a84a; }
+#radio b { display: block; font: 700 12px sans-serif; letter-spacing: .12em; text-transform: uppercase; color: #e0a84a; }
+#banner { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); font: 900 34px/1.1 serif; color: #f4d9a0; text-shadow: 0 3px 14px #000, 0 0 2px #000; letter-spacing: .1em; z-index: 23; pointer-events: none; text-align: center; }
+#banner small { display: block; font: 600 14px sans-serif; letter-spacing: .2em; color: #efe6d0; margin-top: 6px; text-transform: uppercase; }
+#wpns { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin: 4px 0 2px; font-size: 11px; color: #cfc6b4; }
+#wpns span { padding: 1px 6px; border: 1px solid rgba(255,255,255,.18); border-radius: 2px; }
+#wpns span.on { border-color: var(--gold); color: #fff; background: rgba(210,169,76,.18); }
+#wpns kbd { margin-left: auto; }
+#fpmarks { position: fixed; inset: 0; pointer-events: none; z-index: 15; overflow: hidden; }
+#fpmarks .mk { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); font: 700 11px sans-serif; text-shadow: 0 1px 2px #000; white-space: nowrap; text-align: center; }
+#fpmarks .mk.own { color: #1a1206; background: #e8c25a; padding: 1px 6px; border: 1px solid #fff2c4; border-radius: 2px; box-shadow: 0 0 6px rgba(0,0,0,.6); }
+#fpmarks .mk.own.sel { background: #ffe08a; outline: 2px solid #fff; }
+#fpmarks .mk.own small { font-weight: 400; margin-left: 4px; opacity: .8; }
+#fpmarks .mk.ally { color: #8fe08a; font-size: 13px; }
+#fpmarks .mk.foe { color: #ff5a4a; font-size: 13px; }
+#labels .lab.own { border-color: #e8c25a !important; background: rgba(60,44,10,.85); }
+#labels .lab:not(.own):not(.enemy) { border-color: #8fe08a !important; }
+#labels .lab.enemy { border-color: #ff5a4a !important; }
+#labels .lab.own.sel { background: #e8c25a !important; color: #1a1206 !important; border-color: #fff2c4 !important; }
+#hudmarks { position: fixed; inset: 0; pointer-events: none; z-index: 19; }
+#hudmarks .hm { position: absolute; left: 0; top: 0; margin: -15px 0 0 -15px; display: flex; flex-direction: column; align-items: center; transition: opacity .2s; }
+#hudmarks .hm b { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px Georgia, serif; color: #eaf2ff; background: rgba(30,70,150,.82); border: 2px solid #8fb8ff; box-shadow: 0 1px 4px rgba(0,0,0,.6); }
+#hudmarks .hm.own b { background: rgba(30,90,190,.9); border-color: #cfe0ff; }
+#hudmarks .hm.foe b { background: rgba(170,40,32,.88); border-color: #ffb0a0; }
+#hudmarks .hm.hot b { animation: hmPulse .6s infinite alternate; }
+@keyframes hmPulse { to { box-shadow: 0 0 10px 3px rgba(255,220,120,.85); } }
+#hudmarks .hm.sq b { width: 24px; height: 24px; font-size: 13px; background: rgba(10,40,18,.82); border-color: #6fe08a; color: #b6f7c3; }
+#hudmarks .hm.sq.on b { background: #bff2c9; color: #0c3a1a; }
+#hudmarks .hm.file b { width: 30px; height: 30px; font: 700 15px serif; background: rgba(10,46,20,.88); border: 2px solid #8ff0a4; color: #c6f9d0; }
+#hudmarks .hm.place b { width: 22px; height: 22px; border-radius: 3px; transform: rotate(45deg); background: rgba(120,240,150,.25); border: 2px solid #9ff5b0; color: transparent; }
+#hudmarks .hm.place i { color: #b9f7c6; }
+#hudmarks .hm i { font: 600 10px sans-serif; font-style: normal; color: #fff; text-shadow: 0 1px 2px #000; margin-top: 1px; }
+#hudmarks .hm.edge.l b::before, #hudmarks .hm.edge.r b::after { content: ''; position: absolute; border: 6px solid transparent; }
+#hudmarks .hm.edge.l b::before { margin-left: -36px; border-right-color: rgba(255,255,255,.85); }
+#hudmarks .hm.edge.r b::after { margin-left: 36px; border-left-color: rgba(255,255,255,.85); }
+.ztag { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 18; font: 600 13px "Noto Serif CJK TC", Georgia, serif; color: #f3e6c8; text-shadow: 0 1px 3px #000, 0 0 2px #000; text-align: center; white-space: nowrap; transition: opacity .15s; }
+.ztag span { font: 600 11px sans-serif; opacity: .85; }
+.ztag small { display: block; font: 10px sans-serif; opacity: .75; }
+.ztag i { font-style: normal; } .ztag i.w { color: #f0c060; } .ztag i.d { color: #ff7a6a; }
+.zroster { display: flex; flex-wrap: wrap; gap: 3px 6px; margin: 4px 0 2px 22px; max-width: 300px; }
+.zroster .zr { font: 600 11px sans-serif; font-weight: 600; white-space: nowrap; } .zroster .zr.a { color: #9fe0a8; } .zroster .zr.w { color: #f0c060; } .zroster .zr.d { color: #ff7a6a; } .zroster .zr.x { color: #8a8680; text-decoration: line-through; }
+</style>
+<div id="app">
+  <canvas id="c"></canvas>
+  <div id="menu" class="screen">
+    <div class="panel">
+      <div class="title"><h1>明清戰爭</h1><span class="en">Ming Dynasty · 1619</span></div>
+      <p class="sub">The Ming Dynasty against the rising Manchu Later Jin. Build an army squad by squad, ride in at its head, fight with dao and rifle in first person, or climb to a bird's-eye view and give orders. Deterministic lockstep keeps every peer's battle identical.</p>
+      <p class="sub" style="font-size:12px">Sound: instrument recordings from the Versilian Community Sample Library and VSCO-2 Community Edition (CC0, Versilian Studios); erhu and suona are physical models written for this game; battle effects and the war-drum recordings and the Han-civilization pieces “Red Dawn” and “Hill of Sorrows” (music by Omri Lahav) from <a href="https://play0ad.com" target="_blank" rel="noopener">0 A.D.</a> © Wildfire Games, <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC BY-SA 3.0</a>, trimmed and re-encoded.</p>
+      <div class="row">
+        <label class="lbl" for="nameIn">Name</label><input type="text" id="nameIn" maxlength="16" value="Commander">
+        <label class="lbl" for="factionSeg">Faction</label>
+        <div class="seg" id="factionSeg"><button type="button" data-f="0" class="on">大明 Ming</button><button type="button" data-f="1">後金 Later Jin</button></div>
+        <label class="lbl" style="min-width:0"><input type="checkbox" id="mountedIn"> start on horseback</label>
+        <label class="lbl" style="min-width:0"><input type="checkbox" id="lowfxIn"> low graphics</label>
+        <label class="lbl" style="min-width:0"><input type="checkbox" id="musicIn" checked> music</label>
+        <input type="checkbox" id="fogIn" hidden>
+      </div>
+      <div class="row arms" id="armsRow">
+        <label class="lbl" for="armMelee">Your blade</label><select id="armMelee"><option value="">Standard issue</option><option value="dao">腰刀 Dao saber · balanced</option><option value="jian">劍 Jian · fast thrusts, wide parry</option><option value="guandao">偃月刀 Guandao · huge reach, slow</option><option value="mace">鐵鞭 Iron mace · breaks guards</option><option value="qiang">槍 Qiang spear · fight at the tip</option></select>
+        <label class="lbl" for="armRanged">Missile</label><select id="armRanged"><option value="">Standard issue</option><option value="niaochong">鳥銃 Niaochong musket</option><option value="sanyan">三眼銃 Three-eyed gun · 3 quick shots</option><option value="xbow">弩 Crossbow · flat heavy bolt</option><option value="bow">弓 Horn bow · fast, arcing</option><option value="none">None · hands free</option></select>
+        <label class="lbl" style="min-width:0"><input type="checkbox" id="armShield"> rattan shield</label>
+      </div>
+      <div id="zheCta"><div><b>浙兵 · The Zhejiang Company</b><small>A story campaign. Spring 1619: a mandarin duck team of Yiwu miners marches into the mountains of Liaodong with Liu Ting's column. Live with your file in camp, fight the battles as they really happened, and bring home whoever you can.</small></div><div class="btns"><button class="btn primary" id="btnZhe" type="button">Begin</button><button class="btn" id="btnZheNew" type="button" hidden>New</button></div></div>
+      <h3 class="sect">Mode</h3>
+      <div class="seg modes" id="modeSeg"><button type="button" data-m="standard" class="on"><b>Field battle</b><small>Your army against theirs</small></button><button type="button" data-m="grand"><b>Grand battle</b><small>A council of AI commanders on each side. Command your allies.</small></button><button type="button" data-m="chaos"><b>Chaos</b><small>No orders, no fear, no deployment. Earthquakes, fleets and fire.</small></button><button type="button" data-m="officers"><b>Officers · co-op</b><small>Every player leads one squad in person beside AI generals. Peer-to-peer.</small></button><button type="button" data-m="heroes"><b>Heroes</b><small>Be a champion in a phased historical siege. No orders, only your blade and abilities. Co-op or versus.</small></button><button type="button" data-m="soldier"><b>小兵之路 · Path of a Soldier</b><small>One man in the ranks. Lethal muskets, long reloads, drums and gongs. A career from recruit to general, or co-op with friends.</small></button><button type="button" data-m="campaign"><b>Co-op campaign</b><small>Historical missions in phases: ambushes, relief, sieges and break-outs. Each player leads a squad they choose, beside AI generals.</small></button><button type="button" data-m="assault"><b>Assault</b><small>Attackers with limited manpower storm fortified lines point by point; defenders fall back to the next. You fight as a soldier.</small></button><button type="button" data-m="story"><b>Story</b><small>Seven battles from Sarhu to Yangzhou, as the Ming or the Jin.</small></button></div>
+      <p class="note" id="modeNote" style="margin:-6px 0 12px"></p>
+      <div id="storyPanel" hidden><h3 class="sect">Campaign</h3><div class="chapters" id="storyList"></div><div id="warchest"></div></div>
+      <div id="soldierPanel" hidden>
+        <div class="career-cta"><div><b>小兵之路 · The career</b><small>Enlist in 1619 on the Liaodong frontier. March between forts, drill, buy kit, keep your comrades alive, earn merit and rise from recruit to regional commander while the war turns around you.</small></div><button class="btn primary" id="btnCareer" type="button">Open the road</button></div>
+        <h3 class="sect">Quick battle or co-op · your post</h3><div class="chapters roles" id="roleList"></div>
+        <label class="chk"><input type="checkbox" id="officerIn"> Serve as an officer (lead your squad and two more by drum and gong)</label>
+      </div>
+      <div id="missionPanel" hidden>
+        <h3 class="sect" id="missionHead">Mission</h3><div class="chapters" id="missionList"></div>
+        <h3 class="sect">Your troops</h3><div class="chapters roles" id="mroleList"></div>
+        <p class="note" id="missionNote"></p>
+      </div>
+      <div id="heroPanel" hidden><h3 class="sect">Champion</h3><div class="chapters" id="hcList"></div><h3 class="sect">Siege</h3><div class="chapters" id="scenList"></div></div>
+      <div id="fieldPanel">
+      <h3 class="sect">Battlefield</h3>
+      <div class="battles" id="battles"></div>
+      <div class="builder">
+        <div><h3>Available squads <span class="budget" id="budget"></span></h3><div class="roster" id="roster"></div></div>
+        <div><h3>Your army <span class="budget" id="armyCount"></span></h3><div class="army" id="armyList"></div></div>
+      </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnSolo" type="button">Practice vs AI</button>
+        <button class="btn" id="btnHost" type="button">Host P2P battle</button>
+        <span class="spacer"></span>
+        <input type="text" id="codeIn" placeholder="ROOM CODE" maxlength="5" style="width:120px;text-transform:uppercase;letter-spacing:.2em">
+        <button class="btn" id="btnJoin" type="button">Join</button>
+      </div>
+      <div class="msg" id="menuMsg"></div>
+      <div class="note" id="netNote"></div>
+      <div id="mobile-note" hidden>This battle needs a keyboard and mouse. Open it on a desktop browser.</div>
+      <details><summary>Controls</summary>
+        <div class="keys">
+          <div><span>Move / jump</span><kbd>W A S D</kbd> <kbd>Space</kbd></div>
+          <div><span>Melee: slash (hold for a heavy blow)</span><kbd>LMB</kbd></div>
+          <div><span>Melee: overhead / stab</span>wheel ↑ / wheel ↓ or <kbd>R</kbd></div>
+          <div><span>Block (tap just before a hit to parry)</span><kbd>RMB</kbd></div>
+          <div><span>Feint</span><kbd>RMB</kbd> during windup</div>
+          <div><span>Sprint (drains stamina)</span>hold <kbd>Shift</kbd></div>
+          <div><span>Slide left / right / back (dodge)</span>double-tap <kbd>A</kbd> / <kbd>D</kbd> / <kbd>S</kbd></div>
+          <div><span>Switch weapon</span><kbd>Q</kbd> (or wheel while holding a gun or bow)</div>
+          <div><span>Gun / bow: fire / aim (toggle) / reload</span><kbd>LMB</kbd> / <kbd>RMB</kbd> / <kbd>R</kbd></div>
+          <div><span>Mount or dismount (near a horse) · otherwise kick</span><kbd>E</kbd></div>
+          <div><span>Horse: speed / turn</span><kbd>W S</kbd> / <kbd>A D</kbd></div>
+          <div><span>Rally nearby squads (40 s cooldown)</span><kbd>V</kbd></div>
+          <div><span>Challenge the enemy captain you look at</span><kbd>J</kbd></div>
+          <div><span>Command view (overview)</span><kbd>O</kbd> or <kbd>`</kbd></div>
+          <div><span>Pick which squad hears you (0 = all)</span><kbd>1</kbd>–<kbd>9</kbd></div>
+          <div><span>Orders from first person: follow-halt / charge / hold / fire at will</span><kbd>F</kbd> <kbd>C</kbd> <kbd>H</kbd> <kbd>N</kbd></div>
+          <div><span>Form up where you look (hold to preview) · squad ability · war junk</span><kbd>Z</kbd> · <kbd>B</kbd> · <kbd>K</kbd></div>
+          <div><span>Full order menu (tap to open, tap to close)</span><kbd>G</kbd></div>
+          <div><span>Deployment: ready</span><kbd>Enter</kbd></div>
+          <div><span>Heroes mode: dodge / evasive leap</span>double-tap <kbd>A</kbd> <kbd>D</kbd> <kbd>S</kbd> / <kbd>Space</kbd></div>
+          <div><span>Heroes mode: change champion (at your spawn or when fallen)</span><kbd>B</kbd> then <kbd>1</kbd>–<kbd>4</kbd></div>
+          <div><span>Heroes mode: whirlwind / dragon charge / iron guard / war cry / valor</span><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>G</kbd></div>
+          <div><span>Music on / off</span><kbd>M</kbd></div>
+          <div><span>Command view: select / order</span><kbd>LMB</kbd> / <kbd>RMB</kbd></div>
+          <div><span>Command view: charge, hold, follow</span><kbd>C</kbd> <kbd>H</kbd> <kbd>F</kbd></div>
+          <div><span>Command view: formations line / column / wedge / loose</span><kbd>Z</kbd> <kbd>X</kbd> <kbd>V</kbd> <kbd>B</kbd></div>
+          <div><span>Command view: take control of a squad</span><kbd>U</kbd></div>
+          <div><span>Return to your commander</span><kbd>R</kbd> in command view, <kbd>Backspace</kbd> anywhere</div>
+          <div><span>Command view: AI general for your army</span><kbd>Y</kbd></div>
+          <div><span>Squad ability</span><kbd>Q</kbd> in command view, <kbd>B</kbd> in first person</div>
+          <div><span>War junk broadside, once per battle (at cursor / crosshair)</span><kbd>K</kbd></div>
+          <div><span>Command: pan / zoom</span><kbd>W A S D</kbd> / wheel</div>
+        </div>
+        <p class="note">Hold the ringed objectives to score: first side to 300 points, or the last side standing, wins. Each squad's captain carries its banner; if he falls the squad wavers. Shellfire and fire arrows set dry grass and houses alight, and the wind drives the flames. At Yangzhou the rain fouls muzzle-loaders and lightning seeks the banners.</p>
+        <p class="note">Blocks must match the attack: an overhead needs an up block, a thrust a down block, and swings are blocked on the side they come from. A block raised in the last fifth of a second is a perfect parry that stuns the attacker and gives you a fast, heavy counter.</p>
+      </details>
+    </div>
+  </div>
+  <div id="career" class="screen" hidden>
+    <div class="panel cpanel">
+      <div class="chead"><div><h2 class="ctitle">小兵之路</h2><div class="cdate" id="cDate"></div></div><div class="crank" id="cRank"></div><button class="btn ghost sm" id="cBack" type="button">Main menu</button></div>
+      <div class="cgrid">
+        <div class="cmapwrap"><canvas id="cMap" width="900" height="620" aria-label="Map of the Liaodong frontier"></canvas><div class="cmaphint" id="cHint">Click a town on a road to march there.</div></div>
+        <div class="cside">
+          <div class="cplace" id="cPlace"></div>
+          <div class="cacts" id="cActs"></div>
+          <div class="csheet" id="cSheet"></div>
+        </div>
+      </div>
+      <div class="clog" id="cLog"></div>
+    </div>
+    <div class="cmodal" id="cModal" hidden><div class="card"><h2 id="cmTitle"></h2><div id="cmBody"></div><div class="row" id="cmBtns" style="justify-content:center;margin:12px 0 0"></div></div></div>
+  </div>
+  <div id="lobby" class="screen" hidden>
+    <div class="panel">
+      <div class="title"><h1>陣営</h1><span class="en">War council</span></div>
+      <p class="sub" id="lobbySub">Share this room code. Friends enter it under Join on the main screen.</p>
+      <div class="code" id="codeOut">·····</div>
+      <div class="note" id="lobbyBattle" style="margin:0 0 8px"></div>
+      <div class="row"><button class="btn sm" id="btnCopy" type="button">Copy code</button><span class="note" id="copyMsg" style="margin:0"></span></div>
+      <div class="players" id="players"></div>
+      <div class="actions">
+        <button class="btn primary" id="btnStart" type="button">Begin the battle</button>
+        <span id="lobbyWait" class="note" style="margin:0">Waiting for the host to begin…</span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="btnLeave" type="button">Leave</button>
+      </div>
+      <p class="note">If only one faction has players, the other side is raised by an AI general. Everyone on a faction fights together; each player commands their own squads.</p>
+    </div>
+  </div>
+  <div id="hud" hidden>
+    <div id="speedlines"></div><div id="suppress"></div><div id="fpmarks"></div><div id="hitdir"><i></i></div><div id="mobj" hidden></div><div id="radio" hidden><b></b><span></span></div><div id="banner" hidden></div><div id="hitby"></div><div id="vignette"></div><div id="parry"></div>
+    <div id="crosshair"><div class="dot"></div><div class="arr up"></div><div class="arr down"></div><div class="arr left"></div><div class="arr right"></div></div>
+    <div id="hitmark"></div>
+    <div class="hudbox" id="netbox"></div>
+    <div class="hudbox" id="status"></div>
+    <div class="hudbox" id="objbar" hidden></div>
+    <div class="hudbox" id="fporders" hidden></div>
+    <div id="abil" hidden></div>
+    <div id="stamina" hidden><i></i><span>氣</span></div>
+    <div id="hitq"></div><div id="drill"></div><div id="fallen" hidden><b>你倒下了 · You have fallen</b><span id="fallenT"></span><small>Your regiment will send you forward with the next drum.</small></div><div id="suppress"></div><div id="posture" hidden><i></i></div><div id="tposture" hidden><i></i><span></span></div>
+    <div id="herosel" hidden></div>
+    <div class="hudbox" id="army"></div>
+    <div class="hudbox" id="vitals">
+      <div class="name"><span id="heroName">Commander</span><span id="mode"></span></div>
+      <div class="bar hp"><i id="hpFill"></i></div>
+      <div class="line"><span id="weapon">Dao</span><b id="hpText"></b></div>
+      <div class="wpns" id="wpns"></div>
+      <div class="bar ammo"><i id="ammoFill"></i></div>
+      <div class="line"><span id="ammoText"></span><span id="dirText"></span></div>
+      <div id="fury"><span>Fury</span></div>
+      <div class="line"><span id="bombs"></span><span>J · challenge</span></div>
+    </div>
+    <div class="hudbox" id="hint" hidden></div>
+    <div id="feed"></div>
+    <div id="ordermenu" hidden>
+      <div id="osquads"></div>
+      <div class="ohelp"><span><b>LMB</b> form up where you look</span><span><b>RMB</b> charge</span><span><b>F</b> follow me</span><span><b>H</b> hold</span><span><b>Z X V B</b> line · column · wedge · loose</span><span><b>N</b> fire at will</span><span><b>C</b> charge</span><span><b>U</b> take control</span><span><b>Q</b> squad ability</span><span><b>K</b> war junk broadside where you look</span></div>
+    </div>
+  </div>
+  <div id="cmdui" hidden>
+    <div id="cmdtitle">Command view</div>
+    <div id="labels"></div>
+    <div id="selbox" hidden></div>
+    <div id="cmdhelp">Left-click or drag a box to select (Shift adds) · Right-click to move, right-drag to lay out a line (direction sets facing, length sets width) · Right-click an enemy to charge</div>
+    <div id="allies" class="hudbox" hidden></div>
+    <div id="cmdpanel">
+      <button type="button" data-cmd="charge" class="danger">Charge<kbd>C</kbd></button>
+      <button type="button" data-cmd="hold">Hold<kbd>H</kbd></button>
+      <button type="button" data-cmd="follow">Follow me<kbd>F</kbd></button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="line">Line<kbd>Z</kbd></button>
+      <button type="button" data-cmd="column">Column<kbd>X</kbd></button>
+      <button type="button" data-cmd="wedge">Wedge<kbd>V</kbd></button>
+      <button type="button" data-cmd="loose">Loose<kbd>B</kbd></button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="fire" id="btnFire">Fire at will<kbd>N</kbd></button>
+      <button type="button" data-cmd="ability" class="gold">Ability<kbd>Q</kbd></button>
+      <button type="button" data-cmd="naval" class="danger">War junk<kbd>K</kbd></button>
+      <button type="button" data-cmd="all">Select all<kbd>Ctrl A</kbd></button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="control">Take control<kbd>U</kbd></button>
+      <button type="button" data-cmd="commander">Commander<kbd>R</kbd></button>
+      <button type="button" data-cmd="auto" id="btnAuto">AI general<kbd>Y</kbd></button>
+      <button type="button" data-cmd="fp">First person<kbd>O</kbd></button>
+    </div>
+  </div>
+  <div id="pause" class="overlay" hidden><div class="card"><h2 style="font-size:28px">Click to take command</h2><p>The battle keeps running while you are away. Press <kbd>O</kbd> any time for the command view.</p></div></div>
+  <div id="result" class="overlay" hidden><div class="card"><h2 id="resultTitle"></h2><p id="resultText"></p><div class="row" style="justify-content:center;margin:0"><button class="btn" id="btnReplay" type="button">Watch the replay</button><button class="btn primary" id="btnNext" type="button" hidden>Next chapter</button><button class="btn" id="btnMenu" type="button">Back to the war council</button></div></div></div>
+  <div id="toast"></div>
+  <div id="storycard"></div>
+</div>
