@@ -30,7 +30,7 @@ const DEFS = {
   hero:          { name: 'General', jp: '將軍', hp: 280, speed: 4.5, r: 0.38, weapons: ['katana', 'rifle', 'revolver'], reach: 2.3, dmg: [64, 48, 40, 48], windup: 0.3, recover: 0.3, block: 0, hat: 'kabuto', rifle: { dmg: 95, reload: 2.4, range: 170, spread: 0.014, ads: 0.0035, aim: 0, mag: 1 }, revolver: { dmg: 52, mag: 3, cycle: 0.28, reload: 3.6, range: 48, spread: 0.03, ads: 0.011 }, count: 1, cost: 0, mass: 1, morale: 200 },
   samurai:       { name: 'Dao & Shield Infantry', jp: '刀牌手', hp: 130, speed: 4.1, r: 0.38, weapons: ['katana'], reach: 2.2, dmg: [54, 42, 34, 42], windup: 0.5, recover: 0.4, block: 0.5, cost: 240, count: 12, hat: 'kabuto', ai: 'melee', mass: 1, morale: 105, desc: 'Qi Jiguang drill: broad dao blades behind rattan shields. Solid line breakers.' },
   ashigaru:      { name: 'Ming Spearmen', jp: '長槍兵', hp: 85, speed: 4.2, r: 0.36, weapons: ['yari'], reach: 3.0, dmg: [42, 0, 38, 0], windup: 0.55, recover: 0.45, block: 0.2, cost: 160, count: 16, hat: 'jingasa', ai: 'melee', mass: 1, morale: 85, desc: 'Long qiang spears. Cheap and long-reaching, but unarmored and quick to break.' },
-  rifle_imp:     { name: 'Niaochong Musketeers', jp: '鳥銃手', hp: 75, speed: 4.0, r: 0.36, weapons: ['rifle'], reach: 2.3, dmg: [30, 0, 36, 0], windup: 0.5, recover: 0.45, block: 0.1, cost: 300, count: 12, hat: 'cap', ai: 'ranged', mass: 1, morale: 95, rifle: { dmg: 60, reload: 4.0, range: 80, spread: 0.032, aim: 0.9, mag: 1 }, desc: 'Bird-beak matchlocks fired in rotating volleys. Accurate, but they hate the rain.' },
+  rifle_imp:     { name: 'Niaochong Musketeers', jp: '鳥銃手', hp: 75, speed: 4.0, r: 0.36, weapons: ['rifle', 'katana'], sidearm: true, reach: 2.3, dmg: [38, 30, 32, 30], windup: 0.45, recover: 0.4, block: 0.25, cost: 300, count: 12, hat: 'cap', ai: 'ranged', mass: 1, morale: 95, rifle: { dmg: 60, reload: 4.0, range: 80, spread: 0.032, aim: 0.9, mag: 1 }, desc: 'Bird-beak matchlocks fired in rotating volleys. Accurate, but they hate the rain. Each man carries a 腰刀 sabre and draws it when the enemy closes.' },
   rifle_sho:     { name: 'Ujen Cooha Musketeers', jp: '漢軍銃手', hp: 80, speed: 4.0, r: 0.36, weapons: ['rifle'], reach: 2.3, dmg: [30, 0, 36, 0], windup: 0.5, recover: 0.45, block: 0.1, cost: 300, count: 12, hat: 'kepi', ai: 'ranged', mass: 1, morale: 95, rifle: { dmg: 54, reload: 3.3, range: 75, spread: 0.038, aim: 0.8, mag: 1 }, desc: 'Han Banner "heavy troops" with captured Ming muskets. Fast-loading and steady.' },
   rifle_spencer: { name: 'Three-Eyed Gunners', jp: '三眼銃', hp: 85, speed: 4.2, r: 0.36, weapons: ['rifle'], reach: 2.3, dmg: [30, 0, 36, 0], windup: 0.5, recover: 0.45, block: 0.1, cost: 380, count: 10, hat: 'cap', ai: 'ranged', mass: 1, morale: 110, rifle: { dmg: 52, reload: 0.7, magReload: 6.0, mag: 3, range: 55, spread: 0.06, aim: 0.45 }, desc: 'Three-barreled hand cannons fired one barrel after another, then swung as clubs. A burst of lead, then a long reload.' },
   jinshotai:     { name: 'Shenji Skirmishers', jp: '神機營', hp: 70, speed: 4.6, r: 0.36, weapons: ['rifle'], reach: 2.3, dmg: [30, 0, 36, 0], windup: 0.5, recover: 0.45, block: 0.1, cost: 280, count: 10, hat: 'none', ai: 'ranged', mass: 1, morale: 100, skirmish: true, rifle: { dmg: 58, reload: 3.2, range: 85, spread: 0.022, aim: 0.5, mag: 1 }, desc: 'Divine Engine Division marksmen. Loose order; they shoot on the move.' },
@@ -1372,9 +1372,10 @@ class Sim {
     if (tgt && (tgt.dead || tgt.type === 'horse')) { tgt = null; u.target = -1; }
     const isHero = u.ctrl >= 0, order = sq ? sq.order : ORD_HOLD;
     let wantYaw = u.yaw;
-    if (isHero && def.weapons.length > 1 && u.st === ST_IDLE && u.mount < 0) {
+    if ((isHero || def.sidearm) && def.weapons.length > 1 && u.st === ST_IDLE && u.mount < 0) {
       const d = tgt ? len(tgt.x - u.x, tgt.z - u.z) : 99;
-      const want = (tgt && d > 6 && u.ammo > 0) ? 'rifle' : 'katana';
+      // a musketeer (紀效新書: every 鳥銃手 also carries a 腰刀) draws his sabre only when the enemy is on top of him
+      const want = def.sidearm && !isHero ? (u.weapon === 'katana' ? (d > 8 ? 'rifle' : 'katana') : (d < 3.2 ? 'katana' : 'rifle')) : (tgt && d > 6 && u.ammo > 0) ? 'rifle' : 'katana';
       if (u.weapon !== want) { u.st = ST_SWAP; u.stT = 0; u.nextWeapon = want; u.blocking = false; }
     }
     const ranged = isGun(def, u.weapon) && !this.dry(u);
@@ -3147,7 +3148,7 @@ Sim.prototype.setupCamp = function (humans) {
   const C = this.cfg.camp || { npcs: [], tents: [], me: { x: 0, z: 6, yaw: PI, role: 'shield' } };
   for (const t of C.tents || []) this.boxes.push({ x: t[0], z: t[1], hw: t[2], hd: t[3], h: t[4], kind: 'tent' });
   const CT = C.type || 'yuanyang', CTm = C.team | 0; // another campaign's camp: its own unit type and side (jin.js, shenji.js)
-  const mk = (role, x, z, yaw) => { const u = this.addUnit(CT, CTm, -1, -1, x, z, yaw); if (CT === 'yuanyang') { u.role = role; u.def = YYDEF[role] || YYDEF.spear; u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } return u; };
+  const mk = (role, x, z, yaw) => { const u = this.addUnit(CT, CTm, -1, -1, x, z, yaw); if (CT === 'yuanyang') { u.role = role; u.def = YYDEF[role] || YYDEF.spear; u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } else { u.def = defFor(CT, CTm); u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } return u; };
   humans.forEach((p, i) => { p.team = CTm; p.auto = false; p.ready = true; p.squads = []; const m = C.me; const u = mk(m.role || 'shield', m.x + i * 1.5, m.z, m.yaw); u.owner = p.idx; u.ctrl = p.idx; p.heroId = u.id; p.commanderId = -1; p.respawnAt = 0; });
   for (const n of C.npcs || []) { const u = mk(n.role, n.x, n.z, n.yaw); u.camp = true; u.ci = n.ci; u.campPose = n.pose || 'stand'; }
   this.mv.ph = 0;

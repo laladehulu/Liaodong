@@ -21,6 +21,7 @@ const PAL = {
 const BANNER = [0xd8b03c, 0xe8e4da, 0x2f4fa8, 0xc0902a];
 function bannerOf(u) { return BANNER[((u.squad >= 0 ? u.squad : u.id) * 7 + 3) % 4]; }
 function torsoColor(u) {
+  if (u.look && u.look.body) return u.look.body;
   const t = u.team;
   if (t === 1) {
     switch (u.type) {
@@ -36,6 +37,7 @@ function torsoColor(u) {
   }
 }
 function legColor(u) {
+  if (u.look && u.look.legs) return u.look.legs;
   if (u.team === 1) return u.type === 'byakkotai' || u.type === 'ronin' ? 0x3a3228 : 0x26262c;
   switch (u.type) { case 'ronin': return 0x3e3832; case 'jinshotai': return 0x24283a; default: return 0x262834; }
 }

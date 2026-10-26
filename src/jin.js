@@ -69,7 +69,8 @@ function jFresh() { const s = { v: 1, stage: 'c1', name: { zh: '阿克敦', en: 
 const jRow = (k) => JR.find(r => r.k === k);
 const jIdx = (k) => JR.findIndex(r => r.k === k);
 function jMeRow() { const r = jRow('me'), nm = JS.me === 'me' ? JS.name : (JS.meName || { zh: '', en: '' }); r.zh = nm.zh; r.en = nm.en; } // the 'me' row carries your first name, even after you carry on as another man
-function jDress(u, i) { const r = JR[i]; if (!u || !r) return; u.look = Object.assign({ id: 'j:' + r.k }, JLOOK[r.k] || { jin: 'helm', coat: JW, stud: JSTUD }); if (state.renderer) state.renderer.colorFigure(u.id, u); }
+function jDress(u, i) { const r = JR[i]; if (!u || !r) return; u.look = Object.assign({ id: 'j:' + r.k }, JLOOK[r.k] || { jin: 'helm', coat: JW, stud: JSTUD }); u.look.body = u.look.coat || JW; u.look.legs = 0x2a2a30;
+  if (u.def && !u.def.jinName) { u.def = Object.assign({}, u.def, { name: u.look.armor === 'robe' ? 'Bannerman' : 'Armoured bannerman', jp: u.look.armor === 'robe' ? '旗丁' : '披甲', jinName: true }); } if (state.renderer) state.renderer.colorFigure(u.id, u); }
 function jGo(scene) { try { localStorage.setItem(JGO, scene); } catch (e) { } location.reload(); }
 // the men of the file now, not counting you; the bošokū stands in it only while he lives and you do not lead
 function jFile() { return JR.filter(r => !r.guest && r.k !== JS.me && JS.alive[r.k]); }
@@ -181,7 +182,7 @@ function jStart(scene) {
     const chief = file.find(r => r.k === 'ulgen'); if (chief && !used[q.unitIds[0]]) { used[q.unitIds[0]] = 1; ZB.map[q.unitIds[0]] = jIdx('ulgen'); }
     for (const r of file) { if (r.k === 'ulgen') continue; const id = q.unitIds.find(uid => !used[uid]); if (id === undefined) break; used[id] = 1; ZB.map[id] = jIdx(r.k); }
     for (const uid in ZB.map) jDress(sim.units[uid], ZB.map[uid]);
-    const g = sim.mg.niru; if (g) { const h = sim.units[sim.players[g.p].heroId]; if (h) { h.look = Object.assign({ id: 'j:tobohui' }, JLOOK.tobohui); if (state.renderer) state.renderer.colorFigure(h.id, h); } }
+    const g = sim.mg.niru; if (g) { const h = sim.units[sim.players[g.p].heroId]; if (h) { h.look = Object.assign({ id: 'j:tobohui', body: JW, legs: 0x2a2a30 }, JLOOK.tobohui); if (state.renderer) state.renderer.colorFigure(h.id, h); } }
     setTimeout(() => storyCard(C.battleCard[0], C.battleCard[1]), 700);
   }
 }
