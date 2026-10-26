@@ -3468,7 +3468,9 @@ Sim.prototype.paceMove = function (u) {
     if (sq.paceTk !== this.tick) { sq.paceTk = this.tick; let ax = 0, az = 0, bx = 0, bz = 0, k = 0; for (const id of sq.unitIds) { const v = this.units[id]; if (v.dead || v.ctrl >= 0 || v.downed || v.wounded) continue; ax += v.x; az += v.z; bx += v.slotX; bz += v.slotZ; k++; } sq.pcx = k ? ax / k : 0; sq.pcz = k ? az / k : 0; sq.psx = k ? bx / k : 0; sq.psz = k ? bz / k : 0; }
     const e = len((u.x - sq.pcx) - (u.slotX - sq.psx), (u.z - sq.pcz) - (u.slotZ - sq.psz));
     cap = order === ORD_FOLLOW ? (sd > 12 ? base : sd > 5 ? base * PACE_JOG : base * PACE_WALK) : sd > 35 ? base * PACE_JOG : base * PACE_WALK; // following his leader he keeps the leader's pace; otherwise the company marches
-    if (td < 30 && order !== ORD_FOLLOW) cap = base * PACE_WALK; // advancing to contact: the line walks in step
+    const away = tgt && m > 0.01 && ((tgt.x - u.x) * u.mx + (tgt.z - u.z) * u.mz) < -0.3 * td * m; // falling back from the enemy: no strolling
+    if (away && td < 40 && sd > 3) cap = base;
+    else if (td < 30 && order !== ORD_FOLLOW) cap = base * PACE_WALK; // advancing to contact: the line walks in step
     if (e > 10) cap = Math.max(cap, base); else if (e > 4) cap = Math.max(cap, base * PACE_JOG);
     if (sd < 1.6) cap = Math.min(cap, base * PACE_WALK * Math.max(0.3, sd / 1.6));
     if (sd < 0.35 && !u.role) cap = 0; } // in his place: stand, don't rock on the spot
