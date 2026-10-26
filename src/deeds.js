@@ -161,12 +161,137 @@ function ddFrame(dt) {
   const sim = state.sim; if (!sim || !sim.mission) return;
   if (ZB && sim.mission.soldier && DD.zb !== ZB) { DD.zb = ZB; DD.B = ddFresh(sim); DD.fileKills = 0; DD.killers = {}; DD.firstShot = true; DD.placeSince = 0; DD.acc = 0; }
   if (ZB && DD.B) ddSample(dt);
-  if (ZC && sim.mission.camp && DD.zc !== ZC) { DD.zc = ZC; DD.obj = null; ddCampObjects();
+  if (ZC && sim.mission.camp && DD.zc !== ZC) { DD.zc = ZC; DD.obj = null; ddCampObjects(); DD.sc = { q: [], cur: null, wait: 0 }; ddPlanScenes();
     // the Jin chapters keep their talk in JCH: wrap each chapter's table once
     if (ZC.jin && typeof JCH !== 'undefined') for (const n in JCH) { const C = JCH[n]; if (!C || !C.talk || DD.wrapped.has(C)) continue; const t = C.talk; DD.wrapped.add(C); C.talk = (k) => ddAugment(t(k) || (typeof jTalkAny === 'function' ? jTalkAny(k, +n) : null), k); } }
+  if (ZC && sim.mission.camp) ddScenesTick(dt);
   if (ZC && sim.mission.camp && !state.zheDlg && DD.obj && ddNearRoll()) { const pr = $('zhePrompt'); if (pr) { pr.hidden = false; pr.innerHTML = '<kbd>E</kbd>Read the roll · 功過簿'; } }
 }
 { const st = document.createElement('style'); st.textContent = '.ddres { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; } .ddres span, .ddroll span { font: 13px sans-serif; padding: 2px 8px; border-radius: 3px; } .ddp { background: rgba(120,150,80,.22); color: #cfe0b0; } .ddm { background: rgba(170,60,50,.25); color: #f0b8a8; } .ddn { opacity: .5; } .ddroll { max-height: 56vh; overflow: auto; text-align: left; } .ddrow { margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; } .ddrow b { width: 100%; font-size: 15px; letter-spacing: .04em; }'; document.head.appendChild(st); }
 // test hooks (read-only)
 window.__ddRollPos = () => (DD.obj ? ddRollPos() : null);
 window.__ddCampKey = (u) => { const R = (ZC && ZC.R) || ZR; return u && u.ci !== undefined && R[u.ci] ? R[u.ci].k : null; };
+// ===================== it2 · scenes in camp: a man walks up to you because of what you did =====================
+// court-martial (軍法) with the staff, the man you carried and his keepsake, the friend of the man you left, a toast at
+// the fire, a nickname, a promotion. At most two per camp, the reckoning first.
+DD.sc = { q: [], cur: null, wait: 0 };
+const ddCamp = () => (ddCtx() || {}).c;
+const ddUnitOf = (k) => { const sim = state.sim; if (!sim || !ZC || !ZC.map) return null; for (const uid in ZC.map) { const R = ZC.R || ZR, r = R[ZC.map[uid]]; if (r && r.k === k) { const u = sim.units[uid]; if (u && !u.dead) return u; } } return null; };
+const ddCampKeys = () => { const out = []; if (!ZC || !ZC.map) return out; const R = ZC.R || ZR; for (const uid in ZC.map) { const r = R[ZC.map[uid]]; if (r && !r.guest) out.push(r.k); } return out; };
+const ddHash = (s) => { let x = 7; for (const c of String(s)) x = (x * 31 + c.charCodeAt(0)) | 0; return Math.abs(x); };
+const ddUniq = (a) => a.filter((x, i) => a.indexOf(x) === i);
+function ddPickChief() { const keys = ddCampKeys(); const pref = { zhe: ['wu', 'he', 'lou'], jin: ['ulgen', 'alin', 'dabsun'], sj: ['sj_hu', 'sj_gao', 'sj_lin'] }[ddCamp()] || []; return pref.find(k => keys.includes(k)) || keys[0]; }
+const DDNICK = { // style: [zh, en, how they explain it]
+  wall: ['鐵壁', 'Iron Wall', ddL('刀砍過來，他就是不讓。', 'Blades come at him and he just doesn\'t give.')],
+  club: ['鐵棍', 'Cudgel', ddL('銃打完了，他還能掄。', 'When the gun is empty he just swings it.')],
+  carry: ['背人的', 'the Carrier', ddL('誰倒了，他就背誰回來。', 'Whoever goes down, he carries back.')],
+  eye: ['千里眼', 'Far-Eye', ddL('那麼遠也打得著。', 'He hits them that far out.')],
+  stone: ['石頭', 'Stone', ddL('等到鼻子尖才放。', 'Waits till they\'re at the end of his nose before he fires.')],
+  ladder: ['推梯的', 'Ladder-Pusher', ddL('梯子一靠上來，他就推下去。', 'A ladder touches the wall and over it goes.')],
+  wolf: ['孤狼', 'Lone Wolf', ddL('一個人往前衝，也不等我們。', 'Charges off alone. Doesn\'t wait for us.')],
+  hare: ['兔子', 'the Hare', ddL('跑得比誰都快。', 'Runs faster than any of us.')],
+  butcher: ['屠夫', 'the Butcher', ddL('跑的他也不放過。', 'Not even the running ones get away from him.')],
+};
+function ddStyle(B) {
+  if (B.ran > 6 && !B.rally) return 'hare'; if (B.kf >= 3) return 'butcher';
+  const s = [['carry', ddUniq(B.help.concat(B.rev, B.aid)).length * 4], ['wall', B.blocks / 2 + B.shield * 2], ['club', B.club * 3], ['eye', B.long * 3], ['stone', B.held ? 5 : 0], ['ladder', B.lad * 3], ['wolf', B.alone > 25 ? 5 : 0]].sort((a, b) => b[1] - a[1]);
+  return s[0][1] >= 5 ? s[0][0] : null;
+}
+function ddPlanScenes() {
+  const C = ddCtx(); if (!C) return; const D = ddDD(C.S), B = D.log[D.log.length - 1]; if (!B || D.seen['sc' + B.n]) return; D.seen['sc' + B.n] = 1; C.save();
+  const keys = ddCampKeys(), here = (k) => keys.includes(k), q = [];
+  const saved = ddUniq(B.help.concat(B.rev, B.aid)).filter(here), left = ddUniq(B.left);
+  // the reckoning
+  if ((B.ran > 6 && !B.rally) || B.alone > 40 || (C.c === 'sj' && B.early >= 4)) q.push({ id: 'court', who: ddPickChief() });
+  else if (left.length) { const w = keys.filter(k => k !== C.S.me)[ddHash(left[0] + B.n) % Math.max(1, keys.length - 1)]; if (w) q.push({ id: 'ask', who: w, about: left[0] }); }
+  // the good
+  if (saved.length) q.push({ id: 'thanks', who: saved[0] });
+  else if (B.kills >= 4 || B.off || B.last || B.lad >= 2 || B.avenge.length) q.push({ id: 'toast', who: keys.filter(k => k !== C.S.me).sort((a, b) => (C.S.bond[b] || 0) - (C.S.bond[a] || 0))[0] });
+  const st = ddStyle(B); if (st && !D.nick && q.length < 2) q.push({ id: 'nick', who: keys[ddHash(st + B.n) % keys.length], style: st });
+  const R = D.rep; if (q.length < 2 && !D.rank && R.valor + R.care >= 14 && R.coward === 0 && !(B.ran > 6)) q.push({ id: 'rank', who: ddPickChief() });
+  DD.sc.q = q.filter(s => s.who).slice(0, 2); DD.sc.wait = 8;
+}
+// the dialogue panel: the same box and keys as camp talk (#zheDlg, state.zheDlg)
+function ddDlg(who, sub, lines, choices, end) {
+  if (document.pointerLockElement) document.exitPointerLock(); Input.keys = 0; $('pause').hidden = true;
+  let box = $('zheDlg'); if (!box) { box = document.createElement('div'); box.id = 'zheDlg'; document.body.appendChild(box); box.addEventListener('mousedown', (e) => e.stopPropagation()); }
+  const show = (ls, ch) => { box.hidden = false; box.innerHTML = `<div class="who">${who}<small>${sub || ''}</small></div>${ls.map(l => `<div class="zh">${l[0]}</div><div class="en">${l[1]}</div>`).join('')}<div class="ch">${ch.map((c, i) => `<button type="button" data-i="${i}"><kbd>${i + 1}</kbd>${c.q}</button>`).join('')}${ch.length ? '' : '<button type="button" data-i="-1"><kbd>E</kbd>Go on</button>'}</div>`;
+    box.querySelectorAll('button').forEach(b => b.onclick = () => (+b.dataset.i < 0 ? close() : choose(+b.dataset.i))); cur = ch; };
+  let cur = choices; const close = () => { if (cur.length) return; box.hidden = true; state.zheDlg = null; requestLock(); if (end) end(); };
+  const choose = (i) => { const c = cur[i]; if (!c) return; AUDIO.play('ui'); const nx = c.fx ? c.fx() : null; if (nx && nx.beat) { box.hidden = true; state.zheDlg = null; ddBeat(nx.beat, () => ddDlg(who, sub, nx.after || [], [], end)); return; } show(c.a || [], nx && nx.more ? nx.more : []); };
+  state.zheDlg = { k: 'dd', choose, close }; show(lines, choices);
+}
+// 軍棍 · the staff: count the blows; press E as each one falls to take it without crying out
+function ddBeat(n, done) {
+  const C = ddCtx(); let el = $('ddBeat'); if (!el) { el = document.createElement('div'); el.id = 'ddBeat'; document.body.appendChild(el); }
+  const NUM = '一二三四五六七八九十'; const zhN = (i) => i <= 10 ? NUM[i - 1] : i < 20 ? '十' + NUM[i - 11] : NUM[Math.floor(i / 10) - 1] + '十' + (i % 10 ? NUM[i % 10 - 1] : '');
+  let i = 0, held = 0, open = false, got = false; el.hidden = false;
+  const tool = C && C.c === 'jin' ? ['鞭', 'the whip'] : ['軍棍', 'the staff'];
+  const draw = (cry) => { el.innerHTML = `<div class="n">${i ? zhN(i) : ''}</div><div class="t">${tool[0]} · ${i} / ${n}</div><div class="k${open ? ' on' : ''}"><kbd>E</kbd> grit your teeth</div>${cry ? `<div class="c">${cry}</div>` : ''}`; };
+  state.zheDlg = { k: 'beat', choose: () => { }, close: () => { if (open && !got) { got = true; held++; } } };
+  const blow = () => { i++; open = false; const r = state.renderer; if (r) { r.shake = Math.max(r.shake, 0.6); r.hitFlash = 0.35; } AUDIO.play('thud'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); draw(got ? '' : '啊——！'); got = false;
+    if (i >= n) { setTimeout(() => { el.hidden = true; state.zheDlg = null; const D = C && ddDDsafe(); if (D) { D.beat = { n, held }; if (held >= n * 0.75) { D.rep.disc += 1; D.flags = D.flags || {}; D.flags.endured = 1; } C.save(); } done(held >= n * 0.75); }, 900); return; }
+    setTimeout(() => { open = true; draw(''); setTimeout(blow, 420); }, 380); };
+  draw(''); setTimeout(() => { open = true; draw(''); setTimeout(blow, 420); }, 900);
+}
+const ddDDsafe = () => { const C = ddCtx(); return C ? ddDD(C.S) : null; };
+// ---------- the scenes ----------
+function ddRunScene(s) {
+  const C = ddCtx(); if (!C) return; const D = ddDD(C.S), B = D.log[D.log.length - 1], me = C.S.name, r = ddRow(s.who) || { zh: '', en: 'A comrade', t: '' };
+  const who = `${r.zh} ${r.en}`, sub = r.t, bond = (k, n) => { C.S.bond[k] = (C.S.bond[k] || 0) + n; }, done = () => { C.save(); DD.sc.cur = null; DD.sc.wait = 22; };
+  const jin = C.c === 'jin', sj = C.c === 'sj';
+  if (s.id === 'court') {
+    const officer = jin ? ['甲喇額真', 'the jalan captain'] : sj ? ['把總', 'the company captain'] : ['哨官', 'the company officer'];
+    const crime = B.ran > 6 && !B.rally ? ['臨陣退縮', 'turning your back on the enemy'] : sj && B.early >= 4 ? ['未令先放', 'firing before the order'] : ['失伍', 'leaving your file'];
+    const law = jin ? ddL('汗的法：臨陣退走者，鞭；再犯，斬。', 'The Khan\'s law: who falls back in battle is whipped. The second time, beheaded.') : ddL('號令有云：臨陣退縮者斬，失伍者棍。', 'The regulations say: who turns back in battle is beheaded; who leaves his file is beaten.');
+    const helped = ddUniq(B.help.concat(B.rev, B.aid)).length;
+    ddDlg(who, sub, [ddL(`${me.zh}。${officer[0]}叫你。現在就去。`, `${me.en}. ${officer[1][0].toUpperCase() + officer[1].slice(1)} wants you. Now.`), ddL(`罪名：${crime[0]}。`, `The charge: ${crime[1]}.`), law], [
+      { q: 'I did it. I have no excuse.', a: [ddL('……還知道認。打二十，記過。', '...At least you own it. Twenty strokes, and it goes on the roll.')], fx: () => { bond(s.who, 1); return { beat: 20, after: [ddL('弟兄們把你扶回火邊。沒人說話，但有人把碗遞給你。', 'The men help you back to the fire. Nobody speaks, but someone hands you a bowl.')] }; } },
+      { q: helped ? 'I went back for a wounded man.' : 'I was going for help.', a: [], fx: () => helped ? { beat: 10, after: [ddL('有人作證，你是去背人的。減為十棍。', 'Someone swears you went to carry a man. Ten strokes.')] } : (bond(s.who, -1), { beat: 40, after: [ddL('沒人能作證。說謊加倍：四十。', 'No one can back you. A lie doubles it: forty.')] }) },
+      { q: '(Say nothing.)', a: [], fx: () => ({ beat: 30, after: [ddL('三十。你一聲沒吭，連打的人都看了你一眼。', 'Thirty. You don\'t make a sound; even the man with the staff gives you a look.')] }) },
+    ], done);
+  } else if (s.id === 'ask') {
+    const a = s.about, an = [ddNm(a), ddNm(a, true)];
+    ddDlg(who, sub, [ddL(`你把${an[0]}丟在那裡了。`, `You left ${an[1]} out there.`), ddL('他喊你的名字。我聽見了。', 'He was calling your name. I heard him.')], [
+      { q: 'I couldn\'t carry him. I\'m sorry.', a: [ddL('……我知道。我就是要聽你說出來。', '...I know. I just needed to hear you say it.')], fx: () => { bond(s.who, 0); D.flags = D.flags || {}; D.flags['owned:' + a] = 1; } },
+      { q: 'I thought he was already dead.', a: [ddL('他沒有。', 'He wasn\'t.'), ddL('（他轉身走了。下一仗，他不會站在你旁邊。）', '(He walks away. Next fight, he won\'t stand beside you.)')], fx: () => { bond(s.who, -2); D.grudge = D.grudge || {}; D.grudge[s.who] = a; } },
+      { q: '(Say nothing.)', a: [ddL('（他往地上啐了一口。）', '(He spits on the ground.)')], fx: () => { bond(s.who, -1); } },
+    ], done);
+  } else if (s.id === 'thanks') {
+    const item = jin ? ['鹿骨扳指', 'a deer-bone thumb ring', 'for the bowstring'] : sj ? ['火繩盒', 'his slow-match tin', 'it keeps the match dry'] : ['木雕小鳥', 'a little carved wooden bird', 'my father made it'];
+    ddDlg(who, sub, [ddL(`${me.zh}。你回頭了。別人都在跑，你回頭了。`, `${me.en}. You came back. Everyone was running and you came back.`), ddL(`拿著。${item[0]}。`, `Take this. ${item[1][0].toUpperCase() + item[1].slice(1)} — ${item[2]}.`)], [
+      { q: 'I\'ll keep it close.', a: [ddL('嗯。下次換我。', 'Mm. Next time it\'s my turn.')], fx: () => { bond(s.who, 2); D.keep.push({ k: s.who, zh: item[0], en: item[1], n: B.n }); D.debt = D.debt || {}; D.debt[s.who] = 1; } },
+      { q: 'Keep it. You\'ll need your luck.', a: [ddL('……那我就欠著。', '...Then I owe you.')], fx: () => { bond(s.who, 3); D.debt = D.debt || {}; D.debt[s.who] = 1; } },
+    ], done);
+  } else if (s.id === 'toast') {
+    const deed = B.off ? ddL('砍了他們的頭目', 'cut down their officer') : B.last ? ddL('最後一個站著的', 'the last of us standing') : B.lad ? ddL('把梯子推了下去', 'threw their ladders down') : B.avenge.length ? ddL(`替${ddNm(B.avenge[0])}報了仇`, `paid them back for ${ddNm(B.avenge[0], true)}`) : ddL('殺得最多', 'killed the most of them');
+    ddDlg(who, sub, [ddL(`來！敬${me.zh}——${deed[0]}的人！`, `Here! To ${me.en} — the man who ${deed[1]}!`)], [
+      { q: 'To the ones who aren\'t here.', a: [ddL('……敬他們。', '...To them.'), ddL('（火邊安靜了一會兒，每個人都喝了。）', '(The fire goes quiet for a moment. Everyone drinks.)')], fx: () => { bond(s.who, 1); D.flags = D.flags || {}; D.flags.humble = (D.flags.humble || 0) + 1; } },
+      { q: 'Luck. Just luck.', a: [ddL('運氣也得有人接得住！', 'Luck needs a man to catch it!')], fx: () => bond(s.who, 1) },
+      { q: 'Did you see me? Ha!', a: [ddL('看見了看見了！明天整個營都會知道。', 'We saw, we saw! By tomorrow the whole camp will know.')], fx: () => { D.flags = D.flags || {}; D.flags.boast = (D.flags.boast || 0) + 1; } },
+    ], done);
+  } else if (s.id === 'nick') {
+    const N = DDNICK[s.style];
+    ddDlg(who, sub, [ddL(`欸，你們看——${N[0]}來了！`, `Hey, look — here comes ${N[1]}!`), N[2], ddL('（火邊的人都笑了。）', '(The men at the fire laugh.)')], [
+      { q: `Fine. ${N[1]} it is.`, a: [ddL(`${N[0]}！${N[0]}！`, `${N[1]}! ${N[1]}!`)], fx: () => { D.nick = { zh: N[0], en: N[1], style: s.style }; bond(s.who, 1); } },
+      { q: 'Don\'t call me that.', a: ddHash(s.style + me.en) % 2 ? [ddL('好好好，不叫。', 'All right, all right. We won\'t.')] : [ddL(`越不讓叫，越要叫。${N[0]}！`, `The more you mind, the more we'll say it. ${N[1]}!`)], fx: () => { if (!(ddHash(s.style + me.en) % 2)) D.nick = { zh: N[0], en: N[1], style: s.style }; } },
+    ], done);
+  } else if (s.id === 'rank') {
+    const t = jin ? ['巴圖魯', 'baturu — "hero"', '汗賜你巴圖魯之號。', 'The Khan grants you the name baturu.'] : sj ? ['伍長', 'file leader', '從今天起，你帶這一伍。', 'From today you lead this file of five.'] : ['伍長', 'file leader', '把總給你的腰牌。從今天起你帶一伍。', 'The captain sends you a waist tag. From today you lead a file of five.'];
+    ddDlg(who, sub, [ddL(t[2], t[3]), ddL('別讓我們後悔。', 'Don\'t make us regret it.')], [
+      { q: 'I won\'t.', a: [ddL('（他把東西放在你手裡，拍了拍你的肩。）', '(He puts it in your hand and claps your shoulder.)')], fx: () => { D.rank = { zh: t[0], en: t[1] }; if (jin) D.nick = { zh: '巴圖魯', en: 'Baturu', style: 'baturu' }; bond(s.who, 1); } },
+      { q: 'Give it to someone else.', a: [ddL('不行。命令就是命令。', 'No. An order is an order.')], fx: () => { D.rank = { zh: t[0], en: t[1] }; if (jin) D.nick = { zh: '巴圖魯', en: 'Baturu', style: 'baturu' }; } },
+    ], done);
+  }
+}
+function ddScenesTick(dt) {
+  const S = DD.sc, sim = state.sim, h = localHero(); if (!S.q.length && !S.cur) return; if (!sim || !h || !ZC || !sim.mission.camp) return;
+  if (S.cur && S.cur.talking) return;
+  if (!S.cur) { if ($('zheCard') && !$('zheCard').hidden) return; if (state.zheDlg) return; S.wait -= dt; if (S.wait > 0) return; S.cur = S.q.shift(); S.cur.t = 0; S.cur.u = ddUnitOf(S.cur.who); const n = ddRow(S.cur.who);
+    if (S.cur.u) SPEECH.say(S.cur.u.id, `${(ddCtx().S.name || {}).zh || ''}！`, `${(ddCtx().S.name || {}).en || ''}!`, { prio: 2, dur: 2.5 }); if (n) toast(`${n.zh} ${n.en} is coming over to you`); }
+  const c = S.cur, u = c.u; c.t += dt;
+  if (u && !u.dead) { const dx = h.x - u.x, dz = h.z - u.z, d = Math.hypot(dx, dz); u.yaw = Math.atan2(dx, dz); u.campPose = 'stand';
+    if (d > 1.9 && c.t < 20) { const st = Math.min(d - 1.8, 1.5 * dt); u.px = u.x; u.pz = u.z; u.x += dx / d * st; u.z += dz / d * st; u.y = SIM.terrainH(u.x, u.z); return; } }
+  if (state.zheDlg) return; c.talking = true; ddRunScene(c);
+}
+{ const st = document.createElement('style'); st.textContent = '#ddBeat { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; background: radial-gradient(ellipse at center, rgba(40,6,4,.25), rgba(10,2,2,.75)); color: #f0e0c8; font-family: serif; } #ddBeat .n { font-size: 96px; line-height: 1; text-shadow: 0 0 24px #000; } #ddBeat .t { font: 15px sans-serif; opacity: .8; margin-top: 8px; } #ddBeat .k { margin-top: 26px; font: 600 16px sans-serif; opacity: .35; } #ddBeat .k.on { opacity: 1; color: #ffd28a; } #ddBeat .c { margin-top: 10px; font-size: 26px; color: #ff9a8a; } #ddBeat.hit { animation: ddhit .25s ease-out; } @keyframes ddhit { 0% { background-color: rgba(160,20,10,.45); } 100% { background-color: transparent; } }'; document.head.appendChild(st); }

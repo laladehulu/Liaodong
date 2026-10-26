@@ -185,6 +185,6 @@ const AUDIO = (() => {
     if (!amb.loops) amb.rain.g.gain.setTargetAtTime(rainOn ? 0.05 : 0, t, 2); amb.rumble.g.gain.setTargetAtTime(rainOn ? 0.03 : 0, t, 2);
     amb.roar.g.gain.setTargetAtTime(0.06 * Math.min(1, level), t, 1.2); amb.roar.fl.frequency.setTargetAtTime(500 + 250 * Math.sin(amb.t * 0.31), t, 0.6);
   }
-  return { init, play, setListener, ambient, setRain, setFire, shellshock, get ready() { return !!ctx; }, get ctx() { return ctx; }, get master() { return master; }, get noise() { return noiseBuf; } };
+  return { init, play, setListener, ambient, setRain, setFire, shellshock, spatial: (x, y, z, v, m) => ctx ? spatial(x, y, z, v, m) : null, listener, get verbIn() { return verbIn; }, get ready() { return !!ctx; }, get ctx() { return ctx; }, get master() { return master; }, get noise() { return noiseBuf; } };
 })();
 

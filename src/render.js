@@ -1322,6 +1322,7 @@ class Renderer {
   processEvents(events) {
     const sim = this.sim, units = sim.units; const local = sim.players[this.localIdx]; const heroId = local ? local.heroId : -1;
     for (const ev of events) {
+      if (typeof VOICE !== 'undefined') VOICE.ev(ev, sim, heroId);
       switch (ev.t) {
         case 'shot': {
           if (this.sim.real && ev.shooter !== heroId) { // near misses: the crack of a ball past your head presses you down
@@ -1419,7 +1420,7 @@ class Renderer {
             const w = u.weapon, fx = Math.sin(u.yaw), fz = Math.cos(u.yaw);
             const wd = w === 'katana' ? [0.035, 0.05, 1.0, 0xcfd6dc] : w === 'yari' ? [0.04, 0.04, 2.5, 0x8b6b4a] : w === 'rifle' ? [0.06, 0.09, 1.35, 0x4a2e18] : w === 'bow' ? [0.04, 0.04, 1.9, 0x5a3b1e] : w === 'revolver' ? [0.04, 0.1, 0.28, 0x3a3a3f] : null;
             if (wd) this.spawnDebris('b', u.x + fx * 0.4, u.y + 1.1, u.z + fz * 0.4, ev.ix * 0.3 + fx * rnd(0.5, 2), 2 + Math.random() * 2, ev.iz * 0.3 + fz * rnd(0.5, 2), wd[0], wd[1], wd[2], wd[3], 0.5); }
-          AUDIO.play(Math.random() < 0.55 ? 'scream' : 'death', u.x, u.y + 1, u.z, 0.9);
+          if (typeof VOICE === 'undefined' || !VOICE.on || u.type === 'horse') AUDIO.play(Math.random() < 0.55 ? 'scream' : 'death', u.x, u.y + 1, u.z, 0.9);
           if (ev.killer === heroId) { this.hitMark = 0.45; }
           break;
         }
@@ -2201,6 +2202,7 @@ class Renderer {
       if (this.biomeRain) this.env.weather.visible = !!sim.rain; else if (this.env.rain) { this.env.rain.visible = !!sim.rain; if (sim.rain) { this.env.rain.material.uniforms.time.value = this.time; this.env.rain.material.uniforms.cam.value.copy(cam.position); } } }
     this.sky.position.copy(cam.position);
     AUDIO.setListener(cam.position.x, cam.position.y, cam.position.z, camYaw);
+    if (typeof VOICE !== 'undefined' && !this.studio) { const lp = sim.players[this.localIdx]; VOICE.frame(dt, sim, lp ? lp.heroId : -1); }
     // fog of war: the enemy is only seen within sight of your own men, or by the flash of his muskets
     if (this.fog) { this.fogT = (this.fogT || 0) - dt; if (this.fogT <= 0) { this.fogT = 0.25; const R = 62 * (1 - 0.45 * (sim.bdef.fog || 0)) * (sim.rain ? 0.8 : 1), R2 = R * R; const mine = [];
         for (const u of units) if (!u.dead && u.team === this.localTeam && u.type !== 'horse') mine.push(u);

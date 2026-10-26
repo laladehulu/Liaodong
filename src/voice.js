@@ -41,12 +41,13 @@ const VOICE = (() => {
       if (rasp > 0 && ph > 0.5 && ph < 0.55) src += (rnd() - 0.5) * rasp * 0.9;
       const env = Math.min(1, t / 0.012, (dur - 0.06 - t) / 0.05 + 0.02); const e = Math.max(0, env);
       const nz = rnd() * 2 - 1; let v = src * P[3] + nz * breath * P[3] * 0.6;
-      let y = step(R[0], v, P[0], 90); y = step(R[1], y, P[1], 120) + y * 0.2; y = step(R[2], y, P[2], 180) + y * 0.3; y = step(R[3], y, 3400, 260) + y * 0.6;
-      let fr = 0; if (P[4] > 0) { fr = step(RN, nz, P[5], P[5] * 0.35) * P[4] * (P.stop ? 2.2 : 0.9); }
-      out[n] = (y * 0.5 + fr) * e;
+      // parallel formants: each resonance of the tract adds its own peak, so vowels read as vowels
+      const y = step(R[0], v, P[0], 80) * 1.0 + step(R[1], v, P[1], 100) * 0.7 + step(R[2], v, P[2], 150) * 0.4 + step(R[3], v, 3400, 250) * 0.22;
+      let fr = 0; if (P[4] > 0) { fr = step(RN, nz, P[5], P[5] * 0.3) * P[4] * (P.stop ? 1.4 : 0.5); }
+      out[n] = (y * 1.6 + fr) * e;
     }
     // loudness: peak-normalise, then a soft clip so shouts sound strained
-    let pk = 0; for (let n = 0; n < N; n++) pk = Math.max(pk, Math.abs(out[n])); const k = pk > 0 ? 1 / pk : 1, dr = 1.2 + (o.press || 0) * 3;
+    let pk = 0; for (let n = 0; n < N; n++) pk = Math.max(pk, Math.abs(out[n])); const k = pk > 0 ? 1 / pk : 1, dr = 1 + (o.press || 0) * 1.4;
     for (let n = 0; n < N; n++) out[n] = Math.tanh(out[n] * k * dr) / Math.tanh(dr) * (o.gain || 0.9);
     return out;
   }
@@ -85,6 +86,7 @@ const VOICE = (() => {
     for (const cat in BANK) { B[cat] = []; for (const [w, f0, br] of BANK[cat]) for (const sc of [0.86, 1, 1.15]) {
       const f = f0.map(([u, h]) => [u, h * sc]); const d = synth(W(w), f, { rasp: 0.15 + rnd() * 0.3, breath: br * 0.12, press: cat === 'cry' || cat === 'jcry' || cat.startsWith('o_') ? 0.6 : 0.3 });
       const buf = ctx.createBuffer(1, d.length, SR); buf.copyToChannel ? buf.copyToChannel(d, 0) : buf.getChannelData(0).set(d); B[cat].push(buf); } }
+    if (typeof VOICE_DATA !== 'undefined') addPack(VOICE_DATA);
     return true;
   }
   // recorded packs plug in here, per category
@@ -120,6 +122,7 @@ const VOICE = (() => {
     const t0 = now + Math.min(0.5, sp.dist / 343); src.start(t0); const end = t0 + buf.duration / src.playbackRate.value;
     active.push({ src, end, score }); if (u) v.next = end + 0.35 + Math.random() * 0.6; return true;
   }
+  const lastOrd = {};
   const human = (u) => u && !u.camp && u.type !== 'horse' && u.def && u.def.ai !== 'cannon';
   const cryOf = (u) => (u.team === 1 ? 'jcry' : 'cry');
   // a company answering a shout: a few of its men cry out, one after another
@@ -137,7 +140,7 @@ const VOICE = (() => {
       case 'warcry': { const u = U[e.id]; if (human(u)) { say(cryOf(u), u, 4, undefined, undefined, undefined, 1.3); if (u.squad >= 0) chorus(sim, sim.squads[u.squad], null, 4); } break; }
       case 'rally': { const p = sim.players[e.p], h = p && U[p.heroId]; if (human(h)) say(cryOf(h), h, 4, undefined, undefined, undefined, 1.3); if (p) for (const id of p.squads) chorus(sim, sim.squads[id], null, 2); break; }
       case 'volley': { const sq = sim.squads[e.sq]; if (!sq || Math.random() < 0.4) break; const m = U[sq.unitIds.find(id => !U[id].dead)]; if (human(m)) say(m.team === 1 ? 'jcry' : 'o_fire', m, 2, undefined, undefined, undefined, 0.9); break; }
-      case 'order': { const p = sim.players[e.p], h = p && U[p.heroId], sq = sim.squads[e.sq]; if (!human(h) || h.dead || (p.lastOrderT && performance.now() - p.lastOrderT < 900)) break; p.lastOrderT = performance.now();
+      case 'order': { const p = sim.players[e.p], h = p && U[p.heroId], sq = sim.squads[e.sq]; if (!human(h) || h.dead || performance.now() - (lastOrd[e.p] || 0) < 900) break; lastOrd[e.p] = performance.now();
         const O = SIM.ORD_CHARGE !== undefined ? SIM : { ORD_CHARGE: 1, ORD_HOLD: 2, ORD_FOLLOW: 3, ORD_FORM: 4, ORD_FIRE: 5 };
         const cat = h.team === 1 ? 'jcry' : e.type === O.ORD_CHARGE ? 'o_charge' : e.type === O.ORD_HOLD ? 'o_hold' : e.type === O.ORD_FOLLOW ? 'o_follow' : e.type === O.ORD_FORM ? 'o_form' : e.type === O.ORD_FIRE ? 'o_fire' : null;
         if (cat) say(cat, h, 4, undefined, undefined, undefined, 1.2); if (e.type === O.ORD_CHARGE) chorus(sim, sq, null, 4); break; }
