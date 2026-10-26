@@ -443,6 +443,9 @@ class Sim {
   buildGrid() {
     this.head.fill(-1);
     const us = this.units;
+    // units added after setup (reinforcements, spawned squads) need room in the cell chains, or the chain is cut and
+    // every man filed after them in that cell becomes invisible to blows, pushes and targeting
+    if (this.next.length < us.length) this.next = new Int32Array(us.length + 64);
     for (let i = 0; i < us.length; i++) { const u = us[i]; if (u.dead) continue; const c = this.cellOf(u.x, u.z); this.next[i] = this.head[c]; this.head[c] = i; }
   }
   gatherNear(x, z, rad) {
