@@ -2184,7 +2184,7 @@ class Renderer {
     const up = (h) => V(bx, by, -0.72 - h), rest = V(0, -0.05, 0.2), F = V(0.3, 0.0, 0.42), PO = V(0.22, -0.12, 0.5), stow = V(0.04, -0.07, 0.12), pan = V(0.07, 0.05, -0.3);
     this.vmKey(rh, [[0, rest], [0.07, F], [0.12, up(0.1)], [0.2, up(0.08)], [0.25, PO], [0.31, up(0.02)], [0.34, up(0.02)], [0.38, stow], [0.44, up(0.6)], [0.48, up(0.46)], [0.53, up(0.12)], [0.57, up(0.38)], [0.61, up(0.1)], [0.65, up(0.36)], [0.69, up(0.1)], [0.74, up(0.62)], [0.79, stow], [0.84, F], [0.88, pan], [0.94, pan], [1, rest]], s);
     const prime = s > 0.8 && s < 0.97;
-    return { target: prime ? P(0.08, -0.3, -0.46, 0.25, 0.25, 0.3) : P(0.04, -0.55, -0.45, 0.75, 0.08, 0), rod: s > 0.38 && s < 0.79, flask: (s > 0.06 && s < 0.24) || (s > 0.83 && s < 0.96) ? 1 : 0, blow: 0 };
+    return { target: prime ? P(0.08, -0.3, -0.46, 0.25, 0.25, 0.3) : P(0.04, -0.72, -0.45, 0.6, 0.08, 0), rod: s > 0.38 && s < 0.79, flask: (s > 0.06 && s < 0.24) || (s > 0.83 && s < 0.96) ? 1 : 0, blow: 0 };
   }
   vmKey(out, keys, t) {
     let i = 0; while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
@@ -2344,7 +2344,7 @@ class Renderer {
     this.vmCyl.position.x = -0.04 * cylOut;
     this.vmCart.visible = cart;
     this.vmRod.visible = rod; if (rod) { this.vmRod.position.copy(st.rh).add(T.v.set(0, 0, 0.45)); }
-    { const sjr = w === 'rifle' && !hero.club && reloading && reloadStyle(hero) === 'sj'; if (!sjr) { this._sjFl = 0; this._sjBlow = 0; }
+    { const sjr = w === 'rifle' && !hero.club && reloading && reloadStyle(hero) === 'sj'; if (!sjr) { this._sjFl = 0; this._sjBlow = 0; } this.vmRod.scale.set(sjr ? 2.6 : 1, sjr ? 2.6 : 1, 1);
       if (this.vmFlask) { this.vmFlask.visible = !!this._sjFl; if (this._sjFl) this.vmFlask.position.copy(st.rh).add(T.v.set(0.0, 0.0, 0.06)); }
       if (this.vmSj) { if (!this.vmSjMatch) this.vmSjMatch = this.vmSj.children.find(c => c.material && c.material.type === 'MeshBasicMaterial') || null;
         const mt = this.vmSjMatch; if (mt) { const b = this._sjBlow || 0, f = 1 + b * (2.2 + 0.6 * Math.sin(this.time * 31)); mt.scale.set(f, f, f); mt.material.color.setHex(b > 0.3 ? 0xffd27a : 0xff8a3a); } } }
