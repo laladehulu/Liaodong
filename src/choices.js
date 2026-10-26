@@ -48,7 +48,7 @@ function chCSS() {
 #chUrg .k { font: 700 10px sans-serif; letter-spacing: .3em; color: #f07a5a; } #chUrg .zh { font-size: 17px; margin-top: 4px; } #chUrg .en { font-size: 14px; opacity: .85; margin-bottom: 6px; }
 #chUrg .ops { display: flex; flex-direction: column; gap: 4px; } #chUrg .ops div { padding: 5px 9px; border: 1px solid #5a3a28; border-radius: 4px; font: 14px sans-serif; background: #1e1410; } #chUrg .ops kbd { color: #f0b05a; margin-right: 8px; font: 700 12px sans-serif; }
 #zheCard.dream { background: radial-gradient(ellipse at center, rgba(14,18,30,.95), rgba(2,3,8,.99)); } #zheCard.dream h2 { color: #9fb2d8; font-weight: 400; letter-spacing: .3em; } #zheCard.dream p { font-style: italic; color: #c8d0e0; }
-#zheCard .chled { font-size: 14.5px; line-height: 1.5; } #zheCard .chled div { margin: 0 0 10px; padding-left: 10px; border-left: 2px solid #6a4a2a; } #zheCard .chled b { color: #e8c27a; font-weight: 600; } #zheCard .chled i { display: block; opacity: .75; font-style: normal; } #zheCard .chled em { display: block; color: #d88a7a; font-style: normal; }
+#zheCard .chled { font-size: 14.5px; line-height: 1.5; max-height: 62vh; overflow-y: auto; padding-right: 6px; } #zheCard .chled div { margin: 0 0 10px; padding-left: 10px; border-left: 2px solid #6a4a2a; } #zheCard .chled b { color: #e8c27a; font-weight: 600; } #zheCard .chled i { display: block; opacity: .75; font-style: normal; } #zheCard .chled em { display: block; color: #d88a7a; font-style: normal; }
 #chPr { position: fixed; left: 50%; bottom: 23%; transform: translateX(-50%); z-index: 30; font: 14px sans-serif; color: #efe6d0; background: rgba(12,9,7,.8); border: 1px solid #5a4a32; border-radius: 4px; padding: 5px 12px; pointer-events: none; } #chPr kbd { color: #e0b46a; margin-right: 6px; font-weight: 700; }`;
   document.head.appendChild(st);
 }
@@ -464,6 +464,7 @@ function chLetter(C, then) { if (chGot(C, 'letter') >= 0 || !chLetterWho(C)) ret
 // ---------------- camp: the empty bedrolls of the men your choices cost, and men who bring it up ----------------
 function chCampTick(dt) {
   const sim = state.sim; if (!sim || !sim.mission || !sim.mission.camp || !ZC) { const p = $('chPr'); if (p) p.hidden = true; return; }
+  try { chJinTalkWrap(); } catch (e) { }
   if (CH.zc !== ZC) { CH.zc = ZC; CH.objs = []; CH.murT = 24; CH.mur = chMurmurs(); try { chRolls(); } catch (e) { console.warn('choices rolls', e); } }
   let pr = $('chPr'); const t = chNearRoll();
   if (!pr) { chCSS(); pr = document.createElement('div'); pr.id = 'chPr'; document.body.appendChild(pr); }

@@ -1341,6 +1341,7 @@ class Sim {
   gunRange(def, w, u) { const g = gunOf(def, w); return g ? g.range * this.rangeMul * (u ? 1 + clamp(u.y * 0.02, 0, 0.3) : 1) : 0; }
   findTarget(u, sq) {
     if (this.phase === 0) return -1;
+    if (u.mounted && u.ctrl < 0 && u.target >= 0 && (u.cv === 1 || u.cv === 2 || u.cv === 3)) { const t = this.units[u.target]; if (t && !t.dead && !t.inactive && !(t.downed && this.story) && len(t.x - u.x, t.z - u.z) < 70) return t.id; } /* mid-pass a horseman keeps his man: riding on beyond him and wheeling back is part of the charge, not losing him */
     const order = sq ? sq.order : ORD_HOLD, def = u.def;
     const ranged = isGun(def, u.weapon) && !this.dry(u); const gr = ranged ? this.gunRange(def, u.weapon, u) : 0;
     let range;
