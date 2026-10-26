@@ -3293,10 +3293,10 @@ Sim.prototype.zWound = function (k) {
 };
 Sim.prototype.helpWounded = function (u) { // E beside a downed or wounded comrade: haul him up, or get his arm over your shoulder
   if (u.dead || u.mounted) return false; let best = null, bd = 2.6;
-  for (const v of this.teamAlive[u.team]) { if (!v.wounded || v.aided || v.helpedBy >= 0 || v === u) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } }
+  for (const v of this.teamAlive[u.team]) { if (!v.downed || v.aided || v === u) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } }
   if (!best) return false;
   if (best.downed) { if (best.reviveBy !== u.id) { best.reviveBy = u.id; best.reviveT = 0; this.events.push({ t: 'zrevive0', id: best.id, by: u.id }); } return true; }
-  return false; // walking wounded make their own way after their file for now (no carrying)
+  return false; // one way to help only: a man down is helped up (E, or a medic); nobody is carried or walked
 };
 // story chapters: a man who would die is often only knocked down — bleeding, until someone gets him up or the blood runs out
 Sim.prototype.zDown = function (u, dmg, cause) {
@@ -3643,11 +3643,12 @@ Sim.prototype.zAid = function (u, by) { // handed to the orderlies: laid on a ma
 Sim.prototype.orderlyAI = function (u) {
   u.target = -1; u.blocking = false; u.aiming = false; if (u.st !== ST_IDLE) { u.st = ST_IDLE; u.stT = 0; } const A = this.aidPost(); if (!A) { u.mx = 0; u.mz = 0; return; }
   const go = (x, z, sp) => { const d = len(x - u.x, z - u.z); if (d > 0.6) { const y = this.steerFoot(u, x, z, sp); this.turnTo(u, y, 6 * DT); } else { u.mx = 0; u.mz = 0; } return d; };
-  if (u.fetch >= 0) { const v = this.units[u.fetch];
+  if (u.fetch >= 0) { const v0 = this.units[u.fetch]; if (v0 && v0.helpedBy === u.id) v0.helpedBy = -1; u.fetch = -1; } // orderlies stay at the tent: no fetching men
+  if (false && u.fetch >= 0) { const v = this.units[u.fetch];
     if (!v || v.dead || v.aided || !v.wounded || (v.helpedBy >= 0 && v.helpedBy !== u.id) || (v.reviveBy >= 0 && v.reviveBy !== u.id)) { if (v && v.helpedBy === u.id) v.helpedBy = -1; u.fetch = -1; }
     else if (v.helpedBy === u.id) { go(A.x, A.z, u.def.speed * 0.55); return; }
     else { if (go(v.x, v.z, u.def.speed * 0.9) < 1.6) { v.downed = false; v.reviveBy = -1; v.crawling = false; v.bleed = 0; v.downT = 0; v.helpedBy = u.id; this.events.push({ t: 'zcollect', id: v.id, by: u.id }); } return; } }
-  if ((this.tick + u.id) % 15 === 0) { let best = null, bd = A.r + 18; for (const v of this.teamAlive[u.team]) { if (!v.wounded || v.aided || v.noncomb || v.helpedBy >= 0 || v.reviveBy >= 0 || v.ctrl >= 0) continue; if (this.units.some(o => o.orderly && o !== u && o.fetch === v.id)) continue; const d = len(v.x - A.x, v.z - A.z); if (d < bd) { bd = d; best = v; } }
+  if (false && (this.tick + u.id) % 15 === 0) { let best = null, bd = A.r + 18; for (const v of this.teamAlive[u.team]) { if (!v.wounded || v.aided || v.noncomb || v.helpedBy >= 0 || v.reviveBy >= 0 || v.ctrl >= 0) continue; if (this.units.some(o => o.orderly && o !== u && o.fetch === v.id)) continue; const d = len(v.x - A.x, v.z - A.z); if (d < bd) { bd = d; best = v; } }
     if (best) { let ed = 1e9; for (const e of this.teamAlive[1 - u.team]) { if (e.inactive) continue; const d = len(e.x - best.x, e.z - best.z); if (d < ed) ed = d; if (ed < 10) break; } if (ed >= 10) { u.fetch = best.id; return; } } }
   const k = u.slot | 0; go(A.x + (k - 1) * 2.2, A.z + 1.6, u.def.speed * 0.6); if (len(A.x + (k - 1) * 2.2 - u.x, A.z + 1.6 - u.z) < 0.8) this.turnTo(u, u.yaw + 0.01, DT);
 };

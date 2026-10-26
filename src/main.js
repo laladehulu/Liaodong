@@ -818,7 +818,7 @@ function helpPrompt(h, u) { // 'E · help him up' beside a downed man, and the p
   if (busy) { el.hidden = false; el.innerHTML = `<b>扶起</b> getting him up… <i style="--p:${Math.min(100, Math.round(busy.reviveT / 45 * 100))}%"></i>`; return; }
   if (!u || !u.downed) { el.hidden = true; return; }
   const nm = typeof SPEECH !== 'undefined' ? SPEECH.nameOf(u.id) : null; el.hidden = false;
-  el.innerHTML = `<kbd>E</kbd> ${u.downed ? 'help him up' : 'get his arm over your shoulder'}${nm ? ` · <span>${typeof nm === 'string' ? nm : nm.zh + ' ' + nm.en}</span>` : ''}`;
+  el.innerHTML = `<kbd>E</kbd> help him up${nm ? ` · <span>${typeof nm === 'string' ? nm : nm.zh + ' ' + nm.en}</span>` : ''}`;
 }
 function hudMarks() {
   const sim = state.sim, r = state.renderer; if (!MARKS.el) { MARKS.el = document.createElement('div'); MARKS.el.id = 'hudmarks'; document.body.appendChild(MARKS.el); MARKS.v = new THREE.Vector3(); }
@@ -835,9 +835,8 @@ function hudMarks() {
     { const h = localHero(); let near = null, nd = 2.6; // downed and wounded comrades: a pulsing cross with the bleed-out ring, pinned to the edge when out of view
       if (h) for (const u of sim.teamAlive[me.team]) { if (!u.wounded || u === h) continue; const d = Math.hypot(u.x - h.x, u.z - h.z); if (d > 70) continue;
         { const an = state.renderer && state.renderer.anims && state.renderer.anims[u.id]; if (u.downed && an && an.dw !== undefined && an.dw < 0.95 && !an.dUp) continue; } // the cross appears once he is down, not while he is still falling
-        const helped = u.helpedBy >= 0; if (u.downed || !helped) items.push({ x: u.x, z: u.z, y: 1.3, txt: '✚', cls: 'down' + (u.zfile ? ' file' : '') + (u.reviveBy >= 0 ? ' busy' : ''), always: true, bl: u.downed ? Math.max(0, Math.min(1, u.bleed / (30 * (u.zfile ? 45 : 30)))) : undefined });
-        else if (u.helpedBy === h.id) items.push({ x: u.x, z: u.z, y: 2.1, txt: '扶', cls: 'down carry', always: false });
-        if (!h.dead && d < nd && (u.downed || !helped)) { nd = d; near = u; } }
+        if (u.downed) items.push({ x: u.x, z: u.z, y: 1.3, txt: '✚', cls: 'down' + (u.zfile ? ' file' : '') + (u.reviveBy >= 0 ? ' busy' : ''), always: true, bl: u.downed ? Math.max(0, Math.min(1, u.bleed / (30 * (u.zfile ? 45 : 30)))) : undefined });
+        if (!h.dead && d < nd && u.downed) { nd = d; near = u; } }
       helpPrompt(h, near); }
     (me.squads || []).forEach((id, k) => { const q = sim.squads[id]; if (!q || !q.alive || q.inactive) return; const h = localHero(); if (h && Math.hypot(q.cx - h.x, q.cz - h.z) < 6) return; items.push({ x: q.cx, z: q.cz, y: 2.2, txt: String(k + 1), cls: 'sq' + (sel.includes(id) ? ' on' : ''), always: false }); });
   }
