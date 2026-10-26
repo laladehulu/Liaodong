@@ -1157,7 +1157,7 @@ class Sim {
           const close = !pl.fleeing && d < (def.ai === 'ranged' ? 0 : def.mounted ? (pl.aggr ? pl.aggr + 15 : 45) : (pl.aggr || 32)) && D.kind !== DIR_FLANK && !this.navBlockedLine(sq.cx, sq.cz, e.cx, e.cz);
           if (close) { sq.order = ORD_CHARGE; sq.tx = e.cx; sq.tz = e.cz; sq.facing = ang; continue; }
           const eang = this.dirAng(pl, enemies, px, pz, e), rx = -cos(eang), rz = sin(eang), n = squadIds.length;
-          const lat = (i - (n - 1) / 2) * 20, back = def.ai === 'cannon' ? (pl.standoff ? -70 : -14) : def.mounted ? -8 : (pl.standoff && def.ai === 'ranged' ? -38 : 0);
+          const lat = (i - (n - 1) / 2) * (this.mode === 'assault' ? 7 : 20), back = def.ai === 'cannon' ? (pl.standoff ? -70 : -14) : def.mounted ? -8 : (pl.standoff && def.ai === 'ranged' ? -38 : 0);
           const tx = px + rx * lat + sin(eang) * back, tz = pz + rz * lat + cos(eang) * back;
           if (len(sq.cx - tx, sq.cz - tz) > 3) { sq.order = ORD_MOVE; sq.tx = clamp(tx, -HALF + 5, HALF - 5); sq.tz = clamp(tz, -HALF + 5, HALF - 5); sq.facing = eang; }
           else { if (sq.order !== ORD_HOLD) { sq.tx = sq.cx; sq.tz = sq.cz; } sq.order = ORD_HOLD; sq.facing = eang; }
@@ -3931,7 +3931,7 @@ Sim.prototype.siegeThink = function () {
     const moving = pushers >= e.need && foes <= pushers && e.z < tz - 0.05;
     if (moving) { const st = S.sp * 15 * DT * (pushers >= e.need * 2 ? 1.25 : 1); e.z = Math.min(tz, e.z + st); e.x += clamp(lane - e.x, -st, st); }
     if (e.kind === 'tower' && !e.docked && e.z >= e.tz - 0.05) { e.docked = true; e.lad.up = true; nav = true; this.events.push({ t: 'sgdock', x: e.x, z: e.z }); }
-    if (e.kind === 'ram') { e.atGate = e.z >= e.tz - 0.05; if (e.atGate && sg.gateHp > 0 && pushers >= 1) { this.sgGate(44 + pushers * 4); if (this.tick % 45 === 0) this.events.push({ t: 'sgram', x: 0, z: W.z0 }); } }
+    if (e.kind === 'ram') { e.atGate = e.z >= e.tz - 0.05; if (e.atGate && sg.gateHp > 0 && pushers >= 1) { this.sgGate(26 + (pushers - crew) * 6 + crew * 2); if (this.tick % 45 === 0) this.events.push({ t: 'sgram', x: 0, z: W.z0 }); } }
   }
   // sappers at the shield carts chisel through the wall face
   for (const L of sg.holes) { if (L.up) continue; const n = this.sgCount(L.x, W.z0 - 1.6, 3.5, A); const cart = sg.engines.find(e => e.kind === 'cart' && e.lane === L.x && e.hp > 0 && e.z > W.z0 - 6);
