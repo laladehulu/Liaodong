@@ -3332,7 +3332,7 @@ Sim.prototype.hitReact = function (u, a, kind, heavy, blocked) {
   if (u.hrA === undefined) { u.hrT = 0; u.hrImm = 0; u.hrA = 9; u.hrK = 0; u.hrD = 0.3; u.hrS = 1; u.hrL = []; u.hrF = 0; u.hrFS = 1; }
   const sd = a ? wrap(atan2(a.x - u.x, a.z - u.z) - u.yaw) : 0, sgn = sd < 0 ? -1 : 1;
   const flick = () => { if (!blocked) { u.hrF = 0.16; u.hrFS = sgn; } return false; };
-  if (u.hrT > 0 || u.hrImm > 0) return flick();
+  if (u.hrT > 0 || u.hrImm > 0 || u.st === ST_STUN) return flick();
   if (u.mounted || u.mount >= 0 || u.braceT > 0 || u.dashT > 0 || u.guardT > 0 || u.downed || u.wounded) return flick();
   let k, d;
   if (blocked) { k = 5; d = heavy ? 0.2 : 0.15; }
@@ -3349,15 +3349,16 @@ Sim.prototype.hitReact = function (u, a, kind, heavy, blocked) {
   const t = this.tick; let used = 0; for (const iv of u.hrL) used += Math.max(0, Math.min(iv[1], t) - Math.max(iv[0], t - HR_WIN));
   d = Math.min(d, HR_CAP - used * DT); if (d < 0.1) return flick();
   u.hrT = d; u.hrD = d; u.hrK = k; u.hrS = sgn; u.hrA = 0; u.hrF = 0;
-  u.hrL.push([t, t + Math.round(d / DT)]); if (u.hrL.length > 4) u.hrL.shift();
+  u.hrL.push([t, t + Math.round(d / DT) + 1]); if (u.hrL.length > 4) u.hrL.shift();
   if (!blocked) { u.flinchT = Math.max(u.flinchT, d); if (u.st === ST_WINDUP || u.st === ST_AIM) { u.st = ST_IDLE; u.stT = 0; } }
   if (k === 3 && a) { const dx = u.x - a.x, dz = u.z - a.z, l = len(dx, dz) || 1; u.vx += dx / l * 1.4; u.vz += dz / l * 1.4; }
   this.events.push({ t: 'hitreact', id: u.id, k });
   return true;
 };
 Sim.prototype.hrTick = function (u) {
-  if (u.hrT > 0) { u.hrT -= DT; if (u.hrT <= 0) { u.hrT = 0; u.hrImm = HR_IMM; } }
+  if (u.hrT > 0) { u.hrT -= DT; if (u.hrT <= 1e-6) { u.hrT = 0; u.hrImm = HR_IMM; } }
   else if (u.hrImm > 0) u.hrImm -= DT;
+  if (u.st === ST_STUN) u.hrImm = Math.max(u.hrImm, 0.5);
   if (u.hrF > 0) u.hrF -= DT;
   if (u.hrA < 5) u.hrA += DT;
 };
