@@ -701,10 +701,13 @@ class Renderer {
     this.empN = (this.empN || 0) + 1;
     if (this.empN % 3 === 1 || !this.empP) { const P = this.sim.sgPredict(e, e.yaw, e.pitch || 0); this.empP = P;
       const gy = P.box ? P.y : SIM.terrainH(P.x, P.z); this.empMark.position.set(P.x, gy + 0.06, P.z); const dist = Math.hypot(P.x - e.x, P.z - e.z); 
-      const A = this.empArc.geometry.attributes.position, n = Math.min(A.count, P.pts.length / 3); for (let i = 0; i < A.count; i++) { const j = Math.min(i, n - 1) * 3; if (n > 0) A.setXYZ(i, P.pts[j], P.pts[j + 1], P.pts[j + 2]); else A.setXYZ(i, e.x, e.y, e.z); } A.needsUpdate = true; this.empArc.geometry.setDrawRange(0, n); this.empArc.geometry.computeBoundingSphere();
+      // the arc: the sim's points with four dots between each pair (the sim keeps one point per 3 ticks), ending on the fall of shot
+      const A = this.empArc.geometry.attributes.position, src = P.pts.concat([P.x, P.box ? P.y : SIM.terrainH(P.x, P.z), P.z]), m0 = src.length / 3; let n = 0;
+      for (let i = 0; i < m0 - 1 && n < A.count - 5; i++) for (let s = 0; s < 5; s++) { const f = s / 5, a = i * 3, b = a + 3; A.setXYZ(n++, src[a] + (src[b] - src[a]) * f, src[a + 1] + (src[b + 1] - src[a + 1]) * f, src[a + 2] + (src[b + 2] - src[a + 2]) * f); }
+      A.needsUpdate = true; this.empArc.geometry.setDrawRange(0, n); this.empArc.geometry.computeBoundingSphere();
       // the ring: where a ball first strikes it skips and ploughs on (a bolt sticks), so mark the ground it can sweep; foes inside turn it red
       const rr = bow ? 1.6 : 3.2; let foes = 0; if (!P.out) for (const u of this.sim.units) { if (u.dead || u.team === e.team || u.type === 'horse') continue; if (Math.hypot(u.x - P.x, u.z - P.z) < rr) foes++; }
-      this.empMark.scale.set(rr, 1, rr); this.empMark.children[0].material.color.setHex(foes ? 0xff6a4a : 0xffd27a); { const bm = this.empMark.children.find(c => c.userData.beam); if (bm) { bm.scale.set(1 / rr, 1, 1 / rr); bm.material.color.setHex(foes ? 0xff6a4a : 0xffe2a0); } }
+      const vr = Math.max(rr, dist * 0.03), bt = Math.max(1, dist * 0.06), bh = 1 + dist * 0.06; this.empMark.scale.set(vr, 1, vr); this.empMark.children[0].material.color.setHex(foes ? 0xff6a4a : 0xffd27a); { const bm = this.empMark.children.find(c => c.userData.beam); if (bm) { bm.scale.set(bt / vr, bh, bt / vr); bm.position.y = 3 * bh; bm.material.color.setHex(foes ? 0xff6a4a : 0xffe2a0); } }
       this.empHud = { kind: e.kind, cd: e.cd, cdMax: e.cdMax || (bow ? 150 : 270), elev: e.pitch || 0, want: this._viewPitch, dist, wall: !!P.box, out: !!P.out, foes }; }
     else if (this.empHud) { this.empHud.cd = e.cd; this.empHud.elev = e.pitch || 0; this.empHud.want = this._viewPitch; }
     { const m = this.empArc.material, tk = this.empK || 0; m.size = 3.5 + tk * 2.5; m.opacity = (e.cd > 0 ? 0.25 : 0.9) * (0.6 + 0.4 * tk); }
@@ -728,7 +731,7 @@ class Renderer {
     ring.rotation.x = -Math.PI / 2; const mark = new THREE.Group(); mark.add(ring); const dot = new THREE.Mesh(new THREE.CircleGeometry(0.18, 10), ring.material); dot.rotation.x = -Math.PI / 2; mark.add(dot);
     { const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0.5, depthWrite: false, fog: false })); beam.position.y = 3; beam.userData.beam = true; mark.add(beam); } // a thin post of light so the fall of shot shows at any range
     this.scene.add(mark); this.empMark = mark;
-    const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.BufferAttribute(new Float32Array(90 * 3), 3));
+    const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.BufferAttribute(new Float32Array(360 * 3), 3));
     const arc = new THREE.Points(ag, new THREE.PointsMaterial({ color: 0xffe2a0, size: 4, sizeAttenuation: false, transparent: true, opacity: 0.45, depthWrite: false, fog: false })); arc.frustumCulled = false; this.scene.add(arc); this.empArc = arc;
   }
   updateSiege(dt) {
