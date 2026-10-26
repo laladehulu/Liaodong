@@ -491,5 +491,142 @@ function chRollCard(o) {
   zCards([{ title: `${n[0]} · ${n[1]}`, year: `${how}`, p: ['Nobody sleeps here. Nobody has moved his things, and nobody will say why they keep a place for him.', e ? `${e.pick}` : ''].filter(Boolean), btn: 'Stand up' }], () => requestLock());
 }
 { const _k = zheKeyE; zheKeyE = function () { if (ZC && state.sim && state.sim.mission && state.sim.mission.camp && !state.zheDlg) { const t = chNearRoll(); if (t) { chRollCard(t); return true; } } return _k(); }; }
+// ================= 八旗 · the Plain White niru =================
+const chJA = (C, k) => !!(JS && JS.alive[k] && k !== JS.me);
+// 一 · Shenyang, the night after it fell (c2): the Ming gunner who will not serve the guns
+CHD.j2gun = {
+  build: (C) => ({ id: 'j2gun', title: '砲手 · The gunner', ltitle: 'The Ming gunner at Shenyang', year: 'Shenyang, the night it fell, 1621', who: ['托博輝 Tobohui', 'captain of the niru'],
+    lines: [chL('（城門洞裡關著十幾個明軍砲手。李永芳的人一個一個地問：給銀子，明天替汗開瀋陽的大砲。）', '(A dozen Ming gunners are shut in the gate passage. Li Yongfang\'s men question them one by one: silver, if tomorrow they will serve Shenyang\'s cannon for the Khan.)'),
+      chL('都點頭了，只有這一個。他叫什麼，沒人問。他不肯。', 'All of them nodded except this one. Nobody asked his name. He won\'t.'),
+      chL('托博輝：不肯的，砍了。你的人看著他。你去辦。', 'Tobohui: The ones who refuse, kill. Your file is guarding him. You see to it.'),
+      chJA(C, 'lier') ? chL('（李二站在火把底下，看著那個人，又看著你。他也是在撫順被抓來的。）', '(Li Er stands under the torch, looking at the man, then at you. He was taken at Fushun, too.)') : chL('（那人看著你，不求饒。）', '(The man looks at you. He does not beg.)')],
+    opts: [
+      { q: 'Do as Tobohui says.', led: 'Killed the Ming gunner who would not serve.', a: [chL('（很快。他到最後都沒低頭。）', '(It is quick. He never lowers his head.)'), chJA(C, 'lier') ? chL('（李二轉身走開了。那天晚上他沒有回火邊。）', '(Li Er turns and walks away. He doesn\'t come back to the fire that night.)') : chL('（托博輝點點頭。）', '(Tobohui nods.)')],
+        fx: (C) => { chBond(C, 'lier', -3); chBond(C, 'tobohui', 1); chRep(C, 'cruel', 2); } },
+      { q: 'Have Li Er talk him round to serve the gun.', led: 'Had Li Er talk the Ming gunner into serving the Khan\'s guns.', a: [chL('李二蹲下，用家鄉話跟他說了很久。「活著，比什麼都強。」', 'Li Er squats down and talks to him a long time in their own dialect. "Living beats everything."'), chL('（天亮前，那人點了頭。第二天，他在渾河邊替汗開砲，打的是川兵。）', '(Before dawn the man nods. The next day, on the Hun River, he fires the Khan\'s cannon into the Sichuan camp.)')],
+        fx: (C) => { chBond(C, 'lier', 1); C.S.flags.gunner = 1; } },
+      { q: 'Look the other way while he slips out.', led: 'Let the Ming gunner slip away in the night.', a: [chL('（你把鑰匙放在地上，轉過身去。天亮時，門洞裡少了一個人。）', '(You put the key on the ground and turn your back. At dawn the gate passage is one man short.)'), chL('托博輝：「看守是你的人。」鞭子是你的。', 'Tobohui: "The guard was your file." The whip is yours.')],
+        fx: (C) => { chBond(C, 'lier', 3); chBond(C, 'tobohui', -2); C.S.flags.whipped = 1; chRep(C, 'care', 1); return { beat: 20 }; } },
+    ] }),
+  dream: (C, o) => o === 0 ? ['After Shenyang', ['A man in a Ming coat who will not lower his head, in a gate passage that goes on and on. Every time you reach him, he is still looking at you.']] : null,
+  end: (C, o) => o === 0 ? (C.S.flags.lierGone ? 'You killed the gunner as you were told. Li Er ran south across the Liao River before Ningyuan.' : 'You killed the gunner as you were told.') : o === 1 ? 'The gunner lived and served the Khan\'s cannon at the Hun River. Years later he was among the Han gunners of the Ujen Cooha.' : 'The gunner got away. You took the whip for it, and Tobohui never trusted you again.',
+  talk: (C, k, o) => k === 'lier' ? (o === 2 ? { q: 'About the gunner...', bond: 1, a: [chL('……我知道是你。我什麼都沒說。', '...I know it was you. I said nothing.'), chL('撫順那年，要是也有人轉過身去……', 'The year Fushun fell, if someone had turned his back for me...')] } : o === 1 ? { q: 'You saved his life.', a: [chL('我救了他，讓他打自己人。', 'I saved him so he could shoot his own people.'), chL('我們都是這麼活下來的。', 'That is how all of us stay alive.')] } : null) : null,
+  murmur: (C, o) => o === 0 && chJA(C, 'lier') ? ['lier', '……', '...'] : null,
+};
+// 二 · before Ningyuan (c3): Wunage takes horsemen over the sea ice to the island where the Ming keep their grain
+CHD.j3ice = {
+  build: (C) => { const barred = !!C.S.flags.whipped;
+    return { id: 'j3ice', title: '覺華島 · The ice road', ltitle: 'Juehua Island or the walls', year: 'Under the walls of Ningyuan, the first month of 1626', who: ['托博輝 Tobohui', 'captain of the niru'],
+      lines: [chL('武訥格要帶騎兵從海冰上過去，打覺華島。明軍的糧，船，都在島上。', 'Wunage is taking horsemen over the sea ice to Juehua Island. The Ming keep their grain there, and their ships.'),
+        chL('明天一早，其餘的人推盾車攻城。城上有大砲——你也看見了。', 'At first light everyone else pushes the shield carts at the walls. There are guns on those walls — you have seen them.'),
+        barred ? chL('托博輝：武訥格要的是可靠的人。放跑犯人的，不算。', 'Tobohui: Wunage wants men he can trust. A man who lets prisoners go doesn\'t count.') : chL('托博輝：武訥格還缺一個牛錄的人。要去，你帶你的人去。', 'Tobohui: Wunage is one file short. If you want it, take your file.')],
+      opts: barred ? [{ q: 'The walls, then.', led: 'Was not trusted to ride to Juehua Island; went to the walls.', a: [chL('（你的人什麼也沒說。他們都看見城上的砲了。）', '(Your men say nothing. They have all seen the guns on the walls.)')], fx: () => { } }]
+        : [{ q: 'We go to the walls with the banner.', led: 'Went to the walls of Ningyuan with the banner.', a: [chL('好。盾車明天第一批。', 'Good. The shield carts go in the first wave tomorrow.')], fx: () => { } },
+          { q: 'We ride over the ice with Wunage.', led: 'Rode over the sea ice to Juehua Island with Wunage.', a: [chL('好。冰上冷，可冰上沒有大砲。', 'Good. It\'s cold on the ice. But there are no cannon on the ice.')], fx: () => { } }] }; },
+  end: (C, o) => o === 1 ? (chGot(C, 'j3jetty') === 0 ? 'You went over the ice to Juehua Island and burned the grain. At the jetty you followed the order.' : 'You went over the ice to Juehua Island and burned the grain. At the jetty you let the boatmen run onto the ice.') : 'You went to the walls of Ningyuan, where the guns were.',
+};
+CHD.j3jetty = {
+  build: (C) => ({ id: 'j3jetty', urgent: true, timer: 12, def: 0, title: 'The jetty', ltitle: 'The jetty on Juehua Island', kick: '抉擇 · NOW', who: ['武訥格 Wunage'],
+    lines: [chL('碼頭上的人一個不留——兵也好，船戶商人也好！', 'Nobody at the jetty lives — soldiers, boatmen, merchants, all of them!')],
+    opts: [{ q: 'Follow the order', led: 'Followed the order at the jetty.', a: [chL('（你的人跟著武訥格的人下了碼頭。）', '(Your file goes down to the jetty behind Wunage\'s men.)')], fx: (C) => { chRep(C, 'cruel', 3); } },
+      { q: 'Let them run out onto the ice', led: 'Let the boatmen and merchants run out onto the ice.', a: [chL('（你的人放低了刀。那些人往冰上跑去，一個也沒回頭。）', '(Your file lowers its blades. The people run out onto the ice, and none of them looks back.)')], fx: (C) => { chRep(C, 'care', 2); } }] }),
+  dream: (C, o) => o === 0 ? ['After Juehua', ['Burning ships frozen into the ice, and the smoke going straight up. People on the jetty, and then the jetty empty.', 'In the dream the ice is quiet. That is the worst of it.']] : ['After Juehua', ['Figures running far out on the white ice, smaller and smaller. You never learn whether the ice held.']],
+  end: () => '',
+};
+// 三 · before the Dalinghe relief battle (c4): a man of the file whose mother is dying asks to go home
+const chJLeave = (C) => ['dabsun', 'erde', 'bahai', 'sose', 'ilan'].find(k => chJA(C, k)) || null;
+CHD.j4leave = {
+  build: (C) => { const k = chJLeave(C), n = [chNm(C, k), chNm(C, k, true)], unc = k === 'dabsun' && chJA(C, 'alin');
+    return { id: 'j4leave', keep: { k }, title: '家信 · Word from home', ltitle: `${n[1]} asks to go home`, year: 'Behind the siege lines at Dalinghe, 1631', who: unc ? ['阿林 Alin', `${n[1]}'s uncle`] : [`${n[0]} ${n[1]}`],
+      lines: [chL(`（一個從赫圖阿拉來的人帶了信：${n[0]}的娘病得快不行了。）`, `(A man up from Hetu Ala brings word: ${n[1]}'s mother is dying.)`),
+        unc ? chL('阿林：我答應過他娘，把他活著帶回去。把他的名字從冊子上劃掉吧。少一個人，汗不會知道。', 'Alin: I promised his mother I\'d bring him home alive. Strike his name off the roll. One man less — the Khan will never know.')
+          : chL(`${n[0]}：讓我回去。就這一回。少一個人，汗不會知道。`, `${n[1]}: Let me go home. Just this once. One man less — the Khan will never know.`),
+        chL('（明天汗親自出去迎明朝的援兵。四萬人，有車有砲。）', '(Tomorrow the Khan himself rides out to meet the Ming relief army. Forty thousand of them, with carts and guns.)')],
+      opts: [
+        { q: 'Strike his name. Go home.', led: `Struck ${n[1]}'s name from the roll and sent him home.`, a: [chL(`（${n[0]}天沒亮就走了。你的牛錄明天少一個人。）`, `(${n[1]} leaves before light. Tomorrow your file is one man short.)`)], fx: (C) => { chBond(C, k, 3); chBond(C, 'alin', 2); C.S.alive[k] = false; C.S.fate[k] = 'home'; chData(C.S).chLost[k] = { id: 'j4leave', how: 'home' }; C.S.flags.sentHome = k; } },
+        { q: 'Ask Tobohui for leave, properly.', led: `Asked Tobohui to give ${n[1]} leave. He refused.`, a: [chL('托博輝：「明天打仗。後天再說。」', 'Tobohui: "Tomorrow we fight. Ask me the day after."'), chL(`（${n[0]}點點頭。他知道後天是什麼意思。）`, `(${n[1]} nods. He knows what "the day after" means.)`)], fx: (C) => { chBond(C, k, 1); chRep(C, 'disc', 1); } },
+        { q: 'No. Every man fights tomorrow.', led: `Refused to let ${n[1]} go home.`, a: [chL('（他沒有求第二次。）', '(He doesn\'t ask a second time.)')], fx: (C) => { chBond(C, k, -2); chBond(C, 'alin', -2); chRep(C, 'disc', 1); } },
+      ] }; },
+  end: (C, o) => { const k = (C.S.ch.j4leave || {}).k, n = k ? chNm(C, k, true) : 'He'; if (o === 0) return `${n} reached home before his mother died.`; return C.S.alive[k] ? `${n} fought at Dalinghe and lived. His mother died before he got home.` : `${n}'s mother died without him. Then he died too, at Dalinghe.`; },
+};
+// the Juehua mission: over the sea ice, the trench the Ming cut, the grain, the jetty
+CH.missions3 = () => {
+  const M = SIM.MISSIONS, PI = Math.PI; if (M.jjue) return;
+  M.jjue = { title: '覺華島 · Juehua Island', year: 'The first month of 1626', battle: 'field', side: 1, soldier: { group: 'niru' }, hidden: true, ch: 'jb',
+    bdef: { name: 'Juehua Island', jp: '覺華島', when: 'February 1626', biome: 'winter', fog: 0.25 },
+    brief: 'While the banners storm Ningyuan, Wunage leads horsemen over the frozen sea to Juehua Island, where the Ming keep their grain and ships.',
+    start: [0, -112, 0],
+    zones: [{ key: 'trench', x: 0, z: -28, r: 14, name: 'The ice trench' }, { key: 'stores', x: -10, z: 46, r: 15, name: 'The grain stores' }, { key: 'jetty', x: 36, z: 96, r: 13, name: 'The jetty' }],
+    forts: [[-14, -22, 6, 0.5, 1.4, 'mantlet'], [14, -22, 6, 0.5, 1.4, 'mantlet'], [-16, 46, 3, 3, 2.2, 'tent'], [-4, 50, 3, 3, 2.2, 'tent'], [-12, 36, 3, 2.5, 2.2, 'tent']],
+    labels: { rifle_imp: ['Ming island garrison', '覺華守軍'], ronin: ['Boatmen and merchants', '船戶商民'] },
+    groups: {
+      niru: { team: 1, name: 'Tobohui', zh: '托博輝', army: ['samurai'], at: [0, -112, 0], dir: ['hold', 0, -90], exit: [0, -150] },
+      wunage: { team: 1, name: 'Wunage', zh: '武訥格', army: ['cavalry', 'cavalry', 'samurai'], at: [-24, -118, 0], dir: ['hold', -20, -60] },
+      line: { team: 0, name: 'The trench line', zh: '冰壕守兵', army: ['rifle_imp', 'ashigaru', 'rifle_imp'], at: [0, -16, PI], dir: ['hold', 0, -18], stay: true },
+      garr: { team: 0, name: 'The garrison', zh: '覺華守軍', army: ['ashigaru', 'rifle_imp', 'samurai'], at: [-10, 70, PI], reserve: true },
+      folk: { team: 0, name: 'Boatmen and merchants', zh: '船戶商民', army: ['ronin', 'ronin'], at: [36, 98, PI], dir: ['hold', 36, 98], stay: true, exit: [140, 150] },
+    },
+    choices: [[[['dir', 'wunage', 'hold', 36, 96], ['calm', 'wunage', 30], ['dir', 'niru', 'hold', 34, 90]], [['break', 'folk'], ['dir', 'wunage', 'hold', -10, 46]]]],
+    phases: [
+      { title: '一 · 冰 · The sea ice', goal: 'Cross the ice to the trench', text: 'Over the frozen sea toward the island. The Ming have cut a trench in the ice; the night froze it over again.', show: ['trench'],
+        obj: { reach: 'trench' }, at: [[1, ['promote']]],
+        say: [[3, 'wunage', 'The ice is ours tonight. Ride!', '今夜冰是我們的。走！'], [16, 'lookout', 'Muskets behind the trench!', '冰壕後面有銃！']] },
+      { title: '二 · 冰壕 · The trench', goal: 'Break the line at the ice trench', text: 'The trench has frozen over. Break the line behind it.', start: [['dir', 'wunage', 'attack'], ['dir', 'niru', 'attack']],
+        obj: { defeat: ['line'], frac: 0.7 }, say: [[2, 'niru', 'Over the trench! It froze in the night — the Heavens want this!', '過壕！一夜凍上了——天意！']] },
+      { title: '三 · 糧 · The grain', goal: 'Take the grain stores', text: 'The grain stores beyond the trench. Burn them.', show: ['stores'], hide: ['trench'], start: [['release', 'garr'], ['dir', 'garr', 'hold', -10, 46]],
+        obj: { all: [{ reach: 'stores' }, { survive: 40 }] }, at: [[30, ['burn', -40, 20, 46]]],
+        say: [[3, 'niru', 'Burn it all. Grain, carts, ships.', '全燒了。糧，車，船。'], [32, 'lookout', 'The stores are burning!', '糧倉著了！']] },
+      { title: '四 · 碼頭 · The jetty', goal: 'Go down to the jetty', text: 'The jetty, the ships frozen into the ice, and the people who ran there.', show: ['jetty'], hide: ['stores'],
+        obj: { survive: 40 }, say: [[1, 'lookout', 'People at the jetty — boatmen, merchants, women!', '碼頭上有人——船戶，商人，還有女人！']] },
+    ],
+    win: 'Juehua Island burned.' };
+};
+CHBT.jjue = [{ ph: 3, t: 3, id: 'j3jetty', cid: 0, k: () => 0 }];
+function chJStart(scene) {
+  CH.missions3(); JS = jLoad() || jFresh(); jMeRow(); chData(JS); $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
+  const n = 3, C = JCH[n]; C.who = Object.assign({}, C.who || {}, { wunage: ['武訥格', 'Wunage'], niru: C.who && C.who.niru || ['托博輝', 'Tobohui'], lookout: ['', 'A lookout'] });
+  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: JS.name.zh || 'You', team: 1, connected: true }];
+  ZC = null; startGame({ seed, battle: 'field', mode: 'campaign', mission: 'jjue', players: pl }, 0, null, 1);
+  const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq];
+  ZB = { map: {}, sq: q.id, first: me.heroId, cur: JS.me, fell: false, R: JR, jin: true, ch: n, deadMe: [], jue: true };
+  const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = jIdx(JS.me);
+  for (const r of jFile()) { const id = q.unitIds.find(uid => !used[uid]); if (id === undefined) break; used[id] = 1; ZB.map[id] = jIdx(r.k); }
+  for (const uid in ZB.map) jDress(sim.units[uid], ZB.map[uid]);
+  setTimeout(() => storyCard('The first month of 1626. Over the frozen sea with Wunage\'s horsemen, toward Juehua Island and the Ming grain. Stay with your file. F follow · H halt · C charge.', '覺華島 · Juehua Island'), 700);
+}
+function chJFinish(winner) {
+  const sim = state.sim, h = localHero(), M = sim.mission, won = winner === M.side; const fate = {}, near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
+  for (const uid in ZB.map) { const r = JR[ZB.map[uid]]; if (!r) continue; const u = sim.units[uid]; fate[r.k] = u.dead ? 'dead' : (!won && u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 4)) ? 'lost' : 'out'; }
+  for (const k of ZB.deadMe) fate[k] = 'dead';
+  const meK = JS.me, alive = h && !h.dead; fate[meK] = (ZB.cur === meK || ZB.cur === 'stranger') ? (alive ? 'out' : 'dead') : 'dead';
+  if (ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && alive) { const nk = ZB.cur, r = jRow(nk); if (meK === 'me') JS.meName = Object.assign({}, JS.name); JS.me = nk; JS.name = { zh: r.zh, en: r.en }; fate[nk] = 'out'; }
+  for (const k in fate) { JS.fate[k] = fate[k]; JS.alive[k] = fate[k] === 'out'; }
+  JS.stage = 'c4'; JS.lastWon = won; jSave(); const outN = Object.keys(fate).filter(k => fate[k] === 'out').length;
+  const rows = Object.keys(fate).map(k => { const r = jRow(k), f = fate[k]; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${k === JS.me ? JS.name.zh + ' ' + JS.name.en + ' (you)' : r.zh + ' ' + r.en} — ${f === 'out' ? 'came back over the ice' : f === 'dead' ? 'killed on the island' : 'left on the island'}</li>`; }).join('');
+  $('resultTitle').textContent = won ? '焚 · Juehua burns' : '退 · Back over the ice'; $('resultTitle').className = won ? 'win' : 'lose';
+  $('resultText').innerHTML = `${won ? M.win : 'The island garrison drove you back onto the ice.'} ${outN} of your file came back.`;
+  $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';
+  $('btnNext').onclick = () => { $('result').hidden = true; zCards([
+    { title: '覺華島 · What happened', year: 'The first month of 1626', p: ['Wunage\'s horsemen crossed the frozen sea to Juehua Island. The Ming had cut a trench fifteen li long in the ice, but the cold closed it again in a night. The garrison was destroyed, the grain stores and some two thousand ships were burned, and the people of the island were killed: soldiers, boatmen and merchants together, by the Ming count some fourteen thousand.',
+      'Under the walls of Ningyuan it went the other way. Yuan Chonghuan\'s Western cannon broke the assault again and again; the Khan himself was struck, it was said, and the banners drew off. Nurhaci died that summer. He had never lost a battle before Ningyuan.'], zh: '武訥格攻覺華島，焚其糧船。汗攻寧遠，不克。' },
+    { title: '牛錄 · Your file', year: `${outN} came back over the ice`, html: `<ul>${rows}</ul>`, btn: 'Five years later →' }], () => jGo('c4')); };
+}
+{ const _js = jStart; jStart = function (scene) {
+    if (scene === 'b3j') return chJStart(scene);
+    if (scene === 'c3') { const s = jLoad(); if (s && !(s.seen && s.seen.i3) && s.ch && s.ch.j2gun && s.ch.j2gun.o === 0 && s.alive.lier && s.me !== 'lier' && !s.flags.lierGone) {
+      JS = s; chData(JS); const C = { c: 'jin', S: JS, save: () => jSave(), R: JR }; chLose(C, 'lier', 'gone', 'j2gun'); JS.flags.lierGone = 1; jSave();
+      return zCards([{ title: '李二 · Li Er', year: 'The winter of 1621', p: ['A month after the Hun River, Li Er is gone. His horse is in the lines; his armour is folded on his bedroll. The guards at the Liao River say a man in a Han coat walked out across the ice toward the Ming side one night, and nobody stopped him.', 'Tobohui strikes his name from the roll and says nothing more about it.'], btn: 'On →' }], () => _js(scene)); } }
+    return _js(scene); }; }
+{ const _jf = jFinish; jFinish = function (w) { if (ZB && ZB.jue) { try { if (typeof ddFinish === 'function') ddFinish(w); } catch (e) { } return chJFinish(w); } return _jf(w); }; }
+{ const _jk = jKeyE; jKeyE = function () {
+    if (state.zheDlg) return true; const t = jLook(); if (!t || !t.bed) return _jk(); const C = chCtx(); if (!C) return _jk(); chData(C.S); const n = ZC.night;
+    const id = n === 2 ? 'j2gun' : n === 3 ? 'j3ice' : n === 4 && chJLeave(C) ? 'j4leave' : null;
+    if (id && chGot(C, id) < 0) { chDecide(CHD[id].build(C), (o) => {
+      if (id === 'j3ice' && o === 1 && !C.S.flags.whipped) { JS.stage = 'b3j'; jSave(); return zCards([{ title: '冰 · The ice', year: 'Before dawn', p: ['Long before light the horsemen go down onto the frozen sea. The ice booms under the hooves like a drum somewhere far below.', 'Behind you, by torchlight, the banners are dragging the shield carts toward the walls of Ningyuan.'], btn: 'Onto the ice →' }], () => jGo('b3j')); }
+      chDream(() => _jk()); }); return true; }
+    chDream(() => _jk()); return true; }; }
+{ const _je = jEnd; jEnd = function () { const C = { c: 'jin', S: chData(JS), save: () => jSave(), R: JR }; chLetter(C, () => { const L = chLedgerCard(C); if (L) zCards([L], () => _je()); else _je(); }); }; }
+// the Jin talk lives in each chapter's table: give it the same memory
+function chJinTalkWrap() { if (!ZC || !ZC.jin || CH.talkWrapped.has(ZC.night)) return; const C = JCH[ZC.night]; if (!C || !C.talk) return; CH.talkWrapped.add(ZC.night); const _t = C.talk; C.talk = (k) => chTalkAdd(_t(k), k); }
 // test handle (headless scripts): the registry and the entry points
 window.__ch = { CHD, CH, ctx: () => chCtx(), sleep: () => zSleep(), decide: (id) => { const C = chCtx(); chDecide(CHD[id].build(C), () => { }); }, ledger: () => { const C = chCtx(); return C ? chLedgerCard(C) : null; } };
