@@ -1655,6 +1655,7 @@ class Sim {
     if (att.weapon === 'yari') { if (f < 0.45) { q = 'jammed'; qm = 0.5; } else if (f > 0.68) { q = 'tip'; qm = 1.18; } }
     else { if (f > 0.92) { q = 'graze'; qm = 0.7; } else if (f > 0.45 && f < 0.8) { q = 'clean'; qm = 1.1; } }
     dmg *= qm; const heavy = att.heavy; if (heavy) dmg *= 1.45; if (att.xcMul) dmg *= att.xcMul;
+    if (this.xc && att.ctrl < 0 && def_.ctrl < 0) dmg *= 0.72; // line against line the killing is slower: clashes, pauses, clashes, not a blender
     if (def_.entT > 0 && att.weapon === 'yari' && !att.def.brush) { dmg *= 2.0; q = 'pinned'; }
     if (def_.openT > 0) { dmg *= 2.2; def_.openT = 0; q = 'deathblow'; }
     const behind = Math.abs(wrap(atan2(att.x - def_.x, att.z - def_.z) - def_.yaw)) > 2.0;

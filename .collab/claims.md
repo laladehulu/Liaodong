@@ -5,3 +5,4 @@
 - story-road (fork): sim.js BATTLES.zroad + planTerrain/genMap zroad lines, MISSIONS roadA/roadB/roadC (inserted before ch3 nyz), setupMission one-line G.n trim hook + Sim.prototype.mTrim at end, zDown soft line; zhe.js new road block appended at end + routing lines in zStart/zheFinish/zMenu begin/INTRO2 end/zSleep2 end2
 
 - combat-loop (fork, took over antibunch+hitreact): sim.js line-fighting section, hitReact/hrTick, unitAI melee block, meleeHit/stamina hooks, render.js hit poses; this.xc only- shenji2 (fork): src/shenji.js (ch4 sj4, ch5 sj5, per-man looks, chief line fallback, cannon FX); minimal render/zhe hooks
+- jin-story2 (fork): src/jin.js (jin1-4 fixes, new jin5/jin6/jin7), tiny guarded render hooks (banner colour, kneel)
