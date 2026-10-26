@@ -1254,10 +1254,11 @@ class Renderer {
     };
     // a gun swung as a club: the shaft's end in both fists, the heavy end (three barrels, or a musket's butt) out at the far end
     this.VM.club = {
-      idle: P(0.32, -0.46, -0.45, -0.78, 0.25, -0.2),
-      windup: [P(0.2, 0.1, -0.28, 0.5, 0.1, 0.15), P(0.66, -0.06, -0.3, -0.3, 0.3, -1.7), null, P(-0.56, -0.06, -0.3, -0.3, -0.3, 1.7)],
-      mid: [P(0.12, 0.08, -0.6, -0.65, 0.08, 0.1), P(0.15, -0.16, -0.7, -1.3, 0.1, -0.2), null, P(0.0, -0.16, -0.7, -1.3, -0.1, 0.2)],
-      release: [P(0.05, -0.62, -0.72, -2.3, 0.05, 0.05), P(-0.66, -0.32, -0.55, -1.2, -0.2, 1.6), null, P(0.7, -0.32, -0.55, -1.2, 0.2, -1.6)],
+      /* the side swings turn the shaft flat (rz = ±90°) and sweep it round with ry, so the head travels across the view, never straight out */
+      idle: P(0.28, -0.36, -0.5, -1.05, 0.25, -0.25),
+      windup: [P(0.2, 0.06, -0.3, 0.5, 0.05, 0.12), P(0.4, -0.14, -0.26, 0.35, -0.6, -1.57), null, P(-0.32, -0.14, -0.26, 0.35, 0.6, 1.57)],
+      mid: [P(0.1, 0.02, -0.45, -0.6, 0.04, 0.06), P(0.12, -0.24, -0.42, 0.15, 1.4, -1.57), null, P(0.0, -0.24, -0.42, 0.15, -1.4, 1.57)],
+      release: [P(0.06, -0.3, -0.55, -2.0, 0.02, 0.02), P(-0.32, -0.3, -0.3, 0.05, 3.4, -1.57), null, P(0.42, -0.3, -0.3, 0.05, -3.4, 1.57)],
       block: this.VM.katana.block, stun: this.VM.katana.stun,
       R: L(0, 0, 0), Lh: L(0, -0.14, 0),
     };
