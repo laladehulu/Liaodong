@@ -1909,7 +1909,13 @@ class Sim {
     this.events.push({ t: 'shot', from: [ox, oy, oz], to: [hx, hy, hz], dir: [dx, dy, dz], kind, team: u.team, head, shooter: u.id, victim: victim ? victim.id : -1, hero: u.ctrl >= 0, weapon: causeOverride || u.weapon });
     if (victim) {
       const f = (head ? 2.5 : 1) * (1 + clamp((u.y - victim.y) * 0.025, -0.1, 0.2)); victim.lastAttacker = u.id;
-      this.applyDamage(victim, dmg * f, u.id, dx * 2.5, 0.3, dz * 2.5, causeOverride === 'gatling' ? 'gatling' : head ? 'headshot' : 'shot', hx, hy, hz);
+      let dmS = dmg * f;
+      /* your own musket ball drops a common soldier outright; the three-eyed gun's shorter, cruder barrels kill four times in five and otherwise leave him badly hurt */
+      if (u.ctrl >= 0 && !(this.players[u.ctrl] && this.players[u.ctrl].ai) && !causeOverride && u.weapon === 'rifle' && victim.team !== u.team && !victim.champ && victim.type !== 'hero' && victim.type !== 'horse' && victim.def.ai !== 'cannon') {
+        const tri = u.def.rifle === DEFS.rifle_spencer.rifle;
+        if (!tri || head || this.rng.next() < 0.8) dmS = Math.max(dmS, victim.hp * 4 + 300); else dmS = Math.max(dmS, victim.hp * 0.7);
+      }
+      this.applyDamage(victim, dmS, u.id, dx * 2.5, 0.3, dz * 2.5, causeOverride === 'gatling' ? 'gatling' : head ? 'headshot' : 'shot', hx, hy, hz);
       if (!victim.dead) { if (this.xc) this.hitReact(victim, u, 'shot', false, false); else { victim.flinchT = Math.max(victim.flinchT, 0.25); if (victim.st === ST_WINDUP || victim.st === ST_AIM) { victim.st = ST_IDLE; victim.stT = 0; } } }
     }
   }

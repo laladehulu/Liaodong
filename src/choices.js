@@ -67,6 +67,7 @@ function chDecide(spec, done) {
   const pick = (i) => { if (phase !== 'pick') return; const o = spec.opts[i]; if (!o) return; phase = 'after'; cancelAnimationFrame(raf); AUDIO.play('ui');
     chRecord(C, spec, i); const more = o.fx ? o.fx(C) : null; C.save();
     const after = (o.a || []).concat(more && more.a ? more.a : []);
+    const lsEl = box.querySelector('.ls'); if (lsEl) lsEl.style.display = 'none'; const wEl = box.querySelector('.who'); if (wEl) wEl.innerHTML = `「${o.q}」`;
     box.querySelector('.ops').outerHTML = `<div class="ls2">${after.map(ln).join('')}</div><button type="button" class="go">${spec.go || '……'}</button>`; const tm = box.querySelector('.tm'); if (tm) tm.remove();
     const l2 = [...box.querySelectorAll('.ls2 .l')]; let j = 0; const rv = () => { if (j < l2.length) { l2[j++].classList.add('on'); setTimeout(rv, 1300); } }; rv();
     const go = box.querySelector('.go'); go.onclick = () => close(more); };
