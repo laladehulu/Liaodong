@@ -399,11 +399,28 @@ class Particles {
     this.posAttr = new THREE.BufferAttribute(this.pos, 3); this.colAttr = new THREE.BufferAttribute(this.col, 4); this.sizeAttr = new THREE.BufferAttribute(this.size, 1);
     this.posAttr.setUsage(THREE.DynamicDrawUsage); this.colAttr.setUsage(THREE.DynamicDrawUsage); this.sizeAttr.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position', this.posAttr); geo.setAttribute('pcolor', this.colAttr); geo.setAttribute('psize', this.sizeAttr);
+    this.smokey = !additive; /* smoke, dust and blood share this pool; smoke puffs are drawn as billowing, top-lit, wisping clouds */
+    this.seed = new Float32Array(max); this.age = new Float32Array(max); this.ageAttr = new THREE.BufferAttribute(this.age, 1); this.ageAttr.setUsage(THREE.DynamicDrawUsage); this.seedAttr = new THREE.BufferAttribute(this.seed, 1); this.seedAttr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('pseed', this.seedAttr); geo.setAttribute('page', this.ageAttr);
     geo.setDrawRange(0, 0);
+    const toon = typeof MING_STYLE !== 'undefined' && MING_STYLE ? 1 : 0;
     const mat = new THREE.ShaderMaterial({
-      uniforms: { scaleF: { value: 400 } },
-      vertexShader: 'attribute float psize; attribute vec4 pcolor; varying vec4 vC; uniform float scaleF; void main(){ vC=pcolor; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize = psize*(scaleF/ max(1.0,-mv.z)); gl_Position=projectionMatrix*mv; }',
-      fragmentShader: 'varying vec4 vC; void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); float a=smoothstep(0.5,0.12,d)*vC.a; if(a<0.01) discard; gl_FragColor=vec4(vC.rgb,a); }',
+      uniforms: { scaleF: { value: 400 }, noiseT: { value: Particles.noiseTex() }, toon: { value: toon } },
+      vertexShader: 'attribute float psize; attribute vec4 pcolor; attribute float pseed; attribute float page; varying vec4 vC; varying float vS; varying float vT; uniform float scaleF; void main(){ vC=pcolor; vS=pseed; vT=page; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize = psize*(scaleF/ max(1.0,-mv.z)); gl_Position=projectionMatrix*mv; }',
+      fragmentShader: additive ? 'varying vec4 vC; void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); float a=smoothstep(0.5,0.12,d)*vC.a; if(a<0.01) discard; gl_FragColor=vec4(vC.rgb,a); }'
+        : ['uniform sampler2D noiseT; uniform float toon; varying vec4 vC; varying float vS; varying float vT;',
+          'void main(){ vec2 c=gl_PointCoord-0.5;',
+          ' if(vS<0.0){ float d=length(c); float a=smoothstep(0.5,0.12,d)*vC.a; if(a<0.01) discard; gl_FragColor=vec4(vC.rgb,a); return; }',
+          /* each puff turns slowly and has its own patch of cloud noise */
+          ' float an=vS*6.2832+vT*(vS-0.5)*1.6; float cs=cos(an), sn=sin(an); vec2 r=vec2(c.x*cs-c.y*sn, c.x*sn+c.y*cs);',
+          ' vec2 uv=r*0.6+vec2(vS*7.31, vS*3.17); float n1=texture2D(noiseT,uv).r; float n2=texture2D(noiseT,uv*2.3+vec2(vT*0.2,vS)).r;',
+          ' float nz=n1*0.62+n2*0.38; float d=length(c)*2.0;',
+          /* a lumpy body that erodes into wisps as it ages, instead of a round dot fading out */
+          ' float dens=(1.0-d*d)*1.15+(nz-0.5)*(1.0+vT*0.9); float thr=0.08+vT*0.55;',
+          ' float w=toon>0.5?0.07:0.3; float a=smoothstep(thr,thr+w,dens)*vC.a; if(a<0.01) discard;',
+          /* lit from above: brighter crowns, shadowed undersides; the stylized edition bands it */
+          ' float lit=0.86+(-c.y)*0.42+(n2-0.5)*0.22; if(toon>0.5) lit=0.76+floor(clamp((lit-0.6)*3.2,0.0,2.99))*0.15;',
+          ' gl_FragColor=vec4(vC.rgb*lit,a); }'].join('\n'),
       transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
     });
     this.mat = mat;
@@ -415,7 +432,18 @@ class Particles {
     const i = this.n++;
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z; this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;
     this.life[i] = life; this.maxLife[i] = life; this.s0[i] = s0; this.s1[i] = s1; this.a0[i] = a0; this.drag[i] = drag; this.grav[i] = grav;
+    this.seed[i] = (grav > 0 || s1 < 0.45) ? -1 : Math.random(); this.age[i] = 0; /* blood and specks stay plain discs */
     this.cr[i] = r; this.cg[i] = g; this.cb[i] = b; this.cr1[i] = r1 === undefined ? r : r1; this.cg1[i] = g1 === undefined ? g : g1; this.cb1[i] = b1 === undefined ? b : b1;
+  }
+  static noiseTex() {
+    if (Particles._nt) return Particles._nt; const N = 128, d = new Uint8Array(N * N * 4), lat = [];
+    for (let o = 0; o < 4; o++) { const G = 4 << o, v = new Float32Array(G * G); for (let k = 0; k < G * G; k++) v[k] = Math.random(); lat.push([G, v]); }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { let s = 0, amp = 0.5, tot = 0;
+      for (const [G, v] of lat) { const fx = x / N * G, fy = y / N * G, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+        const g = (a, b) => v[((b % G) * G + (a % G))]; const n = (g(x0, y0) * (1 - sx) + g(x0 + 1, y0) * sx) * (1 - sy) + (g(x0, y0 + 1) * (1 - sx) + g(x0 + 1, y0 + 1) * sx) * sy;
+        s += n * amp; tot += amp; amp *= 0.5; }
+      const q = Math.round(s / tot * 255), k = (y * N + x) * 4; d[k] = d[k + 1] = d[k + 2] = q; d[k + 3] = 255; }
+    const t = new THREE.DataTexture(d, N, N, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true; Particles._nt = t; return t;
   }
   update(dt) {
     let i = 0;
@@ -427,17 +455,18 @@ class Particles {
       this.vel[i * 3] *= dr; this.vel[i * 3 + 1] = this.vel[i * 3 + 1] * dr - this.grav[i] * dt; this.vel[i * 3 + 2] *= dr;
       const wd = this.wind && this.grav[i] <= 0 ? this.wind : null; this.pos[i * 3] += (this.vel[i * 3] + (wd ? wd[0] : 0)) * dt; this.pos[i * 3 + 1] += (this.vel[i * 3 + 1] + (wd ? wd[1] : 0)) * dt; this.pos[i * 3 + 2] += (this.vel[i * 3 + 2] + (wd ? wd[2] : 0)) * dt;
       if (this.grav[i] > 0) { const g = terrainH(this.pos[i * 3], this.pos[i * 3 + 2]) + 0.03; if (this.pos[i * 3 + 1] < g) { this.pos[i * 3 + 1] = g; this.vel[i * 3 + 1] *= -0.3; this.vel[i * 3] *= 0.5; this.vel[i * 3 + 2] *= 0.5; } }
-      this.size[i] = this.s0[i] + (this.s1[i] - this.s0[i]) * t;
-      const fade = t < 0.15 ? t / 0.15 : (1 - t) / 0.85;
+      this.age[i] = t; const puff = this.smokey && this.seed[i] >= 0;
+      this.size[i] = puff ? this.s0[i] + (this.s1[i] - this.s0[i]) * (1 - (1 - t) * (1 - t) * (1 - t)) : this.s0[i] + (this.s1[i] - this.s0[i]) * t; /* smoke bursts out fast, then spreads slowly */
+      const fade = puff ? (t < 0.06 ? t / 0.06 : 1 - t * t * 0.55) : t < 0.15 ? t / 0.15 : (1 - t) / 0.85;
       this.col[i * 4] = this.cr[i] + (this.cr1[i] - this.cr[i]) * t; this.col[i * 4 + 1] = this.cg[i] + (this.cg1[i] - this.cg[i]) * t; this.col[i * 4 + 2] = this.cb[i] + (this.cb1[i] - this.cb[i]) * t; this.col[i * 4 + 3] = this.a0[i] * fade;
       i++;
     }
-    this.posAttr.needsUpdate = true; this.colAttr.needsUpdate = true; this.sizeAttr.needsUpdate = true;
+    this.posAttr.needsUpdate = true; this.colAttr.needsUpdate = true; this.sizeAttr.needsUpdate = true; this.ageAttr.needsUpdate = true; this.seedAttr.needsUpdate = true;
     this.points.geometry.setDrawRange(0, this.n);
   }
   copy(from, to) {
     for (let k = 0; k < 3; k++) { this.pos[to * 3 + k] = this.pos[from * 3 + k]; this.vel[to * 3 + k] = this.vel[from * 3 + k]; }
-    const arrs = ['life', 'maxLife', 's0', 's1', 'a0', 'drag', 'grav', 'cr', 'cg', 'cb', 'cr1', 'cg1', 'cb1'];
+    const arrs = ['life', 'maxLife', 's0', 's1', 'a0', 'drag', 'grav', 'cr', 'cg', 'cb', 'cr1', 'cg1', 'cb1', 'seed', 'age'];
     for (const a of arrs) this[a][to] = this[a][from];
   }
 }
