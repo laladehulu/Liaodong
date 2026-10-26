@@ -113,7 +113,7 @@ const VOICE = (() => {
     if (!on || !build()) return false; const now = ctx.currentTime; x = x === undefined ? u.x : x; z = z === undefined ? u.z : z; y = y === undefined ? (u.y || 0) + 1.5 : y;
     const v = u ? vp(u) : { rate: 0.9 + Math.random() * 0.25, rasp: 0.3, eqF: 1500, eqG: 0, gain: 0.9, fav: (Math.random() * 99) | 0, next: 0 };
     if (u && now < v.next && prio < 4) return false;
-    const sp = AUDIO.spatial ? AUDIO.spatial(x, y, z, vol * v.gain * (volMul || 1), cat === 'death' || cat === 'help' ? 140 : 110) : { gain: vol, pan: 0, dist: 0, wet: 0.1 }; if (!sp) return false;
+    const sp = AUDIO.spatial ? AUDIO.spatial(x, y, z, vol * v.gain * (volMul || 1), cat === 'death' || cat === 'help' ? 45 : 32) : { gain: vol, pan: 0, dist: 0, wet: 0.1 }; if (!sp) return false;
     for (let i = active.length - 1; i >= 0; i--) if (active[i].end <= now) active.splice(i, 1);
     const score = prio * 10 - sp.dist * 0.15;
     if (active.length >= MAX) { let lo = 0; for (let i = 1; i < active.length; i++) if (active[i].score < active[lo].score) lo = i; if (active[lo].score >= score) return false; try { active[lo].src.stop(); } catch (e) {} active.splice(lo, 1); }
@@ -126,7 +126,7 @@ const VOICE = (() => {
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 9000 / (1 + sp.dist / 35);
     src.connect(eq); eq.connect(ws); ws.connect(lp); lp.connect(g);
     let node = g; if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = sp.pan; g.connect(p); node = p; } node.connect(out);
-    if (AUDIO.verbIn && sp.wet) { const w = ctx.createGain(); w.gain.value = sp.wet * 0.8; node.connect(w); w.connect(AUDIO.verbIn); }
+    if (AUDIO.verbIn && sp.wet) { const w = ctx.createGain(); w.gain.value = Math.min(0.08, sp.wet * 0.15); node.connect(w); w.connect(AUDIO.verbIn); }
     const t0 = now + Math.min(0.5, sp.dist / 343); src.start(t0); const end = t0 + buf.duration / src.playbackRate.value;
     active.push({ src, end, score }); if (u) v.next = end + 0.35 + Math.random() * 0.6; return true;
   }
@@ -159,7 +159,7 @@ const VOICE = (() => {
   function frame(dt, sim, heroId) {
     if (!on || !AUDIO.ready || !sim) return; dinT -= dt; helpT -= dt; pantT -= dt;
     if (dinT <= 0) { dinT = 0.3; let n = 0, pick = null; const L = AUDIO.listener || { x: 0, z: 0 };
-      for (let i = 0; i < 60; i++) { const u = sim.units[(Math.random() * sim.units.length) | 0]; if (!u || u.dead || !human(u) || u.st < 1 || u.st > 3) continue; n++; const d = Math.hypot(u.x - L.x, u.z - L.z); if (d > 18 && d < 150) pick = u; }
+      for (let i = 0; i < 60; i++) { const u = sim.units[(Math.random() * sim.units.length) | 0]; if (!u || u.dead || !human(u) || u.st < 1 || u.st > 3) continue; n++; const d = Math.hypot(u.x - L.x, u.z - L.z); if (d > 8 && d < 30) pick = u; }
       if (pick && Math.random() < Math.min(0.85, n * 0.06)) say(Math.random() < 0.6 ? cryOf(pick) : Math.random() < 0.6 ? 'pain' : 'death', pick, 0, undefined, undefined, undefined, 0.7); }
     if (helpT <= 0) { helpT = 4 + Math.random() * 3; const d = sim.units.filter(u => u.downed && !u.dead && u.reviveBy < 0); if (d.length) say('help', d[(Math.random() * d.length) | 0], 2, undefined, undefined, undefined, 0.8); }
     const h = sim.units[heroId]; if (h && !h.dead && pantT <= 0 && (h.fat || 0) > 0.75) { pantT = 1.4; say('pant', h, 3, undefined, undefined, undefined, 0.5); }
