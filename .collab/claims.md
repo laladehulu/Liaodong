@@ -23,4 +23,3 @@
 - melee-anim (fork): render.js POSES/KF attack keyframes, drawFigure attack pose/torso twist, viewmodel swing
 - debug (fork): NEW src/debug.js; build.sh splice; sim.js Sim.prototype.mJump + one applyCommand case; tiny hooks main.js/zhe.js/jin.js/shenji.js
 - empaim (fork): render.js emplacement aim camera/arc/ring, main.js emplacement HUD; sim.js sgEmpFire read-only unless needed
-- siegeAI (fork): sim.js siegeThink engine movement, siegeDirs, siegeInit crews
