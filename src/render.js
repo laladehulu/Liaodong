@@ -606,7 +606,9 @@ class Renderer {
     for (const sx of [-1, 1]) { const x0 = W.gate, x1 = 152, cx = sx * (x0 + x1) / 2, len2 = x1 - x0; const hTop = gy(cx, zc);
       box(len2, hTop - base, dep + 0.2, brick, cx, (hTop + base) / 2, zc); box(len2, 0.08, dep - 0.6, top, cx, hTop + 0.04, zc + 0.2); }
     { const pos = []; for (let x = -150; x <= 150; x += 1.7) { if (Math.abs(x) < W.gate + 0.6) continue; pos.push(x); }
-      const m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.95, 1.25, 0.55), brickD, pos.length); pos.forEach((x, i) => { T.m.compose(T.v.set(x, gy(x, W.z0 + 0.3) + 0.62, W.z0 + 0.28), T.q.identity(), T.v2.set(1, 1, 1)); m.setMatrixAt(i, T.m); }); m.castShadow = true; sc.add(m); }
+      const m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.8, 0.85, 0.42), brickD, pos.length); pos.forEach((x, i) => { T.m.compose(T.v.set(x, gy(x, W.z0 + 0.3) + 0.42, W.z0 + 0.22), T.q.identity(), T.v2.set(1, 1, 1)); m.setMatrixAt(i, T.m); }); m.castShadow = true; sc.add(m); }
+    // scaling ladders (雲梯) leaning on the face when raised
+    this.sgLad = sg.lads.map(Ld => { const g = new THREE.Group(); const H = W.h + 0.4; for (const sx of [-0.45, 0.45]) box(0.12, H, 0.12, woodL, sx, H / 2, 0, g); for (let k = 0; k < 9; k++) box(0.9, 0.08, 0.08, woodL, 0, 0.4 + k * 0.66, 0, g); box(0.5, 0.25, 0.25, iron, 0, H, 0, g); g.position.set(Ld.x, gy(Ld.x, W.z0 - 2.8), W.z0 - 2.8); g.visible = false; sc.add(g); return g; });
     // inner ramps (stairways up from the town)
     for (const r of W.ramps) { const z0 = W.z1, z1 = W.z1 + 14, h0 = gy(r, z0 - 1); const len2 = Math.hypot(z1 - z0, h0); const o = box(6, 0.5, len2, brickD, r, h0 / 2, (z0 + z1) / 2); o.rotation.x = Math.atan2(h0, z1 - z0); }
     // the gatehouse (城樓) over the passage, with its two-eaved roof
@@ -652,6 +654,7 @@ class Renderer {
       if (e.kind === 'ram') { const sw = e.atGate && sg.gateHp > 0 ? Math.sin(this.time * 4.2) : 0; g.userData.log.position.z = sw * 0.9; }
       if (e.kind === 'tower') { const br = g.userData.bridge; const k = e.docked ? 1 : 0; br.rotation.x += ((k ? 0 : -1.4) - br.rotation.x) * Math.min(1, dt * 3); }
       if (e.burn > 0 && Math.random() < dt * 16) { const S = { ram: [1.4, 3, 3.6], tower: [2.4, 2.4, 10], cart: [1.6, 0.8, 2.6] }[e.kind]; this.sparks.spawn(e.x + rnd(-S[0], S[0]), y + rnd(0.5, S[2]), e.z + rnd(-S[1], S[1]), rnd(-0.4, 0.4), rnd(1.5, 3.5), rnd(-0.4, 0.4), rnd(0.5, 1.1), rnd(0.5, 1.1), 0.1, 1, 0.55, 0.15, 1, 0.8, -2, 0.9, 0.25, 0.05); if (Math.random() < 0.4) this.smoke.spawn(e.x, y + S[2], e.z, rnd(-0.3, 0.3), 1.5, rnd(-0.3, 0.3), 4, 0.8, 3.5, 0.18, 0.16, 0.15, 0.5, 0.8, 0); } });
+    sg.lads.forEach((Ld, i) => { const g = this.sgLad[i]; const k = Ld.up ? 1 : Math.min(1, Ld.prog / 210); g.visible = Ld.up || Ld.prog > 0; g.rotation.x = -(HPI - (HPI - 0.44) * k); });
     sg.emp.forEach((e, i) => { const g = this.sgEmp[i]; if (!g) return; g.rotation.y = e.yaw; g.userData.aim.rotation.x = -(e.pitch || 0); });
     sg.holes.forEach((L, i) => { const o = this.sgHoles[i]; const k = L.up ? 1 : Math.min(0.85, L.prog / 320); o.scale.set(Math.max(0.01, k), Math.max(0.01, k), 1); });
     if (this.sgDoors) this.sgDoors.visible = sg.gateHp > 0;

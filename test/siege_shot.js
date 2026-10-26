@@ -18,7 +18,8 @@ const path = require('path'); const out = process.argv[2], build = process.argv[
     ['gate', 2, (sim) => { sim.sgGate(1e6); }, [9, 4, 22], [0, 3, 46]],
     ['streets', 3, (sim) => {}, [-30, 16, 50], [0, 2, 100]],
   ];
-  for (const [name, sector, fn, cp, la] of shots) {
+  const only = process.argv[4] ? process.argv[4].split(',') : null;
+  for (const [name, sector, fn, cp, la] of shots) { if (only && !only.includes(name)) continue;
     await page.evaluate(([fnSrc, sector]) => { const st = window.__boshin.state, sim = st.sim; st.screen = 'pause'; for (const id of ['hud', 'pause', 'cmdui', 'toast', 'storycard', 'feed', 'vitals', 'hudmarks', 'deploy', 'mobj']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; } document.body.classList.remove('deploying');
       (new Function('sim', 'return (' + fnSrc + ')(sim)'))(sim); }, [fn.toString(), sector]);
     await page.evaluate(([cp, la]) => { const r = window.__boshin.state.renderer; const cam = new THREE.PerspectiveCamera(55, 1100 / 620, 0.1, 900); const gy = SIM.terrainH(la[0], la[2]); cam.position.set(cp[0], SIM.terrainH(cp[0], cp[2]) + cp[1], cp[2]); cam.lookAt(la[0], gy + la[1], la[2]); r.scene.add(cam);
