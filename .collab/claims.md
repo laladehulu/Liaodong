@@ -23,4 +23,3 @@
 - melee-anim (fork): render.js POSES/KF attack keyframes, drawFigure attack pose/torso twist, viewmodel swing
 - debug (fork): NEW src/debug.js; build.sh splice; sim.js Sim.prototype.mJump + one applyCommand case; tiny hooks main.js/zhe.js/jin.js/shenji.js
 - anim fork: render.js drawFigure joint smoothing hook + arm lengths; new src/anim.js
-- pace (fork): sim.js unit movement pace/accel/facing (unitAI movement tail, steerFoot speed, new paceMove helper)
