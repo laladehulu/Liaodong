@@ -45,6 +45,18 @@ const GJ = { hipL: 0, kneeL: 3, footL: 6, hipR: 9, kneeR: 12, footR: 15, shL: 18
 const GEAR_K = { b: 40, c: 4, y: 5 };
 const uhash = (id, k) => (((id + 1) * 2654435761 + (k || 0) * 40503) >>> 0) % 1000 / 1000;
 const GEAR_CACHE = new Map();
+// hit reaction envelope: snaps in over 70 ms (ease-out), holds while he reels, eases back out over 0.25 s after the stun ends
+const hrEnv = (u, alpha) => { if (u.hrA === undefined) return 0; const t = u.hrA + alpha * DT, D = u.hrD || 0.3; if (t >= D + 0.25) return 0;
+  if (t < 0.07) { const q = t / 0.07; return 1 - (1 - q) * (1 - q); } if (t < D) return 1 - 0.15 * (t - 0.07) / Math.max(0.01, D - 0.07); const q = (t - D) / 0.25; return 0.85 * (1 - q * q * (3 - 2 * q)); };
+// pose offsets per kind: lean (fwd +), twist, roll, crouch, stance, lunge, head pitch (back -), weapon/hands offset y, z (chest-local)
+const HR_POSE = [
+  [-0.18, 0, 0, 0, 0, -0.04, -0.6, 0.04, -0.05],   // 0 head snapped back
+  [-0.05, 0.6, 0.18, 0.04, 0, 0, -0.15, 0.02, -0.08],  // 1 twisted aside (signed by the side he was hit from)
+  [0.6, 0, 0, 0.14, 0.4, -0.12, 0.35, -0.12, -0.1],  // 2 doubled over the blow
+  [-0.45, 0.12, 0.08, 0, 0, -0.2, -0.3, 0.3, -0.2],  // 3 stagger back, arms flung up
+  [0.35, 0.1, 0.12, 0.42, 1, -0.05, 0.2, -0.2, 0.02],   // 4 buckled to one knee
+  [-0.1, 0.12, 0, 0.03, 0.3, -0.06, -0.08, 0.1, -0.2] // 5 guard driven back
+];
 const GEAR_HOOK = { fn: null }; // an edition may supply its own uniforms (the realism edition does)
 // ---- the named men of the story file: each his own face and headgear (u.look is set by the story module; render-only) ----
 function lookGear(L, b, c, y, hatOn, part) {
@@ -1558,7 +1570,7 @@ class Renderer {
       else { lerp3(tg.wp, KW.guard.g, KW.carry.g, r); nrm3(lerp3(tg.wd, KW.guard.d, KW.carry.d, r)); tg.wp[1] += Math.abs(Math.sin(ph)) * 0.02 * mv; }
       if (anchor === 'R') { set3(tg.rh, tg.wp); for (let j = 0; j < 3; j++) tg.lh[j] = tg.wp[j] + tg.wd[j] * KW.off2; }
     } else { fkR = true; fkL = true; }
-    if (u.flinchT > 0) { lean -= 0.3 * (u.flinchT / 0.35); }
+    if (u.flinchT > 0 && !(u.hrA < 1)) { lean -= 0.3 * (u.flinchT / 0.35); }
     if (u.champ) { // acrobatics: low dodges, a tucked leap, a coiled spin, a long lunge
       if (u.dodgeT > 0) { const k = Math.sin(clamp(u.dodgeT / 0.34, 0, 1) * PI); lean += (u.dodgeFwd ? 0.45 : -0.2) * k; crouch += 0.22 * k; twist += 0.25 * k * (u.dodgeX * Math.cos(yaw) - u.dodgeZ * Math.sin(yaw) > 0 ? -1 : 1) * (u.dodgeFwd ? 0 : 1); rateB = 24; }
       if (u.airborne) { crouch += u.plunge ? 0.05 : 0.18; lean += u.plunge ? 0.35 : 0.08; rateB = 18; }
@@ -1575,7 +1587,17 @@ class Renderer {
     const kw = 1 - Math.exp(-rateW * dt), kb = 1 - Math.exp(-rateB * dt), ks = 1 - Math.exp(-6 * dt);
     for (let j = 0; j < 3; j++) { a.wp[j] += (tg.wp[j] - a.wp[j]) * kw; a.wd[j] += (tg.wd[j] - a.wd[j]) * kw; a.rh[j] += (tg.rh[j] - a.rh[j]) * kw; a.lh[j] += (tg.lh[j] - a.lh[j]) * kw; }
     nrm3(a.wd);
+    if (a.hro) { const o = a.hro; a.lean -= o[0]; a.twist -= o[1]; a.roll -= o[2]; a.crouch -= o[3]; a.stance -= o[4]; a.lunge -= o[5]; for (let j = 0; j < 3; j++) { a.wp[j] -= o[6 + j]; a.rh[j] -= o[6 + j]; a.lh[j] -= o[6 + j]; } a.hro = null; }
     a.lean += (lean - a.lean) * kb; a.twist += (twist - a.twist) * kb; a.roll += (roll - a.roll) * kb; a.lunge += (lunge - a.lunge) * kb; a.crouch += (crouch - a.crouch) * kb; a.stance += (stance - a.stance) * ks;
+    a.hrh = 0; { // hit reaction: added on top of the smoothed pose (and taken off again next frame) so it snaps in and out crisply
+      const e = mounted || down ? 0 : hrEnv(u, alpha), fl = u.hrF > 0 ? Math.sin(clamp(u.hrF / 0.16, 0, 1) * PI) * 0.35 : 0;
+      if (e > 0.001 || fl > 0.001) { const P0 = HR_POSE[u.hrK || 0], s = u.hrS || 1, F0 = HR_POSE[0], fs = u.hrFS || 1;
+        const v = (i) => (e > 0.001 ? P0[i] * e : 0) + F0[i] * fl;
+        const o = a.hro = this._hro || (this._hro = new Float64Array(9));
+        o[0] = v(0); o[1] = (e > 0.001 ? P0[1] * e * s : 0) + 0.25 * fl * fs; o[2] = (e > 0.001 ? P0[2] * e * s : 0); o[3] = v(3); o[4] = Math.min(v(4), Math.max(0, 1 - a.stance)); o[5] = v(5);
+        o[6] = (e > 0.001 && u.hrK === 1 ? -0.1 * s * e : 0); o[7] = v(7); o[8] = v(8);
+        a.lean += o[0]; a.twist += o[1]; a.roll += o[2]; a.crouch += o[3]; a.stance += o[4]; a.lunge += o[5]; for (let j = 0; j < 3; j++) { a.wp[j] += o[6 + j]; a.rh[j] += o[6 + j]; a.lh[j] += o[6 + j]; }
+        a.hrh = v(6); } }
     // ---------- legs (root-local; +x left, +z forward) ----------
     const LT = 0.46, LS = 0.46;
     const legs = this._legs || (this._legs = new Float64Array(18)); // hipL,kneeL,footL,hipR,kneeR,footR
@@ -1672,7 +1694,7 @@ class Renderer {
     this.boxB(f.torso, slot, G[18 + 24], G[18 + 25], G[18 + 26], CB, 0.5, 0.64, 0.3);
     this.boxB(f.hips, slot, G[60], G[61], G[62], CB, 0.4, 0.22, 0.27);
     // head stays nearer upright than the chest
-    const HB = this._HB || (this._HB = new Float64Array(9)); { const hl = -a.lean * 0.5, ht = -a.twist * 0.35; const ch = Math.cos(hl), sh = Math.sin(hl), cth = Math.cos(ht), sth = Math.sin(ht); const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; for (let i = 0; i < 3; i++) { const v = ax[i]; const y1 = v[1] * ch - v[2] * sh, z1 = v[1] * sh + v[2] * ch; const x2 = v[0] * cth + z1 * sth, z2 = -v[0] * sth + z1 * cth; const vx = CB[0] * x2 + CB[3] * y1 + CB[6] * z2, vy = CB[1] * x2 + CB[4] * y1 + CB[7] * z2, vz = CB[2] * x2 + CB[5] * y1 + CB[8] * z2; HB[i * 3] = vx; HB[i * 3 + 1] = vy; HB[i * 3 + 2] = vz; } }
+    const HB = this._HB || (this._HB = new Float64Array(9)); { const hl = -a.lean * 0.5 + (a.hrh || 0), ht = -a.twist * 0.35; const ch = Math.cos(hl), sh = Math.sin(hl), cth = Math.cos(ht), sth = Math.sin(ht); const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; for (let i = 0; i < 3; i++) { const v = ax[i]; const y1 = v[1] * ch - v[2] * sh, z1 = v[1] * sh + v[2] * ch; const x2 = v[0] * cth + z1 * sth, z2 = -v[0] * sth + z1 * cth; const vx = CB[0] * x2 + CB[3] * y1 + CB[6] * z2, vy = CB[1] * x2 + CB[4] * y1 + CB[7] * z2, vz = CB[2] * x2 + CB[5] * y1 + CB[8] * z2; HB[i * 3] = vx; HB[i * 3 + 1] = vy; HB[i * 3 + 2] = vz; } }
     if (vsc !== 1) for (let i = 0; i < 9; i++) HB[i] *= vsc;
     const hx = G[18 + 27], hy = G[18 + 28], hz = G[18 + 29];
     this.boxB(f.head, slot, hx, hy, hz, HB, 0.28, 0.3, 0.28);
@@ -1966,6 +1988,7 @@ class Renderer {
         if (RP) { target = P(lerp(target.px, RP.px, rk), lerp(target.py, RP.py, rk), lerp(target.pz, RP.pz, rk), lerp(target.rx, RP.rx, rk), lerp(target.ry, RP.ry, rk), lerp(target.rz, RP.rz, rk)); speed = Math.max(speed, 12); } } }
     if (hero.st === ST_SWAP) { target = P(target.px, target.py - 0.6, target.pz, target.rx + 0.8, target.ry, target.rz); speed = 12; }
     if (hero.st === ST_KICK) { target = P(target.px + 0.1, target.py - 0.15, target.pz, target.rx + 0.3, target.ry, target.rz); camPitch = -0.03; }
+    { const he = hrEnv(hero, this.alpha === undefined ? 1 : this.alpha); if (he > 0.01) { const hs = hero.hrS || 1, jb = hero.hrK === 5; target = P(target.px + 0.05 * hs * he, target.py - (jb ? 0.05 : 0.12) * he, target.pz + (jb ? 0.14 : 0.08) * he, target.rx + (jb ? 0.15 : 0.35) * he, target.ry, target.rz + 0.15 * hs * he); speed = Math.max(speed, 34); camPitch += (jb ? 0.012 : 0.035) * he; camRoll += -0.035 * hs * he; } }
     const k = 1 - Math.exp(-speed * dt), kh = 1 - Math.exp(-16 * dt);
     st.pos.x += (target.px - st.pos.x) * k; st.pos.y += (target.py - st.pos.y) * k; st.pos.z += (target.pz - st.pos.z) * k;
     st.rot.x += (target.rx - st.rot.x) * k; st.rot.y += (target.ry - st.rot.y) * k; st.rot.z += (target.rz - st.rot.z) * k;

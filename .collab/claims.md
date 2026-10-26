@@ -3,3 +3,4 @@
 - story-interlude (fork): sim.js MISSIONS.hunz forts/zones + new interlude mission, zhe.js ch1→ch2 flow, ch2 dialogue/intro cards
 
 - antibunch (fork): sim.js unitAI melee block (~1380-1420), xcToken, new Sim.prototype.lineAI/attack-space helpers near end; this.xc only
+- hitreact (fork): sim.js new Sim.prototype.hitReact/hrTick at end, one-line hooks in meleeHit (flinch line + block line), shot/arrow flinch lines, startWindup guard, per-unit tick line; render.js drawFigure hit-pose offsets + FP viewmodel/cam kick; this.xc only

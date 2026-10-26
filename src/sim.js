@@ -856,7 +856,7 @@ class Sim {
     } else if (!blk) u.blocking = false;
     u.atkHeld = atk; u.blockHeld = blk;
   }
-  startWindup(u, dir) { u.wMul = 1; if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
+  startWindup(u, dir) { if (u.hrT > 0) return; u.wMul = 1; if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
   footControl(u, keys, a, disabled) {
     if (!u.champ && u.dodgeT > 0) { const k = u.dodgeT / 0.32, sp = (this.real ? 10.5 : 12.5) * (0.55 + 0.75 * k); u.mx = u.dodgeX * sp; u.mz = u.dodgeZ * sp; return; } // a low slide: fast off the mark, bleeding speed // mid-dash: the body is committed
     if (disabled || u.airborne) { u.mx = 0; u.mz = 0; return; }
@@ -1176,6 +1176,7 @@ class Sim {
     if (u.flinchT > 0) u.flinchT -= DT;
     if (u.counterT > 0) u.counterT -= DT;
     if (u.hitT > 0) u.hitT -= DT;
+    if (u.hrA !== undefined) this.hrTick(u);
     if (!u.champ && (u.dodgeT > 0 || u.dodgeCd > 0 || u.iframe > 0)) { if (u.dodgeCd > 0) u.dodgeCd -= DT; if (u.iframe > 0) u.iframe -= DT; if (u.dodgeT > 0) u.dodgeT -= DT; }
     // no knockdowns: every blow that used to floor a man now just staggers him for a moment
     if (u.downT > 0 && u.type !== 'horse') { const k = u.downT; u.downT = 0; if (!u.dead && u.st !== ST_RELOAD) { u.st = ST_STUN; u.stT = 0; u.stunDur = Math.min(0.55, 0.25 + k * 0.15); u.blocking = false; u.aiming = false; } u.mx *= 0.3; u.mz *= 0.3; }
@@ -1655,6 +1656,7 @@ class Sim {
         this.applyDamage(def_, dmg * 0.5, att.id, nx * 2.5, 0, nz * 2.5, 'melee', hx, hy, hz); att.heavy = false; return; }
       att.st = ST_STUN; att.stT = 0; att.stunDur = 0.35; this.posture(def_, dmg * (heavy ? 1.6 : 1) * (def_.def.shield ? 0.6 : 1) * (att.def.posture || 1), att); this.posture(att, 6, def_);
       if (att.def.crush) this.applyDamage(def_, dmg * att.def.crush * (def_.def.shield ? 0.6 : 1), att.id, nx * 1.2, 0, nz * 1.2, 'melee', hx, hy, hz);
+      if (this.xc) this.hitReact(def_, att, 'block', heavy, true);
       this.events.push({ t: 'block', x: hx, y: hy, z: hz, perfect: false, by: def_.id, att: att.id, shield: !!def_.def.shield }); att.heavy = false; return;
     }
     if ((def_.mounted || def_.type === 'horse' || def_.mount >= 0) && !(att.mounted || att.mount >= 0)) { const hs = def_.type === 'horse' ? def_ : def_.mounted ? def_ : this.units[def_.mount]; const fast = hs && Math.abs(hs.hspeed) > 5; dmg *= fast ? 0.95 : 1.4; if (hs) hs.hspeed *= fast ? 0.85 : 0.35; } // a galloping horseman is a glancing target; a halted one is cut down
@@ -1663,7 +1665,7 @@ class Sim {
     if (att.def.brush && def_.type !== 'horse') { def_.entT = Math.max(def_.entT, def_.champ ? 0.6 : 1.8); this.posture(def_, 26, att); this.events.push({ t: 'entangle', id: def_.id, x: hx, y: hy, z: hz }); }
     this.posture(def_, dmg * (heavy ? 0.9 : 0.45) * (att.def.posture || 1), att);
     this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz);
-    if (!def_.dead) { def_.flinchT = heavy ? 0.6 : 0.35; if (def_.st === ST_WINDUP || def_.st === ST_AIM) { def_.st = ST_IDLE; def_.stT = 0; } }
+    if (!def_.dead) { if (this.xc) this.hitReact(def_, att, dir === DIR_DOWN || att.weapon === 'yari' ? 'thrust' : 'cut', heavy, false); else { def_.flinchT = heavy ? 0.6 : 0.35; if (def_.st === ST_WINDUP || def_.st === ST_AIM) { def_.st = ST_IDLE; def_.stT = 0; } } }
     if (att.ctrl >= 0 || def_.ctrl >= 0) this.events.push({ t: 'hitq', att: att.id, def: def_.id, q, heavy, x: hx, y: hy, z: hz });
     att.heavy = false;
   }
@@ -1838,7 +1840,7 @@ class Sim {
     if (victim) {
       const f = (head ? 2.5 : 1) * (1 + clamp((u.y - victim.y) * 0.025, -0.1, 0.2)); victim.lastAttacker = u.id;
       this.applyDamage(victim, dmg * f, u.id, dx * 2.5, 0.3, dz * 2.5, causeOverride === 'gatling' ? 'gatling' : head ? 'headshot' : 'shot', hx, hy, hz);
-      if (!victim.dead) { victim.flinchT = Math.max(victim.flinchT, 0.25); if (victim.st === ST_WINDUP || victim.st === ST_AIM) { victim.st = ST_IDLE; victim.stT = 0; } }
+      if (!victim.dead) { if (this.xc) this.hitReact(victim, u, 'shot', false, false); else { victim.flinchT = Math.max(victim.flinchT, 0.25); if (victim.st === ST_WINDUP || victim.st === ST_AIM) { victim.st = ST_IDLE; victim.stT = 0; } } }
     }
   }
   ballistic(u, tx, tz, v, err) {
@@ -1905,7 +1907,7 @@ class Sim {
               if (p.kind === 'arrow' && v.def.shield && !v.dead && v.st !== ST_RELEASE && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.1 && this.rng.next() < 0.75) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
               if (p.kind === 'arrow' && v.ctrl >= 0 && !v.dead && (v.iframe > 0 || (v.blocking && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.2 && this.rng.next() < (v.def.shield ? 1 : 0.8)))) { this.events.push({ t: v.iframe > 0 ? 'evade' : 'arrowstick', id: v.id, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); if (v.iframe <= 0) this.events.push({ t: 'block', x: p.x, y: p.y, z: p.z, perfect: false, by: v.id, att: -1, shield: !!v.def.shield }); done = true; break; } // you can slide under an arrow or turn it on your guard
               if (p.kind === 'arrow' && v.zfile && !v.dead && this.coverShield(v, p)) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
-              if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, this.units[p.owner].def.bow.dmg * (v.def.ai === 'cannon' ? 0.3 : 1) * (v.ctrl >= 0 && !(this.players[v.ctrl] && this.players[v.ctrl].ai) ? 0.65 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
+              if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, this.units[p.owner].def.bow.dmg * (v.def.ai === 'cannon' ? 0.3 : 1) * (v.ctrl >= 0 && !(this.players[v.ctrl] && this.players[v.ctrl].ai) ? 0.65 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { if (this.xc) this.hitReact(v, this.units[p.owner], 'shot', false, false); else { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
               if (p.bolt) { v.lastShotBy = p; p.hits++; this.applyDamage(v, 80, p.owner, p.vx * 0.05, 1, p.vz * 0.05, 'arrow', p.x, p.y, p.z); if (!v.dead && v.mass < 5) v.downT = Math.max(v.downT, 0.8); this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); if (p.hits >= 3) { done = true; break; } continue; }
               // solid shot: bowl through
               const sp = len(p.vx, p.vz) || 1; const nx = p.vx / sp, nz = p.vz / sp;
@@ -3048,7 +3050,7 @@ Sim.prototype.assaultDirs = function () {
   const D = 1 - A; let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D) continue; const di = +gid.slice(1), home = gid[0] === 'd' ? this.missionZone(this.defKey(di)) : null; if (home && home.owner === D) { p.directive = { kind: DIR_HOLD, x: home.x, z: home.z, by: -1 }; continue; } const nz = zt[j++ % zt.length]; if (nz) p.directive = { kind: DIR_HOLD, x: nz.x, z: nz.z, by: -1 }; }
 };
 Sim.prototype.reviveUnit = function (u, x, z) {
-  u.dead = false; u.hp = u.def.hp; u.x = u.px = x; u.z = u.pz = z; u.y = u.py = terrainH(x, z); u.vx = u.vy = u.vz = 0; u.mx = u.mz = 0; u.st = ST_IDLE; u.stT = 0; u.downT = 0; u.flinchT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.deathTick = -1;
+  u.dead = false; u.hp = u.def.hp; u.x = u.px = x; u.z = u.pz = z; u.y = u.py = terrainH(x, z); u.vx = u.vy = u.vz = 0; u.mx = u.mz = 0; u.st = ST_IDLE; u.stT = 0; u.downT = 0; u.flinchT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.deathTick = -1; if (u.hrA !== undefined) { u.hrT = 0; u.hrImm = 0; u.hrA = 9; }
   u.pos = 0; u.entT = 0; u.openT = 0; u.fat = 0; u.shots = Math.max(u.shots || 0, 24); const g = gunOf(u.def, u.weapon); if (g) { u.ammo = g.mag || 1; u.loaded = true; }
   const q = this.squads[u.squad]; if (q) q.alive = true; this.events.push({ t: 'revive', id: u.id });
 };
@@ -3320,6 +3322,45 @@ Sim.prototype.xcEbb = function () { // clash, pause, clash: count the blows each
     else if (e.t === 'block' && e.att >= 0 && e.by >= 0) { const a = U[e.att], v = U[e.by]; if (a && v) bump(a, v); } }
 };
 
+// ---- hit reactions (experimental combat only): a short, readable flinch that stops a man attacking, never a lock ----
+// six kinds: 0 head snapped back, 1 twisted aside, 2 doubled over, 3 stagger back with arms flung, 4 buckled to one knee, 5 guard driven back.
+// Anti-lock: a running reaction is never extended or restarted; when it ends the man has 0.7 s in which further hits hurt but
+// cannot stagger him (only a cosmetic flinch); and he is never reeling for more than 0.6 s out of any 2 s.
+const HR_IMM = 0.7, HR_WIN = 60, HR_CAP = 0.6;
+Sim.prototype.hitReact = function (u, a, kind, heavy, blocked) {
+  if (!this.xc || u.dead || u.type === 'horse' || u.def.ai === 'cannon' || u.champ) return false;
+  if (u.hrA === undefined) { u.hrT = 0; u.hrImm = 0; u.hrA = 9; u.hrK = 0; u.hrD = 0.3; u.hrS = 1; u.hrL = []; u.hrF = 0; u.hrFS = 1; }
+  const sd = a ? wrap(atan2(a.x - u.x, a.z - u.z) - u.yaw) : 0, sgn = sd < 0 ? -1 : 1;
+  const flick = () => { if (!blocked) { u.hrF = 0.16; u.hrFS = sgn; } return false; };
+  if (u.hrT > 0 || u.hrImm > 0) return flick();
+  if (u.mounted || u.mount >= 0 || u.braceT > 0 || u.dashT > 0 || u.guardT > 0 || u.downed || u.wounded) return flick();
+  let k, d;
+  if (blocked) { k = 5; d = heavy ? 0.2 : 0.15; }
+  else if (heavy && u.hp < u.def.hp * 0.35) { k = 4; d = 0.5; }
+  else if (heavy) { k = 3; d = 0.45; }
+  else { const r = this.rng.next();
+    if (kind === 'thrust') k = r < 0.7 ? 2 : 0;
+    else if (kind === 'shot') k = r < 0.45 ? 2 : r < 0.75 ? 0 : 1;
+    else if (Math.abs(sd) > 0.5) k = r < 0.8 ? 1 : 0;
+    else k = r < 0.6 ? 0 : r < 0.85 ? 1 : 2;
+    d = k === 2 ? 0.34 : k === 1 ? 0.3 : 0.27; if (kind === 'shot') d *= 0.8; }
+  if (u.ctrl >= 0 && !(this.players[u.ctrl] && this.players[u.ctrl].ai)) d *= 0.6;
+  // the 2-second budget: never reeling more than HR_CAP seconds out of any HR_WIN ticks
+  const t = this.tick; let used = 0; for (const iv of u.hrL) used += Math.max(0, Math.min(iv[1], t) - Math.max(iv[0], t - HR_WIN));
+  d = Math.min(d, HR_CAP - used * DT); if (d < 0.1) return flick();
+  u.hrT = d; u.hrD = d; u.hrK = k; u.hrS = sgn; u.hrA = 0; u.hrF = 0;
+  u.hrL.push([t, t + Math.round(d / DT)]); if (u.hrL.length > 4) u.hrL.shift();
+  if (!blocked) { u.flinchT = Math.max(u.flinchT, d); if (u.st === ST_WINDUP || u.st === ST_AIM) { u.st = ST_IDLE; u.stT = 0; } }
+  if (k === 3 && a) { const dx = u.x - a.x, dz = u.z - a.z, l = len(dx, dz) || 1; u.vx += dx / l * 1.4; u.vz += dz / l * 1.4; }
+  this.events.push({ t: 'hitreact', id: u.id, k });
+  return true;
+};
+Sim.prototype.hrTick = function (u) {
+  if (u.hrT > 0) { u.hrT -= DT; if (u.hrT <= 0) { u.hrT = 0; u.hrImm = HR_IMM; } }
+  else if (u.hrImm > 0) u.hrImm -= DT;
+  if (u.hrF > 0) u.hrF -= DT;
+  if (u.hrA < 5) u.hrA += DT;
+};
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, spacingOf, gunOf,
   KEY_W, KEY_S, KEY_A, KEY_D, A_ATK, A_BLOCK, A_FIRE, A_AIM, A_KICK, A_MOUNT, A_JUMP, A_SWAP, A_RELOAD, A_CMD, A_RALLY, A_READY, A_THROW, A_DUEL, AIM_RAISE, A_AB1, A_AB2, A_AB3, A_ULT, A_DODGE, A_DASHL, A_DASHR, KEY_SPRINT, ORD_SPAWN, ORD_CLASS, HCLASS, HAB, SCEN, BOMBS, FURY_MAX, SROLE, ARMS, RANGED, MISSIONS, OPS,
   DIR_UP, DIR_RIGHT, DIR_DOWN, DIR_LEFT, ST_IDLE, ST_WINDUP, ST_RELEASE, ST_RECOVER, ST_STUN, ST_RELOAD, ST_AIM, ST_SWAP, ST_KICK, ST_BURST,
