@@ -333,6 +333,25 @@ const BR = (() => { const g = [-0.14, -0.46, 0.22], d = N3(0.3, 0.22, 0.93); con
   return { g, d, keys: [[0, g], [0.14, b], [0.22, o(-0.06, 0.08, 0)], [0.3, o(0, 0.02, -0.06)], [0.48, POUCH], [0.62, o(0, 0.06, -0.04)], [0.7, o(0, 0.02, 0.05)], [0.78, o(0.06, 0.08, 0)], [0.88, [g[0], g[1] + 0.04, g[2]]], [1, g]] }; })();
 const SP = (() => { const g = [-0.12, -0.42, 0.2], d = N3(0.3, -0.3, 0.9); const butt = add3(g, d, -0.3), out = add3(butt, d, -0.32);
   return { g, d, keys: [[0, g], [0.12, butt], [0.24, out], [0.44, POUCH], [0.6, out], [0.72, butt], [0.82, g], [0.9, [g[0], g[1] - 0.14, g[2] + 0.06]], [1, g]] }; })();
+// the three-eyed gun (三眼銃) loaded properly, one barrel after another: muzzles tipped up with the pole's foot on the ground,
+// powder poured from the flask, ball and wad from the pouch, the rammer drawn and driven home in strokes and put back,
+// the touch-hole primed from the flask; when all three are loaded the slow-match is lifted and blown on to brighten it
+const SJR = { g: [-0.02, -0.56, 0.3], d: N3(0.06, 0.9, 0.42), flask: [-0.24, -0.5, 0.14], mouth: [-0.04, 0.16, 0.22], BT: 0.88 / 3 };
+function sjReload(t, tg, KW) {
+  if (t >= 0.88) {
+    const m = clamp((t - 0.88) / 0.12, 0, 1), G = KW.guard;
+    set3(tg.wp, G.g); set3(tg.wd, G.d);
+    keyPath(tg.rh, [[0, G.g], [0.3, SJR.mouth], [0.75, SJR.mouth], [1, G.g]], m);
+    return { rod: -1, flask: 0, blow: m > 0.3 && m < 0.75 ? 1 : 0 };
+  }
+  const k = Math.min(2, Math.floor(t / SJR.BT)), s = (t - k * SJR.BT) / SJR.BT, g = SJR.g, d = SJR.d, sx = (k - 1) * 0.03;
+  set3(tg.wp, g); set3(tg.wd, d);
+  const up = (h) => [g[0] + d[0] * (0.97 + h) + sx, g[1] + d[1] * (0.97 + h), g[2] + d[2] * (0.97 + h)];
+  const at = (f, ox) => [g[0] + d[0] * f + ox, g[1] + d[1] * f, g[2] + d[2] * f];
+  const rest = at(0.1, 0), stow = at(-0.22, 0.05), pan = at(0.5, -0.07);
+  keyPath(tg.rh, [[0, rest], [0.07, SJR.flask], [0.12, up(0.12)], [0.2, up(0.1)], [0.25, POUCH], [0.31, up(0.03)], [0.34, up(0.03)], [0.38, stow], [0.44, up(0.62)], [0.48, up(0.5)], [0.53, up(0.18)], [0.57, up(0.42)], [0.61, up(0.16)], [0.65, up(0.4)], [0.69, up(0.15)], [0.74, up(0.66)], [0.79, stow], [0.84, SJR.flask], [0.88, pan], [0.94, pan], [1, rest]], s);
+  return { rod: s > 0.38 && s < 0.79 ? 0.7 : -1, flask: (s > 0.06 && s < 0.24) || (s > 0.83 && s < 0.96) ? 1 : 0, blow: 0 };
+}
 const BOW = { idleL: [0.24, -0.5, 0.18], idleD: N3(0.2, 0.95, 0.25), aimL: [0.1, 0.03, 0.56], aimD: N3(-0.06, 1, 0.04), nock: [0.06, 0.05, 0.48], cheek: [-0.06, 0.15, 0.06], relL: [0.16, -0.24, 0.42], relD: N3(0, 1, 0.15) };
 BOW.keys = [[0, [0.09, -0.24, 0.38]], [0.25, [-0.22, 0.24, -0.18]], [0.5, [-0.22, 0.42, -0.22]], [0.82, [0.09, -0.24, 0.38]], [1, [0.09, -0.24, 0.38]]];
 const RAISE_MID = { g: [-0.06, -0.12, 0.36], d: N3(0.08, 0.9, 0.45) };
@@ -363,6 +382,7 @@ function reloadStyle(u) {
   if (u.weapon === 'revolver') return 'revolver';
   if (u.weapon === 'bow') return u.def.bow && u.def.bow.xbow ? 'lever' : 'bow';
   const r = u.def.rifle; if (!r) return 'none';
+  if (u.type === 'rifle_spencer') return u.reloadFill ? 'sj' : 'lever'; /* the three-eyed gun: each barrel loaded from the muzzle in turn */
   if (r.mag > 1) return u.reloadFill ? 'spencer' : 'lever';
   return 'muzzle'; // every long gun of the age is a muzzle-loader
   return 'breech';
@@ -1003,7 +1023,7 @@ class Renderer {
       blade: mk(box, PAL.steel), hilt: mk(box, 0x1e1b2a), rifle: mk(box, PAL.wood), barrel: mk(box, 0x55595e), yari: mk(box, PAL.yari), pistol: mk(box, 0x3a3a3f),
       gb: mk(RB(0.3, 6, 4), 0xffffff, GEAR_K.b), gc: mk(new THREE.ConeGeometry(0.5, 1, 10), 0xffffff, GEAR_K.c), gy: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 10), 0xffffff, GEAR_K.y),
       shield: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), 0xa8844a), boss: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 10), 0x8a2a20),
-      bow: mk(box, 0x5a3b1e, 2), bstring: mk(box, 0xe8e2cc, 2, false), arrow: mk(box, 0x8a6a3a, 1, false), rod: mk(box, 0x9aa0a6, 1, false), twig: mk(box, 0x6b6a3a, 9, false),
+      bow: mk(box, 0x5a3b1e, 2), bstring: mk(box, 0xe8e2cc, 2, false), arrow: mk(box, 0x8a6a3a, 1, false), rod: mk(box, 0x9aa0a6, 1, false), flask: mk(box, 0x6b4426, 1, false), twig: mk(box, 0x6b6a3a, 9, false),
     };
     this.anims = [];
     this.tg = { wp: [0, 0, 0], wd: [0, 1, 0], rh: [0, 0, 0], lh: [0, 0, 0] };
@@ -1642,6 +1662,7 @@ class Renderer {
       else { lean = -0.46 * bk - 0.07 * Math.abs(Math.cos(ph)) * bk; twist = -0.28 * sp * bk; roll = -0.05 * bk; } // bolt upright, pedalling hard, shoulders thrashing
     }
     let rateW = 13, rateB = 10, anchor = 'R', two = true, fkR = false, fkL = false, rod = -1, arrowVis = 0, bowDraw = 0;
+    let sjFl = 0;
     const atkSet = KW && KW.atk ? (KW.atk[u.atkDir] || KW.atk[2]) : null;
     const B = (clubbing ? BODYC : BODY)[u.atkDir] || BODY[2];
     const reloading = u.st === ST_RELOAD && u.reloadT > 0.6;
@@ -1678,6 +1699,7 @@ class Renderer {
       else if (w === 'rifle' && reloading && reloadStyle(u) !== 'lever') {
         const style = reloadStyle(u), t = clamp(stT / u.reloadT, 0, 1); anchor = 'W'; rateW = 8;
         if (style === 'muzzle') { if (t < 0.93) { set3(tg.wp, MZ.g); set3(tg.wd, MZ.d); } else { set3(tg.wp, KW.guard.g); set3(tg.wd, KW.guard.d); } keyPath(tg.rh, MZ.keys, t); set3(tg.lh, MZ.l); lean = 0.1; twist = 0.12; rod = t > 0.43 && t < 0.86 ? 1 : -1; stance = 0.3; }
+        else if (style === 'sj') { const q = sjReload(t, tg, KW); rod = q.rod; sjFl = q.flask; lean = q.blow ? 0.14 : 0.1; twist = 0.1; stance = 0.3; rateW = 10; }
         else if (style === 'spencer') { set3(tg.wp, SP.g); set3(tg.wd, SP.d); keyPath(tg.rh, SP.keys, t); lean = 0.06; }
         else { set3(tg.wp, BR.g); set3(tg.wd, BR.d); keyPath(tg.rh, BR.keys, t); lean = 0.06; twist = -0.1; }
         if (style !== 'muzzle') { for (let j = 0; j < 3; j++) tg.lh[j] = tg.wp[j] + tg.wd[j] * KW.off2; }
@@ -1962,7 +1984,8 @@ class Renderer {
       if (u.type === 'rifle_spencer') { if (cl) { segW(f.rifle, -0.15, 1.0, 0.045, 0.045); segW(f.barrel, 1.0, 1.5, 0.1, 0.1); } /* the three-eyed gun as a club: hold the end of the pole, the iron barrels are the head */ else { segW(f.rifle, -0.7, 0.45, 0.045, 0.045); segW(f.barrel, 0.45, 0.95, 0.1, 0.1); } }
       else if (cl) { segW(f.rifle, 0.35, 1.45, 0.05, 0.075); segW(f.barrel, -0.1, 1.05, 0.026, 0.026); } else { segW(f.rifle, -0.3, 0.8, 0.05, 0.075); segW(f.barrel, 0.1, 1.25, 0.026, 0.026); } } else { f.rifle.setMatrixAt(slot, Z); f.barrel.setMatrixAt(slot, Z); }
     if (w === 'revolver') segW(f.pistol, -0.25, 0.3, 0.08, 0.08); else f.pistol.setMatrixAt(slot, Z);
-    if (rod > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; this.seg(f.rod, slot, hx2, hy2, hz2, hx2 - dx * 0.95, hy2 - dy * 0.95, hz2 - dz * 0.95, 0.012, 0.012); } else f.rod.setMatrixAt(slot, Z);
+    if (rod > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; const rl = rod === 1 ? 0.95 : rod; this.seg(f.rod, slot, hx2, hy2, hz2, hx2 - dx * rl, hy2 - dy * rl, hz2 - dz * rl, 0.012, 0.012); } else f.rod.setMatrixAt(slot, Z);
+    if (sjFl > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; this.seg(f.flask, slot, hx2, hy2 + 0.02, hz2, hx2 - dz * 0.03, hy2 + 0.16, hz2 + dx * 0.03, 0.075, 0.055); } else f.flask.setMatrixAt(slot, Z);
     if (xb) { // crossbow: limbs across the front of the stock, string drawn back to the nut
       const ux2 = dz, uz2 = -dx, ul = Math.hypot(ux2, uz2) || 1; const px = ux2 / ul * 0.38, pz = uz2 / ul * 0.38; const cx = P(0.72, 0), cy = P(0.72, 1), cz = P(0.72, 2), bk = 0.08;
       this.seg(f.bow, slot * 2, cx, cy, cz, cx + px - dx * bk, cy - dy * bk, cz + pz - dz * bk, 0.035, 0.04); this.seg(f.bow, slot * 2 + 1, cx, cy, cz, cx - px - dx * bk, cy - dy * bk, cz - pz - dz * bk, 0.035, 0.04);
@@ -2048,7 +2071,7 @@ class Renderer {
     limb2(f.thighR, f.shinR, px - xx * 0.1, py - xy * 0.1, pz - xz * 0.1, p[18], p[19], p[20], 0.17, 0.14, zx * 0.06, zy * 0.06, zz * 0.06);
     this.boxB(f.hand, slot * 2, p[9], p[10], p[11], B, 0.09, 0.09, 0.1); this.boxB(f.hand, slot * 2 + 1, p[12], p[13], p[14], B, 0.09, 0.09, 0.1);
     this.boxB(f.foot, slot * 2, p[15], p[16], p[17], B, 0.11, 0.08, 0.24); this.boxB(f.foot, slot * 2 + 1, p[18], p[19], p[20], B, 0.11, 0.08, 0.24);
-    for (const k of ['blade', 'hilt', 'rifle', 'barrel', 'yari', 'pistol', 'arrow', 'rod']) f[k].setMatrixAt(slot, T.zero); for (let k = 0; k < 9; k++) f.twig.setMatrixAt(slot * 9 + k, T.zero);
+    for (const k of ['blade', 'hilt', 'rifle', 'barrel', 'yari', 'pistol', 'arrow', 'rod', 'flask']) f[k].setMatrixAt(slot, T.zero); for (let k = 0; k < 9; k++) f.twig.setMatrixAt(slot * 9 + k, T.zero);
     for (const k of ['bow', 'bstring']) { f[k].setMatrixAt(slot * 2, T.zero); f[k].setMatrixAt(slot * 2 + 1, T.zero); }
   }
   drawHorse(slot, u, x, y, z, yaw, speed, walk, dead, deadT) {
@@ -2108,6 +2131,21 @@ class Renderer {
     this.setPart(C.axle, slot, root, 0, 0.66, -0.1, 0, 0, 0, 0, 0, 0, 1, 1, 1);
   }
   // ---------- viewmodel ----------
+  // first person, loading the three-eyed gun: the muzzles tipped up before your face, one barrel at a time (powder, ball and wad,
+  // the rammer driven home in strokes, the touch-hole primed), then the gun comes down and the match is blown on
+  vmSjReload(rt, rh, lh, P) {
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    if (!this.vmFlask && this.vmRifle && this.vmRifle.parent) { const g = new THREE.Group(), lea = new THREE.MeshLambertMaterial({ color: 0x6b4426, depthTest: false }), brass = new THREE.MeshLambertMaterial({ color: 0xb8913a, depthTest: false });
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.05, 0.11), lea); b.position.z = 0.06; g.add(b); const sp = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.05), brass); sp.position.z = -0.01; g.add(sp);
+      for (const m of [b, sp]) m.renderOrder = 999; g.visible = false; this.vmRifle.parent.add(g); this.vmFlask = g; }
+    lh.set(0, -0.03, -0.02);
+    if (rt >= 0.88) { const m = clamp((rt - 0.88) / 0.12, 0, 1); rh.set(0, -0.06, 0.14); return { target: P(0.14, -0.3, -0.36, 0.45, 0.35, 0.15), rod: false, flask: 0, blow: m > 0.2 && m < 0.8 ? 1 : 0 }; }
+    const BT = 0.88 / 3, k = Math.min(2, Math.floor(rt / BT)), s = (rt - k * BT) / BT, a = k * 2.094 + 0.5, bx = Math.cos(a) * 0.026, by = Math.sin(a) * 0.026;
+    const up = (h) => V(bx, by, -0.72 - h), rest = V(0, -0.05, 0.2), F = V(0.3, 0.0, 0.42), PO = V(0.22, -0.12, 0.5), stow = V(0.04, -0.07, 0.12), pan = V(0.07, 0.05, -0.3);
+    this.vmKey(rh, [[0, rest], [0.07, F], [0.12, up(0.1)], [0.2, up(0.08)], [0.25, PO], [0.31, up(0.02)], [0.34, up(0.02)], [0.38, stow], [0.44, up(0.6)], [0.48, up(0.46)], [0.53, up(0.12)], [0.57, up(0.38)], [0.61, up(0.1)], [0.65, up(0.36)], [0.69, up(0.1)], [0.74, up(0.62)], [0.79, stow], [0.84, F], [0.88, pan], [0.94, pan], [1, rest]], s);
+    const prime = s > 0.8 && s < 0.97;
+    return { target: prime ? P(0.08, -0.3, -0.46, 0.25, 0.25, 0.3) : P(0.04, -0.52, -0.55, 1.1, 0.08, 0), rod: s > 0.38 && s < 0.79, flask: (s > 0.06 && s < 0.24) || (s > 0.83 && s < 0.96) ? 1 : 0, blow: 0 };
+  }
   vmKey(out, keys, t) {
     let i = 0; while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
     const k0 = keys[i], k1 = keys[i + 1]; let s = clamp((t - k0[0]) / Math.max(1e-4, k1[0] - k0[0]), 0, 1); s = s * s * (3 - 2 * s);
@@ -2185,6 +2223,7 @@ class Renderer {
       if (reloading && style !== 'lever') {
         speed = 9;
         if (style === 'muzzle') { target = rt < 0.93 ? R.relMuzzle : hip; this.vmKey(rhT, R.muzzle, rt); rod = rt > 0.42 && rt < 0.88; cart = rt > 0.12 && rt < 0.3; }
+        else if (style === 'sj') { const q = this.vmSjReload(rt, rhT, lhT, P); target = q.target; rod = q.rod; this._sjFl = q.flask; this._sjBlow = q.blow; speed = 7; }
         else if (style === 'spencer') { target = rt < 0.86 ? R.relSpencer : hip; this.vmKey(rhT, R.spencer, rt); cart = rt > 0.36 && rt < 0.58; }
         else { target = rt < 0.9 ? R.relBreech : (hero.aiming ? ads : hip); this.vmKey(rhT, R.breech, rt); breechOpen = smooth(0.17, 0.24, rt) * (1 - smooth(0.73, 0.8, rt)); cart = rt > 0.45 && rt < 0.72; }
         if (cart) this.vmCart.position.copy(rhT).add(T.v.set(0, 0.03, -0.02));
@@ -2263,6 +2302,10 @@ class Renderer {
     this.vmCyl.position.x = -0.04 * cylOut;
     this.vmCart.visible = cart;
     this.vmRod.visible = rod; if (rod) { this.vmRod.position.copy(st.rh).add(T.v.set(0, 0, 0.45)); }
+    { const sjr = w === 'rifle' && !hero.club && reloading && reloadStyle(hero) === 'sj'; if (!sjr) { this._sjFl = 0; this._sjBlow = 0; }
+      if (this.vmFlask) { this.vmFlask.visible = !!this._sjFl; if (this._sjFl) this.vmFlask.position.copy(st.rh).add(T.v.set(0.0, 0.0, 0.06)); }
+      if (this.vmSj) { if (!this.vmSjMatch) this.vmSjMatch = this.vmSj.children.find(c => c.material && c.material.type === 'MeshBasicMaterial') || null;
+        const mt = this.vmSjMatch; if (mt) { const b = this._sjBlow || 0, f = 1 + b * (2.2 + 0.6 * Math.sin(this.time * 31)); mt.scale.set(f, f, f); mt.material.color.setHex(b > 0.3 ? 0xffd27a : 0xff8a3a); } } }
     // hands and arms
     this.vmHandR.position.copy(st.rh); this.vmHandL.position.copy(st.lh); this.vmHandL.visible = two;
     vm.updateMatrix();

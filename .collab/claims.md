@@ -25,3 +25,4 @@
 - feet fork: src/anim.js (ANIM.feet + rig leg bypass), render.js locomotion else-branch hook (feet), a.ph phase lock
 - club-anim (fork): sim.js startWindup club thrust override (top lines), render.js KF.club/VM.club + drawFigure clubbing arm/grip lines, vmSj grip
 - choices (fork): NEW src/choices.js (campaign branching decisions, consequences, epilogue ledger), build.sh splice; tiny hooks zhe.js/jin.js/shenji.js flow
+- club-anim (fork, +reload): render.js reloadStyle 'sj', new sjReload()/SJR near reload paths, drawFigure reload branch sj line + rod length + flask mesh (fig.flask), FP vmSjReload + vmFlask
