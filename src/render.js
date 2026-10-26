@@ -1670,7 +1670,11 @@ class Renderer {
         o[0] = v(0); o[1] = (e > 0.001 ? P0[1] * e * s : 0) + 0.25 * fl * fs; o[2] = (e > 0.001 ? P0[2] * e * s : 0); o[3] = v(3); o[4] = Math.min(v(4), Math.max(0, 1 - a.stance)); o[5] = v(5);
         o[6] = (e > 0.001 && u.hrK === 1 ? -0.1 * s * e : 0); o[7] = v(7); o[8] = v(8);
         a.lean += o[0]; a.twist += o[1]; a.roll += o[2]; a.crouch += o[3]; a.stance += o[4]; a.lunge += o[5]; for (let j = 0; j < 3; j++) { a.wp[j] += o[6 + j]; a.rh[j] += o[6 + j]; a.lh[j] += o[6 + j]; }
-        a.hrh = v(6); } }
+        a.hrh = v(6); }
+      // caught in a wolf-brush: thrown back, arms up, twisting against the branches
+      if (!a.hro && !mounted && !down && u.entT > 0) { const e2 = Math.min(1, u.entT / 0.2), P3 = HR_POSE[3], w = Math.sin((this.time || 0) * 13 + u.id) * 0.22;
+        const o = a.hro = a.hroB || (a.hroB = new Float64Array(9)); o[0] = P3[0] * 0.8 * e2; o[1] = (P3[1] + w) * e2; o[2] = (P3[2] + w * 0.5) * e2; o[3] = 0; o[4] = 0; o[5] = P3[5] * e2; o[6] = 0; o[7] = P3[7] * 0.9 * e2; o[8] = P3[8] * e2;
+        a.lean += o[0]; a.twist += o[1]; a.roll += o[2]; a.lunge += o[5]; for (let j = 0; j < 3; j++) { a.wp[j] += o[6 + j]; a.rh[j] += o[6 + j]; a.lh[j] += o[6 + j]; } a.hrh = -0.3 * e2; } }
     // ---------- legs (root-local; +x left, +z forward) ----------
     const LT = 0.46, LS = 0.46;
     const legs = this._legs || (this._legs = new Float64Array(18)); // hipL,kneeL,footL,hipR,kneeR,footR

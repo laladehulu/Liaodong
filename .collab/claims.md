@@ -15,3 +15,4 @@
 - emplace (fork): sim manE input/fire (siege section), render viewmodel emplacement hands + aim aid, main.js HUD for manning
 - music fork: src/music.js (whole module), no sim
 - main: siegeDirs sticky jobs + ditch capture (sim.js siegeDirs, OPS.ningyuan_siege zones)
+- ailoop (fork): sim.js AI fixes: unitAI targeting/ranged keep-range, steerFoot/nav, squad slot follow, mAggro, assaultDirs (not siegeDirs/ningyuan zones, not yuanyang roles)
