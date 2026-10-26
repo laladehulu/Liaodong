@@ -1597,8 +1597,9 @@ class Renderer {
     if (!mounted && rsp > 0.3) { const lx = rvx * cy - rvz * sy, lz = rvx * sy + rvz * cy, l = Math.hypot(lx, lz) || 1; a.mfx += (lx / l - a.mfx) * k8; a.mfz += (lz / l - a.mfz) * k8; }
     const spd = mounted ? 0 : a.spd;
     const r = clamp((spd - 2.6) / 1.6, 0, 1), mv = clamp(spd / 1.2, 0, 1);
-    const back = a.mfz < -0.3;
-    const beta = clamp(back ? Math.atan2(-a.mfx, -a.mfz) : Math.atan2(a.mfx, Math.max(0.05, a.mfz)), -1.1, 1.1);
+    a.bk = a.bk ? a.mfz < -0.12 : a.mfz < -0.35; const back = a.bk; // hysteresis: no flicker between stepping forward and backpedalling when moving sideways
+    const beta0 = clamp(back ? Math.atan2(-a.mfx, -a.mfz) : Math.atan2(a.mfx, Math.max(0.05, a.mfz)), -1.1, 1.1);
+    if (a.bt === undefined) a.bt = beta0; a.bt += (beta0 - a.bt) * (1 - Math.exp(-9 * dt)); const beta = a.bt; // the leg plane turns, it doesn't flip
     a.ph += (back ? -1.3 : 1) * spd * dt * 6.2832 / (1.35 + r * 0.95); // backpedalling is short, quick steps
     const ph = a.ph;
     // ---------- pose targets ----------
