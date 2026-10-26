@@ -456,17 +456,24 @@ const BIOMES = {
 // area is broken by dry-brush granulation so it never reads as flat black. Noise is anchored in world space.
 const INK_SHIFT = { value: new THREE.Vector2() };
 (function inkShadows() {
-  if (typeof window !== 'undefined' && window.MING_REAL) return; // the realism edition keeps physically soft shadows
+  const REAL = typeof window !== 'undefined' && window.MING_REAL;
   const C = THREE.ShaderChunk; let src = C.shadowmap_pars_fragment; if (!src || src.indexOf('getShadowBase') >= 0) return;
   const sig = 'float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord )';
   if (src.indexOf(sig) < 0) return;
   src = src.replace(sig, 'float getShadowBase( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord )');
   const ink = `
+	#define REAL_SHADOW ${REAL ? 'true' : 'false'}
 	uniform vec2 inkShift;
 	float inkH( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
 	float inkV( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f ); return mix( mix( inkH( i ), inkH( i + vec2( 1.0, 0.0 ) ), f.x ), mix( inkH( i + vec2( 0.0, 1.0 ) ), inkH( i + vec2( 1.0, 1.0 ) ), f.x ), f.y ); }
 	float inkF( vec2 p ) { return inkV( p ) * 0.55 + inkV( p * 2.13 + 3.1 ) * 0.28 + inkV( p * 4.37 + 7.7 ) * 0.17; }
+	// how edge-on the surface is to the sun: on a wall the light only grazes, one shadow texel smears across a
+	// metre of surface and turns into streaks and staircases. There the plain lighting already darkens the face,
+	// so the shadow (and its ink noise) fades out and the face reads as one clean flat tone.
+	float shadowGraze( vec4 shadowCoord ) { vec3 c = shadowCoord.xyz / shadowCoord.w; float dxy = length( fwidth( c.xy ) ) * 140.0, dz = fwidth( c.z ) * 390.0; return smoothstep( 1.6, 4.0, dz / max( dxy, 1e-6 ) ); }
 	float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
+		float graze = shadowGraze( shadowCoord );
+		if ( REAL_SHADOW ) return mix( getShadowBase( shadowMap, shadowMapSize, shadowBias, shadowRadius, shadowCoord ), 1.0, graze );
 		vec2 w = shadowCoord.xy / shadowCoord.w + inkShift;
 		// low-frequency wander only (features ~1-3 m): nothing finer than a few pixels, so nothing to shimmer
 		vec2 warp = ( vec2( inkF( w * 55.0 ), inkF( w * 55.0 + 19.3 ) ) - 0.5 ) * ( 2.0 / 140.0 );
@@ -478,7 +485,7 @@ const INK_SHIFT = { value: new THREE.Vector2() };
 		s = smoothstep( 0.05, 0.95, s + ( inkF( w * 90.0 ) - 0.5 ) * 0.35 );
 		float rim = s * ( 1.0 - s ) * 4.0; s -= rim * 0.2;
 		s += ( 1.0 - s ) * ( 0.04 + inkF( w * 140.0 ) * 0.16 );
-		return clamp( s, 0.0, 1.0 );
+		return mix( clamp( s, 0.0, 1.0 ), 1.0, graze );
 	}
 `;
   const at = src.lastIndexOf('#endif'); if (at < 0) return;
