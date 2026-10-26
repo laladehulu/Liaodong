@@ -37,7 +37,7 @@ const DEFS = {
   jigen:         { name: 'Zhanmadao Horse-Cutters', jp: '斬馬刀', hp: 110, speed: 4.6, r: 0.38, weapons: ['katana'], reach: 2.3, dmg: [88, 44, 36, 44], windup: 0.42, recover: 0.5, block: 0.35, cost: 320, count: 10, hat: 'none', ai: 'melee', mass: 1, overhead: 0.7, morale: 120, desc: 'Two-handed horse-cutting blades. One devastating overhead blow.' },
   shinsengumi:   { name: 'Bayara Guard', jp: '巴牙喇', hp: 115, speed: 4.4, r: 0.38, weapons: ['katana'], reach: 2.2, dmg: [48, 38, 34, 38], windup: 0.34, recover: 0.3, block: 0.65, cost: 320, count: 10, hat: 'band', ai: 'melee', mass: 1, morale: 120, desc: "The Khan's elite guard. Fast, disciplined and hard to hit." },
   byakkotai:     { name: 'Khorchin Mongols', jp: '科爾沁', hp: 70, speed: 4.9, r: 0.36, weapons: ['katana'], reach: 2.1, dmg: [44, 36, 30, 36], windup: 0.4, recover: 0.35, block: 0.25, cost: 150, count: 12, hat: 'none', ai: 'melee', mass: 1, morale: 100, fearless: true, desc: 'Mongol allies of the Jin on foot. Cheap and quick, and they never run.' },
-  archer:        { name: 'Manchu Archers', jp: '滿洲弓手', hp: 70, speed: 4.3, r: 0.36, weapons: ['bow'], reach: 2.1, dmg: [28, 0, 28, 0], windup: 0.5, recover: 0.45, block: 0.1, cost: 220, count: 12, hat: 'jingasa', ai: 'ranged', mass: 1, morale: 90, bow: { dmg: 46, reload: 2.4, range: 62, aim: 0.6, speed: 40 }, desc: 'Heavy arrows from powerful horn bows, in volleys that arc over your own lines.' },
+  archer:        { name: 'Manchu Archers', jp: '滿洲弓手', hp: 70, speed: 4.3, r: 0.36, weapons: ['bow'], reach: 2.1, dmg: [28, 0, 28, 0], windup: 0.5, recover: 0.45, block: 0.1, cost: 220, count: 12, hat: 'jingasa', ai: 'ranged', mass: 1, morale: 90, bow: { dmg: 40, reload: 3.0, range: 62, aim: 0.6, speed: 33 }, desc: 'Heavy arrows from powerful horn bows, in volleys that arc over your own lines.' },
   cavalry:       { name: 'Guanning Iron Cavalry', jp: '關寧鐵騎', hp: 170, speed: 9.0, r: 0.75, weapons: ['katana'], reach: 2.9, dmg: [60, 48, 40, 48], windup: 0.45, recover: 0.4, block: 0.3, cost: 300, count: 6, hat: 'kabuto', ai: 'melee', mounted: true, mass: 4, morale: 105, desc: "Yuan Chonghuan's armored horsemen. They trample infantry at a gallop." },
   armstrong:     { name: 'Hongyipao', jp: '紅夷大砲', hp: 220, speed: 1.4, r: 1.2, weapons: ['cannon'], reach: 0, dmg: [0, 0, 0, 0], windup: 0, recover: 0, block: 0, cost: 300, count: 1, hat: 'none', ai: 'cannon', mass: 6, morale: 100, cannon: { reload: 9, range: 150, min: 18, speed: 50, type: 'shell' }, desc: '"Red barbarian" heavy cannon cast on European lines. Its shells burst and send men flying.' },
   cannon4:       { name: 'Ujen Cooha Gun', jp: '烏真超哈砲', hp: 220, speed: 1.4, r: 1.2, weapons: ['cannon'], reach: 0, dmg: [0, 0, 0, 0], windup: 0, recover: 0, block: 0, cost: 240, count: 1, hat: 'none', ai: 'cannon', mass: 6, morale: 100, cannon: { reload: 7, range: 130, min: 12, speed: 56, type: 'solid' }, desc: 'Jin heavy guns cast by Han artisans. Round shot that bounces and bowls through the ranks.' },
@@ -1848,8 +1848,11 @@ class Sim {
     this.events.push({ t: 'cannon', id: u.id, x: mx, y: my, z: mz, dx: sin(b.yaw) * ca, dy: sin(b.ang), dz: cos(b.yaw) * ca });
   }
   fireArrow(u, tgt) {
-    const bw = u.def.bow; const lead = tgt.speedNow > 0.5 ? 0.9 : 0;
-    const b = this.ballistic(u, tgt.x + tgt.mx * lead, tgt.z + tgt.mz * lead, bw.speed, 0.06);
+    // an archer leads a marching file, but cannot read a single man's next step: he aims where a player IS, and the
+    // arrow is slow enough to see coming, so a man who keeps moving across its path is hard to hit
+    const bw = u.def.bow; const human = tgt.ctrl >= 0 && !(this.players[tgt.ctrl] && this.players[tgt.ctrl].ai); const lead = tgt.speedNow > 0.5 && !human ? 0.9 : 0;
+    const dd = len(tgt.x - u.x, tgt.z - u.z), sc = (0.035 + dd * 0.0007) * (human && tgt.speedNow > 2 ? 1.8 : 1);
+    const b = this.ballistic(u, tgt.x + tgt.mx * lead, tgt.z + tgt.mz * lead, bw.speed, 0.06); b.yaw += (this.rng.next() - 0.5) * sc * 2; b.ang += (this.rng.next() - 0.5) * sc;
     const ca = cos(b.ang), v = bw.speed; const ox = u.x + sin(b.yaw) * 0.6, oy = u.y + 1.5, oz = u.z + cos(b.yaw) * 0.6;
     this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(b.yaw) * ca * v, vy: sin(b.ang) * v, vz: cos(b.yaw) * ca * v, team: u.team, owner: u.id, life: 0, hits: 0 });
     u.ammo--; this.events.push({ t: 'arrow', id: u.id, x: ox, y: oy, z: oz });
@@ -1881,7 +1884,7 @@ class Sim {
           else { done = true; break; }
         }
         if (p.life > 0.25) {
-          const rad = p.kind === 'solid' ? 1.1 : p.kind === 'arrow' ? 0.5 : 0.6;
+          const rad = p.kind === 'solid' ? 1.1 : p.kind === 'arrow' ? 0.36 : 0.6;
           const n = this.gatherNear(p.x, p.z, 2);
           for (let k = 0; k < n; k++) {
             const v = this.units[this.nearBuf[k]]; if (v.dead || v.id === p.owner) continue;
@@ -1893,8 +1896,9 @@ class Sim {
             if (dx * dx + dz * dz < rr * rr && Math.abs(dy) < 1.3 + v.def.r) {
               if (p.kind === 'shell') { this.explode(p.x, p.y, p.z, p.team, p.owner, 7.5, 170); done = true; break; }
               if (p.kind === 'arrow' && v.def.shield && !v.dead && v.st !== ST_RELEASE && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.1 && this.rng.next() < 0.75) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
+              if (p.kind === 'arrow' && v.ctrl >= 0 && !v.dead && (v.iframe > 0 || (v.blocking && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.2 && this.rng.next() < (v.def.shield ? 1 : 0.8)))) { this.events.push({ t: v.iframe > 0 ? 'evade' : 'arrowstick', id: v.id, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); if (v.iframe <= 0) this.events.push({ t: 'block', x: p.x, y: p.y, z: p.z, perfect: false, by: v.id, att: -1, shield: !!v.def.shield }); done = true; break; } // you can slide under an arrow or turn it on your guard
               if (p.kind === 'arrow' && v.zfile && !v.dead && this.coverShield(v, p)) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
-              if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, this.units[p.owner].def.bow.dmg * (v.def.ai === 'cannon' ? 0.3 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
+              if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, this.units[p.owner].def.bow.dmg * (v.def.ai === 'cannon' ? 0.3 : 1) * (v.ctrl >= 0 && !(this.players[v.ctrl] && this.players[v.ctrl].ai) ? 0.65 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
               if (p.bolt) { v.lastShotBy = p; p.hits++; this.applyDamage(v, 80, p.owner, p.vx * 0.05, 1, p.vz * 0.05, 'arrow', p.x, p.y, p.z); if (!v.dead && v.mass < 5) v.downT = Math.max(v.downT, 0.8); this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); if (p.hits >= 3) { done = true; break; } continue; }
               // solid shot: bowl through
               const sp = len(p.vx, p.vz) || 1; const nx = p.vx / sp, nz = p.vz / sp;
@@ -2600,7 +2604,7 @@ const MISSIONS = {
       lw: { team: 1, name: 'The left wing', army: ['samurai', 'samurai', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
       east: { team: 1, name: 'Banners from the east', army: ['samurai', 'byakkotai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
       night: { team: 1, name: 'Daišan\'s banners', zh: '代善', army: ['shinsengumi', 'samurai', 'samurai', 'cavalry'], at: [140, -110, -PI / 2], reserve: true },
-      cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
+      cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
     },
     phases: [
       { title: '一 · 橋北 · North of the bridge', text: 'The White Poles have crossed to the north bank. Stand to in the Zhejiang camp with your file and watch the far bank.', show: ['camp'],
@@ -2628,7 +2632,7 @@ const MISSIONS = {
       { title: '四 · 夜 · The last stand', text: 'Night. The camp cannot hold. Qi Jin orders you out: take your file and your wounded down the Liaoyang road, so that someone lives to tell what happened here.', show: ['road'], hide: ['camp'],
         start: [['release', 'night'], ['dir', 'night', 'hold', 58, -60], ['kill', 'chen']],
         obj: { extract: 'road' }, limit: 420, fail: 'The ring closed around the camp.',
-        waves: [[2, 'cut', ['attack']]], at: [[55, ['kill', 'zhe']]],
+        waves: [[14, 'cut', ['attack']]], at: [[55, ['kill', 'zhe']]],
         say: [[2, 'soldier', 'General Chen Ce is dead!', '陳總兵陣亡了！'],
           [6, 'qi', 'A man repays his country today, of all days.', '大丈夫報國，就在今日。'],
           [12, 'qi', 'You — take your file and your wounded down the Liaoyang road. Someone must live to tell them what happened here.', '你——帶你的人和傷兵走遼陽大路。總得有人活著，把這裡的事說出去。'],

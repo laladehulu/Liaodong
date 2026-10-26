@@ -777,6 +777,15 @@ function moraleCls(sq) { if (!sq.alive) return ''; if (sq.routing) return 'm-rou
 function moraleWord(sq) { if (sq.routing) return 'routing'; if (sq.def.fearless) return 'fearless'; const m = sq.morale / sq.moraleMax; return m < 0.35 ? 'wavering' : m < 0.6 ? 'shaken' : 'steady'; }
 // ---------- screen markers: objectives (lettered circles) and your companies (numbered), pinned to the screen edge when out of view ----------
 const MARKS = { el: null, pool: [], v: null };
+function helpPrompt(h, u) { // 'E · help him up' beside a downed man, and the progress while you haul him up
+  let el = document.getElementById('helpprompt'); if (!el) { el = document.createElement('div'); el.id = 'helpprompt'; document.body.appendChild(el); }
+  const sim = state.sim; if (!h || h.dead || !sim) { el.hidden = true; return; }
+  const busy = sim.teamAlive[h.team].find(v => v.downed && v.reviveBy === h.id);
+  if (busy) { el.hidden = false; el.innerHTML = `<b>扶起</b> getting him up… <i style="--p:${Math.min(100, Math.round(busy.reviveT / 45 * 100))}%"></i>`; return; }
+  if (!u) { el.hidden = true; return; }
+  const nm = typeof SPEECH !== 'undefined' ? SPEECH.nameOf(u.id) : null; el.hidden = false;
+  el.innerHTML = `<kbd>E</kbd> ${u.downed ? 'help him up' : 'get his arm over your shoulder'}${nm ? ` · <span>${typeof nm === 'string' ? nm : nm.zh + ' ' + nm.en}</span>` : ''}`;
+}
 function hudMarks() {
   const sim = state.sim, r = state.renderer; if (!MARKS.el) { MARKS.el = document.createElement('div'); MARKS.el.id = 'hudmarks'; document.body.appendChild(MARKS.el); MARKS.v = new THREE.Vector3(); }
   const show = sim && r && state.screen === 'game' && !state.ended && r.lastMode === 'fp' && !(sim.mission && sim.mission.camp) && !(typeof DEP !== 'undefined' && DEP.open);
@@ -789,6 +798,12 @@ function hudMarks() {
     { const fq = me.soldierSq !== undefined && !(me.squads || []).includes(me.soldierSq) ? sim.squads[me.soldierSq] : null, h = localHero(); // your file, and your own place in it, before you command it
       if (fq && fq.alive && h && !h.dead) { if (Math.hypot(fq.cx - h.x, fq.cz - h.z) > 7) items.push({ x: fq.cx, z: fq.cz, y: 2.4, txt: '伍', cls: 'sq file', always: false });
         if (h.squad === fq.id && h.slotX !== undefined && Math.hypot(h.slotX - h.x, h.slotZ - h.z) > 3) items.push({ x: h.slotX, z: h.slotZ, y: 0.4, txt: '◇', cls: 'place', name: 'your place', always: true }); } }
+    { const h = localHero(); let near = null, nd = 2.6; // downed and wounded comrades: a pulsing cross with the bleed-out ring, pinned to the edge when out of view
+      if (h) for (const u of sim.teamAlive[me.team]) { if (!u.wounded || u === h) continue; const d = Math.hypot(u.x - h.x, u.z - h.z); if (d > 70) continue;
+        const helped = u.helpedBy >= 0; if (u.downed || !helped) items.push({ x: u.x, z: u.z, y: 1.3, txt: '✚', cls: 'down' + (u.zfile ? ' file' : '') + (u.reviveBy >= 0 ? ' busy' : ''), always: true, bl: u.downed ? Math.max(0, Math.min(1, u.bleed / (30 * (u.zfile ? 45 : 30)))) : undefined });
+        else if (u.helpedBy === h.id) items.push({ x: u.x, z: u.z, y: 2.1, txt: '扶', cls: 'down carry', always: false });
+        if (!h.dead && d < nd && (u.downed || !helped)) { nd = d; near = u; } }
+      helpPrompt(h, near); }
     (me.squads || []).forEach((id, k) => { const q = sim.squads[id]; if (!q || !q.alive || q.inactive) return; const h = localHero(); if (h && Math.hypot(q.cx - h.x, q.cz - h.z) < 6) return; items.push({ x: q.cx, z: q.cz, y: 2.2, txt: String(k + 1), cls: 'sq' + (sel.includes(id) ? ' on' : ''), always: false }); });
   }
   const cam = r ? r.camera : null, W = window.innerWidth, H = window.innerHeight, h = localHero(); const used = { l: [], r: [] };
@@ -800,7 +815,7 @@ function hudMarks() {
     let sx, sy, edge = '';
     if (on) { sx = (v.x * 0.5 + 0.5) * W; sy = (-v.y * 0.5 + 0.5) * H; }
     else { const right = cv.x > 0; edge = right ? ' edge r' : ' edge l'; sx = right ? W - 34 : 34; const yy = behind ? 0 : Math.max(-0.7, Math.min(0.7, v.y)); sy = (-yy * 0.5 + 0.5) * H; const U = used[right ? 'r' : 'l']; for (let k = 0; k < 8 && U.some(y0 => Math.abs(y0 - sy) < 40); k++) sy += 42; U.push(sy); }
-    el.className = 'hm ' + it.cls + edge; el.firstChild.textContent = it.txt;
+    el.className = 'hm ' + it.cls + edge; el.firstChild.textContent = it.txt; if (it.bl !== undefined) el.style.setProperty('--bl', (it.bl * 360).toFixed(0) + 'deg'); else el.style.removeProperty('--bl');
     const d = h ? Math.round(Math.hypot(it.x - h.x, it.z - h.z)) : 0; el.lastChild.textContent = d > 4 ? d + ' m' : '';
     if (el._k === it.txt + edge && el._x !== undefined && Math.abs(el._x - sx) < 200 && Math.abs(el._y - sy) < 200) { sx = el._x + (sx - el._x) * 0.35; sy = el._y + (sy - el._y) * 0.35; } el._k = it.txt + edge; el._x = sx; el._y = sy; // smooth: company centres move in 30 Hz steps
     el.style.transform = `translate(${sx.toFixed(1)}px,${sy.toFixed(1)}px)`; el.style.display = '';

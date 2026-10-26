@@ -319,6 +319,14 @@ h3.sect { font-family: var(--font-display); font-weight: 700; font-size: 15px; l
 #hudmarks .hm.file b { width: 30px; height: 30px; font: 700 15px serif; background: rgba(10,46,20,.88); border: 2px solid #8ff0a4; color: #c6f9d0; }
 #hudmarks .hm.place b { width: 22px; height: 22px; border-radius: 3px; transform: rotate(45deg); background: rgba(120,240,150,.25); border: 2px solid #9ff5b0; color: transparent; }
 #hudmarks .hm.place i { color: #b9f7c6; }
+#hudmarks .hm.down b { width: 30px; height: 30px; font-size: 18px; color: #fff; background: radial-gradient(circle, rgba(190,30,26,.95) 55%, transparent 57%), conic-gradient(#ffd0c0 var(--bl, 360deg), rgba(60,10,8,.6) 0); border: none; animation: hmDown .7s infinite alternate; }
+#hudmarks .hm.down.file b { box-shadow: 0 0 0 2px #6fe08a, 0 1px 4px rgba(0,0,0,.6); }
+#hudmarks .hm.down.busy b { animation: none; background: radial-gradient(circle, rgba(60,140,70,.95) 55%, transparent 57%), conic-gradient(#ffd0c0 var(--bl, 360deg), rgba(60,10,8,.6) 0); }
+#hudmarks .hm.down.carry b { width: 24px; height: 24px; font: 700 13px serif; background: rgba(10,40,18,.85); border: 2px solid #6fe08a; animation: none; }
+@keyframes hmDown { to { transform: scale(1.14); filter: brightness(1.25); } }
+#helpprompt { position: fixed; left: 50%; top: 60%; transform: translateX(-50%); z-index: 21; pointer-events: none; font: 600 14px sans-serif; color: #f4ecd8; background: rgba(20,14,10,.72); border: 1px solid #8a6a3c; border-radius: 5px; padding: 6px 12px; text-shadow: 0 1px 2px #000; }
+#helpprompt kbd { margin-right: 6px; } #helpprompt span { color: #9ff0a8; } #helpprompt b { color: #ffd36a; margin-right: 6px; }
+#helpprompt i { display: inline-block; width: 90px; height: 6px; margin-left: 8px; vertical-align: middle; background: linear-gradient(90deg, #6fe08a var(--p), rgba(255,255,255,.18) 0); border-radius: 3px; }
 #hudmarks .hm i { font: 600 10px sans-serif; font-style: normal; color: #fff; text-shadow: 0 1px 2px #000; margin-top: 1px; }
 #hudmarks .hm.edge.l b::before, #hudmarks .hm.edge.r b::after { content: ''; position: absolute; border: 6px solid transparent; }
 #hudmarks .hm.edge.l b::before { margin-left: -36px; border-right-color: rgba(255,255,255,.85); }

@@ -73,6 +73,12 @@ const SPEECH = (() => {
       if (q.team === team) { const c = unit(q.unitIds.find(id => !unit(id).dead)); if (c) say(c.id, '撤！快撤！', 'Fall back! Fall back!', { prio: 1, shout: 0.25 }); }
       else { const w = near(h.x, h.z, 18, team, h.id)[0]; if (w) say(w.id, pick(['他們跑了！', '韃子退了！']), pick(['They\'re running!', 'They\'re breaking!']), { prio: 1, shout: 0.3 }); } }
     else if (ev.t === 'zhelp') { const u = unit(ev.id); if (u) say(u.id, '我還能走……別丟下我。', 'I can still walk… don\'t let go of me.', { prio: 2, dur: 3.5 }); }
+    else if (ev.t === 'zdown') { const u = unit(ev.id); if (!u || u.team !== team || Math.hypot(u.x - h.x, u.z - h.z) > 26) return; const n = nameOf(u.id);
+      say(u.id, pick(['啊——！', '我中了……', '腿……我的腿……']), pick(['Aagh—!', 'I\'m hit…', 'My leg… my leg…']), { prio: 2, cool: 3, dur: 2.5 });
+      const w = near(u.x, u.z, 12, team, h.id).filter(v => v.id !== u.id)[0]; if (w) setTimeout(() => say(w.id, n ? `${n.zh}倒了！快扶他！` : '有人倒了！快扶起來！', n ? `${n.en} is down! Get him up!` : 'Man down! Get him up!', { prio: 2, cool: 3 }), 700); }
+    else if (ev.t === 'zrevive0') { const r = unit(ev.by); if (r && r.id !== h.id) say(r.id, pick(['我來扶你！', '撐住，我來了！']), pick(['I\'ve got you!', 'Hold on — I\'m here!']), { prio: 1, cool: 4 }); else if (r) say(r.id, '來，抓住我的手！', 'Here — take my hand!', { prio: 2, cool: 1, who: typeof ZS !== 'undefined' && ZS ? ZS.name.zh + ' · you' : 'You' }); }
+    else if (ev.t === 'zrevive') { const u = unit(ev.id), r = unit(ev.by); if (r) say(r.id, ev.limp ? '靠著我，走！' : '起來！還能打！', ev.limp ? 'Lean on me — walk!' : 'Up! You can still fight!', { prio: 2, cool: 1, who: r.id === h.id && typeof ZS !== 'undefined' && ZS ? ZS.name.zh + ' · you' : undefined });
+      if (u) setTimeout(() => say(u.id, pick(['謝了……', '我欠你一條命。', '好……好，我還站得住。']), pick(['Thanks…', 'I owe you my life.', 'Right… I can still stand.']), { prio: 1, cool: 2 }), 900); }
   }
   // an order travels: you shout it, the chief repeats it down the file, the men answer
   const OL = {};
