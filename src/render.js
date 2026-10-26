@@ -1052,7 +1052,7 @@ class Renderer {
       blade: mk(box, PAL.steel), hilt: mk(box, 0x1e1b2a), rifle: mk(box, PAL.wood), barrel: mk(box, 0x55595e), yari: mk(box, PAL.yari), pistol: mk(box, 0x3a3a3f),
       gb: mk(RB(0.3, 6, 4), 0xffffff, GEAR_K.b), gc: mk(new THREE.ConeGeometry(0.5, 1, 10), 0xffffff, GEAR_K.c), gy: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 10), 0xffffff, GEAR_K.y),
       shield: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), 0xa8844a), boss: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 10), 0x8a2a20),
-      bow: mk(box, 0x5a3b1e, 2), bstring: mk(box, 0xe8e2cc, 2, false), arrow: mk(box, 0x8a6a3a, 1, false), rod: mk(box, 0x9aa0a6, 1, false), flask: mk(box, 0x6b4426, 1, false), twig: mk(box, 0x6b6a3a, 9, false),
+      bow: mk(box, 0x5a3b1e, 2), bstring: mk(box, 0xe8e2cc, 2, false), arrow: mk(box, 0x8a6a3a, 1, false), rod: mk(box, 0x9aa0a6, 1, false), flask: mk(box, 0xc9a25a, 1, false), twig: mk(box, 0x6b6a3a, 9, false),
     };
     this.anims = [];
     this.tg = { wp: [0, 0, 0], wd: [0, 1, 0], rh: [0, 0, 0], lh: [0, 0, 0] };
@@ -2014,8 +2014,8 @@ class Renderer {
       if (u.type === 'rifle_spencer') { if (cl) { segW(f.rifle, -0.15, 1.0, 0.045, 0.045); segW(f.barrel, 1.0, 1.5, 0.1, 0.1); } /* the three-eyed gun as a club: hold the end of the pole, the iron barrels are the head */ else { segW(f.rifle, -0.7, 0.45, 0.045, 0.045); segW(f.barrel, 0.45, 0.95, 0.1, 0.1); } }
       else if (cl) { segW(f.rifle, 0.35, 1.45, 0.05, 0.075); segW(f.barrel, -0.1, 1.05, 0.026, 0.026); } else { segW(f.rifle, -0.3, 0.8, 0.05, 0.075); segW(f.barrel, 0.1, 1.25, 0.026, 0.026); } } else { f.rifle.setMatrixAt(slot, Z); f.barrel.setMatrixAt(slot, Z); }
     if (w === 'revolver') segW(f.pistol, -0.25, 0.3, 0.08, 0.08); else f.pistol.setMatrixAt(slot, Z);
-    if (rod > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; const rl = rod === 1 ? 0.95 : rod; this.seg(f.rod, slot, hx2, hy2, hz2, hx2 - dx * rl, hy2 - dy * rl, hz2 - dz * rl, 0.012, 0.012); } else f.rod.setMatrixAt(slot, Z);
-    if (sjFl > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; this.seg(f.flask, slot, hx2, hy2 + 0.02, hz2, hx2 - dz * 0.03, hy2 + 0.16, hz2 + dx * 0.03, 0.075, 0.055); } else f.flask.setMatrixAt(slot, Z);
+    if (rod > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; const rl = rod === 1 ? 0.95 : rod; this.seg(f.rod, slot, hx2, hy2, hz2, hx2 - dx * rl, hy2 - dy * rl, hz2 - dz * rl, rod === 1 ? 0.012 : 0.022, rod === 1 ? 0.012 : 0.022); } else f.rod.setMatrixAt(slot, Z);
+    if (sjFl > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; this.seg(f.flask, slot, hx2, hy2 + 0.02, hz2, hx2 - dz * 0.03, hy2 + 0.19, hz2 + dx * 0.03, 0.1, 0.075); } else f.flask.setMatrixAt(slot, Z);
     if (xb) { // crossbow: limbs across the front of the stock, string drawn back to the nut
       const ux2 = dz, uz2 = -dx, ul = Math.hypot(ux2, uz2) || 1; const px = ux2 / ul * 0.38, pz = uz2 / ul * 0.38; const cx = P(0.72, 0), cy = P(0.72, 1), cz = P(0.72, 2), bk = 0.08;
       this.seg(f.bow, slot * 2, cx, cy, cz, cx + px - dx * bk, cy - dy * bk, cz + pz - dz * bk, 0.035, 0.04); this.seg(f.bow, slot * 2 + 1, cx, cy, cz, cx - px - dx * bk, cy - dy * bk, cz - pz - dz * bk, 0.035, 0.04);
@@ -2165,7 +2165,7 @@ class Renderer {
   // the rammer driven home in strokes, the touch-hole primed), then the gun comes down and the match is blown on
   vmSjReload(rt, rh, lh, P) {
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
-    if (!this.vmFlask && this.vmRifle && this.vmRifle.parent) { const g = new THREE.Group(), lea = new THREE.MeshLambertMaterial({ color: 0x6b4426, depthTest: false }), brass = new THREE.MeshLambertMaterial({ color: 0xb8913a, depthTest: false });
+    if (!this.vmFlask && this.vmRifle && this.vmRifle.parent) { const g = new THREE.Group(), lea = new THREE.MeshLambertMaterial({ color: 0xc9a25a, depthTest: false }), brass = new THREE.MeshLambertMaterial({ color: 0xb8913a, depthTest: false });
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.05, 0.11), lea); b.position.z = 0.06; g.add(b); const sp = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.016, 0.05), brass); sp.position.z = -0.01; g.add(sp);
       for (const m of [b, sp]) m.renderOrder = 999; g.visible = false; this.vmRifle.parent.add(g); this.vmFlask = g; }
     lh.set(0, -0.03, -0.02);
