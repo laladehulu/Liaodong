@@ -704,10 +704,10 @@ class Renderer {
       const A = this.empArc.geometry.attributes.position, n = Math.min(A.count, P.pts.length / 3); for (let i = 0; i < A.count; i++) { const j = Math.min(i, n - 1) * 3; if (n > 0) A.setXYZ(i, P.pts[j], P.pts[j + 1], P.pts[j + 2]); else A.setXYZ(i, e.x, e.y, e.z); } A.needsUpdate = true; this.empArc.geometry.setDrawRange(0, n); this.empArc.geometry.computeBoundingSphere();
       // the ring: where a ball first strikes it skips and ploughs on (a bolt sticks), so mark the ground it can sweep; foes inside turn it red
       const rr = bow ? 1.6 : 3.2; let foes = 0; if (!P.out) for (const u of this.sim.units) { if (u.dead || u.team === e.team || u.type === 'horse') continue; if (Math.hypot(u.x - P.x, u.z - P.z) < rr) foes++; }
-      this.empMark.scale.set(rr, rr, rr); this.empMark.children[0].material.color.setHex(foes ? 0xff6a4a : 0xffd27a);
+      this.empMark.scale.set(rr, 1, rr); this.empMark.children[0].material.color.setHex(foes ? 0xff6a4a : 0xffd27a); { const bm = this.empMark.children.find(c => c.userData.beam); if (bm) { bm.scale.set(1 / rr, 1, 1 / rr); bm.material.color.setHex(foes ? 0xff6a4a : 0xffe2a0); } }
       this.empHud = { kind: e.kind, cd: e.cd, cdMax: e.cdMax || (bow ? 150 : 270), elev: e.pitch || 0, want: this._viewPitch, dist, wall: !!P.box, out: !!P.out, foes }; }
     else if (this.empHud) { this.empHud.cd = e.cd; this.empHud.elev = e.pitch || 0; this.empHud.want = this._viewPitch; }
-    { const m = this.empArc.material, tk = this.empK || 0; m.size = 0.16 + tk * 0.22; m.opacity = (e.cd > 0 ? 0.22 : 0.85) * (0.55 + 0.45 * tk); }
+    { const m = this.empArc.material, tk = this.empK || 0; m.size = 3.5 + tk * 2.5; m.opacity = (e.cd > 0 ? 0.25 : 0.9) * (0.6 + 0.4 * tk); }
   }
   buildEmpVM(hero) {
     const g = new THREE.Group(); this.camera.add(g); this.vmEmp = g; const mk = (c) => new THREE.MeshLambertMaterial({ color: c, depthTest: false });
@@ -724,10 +724,12 @@ class Renderer {
     bx(G, 0.34, 0.3, 0.5, iron, 0, -0.55, -1.55); bx(G, 0.12, 0.12, 0.12, iron, 0, -0.42, -1.25); bx(G, 0.02, 0.03, 0.02, mk(0xff8a3a), 0, -0.38, -1.42);
     hand(G, -0.27, -0.33, -0.55, 0.25); hand(G, 0.27, -0.33, -0.55, -0.25);
     // where the shot will fall: a thin ring on the ground and a faint dotted arc
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 24), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false }));
-    ring.rotation.x = -Math.PI / 2; const mark = new THREE.Group(); mark.add(ring); const dot = new THREE.Mesh(new THREE.CircleGeometry(0.18, 10), ring.material); dot.rotation.x = -Math.PI / 2; mark.add(dot); this.scene.add(mark); this.empMark = mark;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 1, 32), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    ring.rotation.x = -Math.PI / 2; const mark = new THREE.Group(); mark.add(ring); const dot = new THREE.Mesh(new THREE.CircleGeometry(0.18, 10), ring.material); dot.rotation.x = -Math.PI / 2; mark.add(dot);
+    { const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0.5, depthWrite: false, fog: false })); beam.position.y = 3; beam.userData.beam = true; mark.add(beam); } // a thin post of light so the fall of shot shows at any range
+    this.scene.add(mark); this.empMark = mark;
     const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.BufferAttribute(new Float32Array(90 * 3), 3));
-    const arc = new THREE.Points(ag, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.16, transparent: true, opacity: 0.45, depthWrite: false, fog: false })); arc.frustumCulled = false; this.scene.add(arc); this.empArc = arc;
+    const arc = new THREE.Points(ag, new THREE.PointsMaterial({ color: 0xffe2a0, size: 4, sizeAttenuation: false, transparent: true, opacity: 0.45, depthWrite: false, fog: false })); arc.frustumCulled = false; this.scene.add(arc); this.empArc = arc;
   }
   updateSiege(dt) {
     const sim = this.sim, sg = sim.sg, W = SIM.TERR.swall, T = this.tmp;

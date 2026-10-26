@@ -3768,6 +3768,7 @@ Sim.prototype.assaultThink = function () {
     this.assaultDirs();
   }
   if (this.tick % 150 === 0) this.assaultDirs();
+  if (M.siege && this.sg && this.sector >= 2 && this.tick % 30 === 15) this.siegeTown();
   if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(Math.round(CAP * 0.7), (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75)) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
     for (const u of this.units) { if (!u.dead || u.trimmed || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * 25) continue;
       const k = u.id % 9; this.reviveUnit(u, clamp(nz.x + (k % 3 - 1) * 3, -HALF + 4, HALF - 4), clamp(nz.z + fz * (14 + Math.floor(k / 3) * 3), -HALF + 4, HALF - 4)); } }
@@ -3994,6 +3995,18 @@ Sim.prototype.siegeInteract = function (u) {
   return false;
 };
 // the besiegers' generals: push the engines, raise the ladders where the ditch is filled, then climb; the defenders man the walls
+// past the wall the town has to be reached through the breached gate or down the ramps behind the wall: companies still
+// outside make for the gate passage, companies standing on the wall top walk to the nearest ramp and down it
+Sim.prototype.siegeTown = function () {
+  const sg = this.sg, A = sg.A, W = TERR.swall;
+  for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== A || !g.released || g.broken || !p.directive) continue;
+    let n = 0, out = 0, top = 0, tx = 0; for (const id of p.squads) { const q = this.squads[id]; for (const uid of q.unitIds) { const u = this.units[uid]; if (u.dead || u.inactive) continue; n++; if (u.z < W.z0 - 0.5) out++; else if (u.z <= W.z1 + 0.5 && u.y > terrainH(u.x, W.z0 - 4) + 2.5) { top++; tx += u.x; } } }
+    if (!n) continue; const fin = g.townT || (g.townT = { x: p.directive.x, z: p.directive.z }); if (p.directive.wp !== true) { fin.x = p.directive.x; fin.z = p.directive.z; }
+    let wx = fin.x, wz = fin.z;
+    if (out * 2 > n && sg.gateHp <= 0) { wx = 0; wz = W.z1 + 5; }
+    else if (top * 2 > n) { tx /= top; let r = W.ramps[0]; for (const q of W.ramps) if (Math.abs(q - tx) < Math.abs(r - tx)) r = q; wx = r; wz = W.z1 + 15; }
+    p.directive = { kind: DIR_HOLD, x: wx, z: wz, by: -1, wp: wx !== fin.x || wz !== fin.z }; if (p.directive.wp) p.standoff = false; }
+};
 Sim.prototype.siegeDirs = function () {
   const sg = this.sg, M = this.mission, A = sg.A, D = sg.D, W = TERR.swall, s = this.sector;
   const att = Object.keys(this.mg).filter(g => this.mg[g].G.team === A && this.mg[g].released && !this.mg[g].broken);
