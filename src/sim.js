@@ -3425,26 +3425,34 @@ Sim.prototype.assaultCap = function () {
 // and being shoved back. A comrade standing in the way, or coming head-on: step round him (head-on, both keep right).
 // And if for all that he has hardly moved for half a second while meaning to, he is stuck: he side-steps, re-plans his
 // route, and if it keeps happening he squeezes past his own men for a moment. Deterministic: no randomness, ids only.
+const AV_C = [0.9397, 0.7660, 0.5000, 0.0872], AV_S = [0.3420, 0.6428, 0.8660, 0.9962]; // cos/sin of 20, 40, 60, 85 degrees
+// how far he can walk along (hx, hz) before touching a tree, rock, stake or building (up to L)
+Sim.prototype.freeRun = function (u, hx, hz, L) {
+  const r = u.def.r; let best = L; const cs = this.cellSize, W = this.gridW; const cx = Math.floor((u.x + HALF + 5) / cs), cz = Math.floor((u.z + HALF + 5) / cs);
+  for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) { const gx = cx + ox, gz = cz + oz; if (gx < 0 || gz < 0 || gx >= W || gz >= W) continue;
+    let oid = this.obsHead[gz * W + gx];
+    while (oid >= 0) { const o = this.obstacles[oid]; oid = this.obsNext[oid]; const rx = o.x - u.x, rz = o.z - u.z, t = rx * hx + rz * hz; if (t < -0.2 || t > best + o.r + r) continue;
+      const s = rx * hz - rz * hx, clr = r + o.r + 0.12; if (s >= clr || s <= -clr) continue; const e = t - Math.sqrt(clr * clr - s * s); if (e < best) best = e < 0 ? 0 : e; } }
+  for (let t = 0.5; t <= best; t += 0.5) { const px = u.x + hx * t, pz = u.z + hz * t; const bl = this.boxCells[this.cellOf(px, pz)]; if (!bl) continue;
+    for (let k = 0; k < bl.length; k++) { const b = this.boxes[bl[k]]; if (b.hw < 0.1 || b.kind === 'gate' || (b.lad && b.lad.up)) continue;
+      if (Math.abs(px - b.x) < b.hw + r + 0.08 && Math.abs(pz - b.z) < b.hd + r + 0.08) return t - 0.5; } }
+  return best;
+};
 Sim.prototype.steerAround = function (u) {
   if (u.ghostT > 0) u.ghostT -= DT; if (u.unstickT > 0) u.unstickT -= DT;
   const sp = len(u.mx, u.mz);
   if (sp < 0.35) { u.stkX = u.x; u.stkZ = u.z; u.stkK = this.tick; u.stkN = 0; return; }
   let dx = u.mx / sp, dz = u.mz / sp; const nx = dz, nz = -dx, r = u.def.r; let ax = 0, az = 0;
-  // 1. trees, rocks and stakes
-  { const look = clamp(sp * 0.6, 1.4, 3.4), cs = this.cellSize, W = this.gridW; const cx = Math.floor((u.x + HALF + 5) / cs), cz = Math.floor((u.z + HALF + 5) / cs);
-    let bt = 1e9, bs = 0, br = 0;
-    for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) { const gx = cx + ox, gz = cz + oz; if (gx < 0 || gz < 0 || gx >= W || gz >= W) continue;
-      let oid = this.obsHead[gz * W + gx];
-      while (oid >= 0) { const o = this.obstacles[oid]; oid = this.obsNext[oid]; const rx = o.x - u.x, rz = o.z - u.z; const t = rx * dx + rz * dz; if (t < -0.1 || t > look + o.r) continue;
-        const s = rx * nx + rz * nz, clr = r + o.r + 0.15; if (s >= clr || s <= -clr) continue; if (t < bt) { bt = t; bs = s; br = clr; } } }
-    if (bt < 1e9) { const side = bs > 0.02 ? -1 : bs < -0.02 ? 1 : ((u.id & 1) ? 1 : -1); const w = 1 - clamp(bt / (look + 0.5), 0, 1); const k = (0.7 + 1.6 * w) * clamp((br - Math.abs(bs)) / br + 0.3, 0.3, 1.3); ax += nx * side * k; az += nz * side * k; } }
-  // 2. the corner or face of a house, wall or palisade just ahead: slide along it toward the nearer end
-  { const look = clamp(sp * 0.45, 1.0, 2.4), px = u.x + dx * look, pz = u.z + dz * look; const bl = this.boxCells[this.cellOf(px, pz)];
-    if (bl) for (let k = 0; k < bl.length; k++) { const b = this.boxes[bl[k]]; if (b.hw < 0.1 || b.kind === 'gate' || (b.lad && b.lad.up)) continue; const ex = b.hw + r + 0.1, ez = b.hd + r + 0.1;
-      if (Math.abs(px - b.x) >= ex || Math.abs(pz - b.z) >= ez) continue;
-      if (Math.abs(u.x - b.x) >= ex - 0.05) { const tz = Math.abs(dz) > 0.15 ? Math.sign(dz) : (u.z >= b.z ? 1 : -1); ax += -dx * 0.9; az += tz * 1.1; }
-      else { const tx = Math.abs(dx) > 0.15 ? Math.sign(dx) : (u.x >= b.x ? 1 : -1); ax += tx * 1.1; az += -dz * 0.9; }
-      break; } }
+  // 1+2. trees, rocks, stakes and the faces of houses, walls and palisades: if the way ahead is not clear, try headings
+  // fanning out to either side (the side he chose last time first, so he doesn't dither) and take the first clear one
+  { const look = clamp(sp * 0.6, 1.6, 3.4);
+    if (this.freeRun(u, dx, dz, look) < look) {
+      const pref = u.avS || (((u.id >> 1) & 1) ? 1 : -1); let best = 0, bf = -1;
+      for (let k = 0; k < 8; k++) { const sg = (k & 1) ? -pref : pref, j = k >> 1; const c = AV_C[j], s = AV_S[j] * sg; const hx = dx * c + nx * s, hz = dz * c + nz * s;
+        const f = this.freeRun(u, hx, hz, look); if (f >= look) { best = k; bf = f; break; } if (f > bf + 0.25) { bf = f; best = k; } }
+      const sg = (best & 1) ? -pref : pref, j = best >> 1; u.avS = sg; u.avK = this.tick;
+      const c = AV_C[j], s = AV_S[j] * sg; ax += dx * c + nx * s - dx; az += dz * c + nz * s - dz;
+    } else if (u.avS && this.tick - (u.avK || 0) > 20) u.avS = 0; }
   // 3. a comrade in the way
   { const n = this.gatherNear(u.x, u.z, 1.8); let bt = 1e9, bs = 0, head = false;
     for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.team !== u.team || v.mount >= 0 || v.type === 'horse') continue;

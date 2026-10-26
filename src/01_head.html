@@ -97,6 +97,17 @@ kbd { font-family: var(--font-ui); font-size: 11px; background: var(--ink); colo
 .hudbox { position: absolute; background: rgba(14,12,10,.62); border: 1px solid rgba(233,225,207,.18); color: var(--fg); padding: 8px 12px; backdrop-filter: blur(3px); }
 #vitals { left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); min-width: 240px; }
 #vitals .name { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .06em; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 10px; }
+/* compact vitals: no long bars, health is one number that jumps when it changes */
+#vitals { min-width: 0 !important; padding: 8px 12px !important; }
+#vitals .bar { display: none; }
+#vitals .name { font-size: 13px; margin-bottom: 2px; }
+#vitals #hpText { font-family: var(--font-display); font-size: 24px; line-height: 1; font-weight: 800; display: inline-block; transform-origin: 50% 70%; }
+#vitals #hpText.bump { animation: hpBump .35s ease-out; } #vitals #hpText.up { animation: hpUp .5s ease-out; }
+@keyframes hpBump { 0% { transform: scale(1.45) translateY(-3px); filter: brightness(1.8); } 100% { transform: none; filter: none; } }
+@keyframes hpUp { 0% { transform: scale(1.15); } 100% { transform: none; } }
+#vitals .line { align-items: baseline; gap: 12px; }
+#vitals #dirText { font-size: 10.5px; opacity: .7; }
+body.storyhud #vitals #fury, body.storyhud #vitals #bombs, body.storyhud #vitals #dirText, body.storyhud #vitals .line:last-child { display: none; }
 #vitals .name .t0 { color: #ff7d86; } #vitals .name .t1 { color: #8aa9ff; }
 .bar { height: 8px; background: rgba(255,255,255,.12); margin: 4px 0; position: relative; overflow: hidden; }
 .bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); width: 100%; transition: width .12s; }

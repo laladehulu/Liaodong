@@ -1304,6 +1304,8 @@ class Renderer {
     // duels: a ring of torches around the two fighters; frenzied heroes smoulder red
     for (const d of sim.duels) { if (Math.random() < dt * 20) { const a = Math.random() * 6.283, gx = d.x + Math.sin(a) * 9, gz = d.z + Math.cos(a) * 9; this.sparks.spawn(gx, terrainH(gx, gz) + 0.4, gz, 0, 1.5, 0, 0.7, 0.6, 0.1, 1, 0.75, 0.3, 1, 1, -0.6, 1, 0.3, 0.05); } }
     for (const u of sim.units) if (u.frenzyT > 0 && !u.dead && Math.random() < dt * 25) this.sparks.spawn(u.x + rnd(-0.4, 0.4), u.y + rnd(0.5, 1.9), u.z + rnd(-0.4, 0.4), 0, 1.2, 0, 0.5, 0.35, 0.05, 1, 0.25, 0.1, 1, 1, -0.5, 0.6, 0.05, 0.02);
+    { const cp = this.camera.position; if (!this.whistled) this.whistled = new WeakSet(); // a cannonball passing close overhead whistles, once
+      for (const pr of sim.projectiles) { if ((pr.kind !== 'solid' && pr.kind !== 'shell') || this.whistled.has(pr)) continue; const dx = pr.x - cp.x, dy = pr.y - cp.y, dz = pr.z - cp.z; if (dx * dx + dy * dy + dz * dz < 196) { this.whistled.add(pr); AUDIO.play('ballwhistle', pr.x, pr.y, pr.z, 1); } } }
     for (const pr of sim.projectiles) if (pr.kind === 'bomb' && Math.random() < dt * 40) this.sparks.spawn(pr.x, pr.y + 0.15, pr.z, rnd(-0.6, 0.6), rnd(0.5, 1.5), rnd(-0.6, 0.6), 0.25, 0.12, 0.02, 1, 0.8, 0.3, 1, 1, 0.5, 1, 0.4, 0.1);
     for (const u of sim.units) { if (!u.champ || u.dead) continue;
       if (u.spinT > 0.3 && Math.random() < dt * 60) { const a = Math.random() * 6.283; this.sparks.spawn(u.x + Math.sin(a) * 3.6, u.y + 0.15, u.z + Math.cos(a) * 3.6, 0, 0.3, 0, 0.18, 0.4, 0.2, 1, 0.75, 0.3, 1, 1, 0, 1, 0.4, 0.1); }
@@ -1431,7 +1433,7 @@ class Renderer {
         case 'arrow': { AUDIO.play('twang', ev.x, ev.y, ev.z, 1); break; }
         case 'arrowhit': { this.blood(ev.x, ev.y, ev.z, 5, 0, 0.5, 0); AUDIO.play('flesh', ev.x, ev.y, ev.z, 0.8); break; }
         case 'arrowstick': { const i = this.stuckNext; this.stuckNext = (this.stuckNext + 1) % this.stuckN; this.tmp.v.set(ev.vx, ev.vy, ev.vz).normalize(); this.tmp.q.setFromUnitVectors(this.tmp.v2.set(0, 0, 1), this.tmp.v); this.tmp.m.compose(this.tmp.v3.set(ev.x - this.tmp.v.x * 0.35, ev.y - this.tmp.v.y * 0.35, ev.z - this.tmp.v.z * 0.35), this.tmp.q, this.tmp.v4.set(1, 1, 1)); this.stuck.setMatrixAt(i, this.tmp.m); this.stuck.instanceMatrix.needsUpdate = true; this.dust(ev.x, ev.y + 0.05, ev.z, 2, 0, 0.6, 0, 0.5, 0.5, 0.15, 0.4); AUDIO.play(ev.y > 0.4 ? 'woodhit' : 'dirt', ev.x, ev.y, ev.z, 0.7); break; }
-        case 'bounce': { this.dust(ev.x, ev.y + 0.1, ev.z, ev.big ? 14 : 8, 0, 2.5, 0, 2.2, 1.0, 0.4, 1.8); AUDIO.play('thud', ev.x, ev.y, ev.z, ev.big ? 1.2 : 0.9); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 18) this.shake = Math.max(this.shake, 0.25 * (1 - dc / 18)); break; }
+        case 'bounce': { this.dust(ev.x, ev.y + 0.1, ev.z, ev.big ? 14 : 8, 0, 2.5, 0, 2.2, 1.0, 0.4, 1.8); AUDIO.play('cannonhit', ev.x, ev.y, ev.z, ev.big ? 1.2 : 0.9); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 18) this.shake = Math.max(this.shake, 0.25 * (1 - dc / 18)); break; }
         case 'solidhit': { this.blood(ev.x, ev.y, ev.z, 14, 0, 1.5, 0); this.dust(ev.x, ev.y, ev.z, 6, 0, 1.5, 0, 1.5, 0.7, 0.3, 1.2); AUDIO.play('flesh', ev.x, ev.y, ev.z, 1.3); break; }
         case 'gatlingstart': { break; }
         case 'rally': { this.burstSparks(ev.x, ev.y + 1.2, ev.z, 30, 6, 1, 0.85, 0.4, 0.8, 0.14); AUDIO.play('shout', ev.x, ev.y, ev.z, 1); break; }
@@ -2240,6 +2242,7 @@ class Renderer {
       if (this.biomeRain) this.env.weather.visible = !!sim.rain; else if (this.env.rain) { this.env.rain.visible = !!sim.rain; if (sim.rain) { this.env.rain.material.uniforms.time.value = this.time; this.env.rain.material.uniforms.cam.value.copy(cam.position); } } }
     this.sky.position.copy(cam.position);
     AUDIO.setListener(cam.position.x, cam.position.y, cam.position.z, camYaw);
+    if (sim.pickups && !this.studio) this.pkFrame(sim);
     if (typeof VOICE !== 'undefined' && !this.studio) { const lp = sim.players[this.localIdx]; VOICE.frame(dt, sim, lp ? lp.heroId : -1); }
     // fog of war: the enemy is only seen within sight of your own men, or by the flash of his muskets
     if (this.fog) { this.fogT = (this.fogT || 0) - dt; if (this.fogT <= 0) { this.fogT = 0.25; const R = 62 * (1 - 0.45 * (sim.bdef.fog || 0)) * (sim.rain ? 0.8 : 1), R2 = R * R; const mine = [];
@@ -2690,6 +2693,26 @@ Renderer.prototype.campPropDraw = function (u, a, G) {
   for (const k in g) { const m = g[k]; const on = k === kind && !u.dead; m.visible = on; if (!on) continue;
     m.position.set(G[hi], G[hi + 1], G[hi + 2]); const fx = G[hi] - G[ei], fz = G[hi + 2] - G[ei + 2];
     m.rotation.set(k === 'ladle' ? 0.3 : 0, Math.atan2(fx, fz), 0); if (k === 'ladle') m.position.y -= 0.3; if (k === 'gourd') m.position.y += 0.03; }
+};
+// weapons lying where men fell: one small low-poly model per kind, placed flat on the ground and turned by id
+Renderer.prototype.pkFrame = function (sim) {
+  const M = this.pkM || (this.pkM = new Map()), seen = this.pkSeen || (this.pkSeen = new Set()); seen.clear();
+  const mat = this.pkMat || (this.pkMat = { iron: new THREE.MeshLambertMaterial({ color: 0x9aa0a6 }), dark: new THREE.MeshLambertMaterial({ color: 0x3c3c40 }), wood: new THREE.MeshLambertMaterial({ color: 0x6b4a2c }), red: new THREE.MeshLambertMaterial({ color: 0x8a2a1e }), straw: new THREE.MeshLambertMaterial({ color: 0xb79a5a }), horn: new THREE.MeshLambertMaterial({ color: 0x4a3424 }) });
+  const box = (g, w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  const make = (k) => { const g = new THREE.Group();
+    if (k === 'dao' || k === 'jsword') { box(g, 0.05, 0.02, 0.78, mat.iron, 0, 0.02, 0.25); box(g, 0.12, 0.03, 0.03, mat.dark, 0, 0.02, -0.15); box(g, 0.04, 0.035, 0.24, k === 'dao' ? mat.red : mat.wood, 0, 0.02, -0.29); }
+    else if (k === 'spear' || k === 'qiang' || k === 'trident' || k === 'brush') { const L = k === 'spear' ? 4.6 : k === 'brush' ? 4.2 : k === 'trident' ? 2.6 : 3.0; box(g, 0.045, 0.045, L, mat.wood, 0, 0.03, 0);
+      if (k === 'brush') for (let i = 0; i < 6; i++) box(g, 0.6 - i * 0.07, 0.03, 0.03, mat.wood, 0, 0.03, L / 2 - 0.2 - i * 0.22);
+      else if (k === 'trident') { box(g, 0.34, 0.03, 0.03, mat.iron, 0, 0.03, L / 2); for (const s of [-1, 0, 1]) box(g, 0.025, 0.025, 0.28, mat.iron, s * 0.16, 0.03, L / 2 + 0.14); }
+      else box(g, 0.03, 0.02, 0.3, mat.iron, 0, 0.03, L / 2 + 0.15); }
+    else if (k === 'musket' || k === 'jmusket') { box(g, 0.05, 0.06, 0.75, mat.wood, 0, 0.04, -0.15); box(g, 0.025, 0.025, 1.0, mat.dark, 0, 0.07, 0.35); }
+    else if (k === 'sanyan') { box(g, 0.04, 0.04, 1.1, mat.wood, 0, 0.04, -0.3); for (const s of [-1, 0, 1]) box(g, 0.035, 0.035, 0.42, mat.dark, s * 0.04, 0.05 + (s === 0 ? 0.035 : 0), 0.45); }
+    else if (k === 'bow' || k === 'jbow') { const m = k === 'jbow' ? mat.horn : mat.wood; for (let i = -3; i <= 3; i++) { const a = i / 3 * 0.9; box(g, 0.035, 0.025, 0.2, m, Math.cos(a) * 0.45 - 0.42, 0.02, Math.sin(a) * 0.62); } box(g, 0.006, 0.006, 1.2, mat.straw, 0.0, 0.02, 0); }
+    else if (k === 'shield' || k === 'jshield') { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 10), k === 'shield' ? mat.straw : mat.red); s.position.y = 0.04; g.add(s); box(g, 0.1, 0.03, 0.1, mat.dark, 0, 0.08, 0); }
+    return g; };
+  for (const p of sim.pickups) { seen.add(p.id); let g = M.get(p.id);
+    if (!g) { g = make(p.k); const y = terrainH(p.x, p.z); g.position.set(p.x, y + 0.01, p.z); g.rotation.y = (p.id * 2.399) % 6.283; g.rotation.z = ((p.id * 0.37) % 0.3) - 0.15; this.scene.add(g); M.set(p.id, g); } }
+  for (const [id, g] of M) if (!seen.has(id)) { this.scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); M.delete(id); }
 };
 return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, roundBox, uhash };
 })();

@@ -16,6 +16,9 @@ const MUSIC = (() => {
     vc: { A2: 56.97, B1: 46.99 },
   };
   const mf = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  let duckG = null;
+  // a great gun going off pushes the music down for a moment (k: how far, 0..1; d: seconds back up)
+  function duck(k, d) { if (!duckG || !ctx) return; const t = ctx.currentTime, g = duckG.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(Math.max(0.2, 1 - k), t + 0.05); g.linearRampToValueAtTime(1, t + 0.05 + (d || 1.2)); }
   let REC = null, recSrc = null, recG = null, recEnd = 0, comp = null, ctx, out, dry, nb, playing = null, nextT = 0, step = 0, timer = null, vol = 0.5, target = 0.5, I = 0.5, muted = false, prevMel = {};
   function ensure(c) {
     if (out && !c) return true; ctx = c || AUDIO.ctx; if (!ctx) return false; nb = AUDIO.noise;
@@ -25,7 +28,7 @@ const MUSIC = (() => {
     const L = Math.floor(ctx.sampleRate * 2.6), ir = ctx.createBuffer(2, L, ctx.sampleRate);
     for (let c = 0; c < 2; c++) { const ch = ir.getChannelData(c); let lp = 0; for (let i = 0; i < L; i++) { const t = i / ctx.sampleRate; lp += (Math.random() * 2 - 1 - lp) * Math.max(0.08, 0.6 - t * 0.2); ch[i] = lp * Math.exp(-t * 2.3) * (t < 0.018 ? 0 : 1); } for (const e of [0.021, 0.034, 0.047, 0.063]) ch[Math.floor((e + c * 0.003) * ctx.sampleRate)] += 0.5; }
     const verb = ctx.createConvolver(); verb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.3;
-    dry = ctx.createGain(); dry.connect(comp); dry.connect(wet); wet.connect(verb); verb.connect(comp); comp.connect(out); out.connect(ctx.destination);
+    dry = ctx.createGain(); dry.connect(comp); dry.connect(wet); wet.connect(verb); verb.connect(comp); duckG = ctx.createGain(); comp.connect(duckG); duckG.connect(out); out.connect(ctx.destination);
     return true;
   }
   const S = () => SAMPLES;
@@ -247,5 +250,5 @@ const MUSIC = (() => {
   }
   function toggle() { muted = !muted; if (out) out.gain.setTargetAtTime(muted ? 0 : vol, ctx.currentTime, 0.1); return !muted; }
   function setMuted(m) { muted = m; if (out) out.gain.setTargetAtTime(muted ? 0 : vol, ctx.currentTime, 0.1); }
-  return { _offline, play, stop, sting, accent, setIntensity, toggle, setMuted, get muted() { return muted; }, get track() { return playing; } };
+  return { duck, _offline, play, stop, sting, accent, setIntensity, toggle, setMuted, get muted() { return muted; }, get track() { return playing; } };
 })();

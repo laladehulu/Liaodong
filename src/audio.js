@@ -106,10 +106,43 @@ const AUDIO = (() => {
     }
     return false;
   }
+  // ---- the great guns: a layered boom that carries across the whole field and is never dropped by the sound budget ----
+  // crack (near only) + pitched-down shot + sub-bass thump + body roar + a long rolling tail (thunder) + an echo slap
+  // off the hills; distance bends it all toward a low rumble that arrives late. Music ducks under it, and a gun fired
+  // right beside you leaves your ears ringing.
+  let lastBoom = 0;
+  function boom(x, y, z, vol, kind) {
+    const L = listener, dx = x - L.x, dz = z - L.z, dist = Math.sqrt(dx * dx + dz * dz + (y - L.y) * (y - L.y));
+    if (dist > 950) return;
+    const rx = -Math.cos(L.yaw), rz = Math.sin(L.yaw), pan = dist > 0.5 ? Math.max(-1, Math.min(1, (dx * rx + dz * rz) / dist * 0.7)) : 0;
+    const g = vol / (1 + dist / 85), near = Math.max(0, 1 - dist / 70), air = 14000 / (1 + dist / 55);
+    const sp = { gain: g, pan, dist, wet: Math.min(0.9, 0.25 + dist / 250) }, t = ctx.currentTime + Math.min(2.8, dist / 343);
+    const big = kind === 'hit' ? 0.55 : 1, S = SAMPLES.count ? SAMPLES : null;
+    if (near > 0) noise(sp, t, 0.045, 'highpass', 2200, 0.7, g * near * 1.4 * big, 0.001);                                   // crack
+    if (S && S.pick('shot')) { samp(sp, t, S.pick('shot'), 0.38, g * 1.2 * big, air); samp(sp, t + 0.012, S.pick('shot'), 0.55, g * 0.7 * big, air); }
+    tone(sp, t, 1.1, 'sine', 58, 24, g * 1.9 * big);                                                                         // sub thump
+    tone(sp, t, 0.35, 'triangle', 110, 40, g * 0.6 * big);
+    { const f = noise(sp, t, 1.8 + dist / 400, 'lowpass', Math.min(2400, air), 0.6, g * 1.25 * big, 0.006); f.frequency.exponentialRampToValueAtTime(140, t + 1.6); } // body roar
+    if (S && S.pick('thunder')) samp({ ...sp, wet: 0.9 }, t + 0.06, S.pick('thunder'), 1.35 + Math.random() * 0.2, g * 0.55 * big, Math.min(900, air));   // rolling tail
+    else noise({ ...sp, wet: 1 }, t + 0.08, 4, 'lowpass', 240, 0.5, g * 0.7 * big, 0.12);
+    const e1 = 0.35 + (dist % 7) * 0.06; noise({ ...sp, gain: g * 0.45, wet: 1 }, t + e1, 1.6, 'lowpass', 380, 0.6, g * 0.4 * big, 0.03);      // echo off the hills
+    noise({ ...sp, gain: g * 0.25, wet: 1 }, t + e1 * 2.1, 2.2, 'lowpass', 260, 0.6, g * 0.22 * big, 0.06);
+    const now = performance.now();
+    if (kind !== 'hit' && now - lastBoom > 250) { lastBoom = now; if (typeof MUSIC !== 'undefined' && MUSIC.duck) MUSIC.duck(Math.min(0.75, 0.25 + g * 0.5), 1.4); }
+    if (dist < 14 && kind !== 'hit') shellshock(Math.min(0.6, 0.6 * (1 - dist / 14)));
+  }
+  // a ball whistling past or overhead
+  function whistle(x, y, z, vol) {
+    const sp = spatial(x, y, z, vol, 60); if (!sp) return; const t = ctx.currentTime; sp.wet = 0.1;
+    const f = noise(sp, t, 0.55, 'bandpass', 1900, 6, sp.gain * 0.8, 0.12); f.frequency.exponentialRampToValueAtTime(700, t + 0.5);
+    noise(sp, t, 0.5, 'lowpass', 400, 0.7, sp.gain * 0.5, 0.1);
+  }
   function play(name, x, y, z, vol) {
     if (!ctx) return;
+    if (name === 'cannon' || name === 'cannonhit') { boom(x, y, z, vol === undefined ? 1 : vol, name === 'cannonhit' ? 'hit' : 'fire'); if (name === 'cannonhit' && SAMPLES.count) { sampled('dirt', x, y, z, (vol || 1) * 1.6); const sp = spatial(x, y, z, (vol || 1) * 0.9, 120), d = SAMPLES.pick('debris'); if (sp && d) samp(sp, ctx.currentTime + Math.min(1, sp.dist / 343) + 0.03, d, rr(0.9, 1.1), sp.gain * 0.8); } return; }
+    if (name === 'ballwhistle') { whistle(x, y, z, vol === undefined ? 1 : vol); return; }
     const now = performance.now(); if (now - lastFrame > 40) { budget = 16; lastFrame = now; }
-    if (budget-- <= 0) return;
+    if (budget-- <= 0 && name !== 'explosion' && name !== 'collapse' && name !== 'siegehit') return;
     vol = vol === undefined ? 1 : vol;
     if (SAMPLES.count && sampled(name, x, y, z, vol)) return;
     name = { flesh: 'thud', shield: 'clang', thrust: 'swish', woodhit: 'dirt', gatehit: 'thud', ram: 'thud', collapse: 'explosion', siegehit: 'explosion', horsedie: 'death', arrow: 'whiz' }[name] || name;

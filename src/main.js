@@ -927,9 +927,15 @@ function updateHUD(dt) {
   } else { $('crosshair').style.opacity = 0; }
   // vitals
   if (hero) {
-    $('hpFill').style.width = Math.max(0, hero.hp / hero.def.hp * 100).toFixed(1) + '%'; $('hpText').textContent = `${Math.max(0, Math.round(hero.hp))} / ${Math.round(hero.def.hp)}`;
+    $('hpFill').style.width = Math.max(0, hero.hp / hero.def.hp * 100).toFixed(1) + '%';
+    { // health is one number: green, amber, red; it jumps when it changes
+      const hv = Math.max(0, Math.round(hero.hp)), fr = hero.hp / hero.def.hp, ht = $('hpText'); if (ht._v !== hv) { ht.textContent = hv; ht.style.color = fr > 0.6 ? '#9fdc76' : fr > 0.3 ? '#efb24a' : '#f0553f'; if (ht._v !== undefined) { ht.classList.remove('bump', 'up'); void ht.offsetWidth; ht.classList.add(hv < ht._v ? 'bump' : 'up'); } ht._v = hv; } }
+    document.body.classList.toggle('storyhud', !!(sim.mission && (sim.mission.soldier || sim.mission.camp)));
     const nm = state.peerNames[state.localIdx] || 'Commander'; const label = hero.type === 'hero' ? nm : `${nm} · ${hero.def.name.replace(/men$/, 'man').replace(/Infantry/, 'infantryman')}`; if ($('heroName').textContent !== label) $('heroName').textContent = label;
-    { const ws = hero.def.weapons || []; const key = hero.dead ? 'x' : ws.join() + hero.weapon + (hero.def.arm || ''); if (state.wpnKey !== key) { state.wpnKey = key; $('wpns').innerHTML = hero.dead ? '' : ws.map(x => `<span class="${x === hero.weapon ? 'on' : ''}">${wpnName(hero, x)}</span>`).join('') + (ws.length > 1 ? '<kbd>Q</kbd>' : ''); } }
+    if (hero.kit) { const K = hero.kit, am = (sl, i) => { const W = S.WPN[sl.k]; if (!(W && W.gun) && !(sl.o && (sl.w === 'rifle' || sl.w === 'bow'))) return ''; const n = i === hero.kitI ? hero.ammo : sl.am; return n === undefined ? '' : ` <b>${n}</b>`; };
+      const key = hero.dead ? 'x' : 'k' + K.map((s, i) => s.k + (i === hero.kitI ? '*' + hero.ammo : s.am)).join() + (hero.kitSh ? 'S' : '') + hero.weapon;
+      if (state.wpnKey !== key) { state.wpnKey = key; $('wpns').innerHTML = hero.dead ? '' : K.map((s, i) => `<span class="${i === hero.kitI ? 'on' : ''}"><kbd>${i + 1}</kbd> ${s.o ? wpnName(hero.kitI === i ? hero : Object.assign({}, hero, { def: hero.baseDef }), s.w) : S.WPN[s.k].n}${am(s, i)}</span>`).join('') + (hero.kitSh ? `<span>🛡 ${hero.team === 1 ? '盾' : '藤牌'}</span>` : ''); } }
+    else { const ws = hero.def.weapons || []; const key = hero.dead ? 'x' : ws.join() + hero.weapon + (hero.def.arm || ''); if (state.wpnKey !== key) { state.wpnKey = key; $('wpns').innerHTML = hero.dead ? '' : ws.map(x => `<span class="${x === hero.weapon ? 'on' : ''}">${wpnName(hero, x)}</span>`).join('') + (ws.length > 1 ? '<kbd>Q</kbd>' : ''); } }
     { let sb = document.getElementById('stam'); if (!sb) { sb = document.createElement('div'); sb.id = 'stam'; sb.innerHTML = '<i></i>'; sb.style.cssText = 'position:fixed;left:50%;bottom:86px;width:180px;height:5px;margin-left:-90px;background:rgba(0,0,0,.45);border:1px solid rgba(240,230,210,.25);border-radius:3px;overflow:hidden;pointer-events:none;transition:opacity .4s;z-index:5'; sb.firstChild.style.cssText = 'display:block;height:100%;background:#d9cfb6'; document.body.appendChild(sb); }
       const st = hero.champ ? Math.min(1, Math.max(0, (hero.sta || 0) / 100)) : 1 - Math.min(1, Math.max(0, (hero.fat || 0) / 100)); const show = !hero.dead && !Input.cmdMode && (st < 0.97 || hero.sprint);
       sb.style.opacity = show ? 1 : 0; sb.firstChild.style.width = (st * 100).toFixed(1) + '%'; sb.firstChild.style.background = hero.winded ? '#c0452e' : '#d9cfb6'; }
@@ -958,7 +964,9 @@ function updateHUD(dt) {
     const horse = sim.units[me.horseId];
     if (hero.mount < 0 && !hero.mounted && horse && !horse.dead && horse.rider < 0 && Math.hypot(horse.x - hero.x, horse.z - hero.z) < 3.4) ht = 'E · mount your horse';
     else if (hero.downT > 0) ht = 'You are down';
-    else if (hero.type !== 'hero') { const c = sim.units[me.commanderId]; if (c && !c.dead) ht = 'Backspace · return to your commander'; }
+    else if (sim.pickups && sim.pickups.length && hero.mount < 0 && !(hero.manE >= 0)) { let pk = null, bd = 1.9; for (const p of sim.pickups) { const d = Math.hypot(p.x - hero.x, p.z - hero.z); if (d < bd) { bd = d; pk = p; } }
+      if (pk && !sim.units.some(v => v.downed && !v.dead && v.team === hero.team && Math.hypot(v.x - hero.x, v.z - hero.z) < 2.6)) { const W = S.WPN[pk.k]; const full = hero.kit ? hero.kit.length >= 4 : (hero.def.weapons || []).length >= 4; ht = `E · pick up ${W.n}${W.sh ? '' : full ? ' (swap for the one in your hands)' : ''}`; } }
+    else if (hero.type !== 'hero' && !(sim.mission && sim.mission.soldier)) { const c = sim.units[me.commanderId]; if (c && !c.dead) ht = 'Backspace · return to your commander'; }
   } else if (hero && hero.dead) ht = (state.sim.mode === 'campaign' ? 'You have fallen. Press P to rejoin the fight with one of your companies' : 'You have fallen. Select a squad and press O, then U, to fight on in their ranks');
   if (!sim.heroMode) { if (ht !== hint.textContent) hint.textContent = ht; hint.hidden = !ht; }
   // periodic panels
