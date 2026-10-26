@@ -3064,7 +3064,7 @@ Sim.prototype.siegeThink = function () {
     const moving = pushers >= e.need && foes <= pushers && e.z < tz - 0.05;
     if (moving) { const st = S.sp * 15 * DT * (pushers >= e.need * 2 ? 1.25 : 1); e.z = Math.min(tz, e.z + st); e.x += clamp(lane - e.x, -st, st); }
     if (e.kind === 'tower' && !e.docked && e.z >= e.tz - 0.05) { e.docked = true; e.lad.up = true; nav = true; this.events.push({ t: 'sgdock', x: e.x, z: e.z }); }
-    if (e.kind === 'ram') { e.atGate = e.z >= e.tz - 0.05; if (e.atGate && sg.gateHp > 0 && pushers >= 1) { this.sgGate(30 + pushers * 2); if (this.tick % 45 === 0) this.events.push({ t: 'sgram', x: 0, z: W.z0 }); } }
+    if (e.kind === 'ram') { e.atGate = e.z >= e.tz - 0.05; if (e.atGate && sg.gateHp > 0 && pushers >= 1) { this.sgGate(44 + pushers * 4); if (this.tick % 45 === 0) this.events.push({ t: 'sgram', x: 0, z: W.z0 }); } }
   }
   // sappers at the shield carts chisel through the wall face
   for (const L of sg.holes) { if (L.up) continue; const n = this.sgCount(L.x, W.z0 - 1.6, 3.5, A); const cart = sg.engines.find(e => e.kind === 'cart' && e.lane === L.x && e.hp > 0 && e.z > W.z0 - 6);
