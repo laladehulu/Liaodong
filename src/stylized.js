@@ -11,8 +11,8 @@
   const ST = { time: { value: 0 } };
   const styQ = () => { try { const v = localStorage.getItem('ming_q'); return v === null ? 1 : Math.max(0, Math.min(2, +v)); } catch (e) { return 1; } };
   // palettes: sky (top, horizon), light (sun, hemisphere sky/ground), ground tones (three grass bands + earth), foliage tint, fog
-  const DAY = { top: 0x6f9cc6, hor: 0xe9dcbf, cloud: 0xfaf4e6, cloudSh: 0xc3c8cf, sun: 0xfff0d2, sunI: 1.25, hemiS: 0xc6d6e4, hemiG: 0x7a6a4c, hemiI: 0.85,
-    g: [0x7f8f45, 0x96a050, 0xb3ab5c], earth: 0x9a7a52, fol: 1.25, fog: 0xd9d6c4, ink: 0x2a2420, mtn: 0x8ea3b4, exp: 1.0 };
+  const DAY = { top: 0x6f9cc6, hor: 0xe9dcbf, cloud: 0xfaf4e6, cloudSh: 0xc3c8cf, sun: 0xfff0d2, sunI: 1.0, hemiS: 0xb9c8d6, hemiG: 0x6a5c42, hemiI: 0.72,
+    g: [0x66783c, 0x768444, 0x8c8c4e], earth: 0x9a7a52, fol: 1.25, fog: 0xd9d6c4, ink: 0x2a2420, mtn: 0x8ea3b4, exp: 1.0 };
   const WIN = { top: 0x7f9fbf, hor: 0xe6ecf0, cloud: 0xffffff, cloudSh: 0xc9d3de, sun: 0xfff6e6, sunI: 1.05, hemiS: 0xd2e0ee, hemiG: 0x8c94a0, hemiI: 0.95,
     g: [0xdfe7ee, 0xeef3f6, 0xffffff], earth: 0x8c8278, fol: 1.15, fog: 0xdfe6ec, ink: 0x2b2f3a, mtn: 0xa9b8c8, exp: 1.0 };
   const STORM = { top: 0x56646f, hor: 0xa8adad, cloud: 0x9aa1a6, cloudSh: 0x6d767e, sun: 0xdfe6ee, sunI: 0.8, hemiS: 0xaab4bd, hemiG: 0x55503f, hemiI: 1.0,
@@ -37,7 +37,7 @@
       if (!o.isMesh || !o.material || !o.material.isMeshLambertMaterial) return;
       const m = o.material, isMetal = metal.has(o); const key = m.uuid + (isMetal ? 'm' : '');
       let t = cache.get(key);
-      if (!t) { const col = punch(m.color.clone(), 1.18); if (isMetal) col.lerp(C(0xdfe4ea), 0.35);
+      if (!t) { const col = punch(m.color.clone(), 1.06); if (isMetal) col.lerp(C(0xdfe4ea), 0.35);
         t = new THREE.MeshToonMaterial({ color: col, vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, side: m.side, depthWrite: m.depthWrite, gradientMap: g }); cache.set(key, t); cache.set(m, t); }
       o.material = t;
     });
@@ -98,7 +98,7 @@
           float aw = fwidth(n) * 1.5 + 0.004; float cloud = smoothstep(0.56 - aw, 0.56 + aw, n) * smoothstep(0.0, 0.06, h);
           float shade = smoothstep(0.62 - aw, 0.62 + aw, n2);
           c = mix(c, mix(cs, cl, shade), cloud * (night > 0.5 ? 0.6 : 0.95));
-          float s = dot(d, normalize(sunDir)); float disc = smoothstep(0.9975, 0.998, s);
+          float s = dot(d, normalize(sunDir)); float disc = smoothstep(0.9988, 0.99895, s);
           c = mix(c, sunCol * (night > 0.5 ? 1.0 : 1.08), disc * (1.0 - cloud * 0.8));
           c += sunCol * pow(max(s, 0.0), 24.0) * 0.12 * (1.0 - night);
           if (night > 0.5) { vec2 sp = floor(d.xz / max(0.2, h + 0.3) * 260.0); float st = step(0.996, sH(sp)) * smoothstep(0.1, 0.4, h) * (1.0 - cloud); c += vec3(0.85, 0.88, 1.0) * st * 0.8; }
@@ -122,16 +122,16 @@
   // ---- distant burning: stacked low-poly smoke puffs that drift upward (flat toon grey, no soft texture)
   R.buildPuffColumns = function () {
     let seed = 31 + (this.sim.seed & 255); const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    const N = 6, P = 9, g = new THREE.IcosahedronGeometry(1, 0); const night = !!this.biome.night;
+    const N = 5, P = 9, g = new THREE.IcosahedronGeometry(1, 1); const night = !!this.biome.night;
     const mesh = new THREE.InstancedMesh(g, new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: this.styGrad, fog: false }), N * P); mesh.frustumCulled = false;
     this.puffs = []; let k = 0;
     for (let i = 0; i < N; i++) { const a = rr() * Math.PI * 2, R0 = 190 + rr() * 150, x = Math.sin(a) * R0, z = Math.cos(a) * R0, lean = (rr() - 0.5) * 0.5;
-      for (let j = 0; j < P; j++) { const f = j / P; const c = C(night ? 0x2a3046 : 0x8c8a86).lerp(C(night ? 0x4a5270 : 0xd8d4cc), f); if (j === 0) c.set(night ? 0x9a4a2a : 0x6a5c50); mesh.setColorAt(k, c); this.puffs.push({ k, x, z, lean, f, s: 9 + f * 26 + rr() * 6, ph: rr() * 6.28 }); k++; } }
+      for (let j = 0; j < P; j++) { const f = j / P; const c = C(night ? 0x1c2338 : 0x9a9690).lerp(C(night ? 0x2a3350 : 0xe4dfd4), f); if (j === 0) c.set(night ? 0x7a3a22 : 0x7a6a5a); mesh.setColorAt(k, c); this.puffs.push({ k, x, z, lean, f, s: 9 + f * 26 + rr() * 6, ph: rr() * 6.28 }); k++; } }
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; this.scene.add(mesh); this.puffMesh = mesh; this.updatePuffs(0);
   };
   R.updatePuffs = function (t) {
     if (!this.puffMesh) return; const T = this.tmp, P = 9;
-    for (const p of this.puffs) { const ff = (p.f + t * 0.004) % 1; const y = 4 + ff * P * 15; const s = (9 + ff * 30) * (ff > 0.85 ? (1 - ff) / 0.15 : 1);
+    for (const p of this.puffs) { const ff = (p.f + t * 0.004) % 1; const y = 2 + ff * P * 10; const s = (5 + ff * 17) * (ff > 0.85 ? (1 - ff) / 0.15 : 1);
       T.m.compose(T.v.set(p.x + p.lean * y + Math.sin(p.ph + y * 0.05) * 4, y, p.z), T.q.setFromEuler(T.e.set(p.ph, p.ph + t * 0.02, 0)), T.v2.set(s, s * 0.8, s)); this.puffMesh.setMatrixAt(p.k, T.m); }
     this.puffMesh.instanceMatrix.needsUpdate = true;
   };
