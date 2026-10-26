@@ -597,7 +597,7 @@ class Renderer {
     const sc = this.scene, L = (c) => new THREE.MeshLambertMaterial({ color: c });
     const tents = this.sim.boxes.filter(b => b.kind === 'tent');
     if (tents.length) { const g = new THREE.CylinderGeometry(1, 1, 1, 3, 1); g.rotateX(-Math.PI / 2); g.translate(0, 0.5, 0); const m = new THREE.InstancedMesh(g, L(0xb9ab8a), tents.length); const T = this.tmp;
-      tents.forEach((b, i) => { const y = terrainH(b.x, b.z); T.m.compose(T.v.set(b.x, y, b.z), T.q.identity(), T.v2.set(b.hw * 2 / 1.732, b.h / 1.5, b.hd * 2)); m.setMatrixAt(i, T.m); }); m.castShadow = true; m.receiveShadow = true; sc.add(m);
+      tents.forEach((b, i) => { const y = Math.min(terrainH(b.x, b.z) - 0.04, this.footY(b) + 0.04); T.m.compose(T.v.set(b.x, y, b.z), T.q.identity(), T.v2.set(b.hw * 2 / 1.732, b.h / 1.5, b.hd * 2)); m.setMatrixAt(i, T.m); }); m.castShadow = true; m.receiveShadow = true; sc.add(m);
       for (const b of tents) { const y = terrainH(b.x, b.z); const flap = new THREE.Mesh(new THREE.PlaneGeometry(b.hw * 0.9, b.h * 0.7), L(0x2a2620)); flap.position.set(b.x, y + b.h * 0.32, b.z + b.hd + 0.02); sc.add(flap);
         for (const sz of [-1, 1]) { const pole = new THREE.Mesh(new THREE.BoxGeometry(0.06, b.h + 0.25, 0.06), L(0x5a4630)); pole.position.set(b.x, y + (b.h + 0.25) / 2, b.z + sz * (b.hd + 0.05)); sc.add(pole); } } }
     this.campFires = [];
