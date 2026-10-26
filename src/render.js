@@ -1560,10 +1560,10 @@ class Renderer {
     // a wounded man going down (and being got up again) is animated, not snapped: a.dw runs 0 (on his feet) to 1 (on the ground)
     if (a.dw === undefined) a.dw = 0;
     if (wnd || a.dw > 0) { const want = wnd && u.downed ? 1 : 0;
-      if (!wnd) a.dw = 0;
+      if (!wnd) { if (u.dead || mounted) a.dw = 0; else { a.dUp = true; a.dw = Math.max(0, a.dw - dt / 0.8); } } // hauled up: he gets up, he doesn't pop up
       else if (want > a.dw) { if (!(a.dw > 0)) { a.dw = 0; a.dV = uhash(u.id, 23) < 0.5 ? 1 : -1; } a.dUp = false; a.dw = Math.min(1, a.dw + dt / 1.05); }
       else if (want < a.dw) { a.dUp = true; a.dw = Math.max(0, a.dw - dt / 0.8); } }
-    const down = (u.downT > 0 && !mounted) || (wnd && a.dw > 0);
+    const down = (u.downT > 0 && !mounted) || (a.dw > 0 && !u.dead && !mounted);
     const sq = u.squad >= 0 ? this.sim.squads[u.squad] : null, routing = !!(sq && sq.routing);
     // ---------- locomotion state ----------
     const k8 = 1 - Math.exp(-8 * dt);
@@ -1732,7 +1732,7 @@ class Renderer {
       const sx = [1, -1];
       for (let i = 0; i < 2; i++) { const o = i * 9, s = sx[i]; legs[o] = s * 0.1; legs[o + 1] = 0; legs[o + 2] = 0; legs[o + 3] = s * 0.34; legs[o + 4] = -0.3; legs[o + 5] = 0.28; legs[o + 6] = s * 0.32; legs[o + 7] = -0.78; legs[o + 8] = 0.1; }
       pel = 1.47 + (u.mount >= 0 ? this.anim(u.mount).hbob : a.hbob);
-    } else if (down && wnd && a.dw !== undefined) { // the fall of a wounded man: stagger, knees buckle, one knee, down on his back, up on an elbow
+    } else if (down && a.dw > 0 && (wnd || !(u.downT > 0))) { // the fall of a wounded man: stagger, knees buckle, one knee, down on his back, up on an elbow
       // keys: [thigh A, knee A, thigh B, knee B, pelvis height, torso lean, lift, roll, leg-plane A, leg-plane B]; A is the
       // knee-up / kneeling leg. The body is jointed, not tipped over: the pelvis comes down to the ground and the chest
       // bends back (or forward) from it, so the legs, the trunk and the head each find the ground on their own.
@@ -1747,6 +1747,7 @@ class Renderer {
       for (let j = 0; j < 10; j++) KD[j] = KG[j] + (KC[j] - KG[j]) * a.cw;
       const KS = [0.05, 0.1, -0.05, 0.1, 0.91, 0, 0, 0, 0, 0], KT = [0.35, 0.5, -0.25, 0.25, 0.84, 0.32, 0, 0.12 * sA, 0, 0], KN = [1.1, 1.5, 0.1, 1.6, 0.5, 0.25, 0, 0.1 * sA, 0, 0];
       const KB = [1.3, 0.55, 1.45, 0.3, 0.2, -1.25, 0.05, -0.12 * sA, 0, 0]; // sat down hard and going over backwards
+      { const rv = u.reviveBy >= 0 && u.downed ? clamp((u.reviveT || 0) / 45, 0, 1) : 0; if (rv > 0) for (let j = 0; j < 10; j++) KD[j] += (KN[j] - KD[j]) * rv * 0.75; } // a comrade pulling him up: up onto a knee as the bar fills
       const KEYS = a.dUp ? [[0, KS], [0.45, KN], [1, KD]] : [[0, KS], [0.22, KT], [0.5, KN], [0.78, KB], [1, KD]];
       const w = a.dw, Q = this._dwq || (this._dwq = new Float64Array(10)); let i = 0; while (i < KEYS.length - 2 && w > KEYS[i + 1][0]) i++;
       const k0 = KEYS[i], k1 = KEYS[i + 1]; let s = clamp((w - k0[0]) / Math.max(1e-4, k1[0] - k0[0]), 0, 1); s = s * s * (3 - 2 * s);
