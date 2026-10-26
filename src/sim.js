@@ -1803,7 +1803,8 @@ class Sim {
   }
   // ---------- ranged ----------
   fireHeroGun(u, g) {
-    let spread = (u.aiming ? (g.ads || g.spread * 0.3) : g.spread) + u.speedNow * 0.004 + (u.mount >= 0 ? 0.008 : 0) + (u.airborne ? 0.03 : 0);
+    // a bow def has no spread of its own (its archers aim by 'aim'): without a default every arrow a player loosed flew NaN
+    const gsp = g.spread !== undefined ? g.spread : 0.03; let spread = (u.aiming ? (g.ads || gsp * 0.3) : gsp) + (u.speedNow || 0) * 0.004 + (u.mount >= 0 ? 0.008 : 0) + (u.airborne ? 0.03 : 0);
     if (this.real) spread = spread * (1 + 2.2 * Math.max(0, 1 - (u.aimHold || 0) / 1.4)) + u.speedNow * 0.01 + ((u.fat || 0) > 50 ? 0.01 : 0);
     if (u.weapon === 'bow') { const v = g.speed || 50, cp = cos(u.pitch); const ox = u.x + sin(u.yaw) * 0.5, oy = u.y + 1.55, oz = u.z + cos(u.yaw) * 0.5; const sp2 = spread * 0.6;
       const yw = u.yaw + (this.rng.next() - 0.5) * sp2, pt = u.pitch + (this.rng.next() - 0.5) * sp2;
