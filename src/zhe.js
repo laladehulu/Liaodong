@@ -530,6 +530,9 @@ function zGoal() {
   let g = P.goal || (P.text || '').split(/(?<=[.!?])\s/)[0]; if (g.length > 70) g = g.slice(0, 67).replace(/\s\S*$/, '') + '…';
   const z = P.obj && (P.obj.extract || P.obj.reach) ? sim.missionZone(P.obj.extract || P.obj.reach) : null, h = localHero();
   if (z && h && !h.dead) g += ` · ${Math.round(Math.hypot(z.x - h.x, z.z - h.z))} m`;
+  // a phase you only have to live through shows how long is left, so nobody thinks he must kill every banner
+  const sv = P.obj && (P.obj.survive || (P.obj.all && (P.obj.all.find(o => o.survive) || {}).survive));
+  if (sv) { const left = Math.max(0, Math.ceil(sv - (sim.tick - sim.mv.t0) / 30)); if (left > 0) g += ` · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; }
   return g;
 }
 function zheHUD(dt) {

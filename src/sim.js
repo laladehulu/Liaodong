@@ -2611,9 +2611,9 @@ const MISSIONS = {
       rw: { team: 1, name: 'The right wing', army: ['samurai', 'samurai', 'ashigaru', 'archer', 'cavalry'], at: [100, 138, PI], reserve: true, stay: true },
       guns: { team: 1, name: 'The Shenyang guns', army: ['cannon4', 'rifle_sho'], at: [86, 112, PI], reserve: true, stay: true, dir: ['hold', 86, 92] },
       lw: { team: 1, name: 'The left wing', army: ['samurai', 'samurai', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
-      east: { team: 1, name: 'Banners from the east', army: ['samurai', 'byakkotai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
+      east: { team: 1, name: 'Banners from the east', army: ['samurai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
       night: { team: 1, name: 'Daišan\'s banners', zh: '代善', army: ['shinsengumi', 'samurai', 'samurai', 'cavalry'], at: [140, -110, -PI / 2], reserve: true },
-      cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
+      cut: { team: 1, name: 'Jin horsemen', army: ['cavalry'], at: [-140, -96, PI / 2], reserve: true },
     },
     phases: [
       { title: '一 · 橋北 · North of the bridge', goal: 'Stand to in camp and watch the far bank', text: 'The White Poles have crossed to the north bank. Stand to in the Zhejiang camp with your file and watch the far bank.', show: ['camp'],
@@ -2634,22 +2634,22 @@ const MISSIONS = {
           [73, 'lookout', 'Qin Bangping is down! Zhou Dunji is down! The Sichuan men are coming back over the bridge!', '秦邦屏陣亡！周敦吉陣亡！川兵退過橋來了！']] },
       { title: '三 · 車營 · The wagon camp', goal: 'Get back inside the camp and hold the wagons', text: 'The Jin left wing is over the river. Get your file back inside the camp and hold the line of wagons and palisades.', show: ['camp'], hide: ['sbridge'],
         start: [['release', 'lw'], ['dir', 'lw', 'hold', 58, -58], ['dir', 'chen', 'hold', 64, -56], ['dir', 'zhe', 'hold', 58, -60]],
-        obj: { survive: 110 }, waves: [[40, 'east', ['hold', 58, -60]]],
+        obj: { survive: 110 }, waves: [[60, 'east', ['hold', 58, -60]]],
         at: [[64, ['wound', 3]]],
         say: [[3, 'qi', 'Wagons together! Muskets to the palisade — let them come onto the guns.', '車並起來！銃手上柵——讓他們撞上來。'],
           [36, 'lookout', 'Shield carts! They are pushing shield carts at the ditch!', '盾車！他們推盾車來填壕了！'],
           [85, 'qi', 'The powder is nearly gone. Spears forward, shields close up!', '火藥快盡了！長槍向前，藤牌靠攏！']] },
       { title: '四 · 夜 · The last stand', goal: 'Take your file and wounded down the Liaoyang road', text: 'Night. The camp cannot hold. Qi Jin orders you out: take your file and your wounded down the Liaoyang road, so that someone lives to tell what happened here.', show: ['road'], hide: ['camp'],
-        start: [['release', 'night'], ['dir', 'night', 'hold', 58, -60], ['kill', 'chen']],
+        start: [['release', 'night'], ['dir', 'night', 'hold', 58, -60], ['kill', 'chen'], ['calm', 'bayara', 24], ['calm', 'rw', 24], ['calm', 'lw', 24], ['calm', 'east', 24], ['calm', 'night', 24], ['dir', 'bayara', 'hold', 58, -60], ['dir', 'rw', 'hold', 58, -60], ['dir', 'lw', 'hold', 58, -60], ['dir', 'east', 'hold', 58, -60]],
         obj: { extract: 'road' }, limit: 420, fail: 'The ring closed around the camp.',
-        waves: [[14, 'cut', ['attack']]], at: [[55, ['kill', 'zhe']]],
+        waves: [[14, 'cut', ['hold', -62, -118]]], at: [[15, ['calm', 'cut', 30]], [95, ['kill', 'zhe']]],
         say: [[1, 'lookout', 'The big banner on the east side — it\'s down!', '東邊的大旗倒了！'], [2, 'soldier', 'General Chen Ce is dead!', '陳總兵陣亡了！'],
           [4, 'fang', 'The general who asked about our feet last night...', '昨晚問我們腳冷不冷的那個總兵……'],
           [6, 'qi', 'A man repays his country today, of all days.', '大丈夫報國，就在今日。'],
           [12, 'qi', 'You — take your file and your wounded down the Liaoyang road. Someone must live to tell them what happened here.', '你——帶你的人和傷兵走遼陽大路。總得有人活著，把這裡的事說出去。'],
           [16, 'lookout', 'Horsemen on the road ahead!', '前面路上有馬兵！'],
-          [55, 'lookout', 'The drum... listen. The drum has stopped.', '鼓……你聽，鼓停了。'], [56, 'lookout', 'General Qi has fallen!', '戚副將陣亡了！'],
-          [60, 'he', 'He sat at our fire last night. He knew our names.', '他昨晚還跟我們烤火。他記得我們的名字。']] },
+          [95, 'lookout', 'The drum... listen. The drum has stopped.', '鼓……你聽，鼓停了。'], [96, 'lookout', 'General Qi has fallen!', '戚副將陣亡了！'],
+          [100, 'he', 'He sat at our fire last night. He knew our names.', '他昨晚還跟我們烤火。他記得我們的名字。']] },
     ],
     win: 'You got out by the Liaoyang road.',
   },
@@ -2890,6 +2890,7 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
   else if (a[0] === 'promote') this.zPromote();
   else if (a[0] === 'break') this.mBreak(a[1]);
+  else if (a[0] === 'calm') { const g = this.mg[a[1]]; if (g) { g.calm = a[2]; const p = this.players[g.p]; if (g.released && !g.broken) p.aggr = a[2]; } }
   else if (a[0] === 'wound') this.zWound(a[1] | 0);
   else if (a[0] === 'sector') { this.sector = a[1] | 0; if (a[2] && this.sg) for (const f of TERR.sditch.fills) if (!f.done) { f.done = true; this.sgRewater(f); this.events.push({ t: 'sgfill', x: f.x, z: TERR.sditch.zc }); } if (this.sg) { this.navBoxes(); this.siegeDirs(); } }
 };
@@ -3028,6 +3029,8 @@ Sim.prototype.mAggro = function () {
   const M = this.mission, side = M.side;
   for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team === side || !g.released || g.broken || p.fleeing) continue; p.aggr = 55;
     if (!g.G.officer && this.mGroupFrac(gid) < 0.12) { this.mBreak(gid); continue; } // a general with no men left quits the field
+    // a scripted 'calm' pins a group to its directive with a short reach (e.g. the Jin busy storming a camp)
+    if (g.calm !== undefined) { p.aggr = g.calm; continue; }
     const D = p.directive; if (!D || D.kind !== DIR_HOLD) { g.idle = 0; continue; }
     let gx = 0, gz = 0, gn = 0; for (const id of p.squads) { const q = this.squads[id]; if (q.alive && !q.inactive) { gx += q.cx; gz += q.cz; gn++; } } if (!gn) continue; gx /= gn; gz /= gn;
     let dm = 1e9; for (const q of this.squads) if (q.alive && !q.inactive && q.team === side) dm = Math.min(dm, len(q.cx - gx, q.cz - gz));
