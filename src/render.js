@@ -1669,6 +1669,10 @@ class Renderer {
     if (u.camp && !u.dead && u.cAct !== undefined) { const P = this.campPoseT(u, a, w); a.cProp = P.prop; a.cPropH = P.ph;
       lean = P.lean; twist = P.twist; crouch = P.crouch; stance = P.stance; roll = P.roll; rateB = 5;
       if (P.anchor !== 'skip') { anchor = P.anchor; fkL = P.fkL; fkR = P.fkR; two = P.two; rateW = 6; } }
+    if (u.camp) { // a man who looks up at you turns his head first (the body only turns if he gets up to talk)
+      let want = 0; const lp = this.sim.players[this.localIdx], hh = lp ? this.sim.units[lp.heroId] : null;
+      if (u.cLook && u.cAct !== 7 && hh && !hh.dead) want = clamp(wrapA(Math.atan2(hh.x - x, hh.z - z) - yaw), -1.05, 1.05);
+      a.hYw = (a.hYw || 0) + (want - (a.hYw || 0)) * (1 - Math.exp(-4 * dt)); } else a.hYw = 0;
     if (u.wounded && !u.dead) { if (u.helpedBy >= 0) { lean = 0.28; crouch = Math.max(crouch, 0.16); roll = 0.12 * Math.sin(ph); } else { crouch = 0.62; lean = 0.62; roll = 0.1; stance = 0.4; } rateB = 8; } // doubled over / limping on a friend's shoulder
     // ---------- smoothing ----------
     a.recoil = Math.max(0, a.recoil - dt * 3.2);
@@ -1694,7 +1698,7 @@ class Renderer {
     // ---------- legs (root-local; +x left, +z forward) ----------
     const LT = 0.46, LS = 0.46;
     const legs = this._legs || (this._legs = new Float64Array(18)); // hipL,kneeL,footL,hipR,kneeR,footR
-    let pel, wdp = null, woy = 0;
+    let pel, wdp = null, woy = 0, lie = null; a.hK = 0.5;
     const legPlane = (o, side, th, kn, bb) => {
       const fx = Math.sin(bb), fz = Math.cos(bb);
       const f1 = LT * Math.sin(th), v1 = LT * Math.cos(th), f2 = f1 + LS * Math.sin(th - kn), v2 = v1 + LS * Math.cos(th - kn);
@@ -1708,23 +1712,39 @@ class Renderer {
       for (let i = 0; i < 2; i++) { const o = i * 9, s = sx[i]; legs[o] = s * 0.1; legs[o + 1] = 0; legs[o + 2] = 0; legs[o + 3] = s * 0.34; legs[o + 4] = -0.3; legs[o + 5] = 0.28; legs[o + 6] = s * 0.32; legs[o + 7] = -0.78; legs[o + 8] = 0.1; }
       pel = 1.47 + (u.mount >= 0 ? this.anim(u.mount).hbob : a.hbob);
     } else if (down && wnd && a.dw !== undefined) { // the fall of a wounded man: stagger, knees buckle, one knee, down on his back, up on an elbow
-      const g = u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1);
-      if (a.dpG === undefined || a.dw < 0.75) a.dpG = g; else a.dpG += (g - a.dpG) * (1 - Math.exp(-3.5 * dt));
-      const gp = a.dpG, kw = clamp(1 - Math.abs(gp) / 0.6, 0, 1), sv = a.dV || 1;
-      // each key: thigh/knee of the kneeling-side leg, thigh/knee of the other, pelvis height, body pitch, lift
-      const KS = [0.05, 0.1, -0.05, 0.1, 0.91, 0, 0], KG = [lerp(0.12, 1.1, kw), lerp(0.2, 1.5, kw), lerp(-0.05, 0.1, kw), lerp(0.3, 1.6, kw), lerp(0.92, 0.5, kw), gp, 0.15 * (1 - kw)];
-      const KN = [1.1, 1.5, 0.1, 1.6, 0.5, 0.18, 0], KT = [0.35, 0.5, -0.25, 0.25, 0.84, sv > 0 ? -0.22 : 0.2, 0], KB = [0.3, 0.6, 0.1, 0.5, 0.92, -1.3, 0.15];
-      const KEYS = a.dUp ? [[0, KS], [0.45, KN], [1, KG]] : [[0, KS], [0.22, KT], [0.5, KN], [0.78, KB], [1, KG]];
-      const w = a.dw, Q = this._dwq || (this._dwq = new Float64Array(7)); let i = 0; while (i < KEYS.length - 2 && w > KEYS[i + 1][0]) i++;
+      // keys: [thigh A, knee A, thigh B, knee B, pelvis height, torso lean, lift, roll, leg-plane A, leg-plane B]; A is the
+      // knee-up / kneeling leg. The body is jointed, not tipped over: the pelvis comes down to the ground and the chest
+      // bends back (or forward) from it, so the legs, the trunk and the head each find the ground on their own.
+      const sv = a.dV || 1, sA = sv > 0 ? 1 : -1, tt = (this.time || 0) + u.id * 1.37;
+      a.cw = (a.cw || 0) + ((u.crawling ? 1 : 0) - (a.cw || 0)) * (1 - Math.exp(-2.5 * dt));
+      const KG = this._lieKG || (this._lieKG = new Float64Array(10)), KC = this._lieKC || (this._lieKC = new Float64Array(10)), KD = this._lieKD || (this._lieKD = new Float64Array(10));
+      { const br = 0.025 * Math.sin(tt * 1.9), sh = 0.04 * Math.sin(tt * 0.37); // on his back, up on an elbow, one knee up; breathing hard, shifting
+        KG[0] = 2.05 + sh; KG[1] = 1.42 + sh; KG[2] = 1.42; KG[3] = 0.28 + 0.08 * Math.sin(tt * 0.23); KG[4] = 0.17; KG[5] = -1.02 + br; KG[6] = 0; KG[7] = -0.2 * sA; KG[8] = -0.1 * sA; KG[9] = 0.12 * sA; }
+      { a.crPh = (a.crPh || 0) + dt * (a.spd > 0.12 ? 3.4 : 0.5); const c = a.crPh, s1 = Math.sin(c); // face down: the arms pull in turn, one leg drawn up to push, the other dragging
+        KC[0] = -1.32 + 0.38 * s1; KC[1] = 0.55 + 0.75 * Math.max(0, s1); KC[2] = -1.38 - 0.12 * s1; KC[3] = 0.3 + 0.75 * Math.max(0, -s1); KC[4] = 0.17; KC[5] = 1.36; KC[6] = 0; KC[7] = 0.1 * s1; KC[8] = -sA * (0.3 + 0.3 * Math.max(0, s1)); KC[9] = sA * (0.3 + 0.3 * Math.max(0, -s1)); }
+      for (let j = 0; j < 10; j++) KD[j] = KG[j] + (KC[j] - KG[j]) * a.cw;
+      const KS = [0.05, 0.1, -0.05, 0.1, 0.91, 0, 0, 0, 0, 0], KT = [0.35, 0.5, -0.25, 0.25, 0.84, 0.32, 0, 0.12 * sA, 0, 0], KN = [1.1, 1.5, 0.1, 1.6, 0.5, 0.25, 0, 0.1 * sA, 0, 0];
+      const KB = [1.3, 0.55, 1.45, 0.3, 0.2, -1.25, 0.05, -0.12 * sA, 0, 0]; // sat down hard and going over backwards
+      const KEYS = a.dUp ? [[0, KS], [0.45, KN], [1, KD]] : [[0, KS], [0.22, KT], [0.5, KN], [0.78, KB], [1, KD]];
+      const w = a.dw, Q = this._dwq || (this._dwq = new Float64Array(10)); let i = 0; while (i < KEYS.length - 2 && w > KEYS[i + 1][0]) i++;
       const k0 = KEYS[i], k1 = KEYS[i + 1]; let s = clamp((w - k0[0]) / Math.max(1e-4, k1[0] - k0[0]), 0, 1); s = s * s * (3 - 2 * s);
-      for (let j = 0; j < 7; j++) Q[j] = k0[1][j] + (k1[1][j] - k0[1][j]) * s;
-      const oA = sv > 0 ? 0 : 9, oB = sv > 0 ? 9 : 0; legPlane(oA, oA ? -1 : 1, Q[0], Q[1], 0); legPlane(oB, oB ? -1 : 1, Q[2], Q[3], 0);
-      pel = Q[4]; wdp = Q[5]; woy = Q[6];
+      for (let j = 0; j < 10; j++) Q[j] = k0[1][j] + (k1[1][j] - k0[1][j]) * s;
+      const oA = sv > 0 ? 0 : 9, oB = sv > 0 ? 9 : 0; legPlane(oA, oA ? -1 : 1, Q[0], Q[1], Q[8]); legPlane(oB, oB ? -1 : 1, Q[2], Q[3], Q[9]);
+      pel = Q[4]; woy = Q[6]; a.lean = Q[5]; a.roll = Q[7]; a.twist *= 0.5; a.lunge = 0;
+      const lk = clamp((0.62 - pel) / 0.42, 0, 1); a.hK = lerp(0.5, a.cw > 0.5 ? 0.85 : 0.55, lk);
+      // lying on a slope: tilt with the ground between his head and his feet so neither end sinks into it
+      { const hb = terrainH(x - sy * 0.9, z - cy * 0.9), hf = terrainH(x + sy * 0.6, z + cy * 0.6); wdp = clamp(Math.atan2(hb - hf, 1.5), -0.4, 0.4) * lk; }
+      lie = { k: lk, kind: a.cw > 0.5 ? 'crawl' : 'back', sA, c: a.crPh || 0, call: u.downed && u.reviveBy < 0, tt };
     } else if (down) {
       legPlane(0, 1, 0.12, 0.2, 0); legPlane(9, -1, -0.05, 0.3, 0); pel = 0.92;
-    } else if (u.camp && a.cl > 0.02) { legPlane(0, 1, 0.06, 0.12, 0); legPlane(9, -1, 0.02, 0.2, 0); pel = 0.92;
+    } else if (u.camp && a.cl > 0.02) { // asleep: down on his back, a knee drawn up (or both legs out), an arm under his head
+      const k = a.cl, ss = a.cSl === undefined ? (a.cSl = uhash(u.id, 41) < 0.5 ? 1 : -1) : a.cSl, kv = uhash(u.id, 43) < 0.55, tt = (this.time || 0) + u.id;
+      const k2 = clamp((k - 0.15) / 0.85, 0, 1), sk = k2 * k2 * (3 - 2 * k2);
+      legPlane(0, 1, lerp(0.06, kv && ss > 0 ? 1.9 : 1.47, k), lerp(0.12, kv && ss > 0 ? 1.15 : 0.18, k), lerp(0, -0.06, k)); legPlane(9, -1, lerp(0.02, kv && ss < 0 ? 1.9 : 1.5, k), lerp(0.2, kv && ss < 0 ? 1.15 : 0.22, k), lerp(0, 0.1, k));
+      pel = lerp(0.92, 0.14, k); a.lean = lerp(a.lean, -1.5 + 0.018 * Math.sin(tt * 1.25), sk); a.roll = lerp(a.roll, 0.1 * ss, sk); a.twist *= 1 - sk; a.hK = lerp(0.5, 0.08, sk);
+      lie = { k: sk, kind: 'sleep', sA: ss, c: 0, call: false, tt };
       // lying on a slope: tilt with the ground between his feet and his head so neither end sinks into it
-      { const hx = x - sy * 1.6, hz = z - cy * 1.6; a.cTilt = clamp(Math.atan2(terrainH(hx, hz) - terrainH(x, z), 1.6), -0.4, 0.4); }
+      { const hb = terrainH(x - sy * 0.95, z - cy * 0.95), hf = terrainH(x + sy * 0.6, z + cy * 0.6); a.cTilt = clamp(Math.atan2(hb - hf, 1.55), -0.4, 0.4); }
     } else if (u.camp && a.cs > 0.02) { // seated on the ground (knees up, or legs out) or on a log, rising when someone comes to talk
       const k = a.cs, g0 = terrainH(x, z); let v = a.cSv;
       if (v === 1 && terrainH(x + sy * 0.85, z + cy * 0.85) - g0 > 0.03) v = 0; // ground rising in front: knees up rather than legs pushed into it
@@ -1794,9 +1814,10 @@ class Renderer {
     else if (anchor === 'R' && KW) { ik(0, 6, J[18] + J[21] * KW.off2, J[19] + J[22] * KW.off2, J[20] + J[23] * KW.off2, 1); }
     else { toRoot(a.lh, tmpA, 0); ik(0, 6, tmpA[0], tmpA[1], tmpA[2], 1); }
     if (fkR && w !== 'bow' && w !== '') { J[18] = J[15]; J[19] = J[16]; J[20] = J[17]; const fx = J[15] - J[12], fy = J[16] - J[13], fz = J[17] - J[14]; const l = Math.hypot(fx, fy, fz) || 1; const cdir = routing ? [fx / l * 0.3 - C[6], fy / l * 0.3 - C[7] - 0.4, fz / l * 0.3 - C[8]] : [C[6], C[7] + 0.3, C[8]]; const cl2 = Math.hypot(cdir[0], cdir[1], cdir[2]) || 1; J[21] = cdir[0] / cl2; J[22] = cdir[1] / cl2; J[23] = cdir[2] / cl2; }
+    if (lie && lie.k > 0.01) this.lieArms(lie, J, C, pel, toRoot, ik);
     // ---------- to world ----------
-    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : (u.camp && a.cl ? (-1.42 + (a.cTilt || 0)) * a.cl : 0), cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
-    const oy = wdp !== null ? woy : down ? 0.15 : u.camp && a.cl ? 0.12 * a.cl : 0;
+    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : (u.camp && a.cl ? (a.cTilt || 0) * a.cl : 0), cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
+    const oy = wdp !== null ? woy : down ? 0.15 : 0;
     const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
     const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
     const Wd = (lx, ly, lz, out, o) => { const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = lx * cy + z2 * sy; out[o + 1] = y2; out[o + 2] = -lx * sy + z2 * cy; };
@@ -1812,7 +1833,7 @@ class Renderer {
     this.boxB(f.torso, slot, G[18 + 24], G[18 + 25], G[18 + 26], CB, 0.5, 0.64, 0.3);
     this.boxB(f.hips, slot, G[60], G[61], G[62], CB, 0.4, 0.22, 0.27);
     // head stays nearer upright than the chest
-    const HB = this._HB || (this._HB = new Float64Array(9)); { const hl = -a.lean * 0.5 + (a.hrh || 0), ht = -a.twist * 0.35; const ch = Math.cos(hl), sh = Math.sin(hl), cth = Math.cos(ht), sth = Math.sin(ht); const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; for (let i = 0; i < 3; i++) { const v = ax[i]; const y1 = v[1] * ch - v[2] * sh, z1 = v[1] * sh + v[2] * ch; const x2 = v[0] * cth + z1 * sth, z2 = -v[0] * sth + z1 * cth; const vx = CB[0] * x2 + CB[3] * y1 + CB[6] * z2, vy = CB[1] * x2 + CB[4] * y1 + CB[7] * z2, vz = CB[2] * x2 + CB[5] * y1 + CB[8] * z2; HB[i * 3] = vx; HB[i * 3 + 1] = vy; HB[i * 3 + 2] = vz; } }
+    const HB = this._HB || (this._HB = new Float64Array(9)); { const hl = -a.lean * a.hK + (a.hrh || 0), ht = -a.twist * 0.35 + (a.hYw || 0); const ch = Math.cos(hl), sh = Math.sin(hl), cth = Math.cos(ht), sth = Math.sin(ht); const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; for (let i = 0; i < 3; i++) { const v = ax[i]; const y1 = v[1] * ch - v[2] * sh, z1 = v[1] * sh + v[2] * ch; const x2 = v[0] * cth + z1 * sth, z2 = -v[0] * sth + z1 * cth; const vx = CB[0] * x2 + CB[3] * y1 + CB[6] * z2, vy = CB[1] * x2 + CB[4] * y1 + CB[7] * z2, vz = CB[2] * x2 + CB[5] * y1 + CB[8] * z2; HB[i * 3] = vx; HB[i * 3 + 1] = vy; HB[i * 3 + 2] = vz; } }
     if (vsc !== 1) for (let i = 0; i < 9; i++) HB[i] *= vsc;
     const hx = G[18 + 27], hy = G[18 + 28], hz = G[18 + 29];
     this.boxB(f.head, slot, hx, hy, hz, HB, 0.28, 0.3, 0.28);
@@ -2639,6 +2660,30 @@ Renderer.prototype.gearFollow = function (u, p, F, G) {
 };
 // ---- camp life, drawn: relaxed poses and small activities for the men at the fire (sim sets u.cAct; see campThink) ----
 // Sets the hand/weapon targets in this.tg (chest-local: +x left, +y up from the shoulders, +z forward) and returns the body.
+// arms of a man on the ground (root-local; +x his left, +z forward, y from the ground): on his back one arm props him on
+// the elbow and the other holds the wound, now and then reaching out for help; face down the arms reach and pull in
+// turn; asleep one hand is under his head. The weapon lies by his side. Blended in by lie.k as he goes down.
+Renderer.prototype.lieArms = function (lie, J, C, pel, toRoot, ik) {
+  const k = lie.k, T = this._lieT || (this._lieT = new Float64Array(6)), tt = lie.tt, sA = lie.sA;
+  const bump = (per, on) => { const c = ((tt / per) % 1 + 1) % 1; return c < on ? Math.sin(c / on * Math.PI) : 0; };
+  const put = (so, ho, side, tx, ty, tz) => { const hx = J[ho] + (tx - J[ho]) * k, hy = J[ho + 1] + (ty - J[ho + 1]) * k, hz = J[ho + 2] + (tz - J[ho + 2]) * k; ik(so, ho, hx, hy, hz, side); };
+  const sp = sA > 0 ? 0 : 9, fr = sA > 0 ? 9 : 0, sps = sA > 0 ? 1 : -1; // propping arm and free arm
+  if (lie.kind === 'back') {
+    put(sp, sp + 6, sps, J[sp] + sps * 0.1, 0.05, J[sp + 2] + 0.12);
+    toRoot([-sps * 0.05, -0.3, 0.17], T, 0); let tx = T[0], ty = T[1], tz = T[2];
+    if (lie.call) { const r = bump(4.6, 0.42); tx += (J[fr] * 0.6 - tx) * r; ty += (pel + 0.72 - ty) * r; tz += (0.42 - tz) * r; }
+    put(fr, fr + 6, -sps, tx, ty, tz);
+  } else if (lie.kind === 'crawl') {
+    for (const [so, sd, ph] of [[0, 1, 0], [9, -1, Math.PI]]) { const c = lie.c + ph, r = 0.5 + 0.5 * Math.sin(c), up = Math.max(0, Math.cos(c)) * 0.12;
+      put(so, so + 6, sd, J[so] + sd * 0.06, 0.05 + up, J[so + 2] + 0.1 + 0.36 * r); }
+  } else {
+    put(sp, sp + 6, sps, J[27] + sps * 0.13, Math.max(0.06, J[28] - 0.06), J[29] - 0.06);
+    toRoot([-sps * 0.06, -0.3, 0.17], T, 0); put(fr, fr + 6, -sps, T[0], T[1], T[2]);
+  }
+  // the weapon lies on the ground beside him
+  const gx = -0.42 * sps, gz = 0.15; J[18] += (gx - J[18]) * k; J[19] += (0.05 - J[19]) * k; J[20] += (gz - J[20]) * k;
+  let dx = J[21] * (1 - k) + 0.08 * k, dy = J[22] * (1 - k), dz = J[23] * (1 - k) + k; const l = Math.hypot(dx, dy, dz) || 1; J[21] = dx / l; J[22] = dy / l; J[23] = dz / l;
+};
 Renderer.prototype.campPoseT = function (u, a, w) {
   const tg = this.tg, t = (this.time || 0) + uhash(u.id, 31) * 20, dt = this.fdt || 0.016, act = u.cAct | 0, rise = !!u.cRise, look = !!u.cLook;
   const lie = act === 7 && !rise, squat = !!u.cSeat && (act === 4 || act === 12) && !rise && !lie, sit = !!u.cSeat && !lie && !squat && !rise;

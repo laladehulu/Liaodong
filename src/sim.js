@@ -3515,8 +3515,10 @@ Sim.prototype.campThink = function (u) {
   let h = null; for (const p of this.players) { if (p.ai) continue; const v = this.units[p.heroId]; if (v && !v.dead) { h = v; break; } }
   if (h) { const dx = u.x - h.x, dz = u.z - h.z, d = len(dx, dz), face = d > 0.01 ? (dx * sin(h.yaw) + dz * cos(h.yaw)) / d : 0;
     const was = u.cLook; u.cLook = d < 2.9 && face > 0.55 ? 1 : d < 1.7 ? 1 : 0; if (u.cLook && !was && u.cAct === 11) { u.cAct = 0; }
+    if (u.cAct === 7 && d < 1.5 && face > 0.7) { u.cAct = 1; u.cT = 30 * 15; } // a sleeper you stand over wakes and sits up
     u.cRise = u.cLook && d < 2.2 && u.cAct !== 7 ? 1 : 0;
-    if (u.cLook) { this.turnTo(u, atan2(h.x - u.x, h.z - u.z), 3 * DT); return; } }
+    // only a man on his feet (or one getting up to talk) turns his body toward you, and not in one jerk; the rest just look
+    if (u.cLook && (!u.cSeat || u.cRise) && u.cAct !== 7) { this.turnTo(u, atan2(h.x - u.x, h.z - u.z), 2.2 * DT); return; } }
   if (--u.cT <= 0) { // time for something else
     u.cMate = -1;
     if (u.cSeat) { u.cAct = CAMP_SEAT[(rng.next() * CAMP_SEAT.length) | 0];
