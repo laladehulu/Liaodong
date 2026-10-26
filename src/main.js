@@ -793,7 +793,7 @@ function replayFrame(dt) {
 $('btnReplay').onclick = () => { AUDIO.init(); startReplay(); };
 function feed(text, me) { const f = $('feed'); const d = document.createElement('div'); d.textContent = text; if (me) d.className = 'me'; f.appendChild(d); while (f.children.length > 6) f.removeChild(f.firstChild); setTimeout(() => { if (d.parentNode) d.parentNode.removeChild(d); }, 9000); }
 function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('show'); state.toastT = 2.2; }
-const DIRN = ['overhead', 'right swing', 'thrust', 'left swing'], BLKN = ['up', 'right', 'down', 'left'], ORDN = ['move', 'charge', 'hold', 'follow'];
+const DIRN = ['overhead', 'right swing', 'thrust', 'left swing'], BLKN = ['up', 'right', 'down', 'left'], ORDN = ['move', 'charge', 'hold', 'follow', 'form up', 'hold', 'hold', 'hold', 'hold', 'hold', 'hold', 'hold', 'hold', 'hold', 'hold', 'hold'];
 function moraleCls(sq) { if (!sq.alive) return ''; if (sq.routing) return 'm-rout'; const m = sq.morale / sq.moraleMax; return m < 0.35 ? 'm-low' : m < 0.6 ? 'm-mid' : ''; }
 function moraleWord(sq) { if (sq.routing) return 'routing'; if (sq.def.fearless) return 'fearless'; const m = sq.morale / sq.moraleMax; return m < 0.35 ? 'wavering' : m < 0.6 ? 'shaken' : 'steady'; }
 // ---------- screen markers: objectives (lettered circles) and your companies (numbered), pinned to the screen edge when out of view ----------
