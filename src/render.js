@@ -123,7 +123,7 @@ function gearFor(u) {
     b('p', [0, -0.26, 0.02], [0.46, 0.4, 0.33], col); b('p', [0, -0.2, 0.168], [0.36, 0.018, 0.01], stud || gold); b('p', [0, -0.32, 0.168], [0.36, 0.018, 0.01], stud || gold); };
   const robe = (col, sash) => { b('p', [0, -0.25, 0.01], [0.44, 0.4, 0.3], col); if (sash) b('p', [0, -0.07, 0], [0.47, 0.07, 0.32], sash); };
   const shield = () => { y('sl', [0.12, -0.38, 0.22], [0.56, 0.05, 0.56], 0xa8884a, [HPI, 0, 0]); y('sl', [0.12, -0.38, 0.25], [0.18, 0.03, 0.18], red, [HPI, 0, 0]); };
-  const backflag = (col) => { b('c', [0, 0.45, -0.17], [0.025, 1.05, 0.025], 0x3a2a1a); b('c', [0.12, 0.72, -0.17], [0.22, 0.4, 0.014], col); };
+  const backflag = (col) => { b('c', [0.1, 0.45, -0.24], [0.025, 1.05, 0.025], 0x3a2a1a); b('c', [0.22, 0.72, -0.24], [0.22, 0.4, 0.014], col); }; // pole behind the shoulder, clear of the helmet
   const quiver = () => { y('c', [0.14, 0.05, -0.17], [0.13, 0.6, 0.13], 0x4a2e18, [0, 0, -0.35]); b('c', [0.25, 0.36, -0.17], [0.16, 0.12, 0.08], 0xe8e0cc, [0, 0, -0.35]); };
   // late-Ming kit: vermilion padded coats (胖襖), white puttees, the round 護心鏡 heart-mirror on brigandine,
   // eight-petal iron helmets with red tassels, rattan helmets for shield-men, broad black hats for gunners

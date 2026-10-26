@@ -20,6 +20,7 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
     else { const dx = tx - h.x, dz = tz - h.z; if (Math.hypot(dx, dz) > 1.5) { keys |= S.KEY_W; yaw = Math.atan2(dx, dz); } }
   }
   sim.step([[keys, yq(yaw), 0, acts, 0, 0, [], 0]]);
+  if (process.env.DBG && t % 300 === 0 && sim.mv.ph >= 3) { const hh = sim.units[p.heroId]; console.log(Math.round(t / 30), 'me', hh && hh.x.toFixed(0), hh && hh.z.toFixed(0), hh && hh.dead, 'file', file.filter(id => !sim.units[id].dead).length); }
   for (const e of sim.events) { if (e.t === 'mphase') ph.push(Math.round(sim.tick / 30)); if (e.t === 'zpromote') promoted = Math.round(sim.tick / 30); if (e.t === 'zwound') wounded = e.id; if (e.t === 'zhelp' && e.id === wounded) helped = true; if (e.t === 'zcarry') carry++;
     if (e.t === 'death' && file.includes(e.id)) fdp[Math.max(0, sim.mv.ph)]++; }
 }
