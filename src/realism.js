@@ -69,7 +69,7 @@
               vec3 wn = normalize(cross(dFdx(vWP), dFdy(vWP))); vec2 cp = abs(wn.y) > 0.7 ? p : (abs(wn.x) > abs(wn.z) ? vWP.zy : vWP.xy);
               float px = length(fwidth(cp)); float near = 1.0 - smoothstep(0.025, 0.08, px);
               vec4 cl = tCells(cp * 2.6); float edgeW = max(px * 2.6 * 1.5, 0.02); float seam = 1.0 - smoothstep(0.0, edgeW, cl.z);
-              vec4 cl2 = tCells(cp * 9.0 + 17.0); float grit = smoothstep(0.62, 0.62 - max(px * 9.0 * 1.5, 0.02), cl2.y) * step(0.8, cl2.x);
+              vec4 cl2 = tCells(cp * 9.0 + 17.0); float grit = smoothstep(0.62, 0.62 - max(px * 9.0 * 1.5, 0.02), cl2.y) * step(0.9, cl2.x);
               vec3 base = diffuseColor.rgb; float lum = dot(base, vec3(0.3, 0.59, 0.11));
               float snowy = smoothstep(0.7, 0.8, lum) * step(0.0, rSnow);
               // late-season northern grassland: straw-coloured dry grass, tired green, bare earth and trodden mud
@@ -80,8 +80,8 @@
               float churn = smoothstep(0.45, 0.72, big + (mid - 0.5) * 0.5);
               vec3 c = mix(grass, mix(earth, mud, fine), churn * 0.9);
               c *= 0.94 + 0.1 * fine;
-              { float t = cl.x; vec3 cc = c * (0.86 + 0.26 * t); cc = mix(cc, mix(straw * 1.06, green * 0.9, step(0.5, fract(t * 7.0))), step(0.82, t) * 0.35 * (1.0 - churn));
-                cc *= 1.0 - seam * 0.12; cc = mix(cc, mix(vec3(0.24, 0.22, 0.19), vec3(0.5, 0.47, 0.42), step(0.5, cl2.w)), grit * 0.55);
+              { float t = cl.x; vec3 cc = c * (0.93 + 0.13 * t); cc = mix(cc, mix(straw * 1.06, green * 0.9, step(0.5, fract(t * 7.0))), step(0.84, t) * 0.25 * (1.0 - churn));
+                cc *= 1.0 - seam * 0.035; cc = mix(cc, mix(vec3(0.22, 0.2, 0.16), vec3(0.42, 0.4, 0.35), step(0.6, cl2.w)), grit * 0.4);
                 c = mix(c, cc, near); }
               float stones = smoothstep(0.88, 0.94, rV(p * 1.9)) * (1.0 - churn); c = mix(c, vec3(0.42, 0.4, 0.37), stones * 0.6);
               // keep what the map painted on purpose: water margins, roads, rock, snow
@@ -90,7 +90,7 @@
             { vec2 p = vWP.xz; float e = 0.06; float h0 = rF(p * 0.6); float hx = rF((p + vec2(e, 0.0)) * 0.6); float hz = rF((p + vec2(0.0, e)) * 0.6);
               vec3 bump = vec3((h0 - hx) / e, 0.0, (h0 - hz) / e) * 0.07;
               // each turf clump is a slightly tilted flat facet: a low-poly surface instead of a blurred one
-              float px = length(fwidth(p)); vec4 cl = tCells(p * 2.6); vec2 tilt = (vec2(cl.x, fract(cl.x * 13.7)) - 0.5) * 0.28 * (1.0 - smoothstep(0.025, 0.08, px));
+              float px = length(fwidth(p)); vec4 cl = tCells(p * 2.6); vec2 tilt = (vec2(cl.x, fract(cl.x * 13.7)) - 0.5) * 0.13 * (1.0 - smoothstep(0.025, 0.08, px));
               bump += vec3(tilt.x, 0.0, tilt.y);
               normal = normalize(normal + (viewMatrix * vec4(bump, 0.0)).xyz); }`); };
       tm.needsUpdate = true; }
