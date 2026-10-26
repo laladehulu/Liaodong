@@ -32,10 +32,11 @@ const VOICE = (() => {
     const res = () => ({ y1: 0, y2: 0 }); const R = [res(), res(), res(), res()], RN = res();
     const step = (s, x, f, bw) => { const r = Math.exp(-Math.PI * bw / SR), c = 2 * r * Math.cos(2 * Math.PI * f / SR); const y = (1 - r) * x * 2 + c * s.y1 - r * r * s.y2; s.y2 = s.y1; s.y1 = y; return y; };
     let ph = 0, gp = 0, jit = 0, shim = 1; const rasp = o.rasp || 0, breath = o.breath || 0.08;
+    let P = null, pf = 0;
     for (let n = 0; n < N; n++) {
-      const t = n / SR, u = t / dur, P = tgt(t);
+      const t = n / SR, u = t / dur; if ((n & 31) === 0) { P = tgt(t); pf = pitch(u); }
       if (n % 220 === 0) { jit = (rnd() - 0.5) * (0.02 + rasp * 0.08); shim = 1 - rnd() * (0.08 + rasp * 0.3); }
-      const f = pitch(u) * (1 + jit); ph += f / SR; if (ph >= 1) ph -= 1;
+      const f = pf * (1 + jit); ph += f / SR; if (ph >= 1) ph -= 1;
       // the glottal pulse (open for 60% of the cycle) and its derivative as it leaves the lips
       const g = ph < 0.6 ? Math.pow(Math.sin(Math.PI * ph / 0.6), 2) : 0; let src = (g - gp) * 6 * shim; gp = g;
       if (rasp > 0 && ph > 0.5 && ph < 0.55) src += (rnd() - 0.5) * rasp * 0.9;
@@ -113,7 +114,7 @@ const VOICE = (() => {
     for (let i = active.length - 1; i >= 0; i--) if (active[i].end <= now) active.splice(i, 1);
     const score = prio * 10 - sp.dist * 0.15;
     if (active.length >= MAX) { let lo = 0; for (let i = 1; i < active.length; i++) if (active[i].score < active[lo].score) lo = i; if (active[lo].score >= score) return false; try { active[lo].src.stop(); } catch (e) {} active.splice(lo, 1); }
-    const rec = REC[cat], list = rec && rec.length && Math.random() < 0.8 ? rec : B[cat]; if (!list || !list.length) return false;
+    const rec = REC[cat], syn = B[cat]; let list = rec && rec.length && (Math.random() < 0.8 || !syn || !syn.length) ? rec : syn; if (!list || !list.length) list = rec; if (!list || !list.length) return false;
     const buf = list[(v.fav + ((Math.random() * 3) | 0) * 5) % list.length];
     const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = v.rate * (0.96 + Math.random() * 0.08);
     const eq = ctx.createBiquadFilter(); eq.type = 'peaking'; eq.frequency.value = v.eqF; eq.Q.value = 1.1; eq.gain.value = v.eqG;

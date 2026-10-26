@@ -18,3 +18,5 @@
 - deeds (fork, restarted): NEW src/deeds.js (battle-behaviour record + campaign reactions, wraps zheEvent/zheHUD/zheKeyE/zheFinish/zTalk/JCH talk at load), build.sh splice list (+deeds.js), docs/reactions.md
 - voice (fork): NEW src/voice.js (+build.sh lists after audio), render.js event switch 1-line VOICE.ev hook, main.js order-shout + credits panel hooks
 - turnanim (fork): render.js drawFigure yaw smoothing + turn pose (twist/lean/pivot steps), horse neck lead
+- downfall (fork): render.js drawFigure downed/crawl pose transition (dp/oy lines), zdown fall timing
+- campLife (fork): sim.js camp NPC think (new Sim.prototype.campThink + 1 hook in unitAI), render.js drawFigure camp pose hook + new campPose fn, props
