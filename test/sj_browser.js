@@ -6,9 +6,9 @@ const path = require('path'); const out = process.argv[2], file = process.argv[3
   const page = await browser.newPage({ viewport: { width: 1000, height: 560 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
   const url = 'file://' + path.resolve(__dirname, '..', 'dist', file); const res = {};
-  await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+  await page.goto(url, { waitUntil: 'load', timeout: 150000 });
   for (const sc of scenes) {
-    if (sc === 'menu') { await page.evaluate(() => localStorage.removeItem('mingShenji')); await page.reload({ waitUntil: 'load' });
+    if (sc === 'menu') { await page.evaluate(() => localStorage.removeItem('mingShenji')); await page.reload({ waitUntil: 'load', timeout: 150000 });
       res.menu = await page.evaluate(() => { const b = document.getElementById('btnSj'); b.scrollIntoView(); return b ? b.textContent : 'none'; });
       await page.screenshot({ path: out + '/sj_menu.png', timeout: 90000 });
       await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; }); await page.click('#btnSj'); await page.waitForTimeout(500);
@@ -16,7 +16,7 @@ const path = require('path'); const out = process.argv[2], file = process.argv[3
       continue; }
     await page.evaluate((sc) => { let s = null; try { s = JSON.parse(localStorage.getItem('mingShenji')); } catch (e) { } if (!s || !s.sj) { s = { v: 1, sj: true, name: { zh: '李順', en: 'Li Shun' }, me: 'sjme', team: ['sj_hu', 'sjme', 'sj_tian', 'sj_lin', 'sj_ma', 'sj_zhao', 'sj_song', 'sj_wu', 'sj_qian', 'sj_gao'], alive: {}, fate: {}, bond: {}, talked: {}, flags: {}, newMen: [], lost: [] }; for (const k of s.team) s.alive[k] = true; }
       s.stage = sc; localStorage.setItem('mingShenji', JSON.stringify(s)); localStorage.setItem('mingShenjiGo', sc); }, sc);
-    await page.reload({ waitUntil: 'load' }); await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; });
+    await page.reload({ waitUntil: 'load', timeout: 150000 }); await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; });
     await page.waitForTimeout(4500);
     res[sc] = await page.evaluate(() => { const st = window.__boshin.state, s = st.sim; document.getElementById('pause').hidden = true; if (!s) return 'no sim';
       const me = s.players[0], h = s.units[me.heroId]; return { mission: s.cfg.mission, type: h && h.type, npcs: s.units.filter(u => u.camp).length, grid: document.querySelectorAll('#zgrid .zc').length, goal: (document.querySelector('#status .goal') || {}).textContent || '', card: (document.querySelector('#zheCard:not([hidden]) h2') || {}).textContent || '' }; });

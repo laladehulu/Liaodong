@@ -147,6 +147,61 @@ JCH[1] = {
   })[k],
 };
 
+JCH[2] = {
+  mission: 'jin2', battle: 'toba',
+  intro: () => { const nw = JR.filter(r => JS.joined[r.k] === 2);
+    return [
+      { title: '二年 · Two years', year: 'Spring 1621 · 天命六年', p: ['After Abdali the banners took Kaiyuan and Tieling in the summer rain. Then for a year and a half the Ming held a new line under Xiong Tingbi, until the court in Beijing dismissed him.',
+        'You are the bošokū of your file now, in Ulgen\'s place.' + (nw.length ? ` New men have come to fill the empty places: ${nw.map(r => `${r.zh} ${r.en}`).join(', ')}.` : '')], zh: '天命四年，取開原、鐵嶺。' },
+      { title: '瀋陽 · Shenyang', year: 'The twelfth day of the third month', p: ['This morning the banners took Shenyang. Its two generals died on the walls. Tonight your niru sleeps inside the town.',
+        'To the south a Ming relief army has come up too late: Sichuan men on the north bank of the Hun River, and southern infantry in a wagon camp beyond it.'], btn: 'To the camp →' }]; },
+  campTitle: '營 · Inside Shenyang', campCard: 'Your niru camps inside the walls of Shenyang, taken this morning. Talk with your file (E). When you are ready, lie down on your bedroll (E).',
+  guests: ['tobohui'],
+  chat: [['城裡的井水是甜的。', 'The well water here is sweet.'], ['別進那些房子，裡面還有人。', 'Stay out of those houses. There are still people in them.'], ['明天過河。', 'Tomorrow we cross the river.'], ['城牆上有三十門砲，我數過。', 'Thirty guns on the walls. I counted.'], ['汗住進了經略的衙門。', 'The Khan has moved into the commissioner\'s yamen.']],
+  dawn: { title: '黎明 · Dawn', year: 'The thirteenth day of the third month', p: ['The niru rides out of the south gate behind the Bayara. Mist lies on the river. On the near bank the Sichuan camp is already awake, its long white poles standing up out of the mist like reeds.'], btn: 'To the river →' },
+  battleCard: ['March 1621. You lead your file now: F follow me · H halt · C charge · Z form up where you look.', '渾河 · The Hun River'],
+  who: { niru: ['托博輝', 'Tobohui, captain of the niru'], lookout: ['', 'A lookout'], soldier: ['', 'A bannerman'] },
+  fateText: { out: 'came back from the Hun River', dead: 'killed on the Hun River', lost: 'missing by the river' },
+  after: (won, li, outN) => [
+    { title: '渾河 · What happened', year: 'The third month of 1621', p: ['The White Poles of Shizhu died almost to a man; their commanders Qin Bangping and Zhou Dunji fell with them. South of the river the Zhejiang men fought until their powder was gone and then with their guns as clubs. Qi Jin and Chen Ce died in the wagon camp.',
+      'The banners lost more men that day than in any battle before it. Muktan wrote the numbers into the tally and did not say them out loud.'], zh: '天命六年三月，渾河之戰。' },
+    { title: '牛錄 · Your file', year: `${outN} came back`, html: `<ul>${li}</ul>`, btn: 'Liaoyang →' },
+    { title: '遼陽 · Liaoyang', year: 'The spring of 1621', p: ['Nine days later the banners stormed Liaoyang. The Ming commissioner Yuan Yingtai hanged himself in a tower as the city fell, and seventy towns east of the Liao River gave up. The Khan moved his court into the conquered land.',
+      'Han farmers were counted with the land and shared out, and bannermen were quartered in their houses.' + (JS.alive.lier ? ' Li Er rode to Fushun to look for his family. He came back alone and said nothing about it.' : '')], zh: '天命六年三月，取遼陽。' },
+    { title: '五年 · Five years', year: '1621 – 1625', p: ['They were bad years in the conquered towns. Han villages rose and were put down; in 1625 many Han men were killed as troublemakers. That spring the Khan moved his capital again, to Shenyang, which became Mukden.',
+      'Beyond the Liao River the Ming found a new man: Yuan Chonghuan, who rebuilt the fortress of Ningyuan and mounted western cannon on its walls.'], btn: 'Winter 1626 →' },
+  ],
+  next: 'c3',
+  talk: (k) => { const A = (x) => JS.alive[x], nm = JS.name;
+    return ({
+      tobohui: { g: ['你帶得不錯。烏勒根沒看錯人。', 'You lead well. Ulgen wasn\'t wrong about you.'], t: [
+        { q: 'What do we face tomorrow?', a: [['河北岸有一營川兵，叫白杆兵。河南岸有一營南兵。', 'On the north bank, a camp of Sichuan men, the White Poles. South of the river, the southerners.'], ['都來晚了，瀋陽已經是我們的。可他們不走。', 'Both came too late. Shenyang is ours. But they won\'t leave.']] },
+        { q: 'Were you at Abdali too?', bond: 1, a: [['我在。那些南兵十二個人一隊，到死都沒散。', 'I was. Those southerners fought in twelves and didn\'t scatter even dying.'], ['明天別小看他們。', 'Don\'t think little of them tomorrow.']] }] },
+      dabsun: { g: A('alin') ? ['我十八了。舅舅還拿我當小孩。', 'I\'m eighteen now. Uncle still treats me like a boy.'] : ['舅舅要是看見瀋陽就好了。', 'I wish Uncle could have seen Shenyang.'], t: [
+        { q: 'You\'ve grown.', bond: 1, a: [['我現在能拉十力的弓了。索色教的。', 'I can draw a ten-strength bow now. Sose taught me.'], [A('alin') ? '可我還是不敢看死人的臉。' : '舅舅死的那天，我一直沒敢看他的臉。', A('alin') ? 'I still can\'t look at the faces of the dead.' : 'The day Uncle died I couldn\'t look at his face.']] }] },
+      sose: { g: ['城裡的人看我們，就像兔子看鷹。', 'The townspeople look at us the way a hare looks at a hawk.'], t: [
+        { q: 'Did you hunt this winter?', a: [['打了兩張貂皮。換了一副新弓弦，給達布遜的。', 'Two sable skins. I traded them for a new bowstring for Dabsun.']] },
+        { q: 'What do you think of the White Poles?', bond: 1, a: [['我在城頭上看了他們一下午。他們紮營的樣子，像獵人，不像兵。', 'I watched them from the walls all afternoon. They make camp like hunters, not soldiers.'], ['這種人不好殺。', 'Men like that are hard to kill.']] }] },
+      ilan: { g: ['我在城裡撿了一面銅鏡。你看我多俊。', 'Found a bronze mirror in the town. Look how handsome I am.'], t: [
+        { q: 'Put it back.', bond: 1, a: [['……放回去？放回哪兒？那家人都沒了。', '...Put it back where? The family that owned it is gone.'], ['（他把鏡子收起來，很久沒說話。）', '(He puts the mirror away and is quiet for a long time.)']] }] },
+      bahai: { g: ['瀋陽的饅頭，真白。', 'Shenyang steamed buns. So white.'], t: [
+        { q: 'Save some for tomorrow.', bond: 1, a: [['給你留了兩個。拿著，別讓伊蘭看見。', 'I kept two for you. Here. Don\'t let Ilan see.']] }] },
+      lier: { g: ['這是我頭一回回到漢人的城裡。穿著你們的甲。', 'First time I\'ve been back in a Han town. Wearing your armour.'], t: [
+        { q: 'How does it feel?', bond: 1, a: [['城門口有個老頭朝我吐口水。他吐得對。', 'An old man spat at me in the gate. He was right to.'], ['可我在撫順的時候，明朝的官也沒把我當人看。', 'But in Fushun the Ming officials never treated me like a man either.']] },
+        { q: 'Will you look for your family?', a: [['打完仗，我想去撫順看看。', 'When this is over, I want to go to Fushun and look.']] }] },
+      bater: { g: ['明天過河。我的馬不喜歡冰。', 'Tomorrow we cross the river. My horse doesn\'t like ice.'], t: [
+        { q: 'Sing the white horse song again.', bond: 1, a: [['（這次他唱得更低。唱到一半，他停了，說：「後面的我忘了。」）', '(He sings it lower this time. Halfway through he stops. "I\'ve forgotten the rest.")']] }] },
+      erde: { g: JS.flags.erdeson ? ['太平會走路了。家裡捎信來說的。', 'Taiping can walk now. Word came from home.'] : ['我兒子會走路了。', 'My boy can walk now.'], t: [
+        { q: 'Have you seen him?', bond: 1, a: [['去年冬天見了三天。他不認得我，躲在他娘後面。', 'Three days, last winter. He didn\'t know me and hid behind his mother.'], ['第三天他叫我阿瑪了。', 'On the third day he called me Ama.']] }] },
+      muktan: { g: ['我在記：天命六年三月十二，取瀋陽。', 'I\'m writing: Tianming sixth year, third month, twelfth day: took Shenyang.'], t: [
+        { q: 'Who have we lost?', a: [[`${jDead().map(r => r.zh).join('、') || '……'}。我都記著。`, `${jDead().map(r => r.en).join(', ') || '...'}. I\'ve written them all.`], ['帳上不只要寫斬了幾級。也要寫我們的人。', 'The tally shouldn\'t only count heads taken. It should count our own.']] },
+        { q: 'What comes after Shenyang?', bond: 1, a: [['遼陽。遼東的首府。拿下遼陽，遼河以東就都是汗的了。', 'Liaoyang, the capital of Liaodong. Take it and everything east of the Liao River is the Khan\'s.']] }] },
+      manggu: { g: ['城是拿下了，城裡的酒是酸的。', 'We took the town, and the wine in it is sour.'], t: [
+        { q: 'You always find something.', bond: 1, a: [['（他終於笑了一下。）……烏勒根也這麼說我。', '(He finally smiles a little.) ...Ulgen used to say that about me.']] }] },
+      alin: { g: ['我老了。打完這一仗，我跟汗討一塊地。', 'I\'m getting old. After this I\'ll ask the Khan for a plot of land.'], t: [
+        { q: 'You\'ve earned it.', bond: 1, a: [[A('dabsun') ? '帶著達布遜回家。我答應過他娘。' : '……我答應過他娘，要帶他回家的。', A('dabsun') ? 'And take Dabsun home. I promised his mother.' : '...I promised his mother I\'d bring him home.']] }] },
+    })[k]; },
+};
 // ---------- camp ----------
 const JCAMP = { fires: [[0, 0], [8, -5]], tents: [[-10, 4, 1.7, 2.5, 2.1], [-4.5, 10.5, 1.7, 2.5, 2.1], [4.5, 10.5, 1.7, 2.5, 2.1], [10, 4, 1.7, 2.5, 2.1]],
   props: [['pot', 8, -5, 0], ['banner', -3, -7.5, 0.3, '白'], ['rack', -7.5, -3.5, 0.9], ['log', 0, 2.9, 0], ['log', -2.6, -1.4, 1.1], ['log', 2.7, -1.2, -1.1]] };
@@ -167,7 +222,7 @@ function jStart(scene) {
   const n = +m[2], C = JCH[n]; if (!C) { $('menu').hidden = false; return; }
   const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: JS.name.zh || 'You', team: 1, connected: true }];
   if (m[1] === 'c') {
-    if (!JS.seen['i' + n]) { if (n > 1) jFill(n); return zCards(C.intro, () => { JS.seen['i' + n] = 1; JS.stage = 'c' + n; jSave(); jStart('c' + n); }); }
+    if (!JS.seen['i' + n]) { if (n > 1) jFill(n); return zCards(typeof C.intro === 'function' ? C.intro() : C.intro, () => { JS.seen['i' + n] = 1; JS.stage = 'c' + n; jSave(); jStart('c' + n); }); }
     const camp = jCampCfg(n); ZB = null;
     startGame({ seed, battle: 'zcamp', mode: 'campaign', mission: 'zcamp', camp, players: pl }, 0, null, 1);
     for (const u of state.sim.units) if (u.camp) { ZC.map[u.id] = u.ci; jDress(u, u.ci); } { const me = state.sim.units[state.sim.players[0].heroId]; jDress(me, jIdx(JS.me)); } ZC.chatT = 6;

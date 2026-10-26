@@ -917,6 +917,7 @@ class Sim {
   deployZ(team, z) { return team === 0 ? clamp(z, -HALF + 6, -48) : clamp(z, 48, HALF - 6); }
   applyCommand(p, c) {
     const type = c[1] | 0;
+    if (type === 21) { if (this.beaconBuy) this.beaconBuy(p, c[2] | 0); return; }
     if (type === ORD_SPAWN) { if ((this.mode === 'assault' || this.mode === 'campaign') && !p.ai) this.deploy(p, c[0] | 0, c[2] | 0); return; }
     if (this.mode === 'assault' && type === ORD_DIRECTIVE) return; // in an assault you are a soldier: the generals are not yours to command
     if (this.chaos && type !== ORD_CONTROL) return; // no orders in chaos: only body-hopping
@@ -1849,10 +1850,13 @@ class Sim {
       if (!victim.dead) { if (this.xc) this.hitReact(victim, u, 'shot', false, false); else { victim.flinchT = Math.max(victim.flinchT, 0.25); if (victim.st === ST_WINDUP || victim.st === ST_AIM) { victim.st = ST_IDLE; victim.stT = 0; } } }
     }
   }
-  ballistic(u, tx, tz, v, err) {
+  ballistic(u, tx, tz, v, err, dy) {
     const dx = tx - u.x, dz = tz - u.z; let d = len(dx, dz); if (d < 1) d = 1;
     let x = GRAV * d / (v * v); if (x > 1) x = 1;
-    const ang = 0.5 * asin(x) + (this.rng.next() - 0.5) * err; const yaw = atan2(dx, dz) + (this.rng.next() - 0.5) * err * 0.8;
+    let a0 = 0.5 * asin(x);
+    // a real height difference (a wall top, a hill): the low arc that drops dy over d, instead of the flat-ground one
+    if (dy !== undefined && (dy > 1.5 || dy < -1.5)) { const v2 = v * v, disc = v2 * v2 - GRAV * (GRAV * d * d + 2 * dy * v2); if (disc >= 0) a0 = atan2(v2 - Math.sqrt(disc), GRAV * d); }
+    const ang = a0 + (this.rng.next() - 0.5) * err; const yaw = atan2(dx, dz) + (this.rng.next() - 0.5) * err * 0.8;
     return { ang, yaw, d };
   }
   fireCannon(u, tx, tz) {
@@ -1867,7 +1871,7 @@ class Sim {
     // arrow is slow enough to see coming, so a man who keeps moving across its path is hard to hit
     const bw = u.def.bow; const human = tgt.ctrl >= 0 && !(this.players[tgt.ctrl] && this.players[tgt.ctrl].ai); const lead = tgt.speedNow > 0.5 && !human ? 0.9 : 0;
     const dd = len(tgt.x - u.x, tgt.z - u.z), sc = (0.035 + dd * 0.0007) * (human && tgt.speedNow > 2 ? 1.8 : 1);
-    const b = this.ballistic(u, tgt.x + tgt.mx * lead, tgt.z + tgt.mz * lead, bw.speed, 0.06); b.yaw += (this.rng.next() - 0.5) * sc * 2; b.ang += (this.rng.next() - 0.5) * sc;
+    const b = this.ballistic(u, tgt.x + tgt.mx * lead, tgt.z + tgt.mz * lead, bw.speed, 0.06, (tgt.y + 1) - (u.y + 1.5)); b.yaw += (this.rng.next() - 0.5) * sc * 2; b.ang += (this.rng.next() - 0.5) * sc;
     const ca = cos(b.ang), v = bw.speed; const ox = u.x + sin(b.yaw) * 0.6, oy = u.y + 1.5, oz = u.z + cos(b.yaw) * 0.6;
     this.projectiles.push({ kind: 'arrow', x: ox, y: oy, z: oz, vx: sin(b.yaw) * ca * v, vy: sin(b.ang) * v, vz: cos(b.yaw) * ca * v, team: u.team, owner: u.id, life: 0, hits: 0, over: this.overParapet(u) });
     u.ammo--; this.events.push({ t: 'arrow', id: u.id, x: ox, y: oy, z: oz });
@@ -2921,6 +2925,55 @@ const MISSIONS = {
     ],
     win: 'The southern infantry died where they stood. Nothing stood between Liu Ting\'s column and the mountains any more.',
   },
+  // Chapter Two: the Hun River, the third month of 1621. Shenyang fell yesterday; a Ming relief army arrived too late and
+  // camped on the Hun River: the Sichuan White Poles on the north bank, the Zhejiang men in a wagon camp to the south.
+  jin2: {
+    title: '渾河 · The Hun River', year: 'The third month of 1621', battle: 'toba', side: 1, soldier: { group: 'niru' }, hidden: true, ch: 'j2',
+    brief: 'Shenyang fell yesterday in a single morning. The Ming relief army has come up too late, and will not go away.',
+    start: [64, 118, PI],
+    zones: [{ key: 'wpcamp', x: 74, z: 32, r: 16, name: 'The White Pole camp' }, { key: 'rally', x: 68, z: 98, r: 14, name: 'The banner: re-form here' },
+      { key: 'zcamp', x: 58, z: -62, r: 20, name: 'The southerners\' wagon camp' }],
+    forts: [[44, -62, 0.5, 12, 1.6, 'palisade'], [72, -62, 0.5, 12, 1.6, 'palisade'], [48.5, -49, 4.5, 0.5, 1.6, 'palisade'], [67.5, -49, 4.5, 0.5, 1.6, 'palisade'], [49, -75, 5, 0.5, 1.5, 'palisade'], [67, -75, 5, 0.5, 1.5, 'palisade'],
+      [49.5, -53, 2, 1.1, 1.4, 'mantlet'], [66.5, -53, 2, 1.1, 1.4, 'mantlet']],
+    groups: {
+      niru: { team: 1, name: 'Tobohui', zh: '托博輝', army: ['samurai'], at: [64, 118, PI], dir: ['hold', 66, 100], stay: true },
+      bayara: { team: 1, name: 'The red Bayara', zh: '紅巴牙喇', army: ['shinsengumi', 'shinsengumi', 'cavalry'], at: [52, 126, PI], dir: ['hold', 56, 104], stay: true },
+      white: { team: 1, name: 'The Plain White banner', zh: '正白旗', army: ['samurai', 'samurai', 'archer', 'cavalry'], at: [90, 126, PI], dir: ['hold', 86, 104], stay: true },
+      guns: { team: 1, name: 'Li Yongfang\'s gunners', zh: '李永芳', army: ['cannon4', 'cannon4', 'rifle_sho'], at: [92, 116, PI], reserve: true, stay: true, dir: ['hold', 90, 96] },
+      yellow: { team: 1, name: 'The Bordered Yellow banner', zh: '鑲黃旗', army: ['samurai', 'samurai', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
+      sichuan: { team: 0, name: 'Qin Bangping', zh: '秦邦屏', army: ['ashigaru', 'ashigaru', 'ashigaru', 'samurai', 'ashigaru', 'ashigaru'], at: [74, 30, 0], dir: ['hold', 74, 32], stay: true },
+      zhe: { team: 0, name: 'Qi Jin', zh: '戚金', army: ['yuanyang', 'rifle_imp', 'yuanyang', 'rifle_imp'], at: [58, -64, 0], dir: ['hold', 58, -60], stay: true },
+      chen: { team: 0, name: 'Chen Ce', zh: '陳策', army: ['samurai', 'rifle_imp'], at: [70, -40, 0], dir: ['hold', 72, -38], stay: true },
+    },
+    phases: [
+      { title: '一 · 白杆兵 · The White Poles', goal: 'Charge the White Pole camp beside the Bayara', text: 'Across the open ground north of the river stands the camp of the Sichuan White Poles. The Bayara go in first. Your file goes with them.', show: ['wpcamp'],
+        start: [['dir', 'niru', 'hold', 72, 40], ['dir', 'bayara', 'hold', 74, 38]], obj: { survive: 56 }, at: [[1, ['lead']]],
+        say: [[2, 'niru', 'Bošokū! Your file goes in beside the Bayara. Where the red armour goes, you go.', '撥什庫！你的人跟著巴牙喇上。紅甲往哪去，你們就往哪去。'],
+          [10, 'muktan', 'Shenyang fell in one morning. These men came too late to save it, and they came anyway.', '瀋陽一個早上就破了。這些人來晚了，可他們還是來了。'],
+          [22, 'lookout', 'They\'re not breaking! Long poles with hooks on the ends: they\'re pulling the riders down!', '他們不退！長桿子，頭上帶鉤，把騎兵拉下馬來！'],
+          [32, 'sose', 'White-poled spears. Those are Qin Liangyu\'s men, the woman general of Shizhu.', '白杆槍。是石柱那個女將軍秦良玉的兵。'],
+          [48, 'niru', 'Back! Back to the banner! Re-form!', '退！退回旗下！重新列隊！']] },
+      { title: '二 · 退 · Back to the banner', goal: 'Fall back to the banner and re-form', text: 'The first charge has been thrown back. Pull your file back to the banner and wait for the guns.', show: ['rally'], hide: ['wpcamp'],
+        start: [['dir', 'niru', 'hold', 68, 98], ['dir', 'bayara', 'hold', 58, 104], ['dir', 'white', 'hold', 86, 104]], obj: { all: [{ reach: 'rally' }, { survive: 30 }] },
+        say: [[3, 'manggu', 'Thrown back. By foot soldiers with sticks.', '被一群拿棍子的步兵打回來了。'],
+          [12, 'niru', 'The Khan is sending up the guns. Li Yongfang found Ming gunners among the Shenyang prisoners.', '汗把砲調上來了。李永芳在瀋陽的俘虜裡找出了明朝的砲手。'],
+          [20, 'lier', 'Those gunners are Shenyang men. They\'ll fire on their own people, for silver and their lives.', '那些砲手是瀋陽人。為了銀子，為了活命，朝自己人開砲。']] },
+      { title: '三 · 砲 · The guns', goal: 'Go in again behind the guns', text: 'The captured Ming cannon fire into the White Pole camp. When it breaks, go in again.', show: ['wpcamp'], hide: ['rally'],
+        start: [['release', 'guns'], ['dir', 'guns', 'hold', 90, 92]], obj: { all: [{ defeat: ['sichuan'], frac: 0.7 }, { survive: 50 }] },
+        at: [[14, ['dir', 'niru', 'attack']], [14, ['dir', 'bayara', 'attack']], [14, ['dir', 'white', 'attack']], [40, ['wound', 4]], [60, ['kill', 'sichuan']]],
+        say: [[2, 'lookout', 'The guns are firing into their camp!', '砲打進他們營裡了！'],
+          [13, 'niru', 'Now! In again, while they\'re still picking themselves up!', '趁現在！再衝一次，趁他們還沒爬起來！'],
+          [61, 'lookout', 'Their general is down! The white banners are going down!', '他們的將軍倒了！白旗一面一面倒了！']] },
+      { title: '四 · 車營 · The wagon camp', goal: 'Cross the river and storm the southerners\' camp', text: 'South of the river the Zhejiang men wait behind their wagons and palisades. Cross over and break the camp.', show: ['zcamp'], hide: ['wpcamp'],
+        start: [['release', 'yellow'], ['dir', 'yellow', 'hold', 58, -58], ['dir', 'niru', 'hold', 58, -56], ['dir', 'bayara', 'hold', 60, -56], ['dir', 'white', 'hold', 62, -58], ['calm', 'zhe', 30]],
+        obj: { defeat: ['zhe', 'chen'], frac: 0.7 }, at: [[70, ['kill', 'chen']], [95, ['kill', 'zhe']], [100, ['dir', 'niru', 'attack']]],
+        say: [[3, 'niru', 'In the wagon camp: southerners. The same kind as at Abdali, two years ago.', '車營裡是南兵。跟兩年前阿布達里岡的一樣。'],
+          [7, 'alin', 'Then they know us too.', '那他們也認得我們。'],
+          [40, 'lookout', 'They\'re out of powder! They\'re swinging their guns like clubs!', '他們火藥打光了！拿銃當棍子打！'],
+          [96, 'lookout', 'Their old general sat by his drum and wouldn\'t move. They\'ve cut him down.', '他們那個老將坐在鼓邊不肯走。被砍倒了。']] },
+    ],
+    win: 'By nightfall both Ming camps on the Hun River were destroyed. The banners called it the hardest fight of the war.',
+  },
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
@@ -3174,6 +3227,7 @@ Sim.prototype.mObj = function (o, el) {
 };
 Sim.prototype.missionThink = function () {
   const M = this.mission; if (this.mwin !== undefined) return; if (this.mode === 'assault') return this.assaultThink();
+  if (M.beacon && this.beaconTick) { this.beaconTick(); if (this.mwin !== undefined) return; }
   const mv = this.mv;
   if (mv.ph < 0) { mv.ph = 0; mv.t0 = this.tick; this.mStart(); }
   const P = M.phases[mv.ph], el = (this.tick - mv.t0) / 30;
