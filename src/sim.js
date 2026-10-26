@@ -3463,10 +3463,15 @@ Sim.prototype.paceMove = function (u) {
   else if (order === ORD_CHARGE) { // a charge: a disciplined close-order team keeps together (the slowest man's pace) until the last few paces
     cap = def.yuanyang || def.shield ? base * (td < 8 ? 1 : 0.8) : base * 1.6; }
   else if (sd >= 0) {
-    const close = td < 30; // advancing to contact: the line walks in step
-    cap = sd > 20 ? base : sd > 8 ? base * PACE_JOG : base * PACE_WALK;
-    if (close && sd <= 8) cap = base * PACE_WALK;
-    if (sd < 1.6) cap = Math.min(cap, base * PACE_WALK * Math.max(0.3, sd / 1.6)); }
+    // where he stands in the company's shape (his offset from the men around him vs his offset in the formation):
+    // a man in his place marches with the rest; a straggler jogs, a man far adrift runs to rejoin
+    if (sq.paceTk !== this.tick) { sq.paceTk = this.tick; let ax = 0, az = 0, bx = 0, bz = 0, k = 0; for (const id of sq.unitIds) { const v = this.units[id]; if (v.dead || v.ctrl >= 0 || v.downed || v.wounded) continue; ax += v.x; az += v.z; bx += v.slotX; bz += v.slotZ; k++; } sq.pcx = k ? ax / k : 0; sq.pcz = k ? az / k : 0; sq.psx = k ? bx / k : 0; sq.psz = k ? bz / k : 0; }
+    const e = len((u.x - sq.pcx) - (u.slotX - sq.psx), (u.z - sq.pcz) - (u.slotZ - sq.psz));
+    cap = order === ORD_FOLLOW ? (sd > 12 ? base : sd > 5 ? base * PACE_JOG : base * PACE_WALK) : sd > 35 ? base * PACE_JOG : base * PACE_WALK; // following his leader he keeps the leader's pace; otherwise the company marches
+    if (td < 30 && order !== ORD_FOLLOW) cap = base * PACE_WALK; // advancing to contact: the line walks in step
+    if (e > 10) cap = Math.max(cap, base); else if (e > 4) cap = Math.max(cap, base * PACE_JOG);
+    if (sd < 1.6) cap = Math.min(cap, base * PACE_WALK * Math.max(0.3, sd / 1.6));
+    if (sd < 0.35 && !u.role) cap = 0; } // in his place: stand, don't rock on the spot
   const want = Math.min(m, cap), vs0 = u.vs || 0;
   const vs = want > vs0 ? Math.min(want, vs0 + (fighting ? 14 : 5.5) * DT) : Math.max(want, vs0 - 11 * DT);
   if (m > 0.01) { u.pdx = u.mx / m; u.pdz = u.mz / m; }
