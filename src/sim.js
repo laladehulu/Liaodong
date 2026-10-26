@@ -1294,6 +1294,7 @@ class Sim {
     const eng = (!ranged && !u.mounted) ? this.engaged() : null; // men already swarming a foe make him a worse pick: spread out along the enemy line
     for (let i = 0; i < enemies.length; i++) { const v = enemies[i]; if (v.inactive || (v.duelWith >= 0 && v.duelWith !== undefined)) continue; const dx = v.x - u.x, dz = v.z - u.z; let d2 = dx * dx + dz * dz;
       if (eng) { const n = eng[v.id] - (u.target === v.id ? 1 : 0); if (n >= 3) d2 *= 5; else if (n === 2) d2 *= 2.2; else if (n === 1) d2 *= 1.25; }
+      if (this.xc && eng && this.spN && u.spaceOf !== v.id && (this.spN[v.id] || 0) >= this.xcLim(v)) d2 *= 4; // every space round him is taken: look along the line for a free one
       if (this.xc && ranged && v.ctrl >= 0 && !this.players[v.ctrl].ai) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 3) d2 *= 8; } if (v.downed && this.story) continue; if (v.wounded) d2 *= v.downed ? 40 : 6; if (this.story && v.zfile && ranged) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 2) d2 *= 4; else if (sh === 1) d2 *= 1.8; } if (v.squad >= 0 && this.squads[v.squad].routing && !u.mounted) d2 *= 1.6; if (sq && sq.focus >= 0 && v.squad === sq.focus && ranged) d2 *= 0.45; if (d2 < bd) { bd = d2; best = v.id; } }
     return best;
   }
@@ -1392,18 +1393,21 @@ class Sim {
       } else {
         wantYaw = ang;
         if (false && u.bombs > 0 && !(u.throwT > 0) && d > 9 && d < 24 && u.st === ST_IDLE && u.flinchT <= 0 && this.rng.next() < 0.08) { this.aiThrow(u, tgt); }
-        const leash = (!sq || isHero || order === ORD_CHARGE || u.mounted) ? 1e9 : order === ORD_FOLLOW ? 6 : 4.5;
+        const xfr = this.xc && sq && sq.front && order === ORD_CHARGE && !isHero && !u.mounted; // in contact the line keeps its frontage
+        const leash = (!sq || isHero || (order === ORD_CHARGE && !xfr) || u.mounted) ? 1e9 : order === ORD_FOLLOW ? 6 : xfr ? 3 : 4.5;
         const tsd = leash < 1e9 ? len(tgt.x - u.slotX, tgt.z - u.slotZ) : 0;
-        if (tsd > leash + reach) { this.goSlot(u, sq, ang); } // hold the formation: step out only for a foe who comes to the line, rear ranks wait their turn
+        const xl = (this.xc && !isHero && !u.mounted && !u.champ && u.ctrl < 0 && tsd <= leash + reach) ? this.xcLine(u, sq, tgt, d, reach) : 0; // 1: waiting or breathing, 2: spear keeping his distance
+        if (tsd > leash + reach) { this.goSlot(u, sq, ang); if (u.spaceOf >= 0) u.spaceOf = -1; } // hold the formation: step out only for a foe who comes to the line, rear ranks wait their turn
+        else if (xl) { }
         else if (u.mounted) {
           if (u.ctrl < 0) this.cavCharge(u, tgt, d); // shock cavalry: run up, ride through, wheel, come again
           else { const desired = d > 9 ? def.speed : (d > reach ? 4 : 2.5); this.cavSteer(u, tgt.x, tgt.z, desired); }
         } else if (d > reach - 0.5) { const sp = def.speed * (u.st === ST_IDLE ? 1 : 0.6); this.steerFoot(u, tgt.x, tgt.z, sp); }
         else { u.mx = 0; u.mz = 0; }
-        if (u.role && sq && !sq.routing) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
+        if (u.role && sq && !sq.routing && !xl) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
         const eager = u.mounted ? 0.35 : u.role === 'spear' && tgt.entT > 0 ? 0.35 : u.role === 'brush' ? 0.2 : u.role === 'shield' ? 0.05 : 0.09;
-        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && this.rng.next() < eager) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
-        if (this.xc && u.circleT > 0 && !u.mounted && u.st === ST_IDLE) { u.circleT -= DT; const sd = (u.id & 1) ? 1 : -1, nx = dx / (d || 1), nz = dz / (d || 1), keep = reach + 1.1; const rad = (d - keep) * 1.6; u.mx = nx * rad + nz * sd * 1.4; u.mz = nz * rad - nx * sd * 1.4; if (!u.blocking && this.rng.next() < 0.02) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = 0.5; } }
+        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && this.rng.next() < eager) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
+        if (this.xc && u.circleT > 0 && !u.mounted && u.st === ST_IDLE && !xl) { u.circleT -= DT; const sd = (u.id & 1) ? 1 : -1, nx = dx / (d || 1), nz = dz / (d || 1), keep = reach + 1.1; const rad = (d - keep) * 1.6; u.mx = nx * rad + nz * sd * 1.4; u.mz = nz * rad - nx * sd * 1.4; if (!u.blocking && this.rng.next() < 0.02) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = 0.5; } }
         this.aiBlock(u, tgt);
       }
     } else {

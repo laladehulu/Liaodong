@@ -11,9 +11,11 @@ const mine = [];
 for (let t = 0; t < 2; t++) SC[t].forEach((k, i) => { const n = SC[t].length; const sq = sim.createSquad(k, t, own[t], (i - (n - 1) / 2) * 16, t === 0 ? -22 : 22, t === 0 ? 0 : Math.PI); for (const id of sq.unitIds) mine.push(id); });
 const N0 = [0, 1].map(t => mine.filter(id => sim.units[id].team === t).length);
 let contact = -1, end = -1, samples = 0, crowd = 0, crowdN = 0, apM = 0, apN = 0, apMax = 0, front = 0, wait = 0, other = 0, apHist = [0, 0, 0, 0, 0, 0], gaps = 0, gapN = 0;
-const hashes = [];
+const hashes = []; sim.phase = 1; sim.battleTick = sim.tick;
+const SQ = sim.squads.filter(q => q.alive && !q.inactive);
+function general() { for (const q of SQ) { if (!q.alive) continue; let e = null, bd = 1e18; for (const r of SQ) { if (!r.alive || r.team === q.team) continue; const d = Math.hypot(r.cx - q.cx, r.cz - q.cz); if (d < bd) { bd = d; e = r; } } if (!e) continue; q.order = S.ORD_CHARGE; q.tx = e.cx; q.tz = e.cz; q.facing = Math.atan2(e.cx - q.cx, e.cz - q.cz); } }
 for (let t = 0; t < maxT; t++) {
-  sim.step([]);
+  if (t % 30 === 0) general(); sim.step([]);
   if (t % 60 === 0) hashes.push(sim.hash());
   const al = [0, 1].map(tm => mine.filter(id => !sim.units[id].dead && sim.units[id].team === tm).length);
   if (contact < 0) { for (const id of mine) { const u = sim.units[id]; if (u.dead || u.target < 0) continue; const v = sim.units[u.target]; if (Math.hypot(v.x - u.x, v.z - u.z) < u.def.reach + 0.5) { contact = t; break; } } }
