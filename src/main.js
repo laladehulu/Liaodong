@@ -805,7 +805,7 @@ function helpPrompt(h, u) { // 'E · help him up' beside a downed man, and the p
   const sim = state.sim; if (!h || h.dead || !sim) { el.hidden = true; return; }
   const busy = sim.teamAlive[h.team].find(v => v.downed && v.reviveBy === h.id);
   if (busy) { el.hidden = false; el.innerHTML = `<b>扶起</b> getting him up… <i style="--p:${Math.min(100, Math.round(busy.reviveT / 45 * 100))}%"></i>`; return; }
-  if (!u) { el.hidden = true; return; }
+  if (!u || !u.downed) { el.hidden = true; return; }
   const nm = typeof SPEECH !== 'undefined' ? SPEECH.nameOf(u.id) : null; el.hidden = false;
   el.innerHTML = `<kbd>E</kbd> ${u.downed ? 'help him up' : 'get his arm over your shoulder'}${nm ? ` · <span>${typeof nm === 'string' ? nm : nm.zh + ' ' + nm.en}</span>` : ''}`;
 }
