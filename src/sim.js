@@ -2362,7 +2362,7 @@ class Sim {
   stormThink() {
     if (this.tick < this.nextBolt) return; this.nextBolt = this.tick + 450 + Math.floor(this.rng.next() * 750);
     const cand = [];
-    for (let i = 0; i < this.squads.length; i++) { const sq = this.squads[i]; if (!sq.alive) continue; const cap = this.units[sq.unitIds[0]]; if (!cap.dead) cand.push(cap); }
+    for (let i = 0; i < this.squads.length; i++) { const sq = this.squads[i]; if (!sq.alive) continue; const cap = this.units[sq.unitIds[0]]; if (!cap.dead && !cap.zfile) cand.push(cap); } // the storm does not pick off the story's own file
     if (!cand.length) return; const t = cand[Math.floor(this.rng.next() * cand.length)];
     const x = t.x, z = t.z, y = terrainH(x, z);
     this.events.push({ t: 'lightning', x, y, z });
@@ -2660,11 +2660,11 @@ const MISSIONS = {
       folk: { team: 0, name: 'People from Kaiyuan', zh: '開原百姓', army: ['ronin', 'ronin', 'ronin'], at: [-4, 96, PI], reserve: true, stay: true },
       jin1: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'archer'], at: [-130, 30, PI / 2], reserve: true },
       jin2: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'byakkotai'], at: [130, 0, -PI / 2], reserve: true },
-      jin3: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry'], at: [0, 140, PI], reserve: true },
+      jin3: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'byakkotai'], at: [-130, -96, PI / 2], reserve: true },
     },
     phases: [
       { title: '一 · 雨 · North in the rain', text: 'Lead your file up the road with the column, to the rise where you can see north toward Kaiyuan.', show: ['crest'],
-        obj: { reach: 'crest' },
+        obj: { all: [{ reach: 'crest' }, { survive: 42 }] },
         at: [[1, ['promote']], [16, ['dir', 'col', 'hold', 0, -40]], [40, ['dir', 'col', 'hold', 0, -16]]],
         say: [[3, 'col', 'Kaiyuan has sent for help twice. The last party that went north never got there. Close up and keep moving.', '開原兩次求援，上回派去的人一個也沒到。跟緊，快走。'],
           [10, 'fang', 'Rain like this, half the matches will be out by noon. Keep your cord under your hat.', '這種雨，不到中午火繩就滅一半。把火繩塞帽子裡。'],
@@ -2686,7 +2686,7 @@ const MISSIONS = {
         at: [[9, ['wound', 4]]],
         say: [[2, 'col', 'We cannot get through. Back to Tieling — with the people!', '過不去了！回鐵嶺——帶著百姓走！'],
           [6, 'fang', 'Half a day north to watch it burn, and half a day back.', '走了半天去看它燒，再走半天回來。'],
-          [14, 'lookout', 'Riders behind us on the road!', '後面路上有馬兵！']] },
+          [14, 'lookout', 'Riders on the road ahead — they are trying to cut us off!', '前面路上有馬兵——要斷我們的路！']] },
     ],
     win: 'You brought your file back to Tieling.',
   },
@@ -2704,8 +2704,8 @@ const MISSIONS = {
     groups: {
       zhe: { team: 0, name: 'Your company', army: ['yuanyang', 'rifle_imp'], at: [-18, 60, Math.PI], dir: ['hold', -25, 44.5], stay: true, free: true },
       yuan: { team: 0, name: 'Yuan Chonghuan', zh: '袁崇煥', army: ['samurai'], at: [-7, 45, Math.PI], dir: ['hold', -7, 45], stay: true, free: true, officer: 4 },
-      ww: { team: 0, name: 'West wall garrison', army: ['rifle_imp', 'armstrong', 'rifle_spencer'], at: [-40, 44, Math.PI] },
-      ew: { team: 0, name: 'East wall garrison', army: ['rifle_imp', 'armstrong', 'samurai'], at: [28, 44, Math.PI] },
+      ww: { team: 0, name: 'West wall garrison', army: ['rifle_imp', 'rifle_spencer', 'rifle_imp'], at: [-40, 44, Math.PI] },
+      ew: { team: 0, name: 'East wall garrison', army: ['rifle_imp', 'rifle_spencer', 'samurai'], at: [28, 44, Math.PI] },
       gate: { team: 0, name: 'The gate guard', army: ['samurai', 'rifle_imp'], at: [0, 58, Math.PI] },
       camp: { team: 1, name: 'The Jin vanguard camp', army: ['cavalry', 'samurai', 'archer'], exit: [-30, -150], at: [-30, -110, 0], dir: ['hold', -30, -62], stay: true },
       van: { team: 1, name: 'The Bordered banners', army: ['samurai', 'samurai', 'archer', 'archer'], exit: [-40, -150], at: [-40, -122, 0], reserve: true },
@@ -2819,7 +2819,7 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   if (!ass && !M.soldier) { // campaign balance: the enemy rank and file are a little softer, your allies a little harder (officers excepted)
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
     for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, 0.82, 0.82) : tune(u.def, 1.12, 1.05); u.hp = u.def.hp; } }
-  if (M.siege && (ass || M.soldier)) { if (!ass) this.sector = 0; this.siegeInit(); } // a story chapter on the walls uses the siege engines too
+  if (M.siege && (ass || M.soldier)) { if (!ass) this.sector = 0; this.siegeInit(); if (!ass) this.sg.emp = this.sg.emp.filter(e => e.team === this.sg.D); } // a story chapter on the walls uses the siege engines too (the Jin of 1626 had no field guns)
   if (ass) { let n = 0; for (const u of this.units) if (u.team === M.attacker && u.type !== 'horse' && u.type !== 'hero') n++; this.tickets = Math.round(n * 0.8); for (const o of this.objectives) o.rate *= 0.6; this.sector = 0; M.sectors[0].forEach(k => this.missionZone(k).hidden = false); this.assaultDirs(); this.mv.ph = 0; }
   // humans: in the campaign each leads a squad of the troops they chose (two when alone) and rides with it
   if (M.soldier) { // a story chapter: you are one man in a mandarin duck team of the named group

@@ -591,9 +591,9 @@ function zheFinishK(winner) {
   ZS.stage = 'endk'; zSave();
   const all = [{ k: meK, zh: ZS.name.zh, en: ZS.name.en, me: true }].concat(file.filter(r => r.k !== meK));
   const li = all.map(r => { const f = r.me ? 'out' : ZS.fateK[r.k] || 'lost'; return `<li class="${f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${r.zh} ${r.en}${r.me ? ' (you)' : ''} — ${f === 'out' ? 'back in Tieling' : f === 'dead' ? 'killed on the road' : 'missing in the rain'}</li>`; }).join('');
-  const outN = file.filter(r => ZS.fateK[r.k] === 'out').length + 1;
+  const outN = file.filter(r => ZS.fateK[r.k] === 'out').length + 1; let fa = 0, fn = 0; { const G = sim.mg.folk; if (G) for (const id of sim.players[G.p].squads) for (const uid of sim.squads[id].unitIds) { fn++; if (!sim.units[uid].dead) fa++; } } ZS.folkK = fa;
   $('resultTitle').textContent = won ? '回 · Back to Tieling' : '散 · Scattered on the road'; $('resultTitle').className = won ? 'win' : 'lose';
-  $('resultText').innerHTML = `${won ? 'The column came back to Tieling, and the people of Kaiyuan with it.' : 'The horsemen closed the road, but some of you found your way back through the fields after dark.'} ${outN} of your file came back.`;
+  $('resultText').innerHTML = `${won ? 'The column came back to Tieling, and the people of Kaiyuan with it.' : 'The horsemen closed the road, but some of you found your way back through the fields after dark.'} ${outN} of your file came back.${fn ? ` About ${Math.round(fa / fn * 10) * 10}% of the people you met on the road reached Tieling with you.` : ''}`;
   $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';
   $('btnNext').onclick = () => { $('result').hidden = true; zCards([
     { title: '開原 · Kaiyuan', year: 'The sixth month of 1619', p: ['Nurhaci attacked Kaiyuan in heavy rain. Its general, Ma Lin, led much of the garrison out of the gates to fight in the open, and too few men were left on the walls. A small relief party sent to the town was cut off on the way; a second relief force from Tieling was intercepted and driven back.',
