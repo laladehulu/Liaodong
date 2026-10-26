@@ -101,18 +101,18 @@ const SPEECH = (() => {
 // they happened. You cannot change the history; you can only change who comes home.
 // each man of the file has his own face and headgear, the same at the fire and in the pass (render-only: u.look)
 const ZLOOK = {
-  wu: { hat: 'chief', brows: 'knit', beard: 'longmous', grey: true, scar: true, skin: 0xbf9670 },
-  lou: { hat: 'rattan', brows: 'thick', beard: 'stubble', bulk: true, skin: 0xcd9f78 },
-  me: { hat: 'rattan', brows: 'thin', band: 0xe8e2d0 },
-  liu6: { hat: 'band', brows: 'high', young: true, rosy: true, skin: 0xe8c6a2 },
-  luo: { hat: 'wrap', wrap: 0x2a3a5a, brows: 'high', beard: 'mous', grin: true },
-  jin: { hat: 'straw', brows: 'thick', beard: 'goatee', charm: true, skin: 0xc49a72 },
-  ye: { hat: 'rattan', band: 0xe8e2d0, brows: 'sad', beard: 'mous' },
-  wang: { hat: 'rattanTall', brows: 'thick', bulk: true, rosy: true, bigNose: true },
-  fang: { hat: 'scholar', brows: 'thin', beard: 'goatee', longBeard: true, brush: true, skin: 0xe2c4a0 },
-  he: { hat: 'felt', brows: 'thick', beard: 'full', patch: true, scar: true, skin: 0xb88c66 },
-  du: { hat: 'rattan', plume: 0xd02a1c, brows: 'knit', skin: 0xd8b088 },
-  zhu: { hat: 'cookcap', brows: 'thick', beard: 'full', grey: true, belly: true, apron: true, bigNose: true, skin: 0xd8a07a },
+  wu: { h: 1.03, hat: 'chief', brows: 'knit', beard: 'longmous', grey: true, scar: true, skin: 0xbf9670 },
+  lou: { h: 1.08, hat: 'rattan', brows: 'thick', beard: 'stubble', bulk: true, skin: 0xcd9f78 },
+  me: { h: 1.0, hat: 'rattan', brows: 'thin', band: 0xe8e2d0 },
+  liu6: { h: 0.86, hat: 'band', brows: 'high', young: true, rosy: true, skin: 0xe8c6a2 },
+  luo: { h: 0.95, hat: 'wrap', wrap: 0x2a3a5a, brows: 'high', beard: 'mous', grin: true },
+  jin: { h: 0.92, hat: 'straw', brows: 'thick', beard: 'goatee', charm: true, skin: 0xc49a72 },
+  ye: { h: 0.98, hat: 'rattan', band: 0xe8e2d0, brows: 'sad', beard: 'mous' },
+  wang: { h: 1.14, hat: 'rattanTall', brows: 'thick', bulk: true, rosy: true, bigNose: true },
+  fang: { h: 0.97, hat: 'scholar', brows: 'thin', beard: 'goatee', longBeard: true, brush: true, skin: 0xe2c4a0 },
+  he: { h: 1.01, hat: 'felt', brows: 'thick', beard: 'full', patch: true, scar: true, skin: 0xb88c66 },
+  du: { h: 1.06, hat: 'rattan', plume: 0xd02a1c, brows: 'knit', skin: 0xd8b088 },
+  zhu: { h: 1.0, hat: 'cookcap', brows: 'thick', beard: 'full', grey: true, belly: true, apron: true, bigNose: true, skin: 0xd8a07a },
 };
 function zDress(u, ci) { const r = ZR[ci]; if (!u || !r) return; u.look = Object.assign({ id: r.k }, ZLOOK[r.k] || {}); if (state.renderer) state.renderer.colorFigure(u.id, u); }
 // name tags: who a man is, over his head, when you look at him or he is close
@@ -129,7 +129,7 @@ function zTags() {
       if (d > 12 && !look) continue;
       let e = ZTAG.pool[n]; if (!e) { e = document.createElement('div'); e.className = 'ztag'; document.body.appendChild(e); ZTAG.pool[n] = e; } n++;
       const st = u.wounded ? (u.helpedBy >= 0 ? ' · <i class="w">wounded</i>' : ' · <i class="d">down</i>') : u.hp < u.def.hp * 0.5 ? ' · <i class="w">hurt</i>' : '';
-      const html = `${rr.zh} <span>${rr.en}</span><small>${rr.t}${st}</small>`; if (e._h !== html) { e.innerHTML = html; e._h = html; }
+      const html = `${rr.zh} <span>${rr.en}</span>${st ? `<small>${st.replace(/^ · /, '')}</small>` : ''}`; if (e._h !== html) { e.innerHTML = html; e._h = html; }
       const sx = (v.x + 1) / 2 * W, sy = (1 - v.y) / 2 * H, k = Math.max(0.7, Math.min(1, 8 / Math.max(4, d)));
       e.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`; e.style.opacity = (look ? 1 : Math.max(0.25, 1 - (d - 4) / 10)).toFixed(2); e.style.display = ''; }
   }

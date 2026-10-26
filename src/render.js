@@ -1573,7 +1573,7 @@ class Renderer {
     // ---------- to world ----------
     const dp = down ? -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4)) : 0, cP = Math.cos(dp), sP = Math.sin(dp);
     const oy = down ? 0.15 : 0;
-    const vsc = (u.type === 'byakkotai' ? 0.88 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.03 : 0.95 + uhash(u.id, 7) * 0.09);
+    const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
     const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
     const Wd = (lx, ly, lz, out, o) => { const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = lx * cy + z2 * sy; out[o + 1] = y2; out[o + 2] = -lx * sy + z2 * cy; };
     const G = this._G || (this._G = new Float64Array(96));
@@ -1582,11 +1582,13 @@ class Renderer {
     const CB = this._CB || (this._CB = new Float64Array(9)); Wd(C[0], C[1], C[2], CB, 0); Wd(C[3], C[4], C[5], CB, 3); Wd(C[6], C[7], C[8], CB, 6);
     Wp(0, pel - 0.02, pz, G, 60);
     this._sx = CB[0]; this._sy = CB[1]; this._sz = CB[2];
+    if (vsc !== 1) for (let i = 0; i < 9; i++) CB[i] *= vsc;
     // ---------- draw body ----------
     this.boxB(f.torso, slot, G[18 + 24], G[18 + 25], G[18 + 26], CB, 0.5, 0.64, 0.3);
     this.boxB(f.hips, slot, G[60], G[61], G[62], CB, 0.4, 0.22, 0.27);
     // head stays nearer upright than the chest
     const HB = this._HB || (this._HB = new Float64Array(9)); { const hl = -a.lean * 0.5, ht = -a.twist * 0.35; const ch = Math.cos(hl), sh = Math.sin(hl), cth = Math.cos(ht), sth = Math.sin(ht); const ax = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; for (let i = 0; i < 3; i++) { const v = ax[i]; const y1 = v[1] * ch - v[2] * sh, z1 = v[1] * sh + v[2] * ch; const x2 = v[0] * cth + z1 * sth, z2 = -v[0] * sth + z1 * cth; const vx = CB[0] * x2 + CB[3] * y1 + CB[6] * z2, vy = CB[1] * x2 + CB[4] * y1 + CB[7] * z2, vz = CB[2] * x2 + CB[5] * y1 + CB[8] * z2; HB[i * 3] = vx; HB[i * 3 + 1] = vy; HB[i * 3 + 2] = vz; } }
+    if (vsc !== 1) for (let i = 0; i < 9; i++) HB[i] *= vsc;
     const hx = G[18 + 27], hy = G[18 + 28], hz = G[18 + 29];
     this.boxB(f.head, slot, hx, hy, hz, HB, 0.28, 0.3, 0.28);
     const hat = def.hat; const hatAt = (mesh, on, off, s1, s2, s3) => { if (!on) { mesh.setMatrixAt(slot, this.tmp.zero); return; } this.boxB(mesh, slot, hx + HB[3] * off, hy + HB[4] * off, hz + HB[5] * off, HB, s1, s2, s3); };

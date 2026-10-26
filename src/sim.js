@@ -160,12 +160,13 @@ const BATTLES = {
   hakodate: { name: 'Ningyuan', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.05, terrain: 0.4, features: ['starfort', 'sea'], desc: 'Yuan Chonghuan\'s fortress by the Bohai Sea, its walls bristling with Portuguese-pattern cannon. The sea lies to the east.' },
   abudali:  { name: 'Abudali Pass', jp: '阿布達里岡', when: 'April 1619', biome: 'winter', fog: 0.3, terrain: 0.45, features: ['pass'], hidden: true, desc: 'A narrow valley in the mountains east of Hetu Ala, its slopes thick with pine and late snow.' },
   zcamp:    { name: 'Camp', jp: '營', when: '1619', biome: 'night', fog: 0.2, terrain: 0.25, features: [], hidden: true, desc: 'A night camp in the hills.' },
+  siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
   bonari:   { name: 'Shanhai Pass', jp: '山海關', when: 'May 1644', biome: 'spring', fog: 0.25, terrain: 0.5, features: ['pass'], desc: 'The First Pass Under Heaven: a narrow gap between steep ridges, blocked by two lines of earthworks. Flanking over the slopes is slow and costly.' },
 };
 // terrain features (deterministic: only + - * / sqrt and DM trig)
 const TERR = { scale: 1, hills: [], plateaus: [], river: null, moat: null, pass: null, sea: null };
 function sstep(a, b, x) { let t = (x - a) / (b - a); t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); }
-function setTerrain(cfg) { TERR.scale = cfg.scale; TERR.hills = cfg.hills || []; TERR.plateaus = cfg.plateaus || []; TERR.river = cfg.river || null; TERR.moat = cfg.moat || null; TERR.pass = cfg.pass || null; TERR.sea = cfg.sea || null; buildHeightCache(); }
+function setTerrain(cfg) { TERR.scale = cfg.scale; TERR.hills = cfg.hills || []; TERR.plateaus = cfg.plateaus || []; TERR.river = cfg.river || null; TERR.moat = cfg.moat || null; TERR.pass = cfg.pass || null; TERR.sea = cfg.sea || null; TERR.swall = cfg.swall || null; TERR.sditch = cfg.sditch || null; buildHeightCache(); }
 // height field component: the terrain is sampled once per battle into a grid and read back bilinearly (the analytic
 // function is dozens of sin() calls; every unit asks for its height several times a tick)
 const HC = { on: false, x0: -192, step: 1, n: 385, h: null };
@@ -182,6 +183,7 @@ function waterAt(x, z) {
   }
   const m = TERR.moat;
   if (m) { const dx = x - m.x, dz = z - m.z; const r = Math.sqrt(dx * dx + dz * dz); const ad = r > m.R ? r - m.R : m.R - r; if (ad < m.w * 0.8) { for (let i = 0; i < m.gates.length; i++) { const g = m.gates[i]; if ((x - g[0]) * (x - g[0]) + (z - g[1]) * (z - g[1]) < 36) return -1; } return 1; } }
+  if (TERR.sditch) { const r = siegeDitchWater(TERR.sditch, x, z); if (r) return r; }
   if (TERR.sea && x > TERR.sea.x0 + 10) return 1;
   return 0;
 }
@@ -206,6 +208,8 @@ function terrainHExact(x, z) {
   }
   const m = TERR.moat;
   if (m) { const dx = x - m.x, dz = z - m.z; const r = Math.sqrt(dx * dx + dz * dz); const ad = r > m.R ? r - m.R : m.R - r; if (ad < m.w) { let gate = false; for (let i = 0; i < m.gates.length; i++) { const g = m.gates[i]; if ((x - g[0]) * (x - g[0]) + (z - g[1]) * (z - g[1]) < 49) gate = true; } if (!gate) { const t = 1 - (ad / m.w) * (ad / m.w); h -= m.depth * t; } } }
+  if (TERR.swall) h = siegeWallH(TERR.swall, x, z, h);
+  if (TERR.sditch) h = siegeDitchH(TERR.sditch, x, z, h);
   const sea = TERR.sea;
   if (sea && x > sea.x0) h -= sea.depth * sstep(sea.x0, sea.x0 + 22, x);
   return h;
@@ -270,7 +274,7 @@ class Sim {
     this.initFuel();
     if (this.mode === 'officers') for (const p of this.players) if (!p.ai) for (const id of p.squads) this.squads[id].order = ORD_FOLLOW;
     this.wagons = [];
-    if (!this.heroMode && !this.chaos) for (let t = 0; t < 2; t++) { const zz = t === 0 ? -128 : 128; for (const xx of [-26, 26]) { let x = xx, z = zz; for (let k = 0; k < 8 && (waterAt(x, z) !== 0); k++) z += t === 0 ? 4 : -4; this.wagons.push({ id: this.wagons.length, team: t, x, z, burnt: false, raid: 0 }); } }
+    if (!this.heroMode && !this.chaos && this.battle !== 'siegecity') for (let t = 0; t < 2; t++) { const zz = t === 0 ? -128 : 128; for (const xx of [-26, 26]) { let x = xx, z = zz; for (let k = 0; k < 8 && (waterAt(x, z) !== 0); k++) z += t === 0 ? 4 : -4; this.wagons.push({ id: this.wagons.length, team: t, x, z, burnt: false, raid: 0 }); } }
     { const wr = new RNG(this.seed ^ 0x77a1); this.wx = { at: 30 * (110 + wr.int(130)), kind: this.rain ? 'clear' : wr.next() < 0.5 ? 'fog' : 'rain', done: !!(this.mission && (this.mission.camp || this.mission.soldier)), lift: 0 }; }
     if (this.vets && this.vets.length && this.players[0]) { // veterans of earlier chapters: their losses and their stars march with them
       const used = {}; this.vets.forEach((v) => { const sid = this.players[0].squads.find(id => !used[id] && this.squads[id].type === v.type); if (sid === undefined) return; used[sid] = 1; const sq = this.squads[sid]; const xp = clamp(v.xp | 0, 0, 200); sq.xp = xp; sq.stars = xp >= 30 ? 3 : xp >= 15 ? 2 : xp >= 6 ? 1 : 0; sq.moraleMax = (sq.def.morale || 100) + sq.stars * 10; sq.morale = sq.moraleMax; sq.veteran = true;
@@ -304,6 +308,7 @@ class Sim {
     if (b === 'aizu') { L.plateaus.push({ x: 0, z: 96, r0: 21, r1: 27, h: 8 }); L.moat = { x: 0, z: 96, R: 33, w: 5, depth: 2.8, gates: [[0, 63]] }; L.hills.push({ x: -150, z: 40, r: 60, h: 14 }); L.hills.push({ x: 160, z: -20, r: 55, h: 12 }); }
     if (b === 'hakodate') { L.plateaus.push({ x: 0, z: 74, r0: 34, r1: 38, h: 1.6 }); L.moat = { x: 0, z: 74, R: 44, w: 5, depth: 2.6, gates: [[0, 30], [0, 118]] }; L.sea = { x0: 128, depth: 7 }; }
     if (b === 'bonari') L.pass = { r0: 24, r1: 56, h: 30 };
+    if (b === 'siegecity') { L.swall = { z0: SG.z0, z1: SG.z1, h: SG.h, gate: SG.gate, ramps: [-60, -12, 12, 60] }; L.sditch = { zc: SG.ditchZ, w: SG.ditchW, depth: 2.6, bridge: SG.gate, fills: SG.fills.map((f, i) => ({ x: f[0], hw: f[1], done: false, key: i ? 'ditchE' : 'ditchW' })) }; }
     if (b === 'abudali') { L.pass = { r0: 15, r1: 46, h: 24 }; L.hills.push({ x: -34, z: 6, r: 30, h: 6 }); L.hills.push({ x: 30, z: -48, r: 26, h: 5 }); }
     if (b === 'zcamp') { L.hills.push({ x: -90, z: 60, r: 70, h: 14 }); L.hills.push({ x: 100, z: -40, r: 80, h: 16 }); L.hills.push({ x: 0, z: 130, r: 70, h: 12 }); }
     // objectives worth holding
@@ -409,12 +414,12 @@ class Sim {
     // cover: wooden mantlets (pavises) around objectives and across the middle of the field
     const mant = (x, z) => { if (waterAt(x, z) !== 0) return; for (const q of this.boxes) if (Math.abs(q.x - x) < q.hw + 2 && Math.abs(q.z - z) < q.hd + 1.5) return; this.boxes.push({ x, z, hw: 1.15, hd: 0.2, h: 1.35, kind: 'mantlet' }); keep.push({ x, z, r: 2 }); };
     if (this.scen) { for (const c of this.scen.cover) mant(c[0], c[1]); }
-    else if (B !== 'abudali' && B !== 'zcamp') { for (const o of this.layout.objectives || []) for (const sd of [-1, 1]) for (const dx of [-5, 0, 5]) mant(o.x + dx + r.range(-1, 1), o.z + sd * (o.r + 2)); for (let i = 0; i < 14; i++) { const x = r.range(-90, 90), z = r.range(-45, 45); if (clear(x, z, 3)) { mant(x, z); mant(x + 2.6, z + r.range(-0.4, 0.4)); } } }
+    else if (B !== 'abudali' && B !== 'zcamp' && B !== 'siegecity') { for (const o of this.layout.objectives || []) for (const sd of [-1, 1]) for (const dx of [-5, 0, 5]) mant(o.x + dx + r.range(-1, 1), o.z + sd * (o.r + 2)); for (let i = 0; i < 14; i++) { const x = r.range(-90, 90), z = r.range(-45, 45); if (clear(x, z, 3)) { mant(x, z); mant(x + 2.6, z + r.range(-0.4, 0.4)); } } }
     if (this.scen) for (const L of this.scen.ladders) this.ladders.push({ x: L[0], z: L[1], hd: L[2], up: false, prog: 0, hp: 0 });
     const treeN = B === 'bonari' ? 30 : B === 'abudali' ? 190 : B === 'zcamp' ? 120 : B === 'nagaoka' ? 70 : this.bdef.biome === 'winter' ? 110 : 150;
     for (let i = 0; i < treeN; i++) {
       const x = r.range(-HALF + 8, HALF - 8), z = r.range(-98, 98);
-      if (!clear(x, z, 3)) continue; if (this.roadX !== undefined && Math.abs(x - this.roadX) < 6) continue; if (B === 'bonari' && Math.abs(x) < 26) continue; if (B === 'abudali' && Math.abs(x) < 19) continue; if (B === 'zcamp' && len(x, z) < 38) continue; if (B !== 'abudali' && Math.abs(z) > 112 && Math.abs(x) < 70) continue;
+      if (!clear(x, z, 3)) continue; if (this.roadX !== undefined && Math.abs(x - this.roadX) < 6) continue; if (B === 'bonari' && Math.abs(x) < 26) continue; if (B === 'abudali' && Math.abs(x) < 19) continue; if (B === 'siegecity' && z > -14) continue; if (B === 'zcamp' && len(x, z) < 38) continue; if (B !== 'abudali' && Math.abs(z) > 112 && Math.abs(x) < 70) continue;
       this.obstacles.push({ x, z, r: 0.45, kind: 0, variant: r.next() < 0.45 ? 1 : 0, scale: r.range(0.8, 1.5), rot: r.range(0, TAU) });
     }
     for (let i = 0; i < 38; i++) {
@@ -710,6 +715,7 @@ class Sim {
     if (this.real && this.tick % 5 === 0) this.soldierThink();
     this.resolveCollisions();
     this.updateProjectiles();
+    if (this.sg) this.siegeTick();
     for (let i = 0; i < units.length; i++) { const u = units[i]; if (!u.dead && u.mount >= 0) { const h = units[u.mount]; u.x = h.x; u.z = h.z; u.y = h.y; u.vy = 0; u.airborne = h.airborne; } }
     if (this.phase === 1 && this.tick % 30 === 0 && this.tick > this.battleTick + 150 && this.winner < 0) this.checkVictory();
   }
@@ -829,7 +835,7 @@ class Sim {
     } else u.aiming = false;
     if (this.phase === 1) {
       this.meleeControl(u, a, inp[4] | 0, inp[5] | 0);
-      if ((a & A_KICK) && u.st === ST_IDLE && u.mount < 0 && !u.mounted && !this.helpWounded(u)) { u.st = ST_KICK; u.stT = 0; u.kickHit = false; u.blocking = false; this.events.push({ t: 'kick', id: u.id }); }
+      if ((a & A_KICK) && u.st === ST_IDLE && u.mount < 0 && !u.mounted && !this.helpWounded(u) && !(this.sg && this.siegeInteract(u))) { u.st = ST_KICK; u.stT = 0; u.kickHit = false; u.blocking = false; this.events.push({ t: 'kick', id: u.id }); }
     } else { u.atkHeld = !!(a & A_ATK); u.blockHeld = !!(a & A_BLOCK); u.blocking = false; }
   }
   startReload(u, dur, fill) { u.st = ST_RELOAD; u.stT = 0; u.reloadT = dur; u.reloadFill = fill; u.blocking = false; this.events.push({ t: 'reload', id: u.id, dur }); }
@@ -1189,6 +1195,7 @@ class Sim {
       const i0 = Math.max(0, Math.floor((b.x - b.hw - m + HALF) / C)), i1 = Math.min(W - 1, Math.floor((b.x + b.hw + m + HALF) / C));
       const j0 = Math.max(0, Math.floor((b.z - b.hd - m + HALF) / C)), j1 = Math.min(W - 1, Math.floor((b.z + b.hd + m + HALF) / C));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) bl[j * W + i] |= 2; }
+    if (this.sg) this.siegeNav(bl);
     if (this.ladders) for (const L of this.ladders) if (L.up) { for (let z = L.z - L.hd - 1.5; z <= L.z + L.hd + 1.5; z += 1) for (const dx of [-0.8, 0.8]) bl[this.navCell(L.x + dx, z)] &= 1; }
     if (this.flows) { this.flows.clear(); this.flowOrder.length = 0; }
   }
@@ -1286,7 +1293,7 @@ class Sim {
     const eng = (!ranged && !u.mounted) ? this.engaged() : null; // men already swarming a foe make him a worse pick: spread out along the enemy line
     for (let i = 0; i < enemies.length; i++) { const v = enemies[i]; if (v.inactive || (v.duelWith >= 0 && v.duelWith !== undefined)) continue; const dx = v.x - u.x, dz = v.z - u.z; let d2 = dx * dx + dz * dz;
       if (eng) { const n = eng[v.id] - (u.target === v.id ? 1 : 0); if (n >= 3) d2 *= 5; else if (n === 2) d2 *= 2.2; else if (n === 1) d2 *= 1.25; }
-      if (this.xc && ranged && v.ctrl >= 0 && !this.players[v.ctrl].ai) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 3) d2 *= 8; } if (v.wounded) d2 *= v.downed ? 40 : 6; if (this.story && v.zfile && ranged) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 2) d2 *= 4; else if (sh === 1) d2 *= 1.8; } if (v.squad >= 0 && this.squads[v.squad].routing && !u.mounted) d2 *= 1.6; if (sq && sq.focus >= 0 && v.squad === sq.focus && ranged) d2 *= 0.45; if (d2 < bd) { bd = d2; best = v.id; } }
+      if (this.xc && ranged && v.ctrl >= 0 && !this.players[v.ctrl].ai) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 3) d2 *= 8; } if (v.downed && this.story) continue; if (v.wounded) d2 *= v.downed ? 40 : 6; if (this.story && v.zfile && ranged) { const sh = this.aimedAt(v.id) - (u.target === v.id ? 1 : 0); if (sh >= 2) d2 *= 4; else if (sh === 1) d2 *= 1.8; } if (v.squad >= 0 && this.squads[v.squad].routing && !u.mounted) d2 *= 1.6; if (sq && sq.focus >= 0 && v.squad === sq.focus && ranged) d2 *= 0.45; if (d2 < bd) { bd = d2; best = v.id; } }
     return best;
   }
   aimedAt(id) { if (this.aimTick !== this.tick) { this.aimTick = this.tick; if (!this.aimN || this.aimN.length < this.units.length) this.aimN = new Int16Array(this.units.length + 64); else this.aimN.fill(0); for (const v of this.units) if (!v.dead && v.target >= 0 && isGun(v.def, v.weapon)) this.aimN[v.target]++; } return this.aimN[id]; }
@@ -1986,7 +1993,7 @@ class Sim {
       }
       const bl = this.boxCells[this.cellOf(u.x, u.z)];
       if (bl) for (let k = 0; k < bl.length; k++) {
-        const b = this.boxes[bl[k]]; if (b.kind === 'gate' && (u.type === 'hero' || b.hw < 0.1)) continue; if (b.lad && b.lad.up && Math.abs(u.x - b.lad.x) < 1.5) continue;
+        const b = this.boxes[bl[k]]; if (b.kind === 'gate' && (u.type === 'hero' || b.hw < 0.1)) continue; if (b.lad && b.lad.up && Math.abs(u.x - b.lad.x) < (b.lad.w || 1.5)) continue;
         const ex = b.hw + r, ez = b.hd + r; const dx = u.x - b.x, dz = u.z - b.z;
         if (dx > -ex && dx < ex && dz > -ez && dz < ez) {
           const px = ex - Math.abs(dx), pz = ez - Math.abs(dz);
@@ -2231,7 +2238,7 @@ class Sim {
   dry(u) { return u.shots <= 0 && !u.champ && u.type !== 'hero' && u.ctrl < 0; }
   fatMul(u) { const f = u.fat || 0; return f > 85 ? 0.72 : f > 60 ? 0.86 : 1; }
   speedBoost(u) { return this.speedBoost0(u) * this.fatMul(u); }
-  speedBoost0(u) { if (u.dashT > 0) return 1; if (u.flinchT > 0 && u.ctrl >= 0 && !u.mounted) return 0.6; if (u.guardT > 0) return 0.45; if (u.frenzyT > 0) return 1.25; if (u.cryT > 0) return 1.15; if (u.squad < 0) return 1; const sq = this.squads[u.squad]; if (sq.abOn <= 0) return 1; return sq.ability === 'kiai' ? 1.3 : sq.ability === 'wedge' ? 1.2 : 1; }
+  speedBoost0(u) { if (u.dashT > 0) return 1; if (this.sg && this.sgClimb(u)) return 0.5; if (u.flinchT > 0 && u.ctrl >= 0 && !u.mounted) return 0.6; if (u.guardT > 0) return 0.45; if (u.frenzyT > 0) return 1.25; if (u.cryT > 0) return 1.15; if (u.squad < 0) return 1; const sq = this.squads[u.squad]; if (sq.abOn <= 0) return 1; return sq.ability === 'kiai' ? 1.3 : sq.ability === 'wedge' ? 1.2 : 1; }
   canister(u, sq) {
     let best = null, bd = 50 * 50; const en = this.teamAlive[1 - u.team];
     for (let i = 0; i < en.length; i++) { const v = en[i]; const dx = v.x - u.x, dz = v.z - u.z, d2 = dx * dx + dz * dz; if (d2 < bd) { bd = d2; best = v; } }
@@ -2578,7 +2585,7 @@ const MISSIONS = {
     start: [56, -64, 0],
     zones: [{ key: 'sbridge', x: 74, zr: -15, r: 10, name: 'South end of the bridge' }, { key: 'camp', x: 58, z: -62, r: 20, name: 'The Zhejiang camp', owner: 0, rate: 0.5 },
       { key: 'road', x: -62, z: -134, r: 15, name: 'The Liaoyang road' }],
-    forts: [[44, -62, 0.5, 12, 1.6, 'palisade'], [72, -62, 0.5, 12, 1.6, 'palisade'], [58, -49, 12, 0.5, 1.6, 'palisade'], [49, -75, 5, 0.5, 1.5, 'palisade'], [67, -75, 5, 0.5, 1.5, 'palisade'],
+    forts: [[44, -62, 0.5, 12, 1.6, 'palisade'], [72, -62, 0.5, 12, 1.6, 'palisade'], [49.5, -49, 5.5, 0.5, 1.6, 'palisade'], [66.5, -49, 5.5, 0.5, 1.6, 'palisade'], [49, -75, 5, 0.5, 1.5, 'palisade'], [67, -75, 5, 0.5, 1.5, 'palisade'],
       [51, -53, 2, 1.1, 1.4, 'mantlet'], [58, -53, 2, 1.1, 1.4, 'mantlet'], [65, -53, 2, 1.1, 1.4, 'mantlet']],
     groups: {
       zhe: { team: 0, name: 'Qi Jin', zh: '戚金', army: ['yuanyang', 'rifle_imp', 'yuanyang', 'rifle_imp', 'samurai'], at: [58, -64, 0], dir: ['hold', 58, -60], stay: true },
@@ -2587,10 +2594,10 @@ const MISSIONS = {
       bayara: { team: 1, name: 'The red Bayara', zh: '紅巴牙喇', army: ['shinsengumi', 'shinsengumi', 'cavalry'], at: [60, 138, PI], reserve: true, stay: true },
       rw: { team: 1, name: 'The right wing', army: ['samurai', 'samurai', 'ashigaru', 'archer', 'cavalry'], at: [100, 138, PI], reserve: true, stay: true },
       guns: { team: 1, name: 'The Shenyang guns', army: ['cannon4', 'rifle_sho'], at: [86, 112, PI], reserve: true, stay: true, dir: ['hold', 86, 92] },
-      lw: { team: 1, name: 'The left wing', army: ['samurai', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
-      east: { team: 1, name: 'Banners from the east', army: ['samurai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
+      lw: { team: 1, name: 'The left wing', army: ['samurai', 'samurai', 'archer', 'cavalry'], at: [-30, 130, PI], reserve: true },
+      east: { team: 1, name: 'Banners from the east', army: ['samurai', 'byakkotai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
       night: { team: 1, name: 'Daišan\'s banners', zh: '代善', army: ['shinsengumi', 'samurai', 'samurai', 'cavalry'], at: [140, -110, -PI / 2], reserve: true },
-      cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
+      cut: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'byakkotai'], at: [-140, -96, PI / 2], reserve: true },
     },
     phases: [
       { title: '一 · 橋北 · North of the bridge', text: 'The White Poles have crossed to the north bank. Stand to in the Zhejiang camp with your file and watch the far bank.', show: ['camp'],
@@ -2618,11 +2625,11 @@ const MISSIONS = {
       { title: '四 · 夜 · The last stand', text: 'Night. The camp cannot hold. Qi Jin orders you out: take your file and your wounded down the Liaoyang road, so that someone lives to tell what happened here.', show: ['road'], hide: ['camp'],
         start: [['release', 'night'], ['dir', 'night', 'hold', 58, -60], ['kill', 'chen']],
         obj: { extract: 'road' }, limit: 420, fail: 'The ring closed around the camp.',
-        waves: [[70, 'cut', ['attack']]], at: [[55, ['kill', 'zhe']]],
+        waves: [[20, 'cut', ['attack']]], at: [[55, ['kill', 'zhe']]],
         say: [[2, 'soldier', 'General Chen Ce is dead!', '陳總兵陣亡了！'],
           [6, 'qi', 'A man repays his country today, of all days.', '大丈夫報國，就在今日。'],
           [12, 'qi', 'You — take your file and your wounded down the Liaoyang road. Someone must live to tell them what happened here.', '你——帶你的人和傷兵走遼陽大路。總得有人活著，把這裡的事說出去。'],
-          [72, 'lookout', 'Horsemen on the road ahead!', '前面路上有馬兵！'],
+          [22, 'lookout', 'Horsemen on the road ahead!', '前面路上有馬兵！'],
           [56, 'lookout', 'General Qi has fallen!', '戚副將陣亡了！']] },
     ],
     win: 'You got out by the Liaoyang road.',
@@ -2684,6 +2691,7 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   if (!ass && !M.soldier) { // campaign balance: the enemy rank and file are a little softer, your allies a little harder (officers excepted)
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
     for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, 0.82, 0.82) : tune(u.def, 1.12, 1.05); u.hp = u.def.hp; } }
+  if (ass && M.siege) this.siegeInit();
   if (ass) { let n = 0; for (const u of this.units) if (u.team === M.attacker && u.type !== 'horse' && u.type !== 'hero') n++; this.tickets = Math.round(n * 0.8); for (const o of this.objectives) o.rate *= 0.6; this.sector = 0; M.sectors[0].forEach(k => this.missionZone(k).hidden = false); this.assaultDirs(); this.mv.ph = 0; }
   // humans: in the campaign each leads a squad of the troops they chose (two when alone) and rides with it
   if (M.soldier) { // a story chapter: you are one man in a mandarin duck team of the named group
@@ -2894,6 +2902,7 @@ Sim.prototype.mAggro = function () {
 Sim.prototype.mOver = function (won, text) { if (this.mwin !== undefined) return; this.mwin = won ? this.mission.side : 1 - this.mission.side; this.events.push({ t: 'mend', won, text }); };
 // ---- assault
 Sim.prototype.assaultDirs = function () {
+  if (this.mission.siege && this.sg && this.sector <= 1) return this.siegeDirs();
   const M = this.mission, A = M.attacker, keys = M.sectors[this.sector] || []; const zs = keys.map(k => this.missionZone(k)).filter(z => z && z.owner !== A);
   const zt = zs.length ? zs : keys.map(k => this.missionZone(k));
   let i = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== A || g.broken) continue; const z = zt[i++ % zt.length]; if (z) { p.directive = { kind: DIR_HOLD, x: z.x, z: z.z, by: -1 }; p.standoff = true; } }
@@ -2926,6 +2935,190 @@ Sim.prototype.assaultThink = function () {
       const k = u.id % 9; this.reviveUnit(u, clamp(nz.x + (k % 3 - 1) * 3, -HALF + 4, HALF - 4), clamp(nz.z + fz * (14 + Math.floor(k / 3) * 3), -HALF + 4, HALF - 4)); } }
   const left = Object.keys(this.mg).some(g => this.mg[g].G.team === A && !this.mg[g].released);
   if (this.tickets <= 0 || (act < 8 && !left)) { this.mwin = 1 - A; this.events.push({ t: 'mend', won: false, text: 'The attackers have no men left to send.', att: A }); }
+};
+
+// ===== 攻守城 · Siege: walls, ditch, ladders, siege towers, covered rams, shield carts, sappers, oil, stones and bed crossbows =====
+// A siege is an assault operation (OPS entry with `siege`) fought over a walled town: the line of sectors is ditch → walls →
+// gatehouse → streets. Everything here is deterministic (DM trig, this.rng only) so lockstep peers stay in step.
+// Layout (south is outside): ditch at z = D.zc, wall face at W.z0, wall top to W.z1, the town and the yamen to the north.
+const SG = { z0: 40, z1: 47, h: 6, gate: 4.6, ditchZ: 30, ditchW: 4, ladders: [-32, -18, 18, 32], towers: [-40, 40], holes: [-25, 25], fills: [[-28, 14], [28, 14]],
+  bows: [[-52, 44.5], [-9, 44.5], [9, 44.5], [52, 44.5]], guns: [[-70, 44.5], [70, 44.5]], atGuns: [[-30, -48], [30, -48]] };
+// the rampart and the ditch in the height field (called from terrainHExact / waterAt; TERR.swall / TERR.sditch set by planTerrain)
+function siegeWallH(w, x, z, h) {
+  if (z < w.z0 - 0.7 || z > w.z1 + 14.5) return h;
+  let k = z >= w.z0 && z <= w.z1 ? 1 : z < w.z0 ? 1 - (w.z0 - z) / 0.7 : 1 - (z - w.z1) / 1.3;
+  for (let i = 0; i < w.ramps.length; i++) { const r = w.ramps[i]; if ((x - r < 0 ? r - x : x - r) < 3 && z > w.z1 && z < w.z1 + 14) { const kr = 1 - (z - w.z1) / 14; if (kr > k) k = kr; } }
+  if (k <= 0) return h; const ax = x < 0 ? -x : x; if (ax < w.gate) return h; if (ax < w.gate + 0.6) k *= (ax - w.gate) / 0.6;
+  return h + w.h * k;
+}
+function siegeDitchH(d, x, z, h) { const dz = z - d.zc, ad = dz < 0 ? -dz : dz; if (ad >= d.w) return h; const ax = x < 0 ? -x : x; if (ax < d.bridge) return h; const t = 1 - (ad / d.w) * (ad / d.w); return h - d.depth * t; }
+function siegeDitchWater(d, x, z) { const dz = z - d.zc, ad = dz < 0 ? -dz : dz; if (ad >= d.w * 0.8) return 0; const ax = x < 0 ? -x : x; if (ax < d.bridge) return -1;
+  for (let i = 0; i < d.fills.length; i++) { const f = d.fills[i]; if (f.done && (x - f.x < 0 ? f.x - x : x - f.x) < f.hw) return 2; } return 1; }
+Sim.prototype.siegeInit = function () {
+  const M = this.mission, A = M.attacker, D = 1 - A, W = TERR.swall; const sg = this.sg = { A, D, gateHp: 6000, gateMax: 6000, engines: [], lads: [], emp: [], holes: [], fired: false, oilT: 0, stoneT: 0, slipT: 0, ice: this.bdef.biome === 'winter', sec: -1 };
+  // the gate in its passage through the rampart
+  this.boxes.push({ x: 0, z: (W.z0 + W.z1) / 2, hw: W.gate, hd: (W.z1 - W.z0) / 2, h: W.h + 0.5, kind: 'sgate' }); sg.gateBox = this.boxes.length - 1;
+  // the outer face of the wall: parapet segments, with lanes where a ladder, a tower's bridge or a sapped hole can open a way up
+  const lanes = [];
+  SG.ladders.forEach((x) => { const L = { kind: 'ladder', x, z: W.z0, hd: 0.5, w: 1.4, up: false, prog: 0, hp: 0 }; sg.lads.push(L); lanes.push(L); });
+  SG.towers.forEach((x) => { const L = { kind: 'tower', x, z: W.z0, hd: 0.5, w: 2.4, up: false, prog: 0, hp: 0 }; lanes.push(L); sg.engines.push({ id: sg.engines.length, kind: 'tower', team: A, x, z: -82, lane: x, tz: W.z0 - 3.2, hp: 2600, max: 2600, burn: 0, docked: false, lad: L, push: 0, need: 4 }); });
+  SG.holes.forEach((x) => { const L = { kind: 'hole', x, z: W.z0, hd: 0.5, w: 1.4, up: false, prog: 0, hp: 0 }; sg.holes.push(L); lanes.push(L); sg.engines.push({ id: sg.engines.length, kind: 'cart', team: A, x, z: -62, lane: x, tz: W.z0 - 3, hp: 900, max: 900, burn: 0, push: 0, need: 2 }); });
+  sg.engines.push({ id: sg.engines.length, kind: 'ram', team: A, x: 0, z: -72, lane: 0, tz: W.z0 - 2.9, hp: 1800, max: 1800, burn: 0, atGate: false, push: 0, need: 2 });
+  for (const x of [-10, 10]) sg.engines.push({ id: sg.engines.length, kind: 'cart', team: A, x, z: -58, lane: x * 1.2, tz: SG.ditchZ - 6.5, hp: 900, max: 900, burn: 0, push: 0, need: 2, cover: true });
+  lanes.sort((a, b) => a.x - b.x);
+  for (const L of lanes) this.boxes.push({ x: L.x, z: W.z0, hw: L.w, hd: 0.5, h: 1.3, kind: 'sface', lad: L });
+  let x0 = -HALF; const gaps = lanes.map(L => [L.x - L.w, L.x + L.w]).concat([[-W.gate - 0.01, W.gate + 0.01]]).sort((a, b) => a[0] - b[0]);
+  for (const g of gaps) { if (g[0] > x0 + 0.05) this.boxes.push({ x: (x0 + g[0]) / 2, z: W.z0, hw: (g[0] - x0) / 2, hd: 0.5, h: 1.3, kind: 'sface' }); x0 = g[1]; }
+  if (x0 < HALF) this.boxes.push({ x: (x0 + HALF) / 2, z: W.z0, hw: (HALF - x0) / 2, hd: 0.5, h: 1.3, kind: 'sface' });
+  // bed crossbows (床弩) and red-barbarian guns on the wall; the besiegers' field guns before it
+  for (const e of SG.bows) sg.emp.push({ id: sg.emp.length, kind: 'bow', team: D, x: e[0], z: e[1], yaw: PI, pitch: 0, cd: 30 * 3 + sg.emp.length * 17, man: -1 });
+  for (const e of SG.guns) sg.emp.push({ id: sg.emp.length, kind: 'gun', team: D, x: e[0], z: e[1], yaw: PI, pitch: 0, cd: 30 * 5 + sg.emp.length * 23, man: -1 });
+  for (const e of SG.atGuns) sg.emp.push({ id: sg.emp.length, kind: 'gun', team: A, x: e[0], z: e[1], yaw: 0, pitch: 0, cd: 30 * 6 + sg.emp.length * 19, man: -1 });
+  for (const e of sg.emp) e.y = terrainH(e.x, e.z);
+  // the town behind the walls: rows of houses along two streets, leaving the main street and the zones clear
+  const r = new RNG(this.seed ^ 0x51e9e);
+  for (let z = 64; z < 140; z += 11) for (let x = -120; x <= 120; x += 12) { if (Math.abs(x) < 9 || (z > 74 && z < 86) || len(x - 0, z - 112) < 22 || len(x + 18, z - 80) < 14) continue; if (r.next() < 0.22) continue;
+    this.boxes.push({ x: x + r.range(-1.5, 1.5), z: z + r.range(-1, 1), hw: r.range(3, 4.4), hd: r.range(2.6, 3.6), h: r.range(3, 4), kind: 'house' }); }
+  sg.secT = 0; this.siegeDirs();
+};
+// the wall-face lanes that are open (ladder up, tower docked, hole broken) become walkable corridors
+Sim.prototype.siegeNav = function (bl) {
+  const sg = this.sg, W = TERR.swall; if (!sg) return;
+  const open = (L) => { if (!L.up) return; for (let z = W.z0 - 2.5; z <= W.z0 + 2.5; z += 1) for (let dx = -L.w + 0.6; dx <= L.w - 0.6 + 0.01; dx += 0.8) bl[this.navCell(L.x + dx, z)] &= 1; };
+  for (const L of sg.lads) open(L); for (const L of sg.holes) open(L); for (const e of sg.engines) if (e.lad) open(e.lad);
+  if (sg.gateHp <= 0) for (let z = W.z0 - 1; z <= W.z1 + 1; z += 1) for (let dx = -3; dx <= 3; dx += 1) bl[this.navCell(dx, z)] &= 1;
+};
+Sim.prototype.sgClimb = function (u) { const sg = this.sg, W = TERR.swall; if (u.z < W.z0 - 2.6 || u.z > W.z0 + 0.8) return false; for (const L of sg.lads) if (L.up && Math.abs(u.x - L.x) < 1.5) return true; return false; };
+// every tick: engines meet projectiles, manned emplacements follow their gunner
+Sim.prototype.siegeTick = function () {
+  const sg = this.sg; if (!sg) return;
+  const ps = this.projectiles;
+  for (let i = ps.length - 1; i >= 0; i--) { const p = ps[i]; if (p.kind === 'bomb') continue;
+    for (const e of sg.engines) { if (e.hp <= 0 || p.team === e.team) continue; const S = SGE[e.kind]; if (Math.abs(p.x - e.x) > S.hw || Math.abs(p.z - e.z) > S.hd || p.y > terrainH(e.x, e.z) + S.h) continue;
+      const dmg = p.kind === 'shell' ? 300 : p.kind === 'solid' ? (p.bolt ? 110 : 260) : 6; this.sgHurt(e, dmg); if (p.kind === 'arrow' && e.kind !== 'cart' && this.rng.next() < 0.04 && !this.rain) e.burn = Math.max(e.burn, 6);
+      this.events.push({ t: 'sghit', x: p.x, y: p.y, z: p.z, kind: p.kind, eng: e.kind }); ps[i] = ps[ps.length - 1]; ps.pop(); break; } }
+  for (const e of sg.emp) { if (e.cd > 0) e.cd--; if (e.man < 0) continue; const u = this.units[e.man];
+    if (!u || u.dead || len(u.x - e.x, u.z - e.z) > 3.2) { e.man = -1; if (u) u.manE = -1; continue; }
+    e.yaw = u.yaw; e.pitch = clamp(u.pitch || 0, -0.5, 0.6); const bx = e.x - sin(e.yaw) * 1.2, bz = e.z - cos(e.yaw) * 1.2; u.x = bx; u.z = bz; u.mx = 0; u.mz = 0;
+    if ((u.st === ST_WINDUP || u.st === ST_AIM || u.st === ST_RELEASE) && e.cd <= 0) { this.sgFire(e, e.yaw, e.pitch); u.st = ST_IDLE; u.stT = 0; } else if (u.st === ST_WINDUP) { u.st = ST_IDLE; u.stT = 0; } }
+  if (this.tick % 15 === 0) this.siegeThink();
+};
+const SGE = { ram: { hw: 1.5, hd: 3, h: 3.6, sp: 1.5 }, tower: { hw: 2.5, hd: 2.5, h: 9.5, sp: 0.75 }, cart: { hw: 1.7, hd: 0.9, h: 2.6, sp: 1.6 } };
+Sim.prototype.sgHurt = function (e, dmg) { if (e.hp <= 0) return; e.hp -= dmg; if (e.hp <= 0) { e.hp = 0; if (e.lad && e.lad.up) { e.lad.up = false; this.navBoxes(); } this.events.push({ t: 'sgengine', kind: e.kind, x: e.x, z: e.z }); for (const sq of this.squads) if (sq.alive && sq.team === e.team && !sq.def.fearless) sq.morale = Math.max(0, sq.morale - 6); } };
+Sim.prototype.sgFire = function (e, yaw, pitch) {
+  const bow = e.kind === 'bow', v = bow ? 62 : 78; e.cd = bow ? 30 * 4 : 30 * 7;
+  const cp = cos(pitch), x = e.x + sin(yaw) * 1.6, z = e.z + cos(yaw) * 1.6, y = e.y + (bow ? 1.4 : 1.2);
+  this.projectiles.push({ kind: 'solid', bolt: bow, x, y, z, vx: sin(yaw) * cp * v, vy: sin(pitch) * v, vz: cos(yaw) * cp * v, team: e.team, owner: -1, life: 0, hits: 0 });
+  this.events.push({ t: 'sgshot', x, y, z, dx: sin(yaw), dz: cos(yaw), gun: !bow, team: e.team });
+};
+// pick a mark for an unmanned emplacement: defenders prefer engines, then the thickest crowd of the enemy
+Sim.prototype.sgAim = function (e) {
+  let tx = 0, tz = 0, ty = 0, best = 1e18;
+  if (e.team === this.sg.D) for (const g of this.sg.engines) { if (g.hp <= 0) continue; const d = len(g.x - e.x, g.z - e.z); if (d < 125 && d < best) { best = d; tx = g.x; tz = g.z; ty = terrainH(g.x, g.z) + 1.5; } }
+  if (best > 1e17) for (const q of this.squads) { if (!q.alive || q.inactive || q.team === e.team) continue; const d = len(q.cx - e.x, q.cz - e.z); if (d < 125 && d > 12 && d - q.aliveCount * 0.6 < best) { best = d - q.aliveCount * 0.6; tx = q.cx; tz = q.cz; ty = terrainH(q.cx, q.cz) + 1; } }
+  if (best > 1e17) return false;
+  const bow = e.kind === 'bow', v = bow ? 62 : 78, d = len(tx - e.x, tz - e.z), dy = ty - (e.y + 1.3);
+  const yaw = atan2(tx - e.x, tz - e.z) + (this.rng.next() - 0.5) * 0.04, pitch = atan2(dy, d) + 0.5 * asin(clamp(GRAV * d / (v * v), -1, 1)) + (this.rng.next() - 0.5) * 0.02;
+  e.yaw = yaw; e.pitch = pitch; this.sgFire(e, yaw, pitch); return true;
+};
+Sim.prototype.sgCount = function (x, z, r, team) { return this.countNear(x, z, r, team); };
+// every half second: engines move or burn, ladders rise and fall, the defenders pour oil and drop stones, the gate and the walls give way
+Sim.prototype.siegeThink = function () {
+  const sg = this.sg, W = TERR.swall, A = sg.A, D = sg.D, M = this.mission; let nav = false;
+  if (sg.sec !== this.sector) { sg.sec = this.sector; sg.secT = 0; this.events.push({ t: 'sgstage', stage: this.sector });
+    if (this.sector === 1 && !sg.fired && !this.rain) { sg.fired = true; for (let x = -46; x <= 46; x += FIRE_CS * 0.9) { if (Math.abs(x) < 6) continue; const c = this.fireCell(x, W.z0 - 3); if (c < 0) continue; this.fuel[c] = 1.4; this.fireState[c] = 1; this.burnT[c] = 420; } this.events.push({ t: 'sgsaltpeter', z: W.z0 - 3 }); } }
+  sg.secT++;
+  // the ditch: a ditch zone in attackers' hands is filled with fascines and earth
+  for (const f of TERR.sditch.fills) { if (f.done) continue; const z = this.missionZone(f.key); if (z && z.owner === A) { f.done = true; this.sgRewater(f); nav = true; this.events.push({ t: 'sgfill', x: f.x, z: TERR.sditch.zc }); } }
+  // engines: pushed by the besiegers behind them, hacked at and burned by the defenders
+  for (const e of sg.engines) { if (e.hp <= 0) continue; const S = SGE[e.kind];
+    const pushers = this.sgCount(e.x, e.z - S.hd - 1.5, 6, A), foes = this.sgCount(e.x, e.z, S.hw + 2.5, D); e.push = pushers;
+    if (foes) this.sgHurt(e, foes * 5);
+    if (e.burn > 0) { e.burn -= 0.5; this.sgHurt(e, e.kind === 'tower' ? 28 : 22); if (this.tick % 45 === 0) this.events.push({ t: 'sgburn', x: e.x, z: e.z, kind: e.kind }); }
+    { const c = this.fireCell(e.x, e.z); if (c >= 0 && this.fireState[c] === 1 && e.burn < 2) e.burn = 4; }
+    if (e.hp <= 0) continue;
+    let tz = e.tz; if (e.kind === 'cart' && e.cover && this.sector >= 1) tz = W.z0 - 7;
+    const lane = e.lane, crossing = e.kind !== 'ram' && e.z < TERR.sditch.zc + TERR.sditch.w; const filled = siegeDitchWater(TERR.sditch, lane, TERR.sditch.zc) !== 1;
+    if (crossing && !filled) tz = Math.min(tz, TERR.sditch.zc - TERR.sditch.w - S.hd - 0.5);
+    const moving = pushers >= e.need && foes <= pushers && e.z < tz - 0.05;
+    if (moving) { const st = S.sp * 15 * DT * (pushers >= e.need * 2 ? 1.25 : 1); e.z = Math.min(tz, e.z + st); e.x += clamp(lane - e.x, -st, st); }
+    if (e.kind === 'tower' && !e.docked && e.z >= e.tz - 0.05) { e.docked = true; e.lad.up = true; nav = true; this.events.push({ t: 'sgdock', x: e.x, z: e.z }); }
+    if (e.kind === 'ram') { e.atGate = e.z >= e.tz - 0.05; if (e.atGate && sg.gateHp > 0 && pushers >= 1) { this.sgGate(30 + pushers * 2); if (this.tick % 45 === 0) this.events.push({ t: 'sgram', x: 0, z: W.z0 }); } }
+  }
+  // sappers at the shield carts chisel through the wall face
+  for (const L of sg.holes) { if (L.up) continue; const n = this.sgCount(L.x, W.z0 - 1.6, 3.5, A); const cart = sg.engines.find(e => e.kind === 'cart' && e.lane === L.x && e.hp > 0 && e.z > W.z0 - 6);
+    if (n >= 2 && this.sector >= 1) { L.prog += n * (cart ? 1.6 : 0.6); if (L.prog >= 320) { L.up = true; nav = true; this.events.push({ t: 'sghole', x: L.x, z: W.z0 }); for (const sq of this.squads) if (sq.alive && sq.team === D && !sq.def.fearless) sq.morale = Math.max(0, sq.morale - 8); } } }
+  // the gate: men without a ram can only hack at it
+  if (sg.gateHp > 0) { const n = this.sgCount(0, W.z0 - 1.5, 4, A); if (n) this.sgGate(n * 2); }
+  // scaling ladders: raised by men at the foot (only where the ditch is filled), thrown down by defenders who outnumber the climbers at the top
+  for (const L of sg.lads) { const foot = this.sgCount(L.x, W.z0 - 2.4, 3.2, A), top = this.sgCount(L.x, W.z0 + 2, 3.2, D), up = this.sgCount(L.x, W.z0 + 2, 3.2, A);
+    const reach = siegeDitchWater(TERR.sditch, L.x, TERR.sditch.zc) !== 1;
+    if (!L.up) { if (foot >= 2 && reach && this.sector >= 1) { L.prog += 15 * Math.min(3, foot / 2); if (L.prog >= 30 * 7) { L.up = true; L.hp = 650; nav = true; this.events.push({ t: 'sgladder', x: L.x, z: W.z0, up: true }); } } else L.prog = Math.max(0, L.prog - 5); }
+    else { if (top > up + 1) L.hp -= (top - up) * 14; if (L.hp <= 0) { this.sgLadderDown(L); nav = true; } } }
+  // ice: in the frozen months the wall face is glazed and the rungs are slick
+  if (sg.ice) for (const L of sg.lads) { if (!L.up) continue; const n = this.gatherNear(L.x, W.z0 - 1, 2.5); const ids = []; for (let i = 0; i < n; i++) ids.push(this.nearBuf[i]); ids.sort((a, b) => a - b);
+    for (const id of ids) { const v = this.units[id]; if (v.dead || v.team !== A || v.mounted || Math.abs(v.x - L.x) > 1.4 || v.z < W.z0 - 2.6 || v.z > W.z0 + 0.6 || v.downT > 0) continue; if (this.rng.next() < 0.03) { v.z = W.z0 - 3.2; v.downT = 1.2; this.applyDamage(v, 18, -1, 0, 0, -2, 'fall'); if (this.tick - sg.slipT > 60) { sg.slipT = this.tick; this.events.push({ t: 'sgslip', x: v.x, z: v.z, id: v.id }); } } } }
+  // defenders: burning oil and gunpowder quilts on crowds and engines at the foot of the wall, stones on the ladders
+  sg.oilT++; sg.stoneT++;
+  if (sg.oilT >= 8) { const s = this.sgSpot(4); if (s) { sg.oilT = 0; this.sgOil(s[0], s[1]); } }
+  if (sg.stoneT >= 6) { const s = this.sgSpot(3); if (s) { sg.stoneT = 0; this.sgStone(s[0], s[1]); } }
+  // unmanned emplacements fire on their own
+  for (const e of sg.emp) if (e.man < 0 && e.cd <= 0) { if (!this.sgAim(e)) e.cd = 30; }
+  // the walls are turned once the gate is down
+  if (this.sector === 1 && sg.gateHp <= 0) for (const k of M.sectors[1]) { const z = this.missionZone(k); if (z.owner !== A) { z.owner = A; z.ctrl = A === 1 ? -100 : 100; } }
+  if (nav) this.navBoxes();
+  if (this.tick % 45 === 0 && this.sector <= 1) this.siegeDirs();
+};
+Sim.prototype.sgRewater = function (f) { const C = this.navC, bl = this.navBlk; for (let x = f.x - f.hw - C; x <= f.x + f.hw + C; x += C * 0.5) for (let z = TERR.sditch.zc - TERR.sditch.w - C; z <= TERR.sditch.zc + TERR.sditch.w + C; z += C * 0.5) { const c = this.navCell(x, z), cx = -HALF + ((c % this.navW) + 0.5) * C, cz = -HALF + (Math.floor(c / this.navW) + 0.5) * C; if (waterAt(cx, cz) === 1) bl[c] |= 1; else bl[c] &= ~1; } };
+// the best place along the wall foot for the defenders to drop something: most attackers, with defenders on the wall above
+Sim.prototype.sgSpot = function (minN) {
+  const W = TERR.swall, sg = this.sg; let best = null, bn = minN - 1;
+  for (let x = -60; x <= 60; x += 6) { const n = this.sgCount(x, W.z0 - 2.5, 3.5, sg.A) + (sg.engines.some(e => e.hp > 0 && e.kind !== 'cart' && Math.abs(e.x - x) < 4 && e.z > W.z0 - 9) ? 3 : 0); if (n > bn && this.sgCount(x, W.z0 + 2.5, 9, sg.D) >= 1) { bn = n; best = [x, W.z0 - 2.5]; } }
+  return best;
+};
+Sim.prototype.sgOil = function (x, z) {
+  const sg = this.sg, n = this.gatherNear(x, z, 4.5), ids = []; for (let i = 0; i < n; i++) ids.push(this.nearBuf[i]); ids.sort((a, b) => a - b);
+  for (const id of ids) { const v = this.units[id]; if (v.dead || v.team !== sg.A || v.type === 'horse') continue; const dd = len(v.x - x, v.z - z); if (dd > 4.5) continue; this.applyDamage(v, 52 * (1 - dd / 6), -1, 0, 0, 0, 'fire'); if (v.squad >= 0 && !this.squads[v.squad].def.fearless) this.squads[v.squad].morale = Math.max(0, this.squads[v.squad].morale - 4); }
+  for (const e of sg.engines) if (e.hp > 0 && len(e.x - x, e.z - z) < 6) e.burn = Math.max(e.burn, 10);
+  if (!this.rain) { const c = this.fireCell(x, z); if (c >= 0) { this.fuel[c] = Math.max(this.fuel[c], 1); this.fireState[c] = 1; this.burnT[c] = 240; } }
+  this.events.push({ t: 'sgoil', x, z, y: TERR.swall.h });
+};
+Sim.prototype.sgStone = function (x, z) {
+  const sg = this.sg, n = this.gatherNear(x, z, 3), ids = []; for (let i = 0; i < n; i++) ids.push(this.nearBuf[i]); ids.sort((a, b) => a - b);
+  for (const id of ids) { const v = this.units[id]; if (v.dead || v.team !== sg.A || v.type === 'horse') continue; const dd = len(v.x - x, v.z - z); if (dd > 3) continue; if (v.mass < 5) { v.downT = Math.max(v.downT, 1); } this.applyDamage(v, 46 * (1 - dd / 4), -1, 0, 0, -3, 'solid'); }
+  for (const L of sg.lads) if (L.up && Math.abs(L.x - x) < 3) { L.hp -= 220; if (L.hp <= 0) { this.sgLadderDown(L); this.navBoxes(); } }
+  for (const e of sg.engines) if (e.hp > 0 && len(e.x - x, e.z - z) < 4) this.sgHurt(e, 90);
+  this.events.push({ t: 'sgstone', x, z, y: TERR.swall.h });
+};
+Sim.prototype.sgLadderDown = function (L) { const W = TERR.swall; L.up = false; L.prog = 0; L.hp = 0; const n = this.gatherNear(L.x, W.z0 - 1.5, 3), ids = []; for (let i = 0; i < n; i++) ids.push(this.nearBuf[i]); ids.sort((a, b) => a - b);
+  for (const id of ids) { const v = this.units[id]; if (v.dead || v.team !== this.sg.A || Math.abs(v.x - L.x) > 1.6 || v.z < W.z0 - 3 || v.z > W.z0 + 0.8) continue; v.z = W.z0 - 3.4; v.downT = Math.max(v.downT, 1.2); this.applyDamage(v, 38, -1, 0, 2, -4, 'fall'); }
+  this.events.push({ t: 'sgladder', x: L.x, z: W.z0, up: false }); };
+Sim.prototype.sgGate = function (dmg) { const sg = this.sg; if (sg.gateHp <= 0) return; sg.gateHp -= dmg; if (sg.gateHp <= 0) { sg.gateHp = 0; const g = this.boxes[sg.gateBox]; g.hw = 0.01; g.hd = 0.01; g.h = 0; this.navBoxes(); this.events.push({ t: 'sgbreach', x: 0, z: g.z });
+    for (const sq of this.squads) if (sq.alive && !sq.def.fearless) { if (sq.team === sg.D) sq.morale = Math.max(0, sq.morale - 15); else sq.morale = Math.min(sq.moraleMax, sq.morale + 20); } } };
+// E: man a bed crossbow or a gun, throw a ladder down from the top, or help raise one at the foot
+Sim.prototype.siegeInteract = function (u) {
+  const sg = this.sg, W = TERR.swall; if (!sg || u.dead || u.mounted) return false;
+  if (u.manE >= 0 && sg.emp[u.manE] && sg.emp[u.manE].man === u.id) { sg.emp[u.manE].man = -1; u.manE = -1; this.events.push({ t: 'sgman', id: u.id, on: false }); return true; }
+  for (const e of sg.emp) if (e.team === u.team && e.man < 0 && len(e.x - u.x, e.z - u.z) < 2.6) { e.man = u.id; u.manE = e.id; this.events.push({ t: 'sgman', id: u.id, on: true, kind: e.kind }); return true; }
+  for (const L of sg.lads) { if (Math.abs(L.x - u.x) > 2.4) continue;
+    if (u.team === sg.D && L.up && u.z > W.z0 && u.z < W.z0 + 3.5) { L.hp -= 360; this.events.push({ t: 'sgpush', x: L.x, z: W.z0, id: u.id }); if (L.hp <= 0) { this.sgLadderDown(L); this.navBoxes(); } return true; }
+    if (u.team === sg.A && !L.up && u.z < W.z0 - 0.5 && u.z > W.z0 - 5 && this.sector >= 1 && siegeDitchWater(TERR.sditch, L.x, TERR.sditch.zc) !== 1) { L.prog += 70; return true; } }
+  return false;
+};
+// the besiegers' generals: push the engines, raise the ladders where the ditch is filled, then climb; the defenders man the walls
+Sim.prototype.siegeDirs = function () {
+  const sg = this.sg, M = this.mission, A = sg.A, D = sg.D, W = TERR.swall, s = this.sector;
+  const att = Object.keys(this.mg).filter(g => this.mg[g].G.team === A && this.mg[g].released && !this.mg[g].broken);
+  const jobs = [];
+  const eng = (k) => sg.engines.filter(e => e.kind === k && e.hp > 0);
+  const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false]);
+  for (const t of eng('tower')) jobs.push(t.docked ? [t.x, W.z0 + 2.5, false] : [t.x, t.z - 5, false]);
+  if (s === 0) { for (const k of M.sectors[0]) { const z = this.missionZone(k); jobs.push([z.x, z.z, true]); } for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false]); }
+  else { for (const L of sg.lads) jobs.push(L.up ? [L.x, W.z0 + 2.5, false] : [L.x, W.z0 - 3, false]); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false]); }
+  att.forEach((g, i) => { const p = this.players[this.mg[g].p], j = jobs[i % jobs.length]; if (!j) return; p.directive = { kind: DIR_HOLD, x: clamp(j[0], -HALF + 3, HALF - 3), z: clamp(j[1], -HALF + 3, HALF - 3), by: -1 }; p.standoff = j[2]; });
+  // defenders: the wall garrisons stand on the wall top above the ladders; the rest hold the gatehouse and the town
+  const posts = [[-26, 43.6], [26, 43.6], [-14, 43.6], [14, 43.6], [0, W.z1 + 7], [-18, 80], [0, 110]];
+  let j = 0; for (const gid in this.mg) { const g = this.mg[gid], p = this.players[g.p]; if (g.G.team !== D || g.broken) continue; const pt = posts[j++ % posts.length]; p.directive = { kind: DIR_HOLD, x: pt[0], z: pt[1], by: -1 }; }
 };
 
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, spacingOf, gunOf,
