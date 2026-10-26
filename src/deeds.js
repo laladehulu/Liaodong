@@ -159,7 +159,7 @@ function ddRoll() {
   zTalk = function (k, night) { return ddAugment(_talk(k, night), k); }; }
 function ddFrame(dt) {
   const sim = state.sim; if (!sim || !sim.mission) return;
-  if (ZB && sim.mission.soldier && DD.zb !== ZB) { DD.zb = ZB; DD.B = ddFresh(sim); DD.fileKills = 0; DD.killers = {}; DD.firstShot = true; DD.placeSince = 0; DD.acc = 0; }
+  if (ZB && sim.mission.soldier && DD.zb !== ZB) { DD.zb = ZB; DD.B = ddFresh(sim); DD.fx = { cool: 0, charge: 0, aloneT: 0, blk: 0, start: false, mark: 0 }; DD.fileKills = 0; DD.killers = {}; DD.firstShot = true; DD.placeSince = 0; DD.acc = 0; }
   if (ZB && DD.B) ddSample(dt);
   if (ZC && sim.mission.camp && DD.zc !== ZC) { DD.zc = ZC; DD.obj = null; ddCampObjects(); DD.sc = { q: [], cur: null, wait: 0 }; ddPlanScenes();
     // the Jin chapters keep their talk in JCH: wrap each chapter's table once
@@ -295,3 +295,48 @@ function ddScenesTick(dt) {
   if (state.zheDlg) return; c.talking = true; ddRunScene(c);
 }
 { const st = document.createElement('style'); st.textContent = '#ddBeat { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; background: radial-gradient(ellipse at center, rgba(40,6,4,.25), rgba(10,2,2,.75)); color: #f0e0c8; font-family: serif; } #ddBeat .n { font-size: 96px; line-height: 1; text-shadow: 0 0 24px #000; } #ddBeat .t { font: 15px sans-serif; opacity: .8; margin-top: 8px; } #ddBeat .k { margin-top: 26px; font: 600 16px sans-serif; opacity: .35; } #ddBeat .k.on { opacity: 1; color: #ffd28a; } #ddBeat .c { margin-top: 10px; font-size: 26px; color: #ff9a8a; } #ddBeat.hit { animation: ddhit .25s ease-out; } @keyframes ddhit { 0% { background-color: rgba(160,20,10,.45); } 100% { background-color: transparent; } }'; document.head.appendChild(st); }
+window.__ddSc = () => DD.sc;
+// ===================== it3 · in battle: the file remembers you while the fight is on =====================
+// your name or nickname shouted after your kills and blocks; "Follow him!" or "Get back in line!" when you charge
+// ahead, depending on your record; the man who owes you a life stays near and calls it when he pays; a file that
+// trusts you stands steadier, one that doesn't wavers; a known killer gets marked by the enemy.
+DD.fx = { cool: 0, charge: 0, aloneT: 0, blk: 0, start: false, mark: 0 };
+const ddMeName = () => { const C = ddCtx(); if (!C) return null; const D = ddDD(C.S); return D.nick ? { zh: D.nick.zh, en: D.nick.en } : C.S.name; };
+function ddSayNear(zh, en, pred, pr) { const sim = state.sim, h = localHero(); if (!sim || !h || !ZB) return null; let best = null, bd = 18;
+  for (const uid in ZB.map) { const u = sim.units[uid]; if (!u || u.dead || u.wounded || u.id === h.id) continue; const k = ddKey(uid); if (pred && !pred(k, u)) continue; const d = Math.hypot(u.x - h.x, u.z - h.z); if (d < bd) { bd = d; best = u; } }
+  if (best) SPEECH.say(best.id, zh, en, { prio: pr || 2, dur: 2.6 }); return best; }
+function ddTrust() { const C = ddCtx(); if (!C) return 0; const R = ddDD(C.S).rep; return R.care + R.valor * 0.5 + R.disc - R.coward * 1.5 - R.cruel * 0.5; }
+function ddBattleStart() {
+  const C = ddCtx(), sim = state.sim, h = localHero(); if (!C || !sim || !h || !ZB) return; const D = ddDD(C.S); if (!D.log.length) return;
+  // trust: the file holds steadier around a man it trusts, and wavers around one it doesn't
+  const t = ddTrust(), q = sim.squads[ZB.sq]; if (q && !q.def.fearless) { const k = t >= 8 ? 1.25 : t >= 4 ? 1.12 : t <= -4 ? 0.8 : 1; if (k !== 1) { q.moraleMax *= k; q.morale = q.moraleMax; } DD.fx.trust = k; }
+  const nm = ddMeName(); setTimeout(() => {
+    if (D.debt) { const k = Object.keys(D.debt)[0]; const u = k && Object.keys(ZB.map).map(Number).find(id => ddKey(id) === k && !sim.units[id].dead); if (u !== undefined) SPEECH.say(u, `${nm.zh}，今天我在你旁邊。`, `${nm.en}, today I stand next to you.`, { prio: 2, dur: 3.5 }); }
+    if (D.grudge) { const k = Object.keys(D.grudge)[0]; const u = k && Object.keys(ZB.map).map(Number).find(id => ddKey(id) === k && !sim.units[id].dead); if (u !== undefined) SPEECH.say(u, '別指望我回頭找你。', 'Don\'t count on me coming back for you.', { prio: 2, dur: 3.5 }); }
+    else if (DD.fx.trust < 1) ddSayNear('……跟緊點，別又跑了。', '...Stay close this time. Don\'t run again.');
+    else if (DD.fx.trust > 1.1) ddSayNear(`有${nm.zh}在，怕什麼。`, `${nm.en}'s with us. What's to be afraid of?`); }, 9000);
+}
+function ddBattleEvent(ev) {
+  const sim = state.sim, h = localHero(), B = DD.B; if (!sim || !h || !B || !ZB) return; const F = DD.fx, nm = ddMeName() || { zh: '', en: '' }; const C = ddCtx(); const D = C && ddDD(C.S);
+  if (ev.t === 'death' && ev.killer === h.id) { const v = sim.units[ev.id]; if (!v || v.team === h.team || v.type === 'horse') return;
+    if (F.cool <= 0 && (B.kills % 3 === 1 || v.type === 'hero' || v.officer)) { F.cool = 10; const L = v.type === 'hero' || v.officer ? [`${nm.zh}砍了他們的頭目！`, `${nm.en} cut down their officer!`] : [`好！${nm.zh}！`, `Good one, ${nm.en}!`]; ddSayNear(L[0], L[1]); } }
+  // the man you saved pays you back: he kills the man who was going for you
+  if (ev.t === 'death' && D && D.debt && ev.killer >= 0 && ev.killer !== h.id) { const k = ddKey(ev.killer); const v = sim.units[ev.id]; if (k && D.debt[k] && v && v.target === h.id) { delete D.debt[k]; C.S.bond[k] = (C.S.bond[k] || 0) + 2; B.repaid = k; SPEECH.say(ev.killer, '這下扯平了！', 'Now we\'re even!', { prio: 3, dur: 3 }); C.save(); } }
+  if (ev.t === 'block' && ev.by === h.id) { F.blk++; if (F.blk >= 4 && F.cool <= 0) { F.cool = 12; F.blk = 0; ddSayNear(D && D.nick && D.nick.style === 'wall' ? '鐵壁！' : '擋得好！', D && D.nick && D.nick.style === 'wall' ? 'Iron Wall!' : 'Good block!'); } }
+}
+function ddBattleTick(dt) {
+  const sim = state.sim, h = localHero(), B = DD.B, F = DD.fx; if (!sim || !h || h.dead || !B || !ZB) return;
+  F.cool -= dt; F.charge -= dt; F.mark -= dt;
+  if (!F.start && sim.tick > 30) { F.start = true; ddBattleStart(); }
+  // charging ahead alone: the chief calls after you, according to your record
+  F.aloneT = B.alone; if (F.charge <= 0 && B.alone - (F.alone0 || 0) > 3) { F.charge = 40; F.alone0 = B.alone; const t = ddTrust(), nm = ddMeName();
+    const chief = ddSayNear(t >= 4 ? '跟上他！' : `${nm.zh}！回來！歸隊！`, t >= 4 ? `Follow him! Follow ${nm.en}!` : `${nm.en}! Get back in line!`, null, 3);
+    // a file that trusts you comes after you: the squad's next slot is your position for a few seconds
+    if (chief && t >= 4) { const q = sim.squads[ZB.sq]; if (q && q.order !== undefined) { DD.fx.follow = 6; } } }
+  if (F.follow > 0) { F.follow -= dt; const q = sim.squads[ZB.sq]; if (q && q.alive) { q.tx = h.x; q.tz = h.z; } }
+  // a known killer: the enemy point you out and come for you
+  if (F.mark <= 0) { F.mark = 12; const C = ddCtx(), D = C && ddDD(C.S); if (D && D.rep.valor >= 14) { let n = 0; for (const v of sim.units) { if (v.dead || v.team === h.team || v.type === 'horse' || v.ctrl >= 0 || v.def.ai === 'cannon') continue; if (Math.hypot(v.x - h.x, v.z - h.z) < 22 && n < 2) { v.target = h.id; n++; if (n === 1 && !F.marked) { F.marked = 1; SPEECH.say(v.id, '就是他！', 'That\'s the one!', { prio: 2, dur: 2.5 }); } } } } }
+}
+{ const _f = ddFrame, _e = ddEvent;
+  ddFrame = function (dt) { _f(dt); try { if (DD.B && ZB && state.sim && state.sim.mission && state.sim.mission.soldier) ddBattleTick(dt); } catch (e) { console.warn('deeds', e); } };
+  ddEvent = function (ev) { _e(ev); try { ddBattleEvent(ev); } catch (e) { console.warn('deeds', e); } }; }

@@ -83,9 +83,13 @@ const VOICE = (() => {
   function build() {
     if (built || !AUDIO.ready) return !!built; ctx = AUDIO.ctx; built = true; rs = 7;
     out = ctx.createGain(); out.gain.value = on ? vol : 0; out.connect(AUDIO.master);
-    for (const cat in BANK) { B[cat] = []; for (const [w, f0, br] of BANK[cat]) for (const sc of [0.86, 1, 1.15]) {
-      const f = f0.map(([u, h]) => [u, h * sc]); const d = synth(W(w), f, { rasp: 0.15 + rnd() * 0.3, breath: br * 0.12, press: cat === 'cry' || cat === 'jcry' || cat.startsWith('o_') ? 0.6 : 0.3 });
-      const buf = ctx.createBuffer(1, d.length, SR); buf.copyToChannel ? buf.copyToChannel(d, 0) : buf.getChannelData(0).set(d); B[cat].push(buf); } }
+    // rendered a few takes at a time in idle moments, so starting the sound never stalls a frame
+    const jobs = []; for (const cat in BANK) { B[cat] = []; for (const [w, f0, br] of BANK[cat]) for (const sc of [0.92, 1.08]) jobs.push([cat, w, f0, br, sc]); }
+    const work = () => { const t0 = performance.now(); while (jobs.length && performance.now() - t0 < 6) { const [cat, w, f0, br, sc] = jobs.shift();
+        const f = f0.map(([u, h]) => [u, h * sc]); const d = synth(W(w), f, { rasp: 0.15 + rnd() * 0.3, breath: br * 0.12, press: cat === 'cry' || cat === 'jcry' || cat.startsWith('o_') ? 0.6 : 0.3 });
+        const buf = ctx.createBuffer(1, d.length, SR); buf.copyToChannel ? buf.copyToChannel(d, 0) : buf.getChannelData(0).set(d); B[cat].push(buf); }
+      if (jobs.length) setTimeout(work, 16); };
+    setTimeout(work, 0);
     if (typeof VOICE_DATA !== 'undefined') addPack(VOICE_DATA);
     return true;
   }
