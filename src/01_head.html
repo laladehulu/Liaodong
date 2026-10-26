@@ -329,6 +329,12 @@ h3.sect { font-family: var(--font-display); font-weight: 700; font-size: 15px; l
 .ztag i { font-style: normal; } .ztag i.w { color: #f0c060; } .ztag i.d { color: #ff7a6a; }
 .zroster { display: flex; flex-wrap: wrap; gap: 3px 6px; margin: 4px 0 2px 22px; max-width: 300px; }
 .zroster .zr { font: 600 11px sans-serif; font-weight: 600; white-space: nowrap; } .zroster .zr.a { color: #9fe0a8; } .zroster .zr.w { color: #f0c060; } .zroster .zr.d { color: #ff7a6a; } .zroster .zr.x { color: #8a8680; text-decoration: line-through; }
+#sgbar { position: fixed; right: 14px; top: 300px; width: 230px; background: rgba(20,16,12,.78); border-left: 3px solid #b8322a; color: #efe6d0; font: 12px sans-serif; padding: 8px 10px; z-index: 18; pointer-events: none; }
+#sgbar b { display: block; font: 600 13px Georgia, serif; margin-bottom: 4px; color: #f0d38a; }
+#sgbar .r { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 3px 0; } #sgbar .r.x { opacity: .4; text-decoration: line-through; }
+#sgbar em { flex: 0 0 90px; height: 6px; background: #3a302a; display: block; } #sgbar em i { display: block; height: 100%; background: #c9a24a; }
+#sgprompt { position: fixed; left: 50%; top: 60%; transform: translateX(-50%); background: rgba(20,16,12,.8); color: #f6e6b0; font: 600 14px sans-serif; padding: 5px 12px; border-radius: 4px; z-index: 21; pointer-events: none; }
+body.deploying #sgbar, body.deploying #sgprompt { visibility: hidden; }
 </style>
 <div id="app">
   <canvas id="c"></canvas>

@@ -651,6 +651,7 @@ function handleEvents(events) {
       state.hitBy = { text: `${what} ${a.type === 'hero' ? 'an enemy general' : 'a ' + a.def.name.replace(/s$/, '').replace(/men$/, 'man')}${ev.cause === 'melee' ? '' : ` · ${Math.round(d)} m`}${ev.killed ? ' — fatal' : ''}`, t: ev.killed ? 6 : 2.6 }; } }
   if (sim.real && typeof soldierEvent === 'function') for (const ev of events) soldierEvent(ev);
   if (sim.mission && typeof missionEvent === 'function') for (const ev of events) missionEvent(ev);
+  if (sim.sg) for (const ev of events) siegeEvent(ev);
   if (typeof SPEECH !== 'undefined') for (const ev of events) SPEECH.event(ev);
   if (typeof zheEvent === 'function') for (const ev of events) zheEvent(ev);
   for (const ev of events) {
@@ -806,6 +807,52 @@ function hudMarks() {
   }
   for (let i = n; i < MARKS.pool.length; i++) MARKS.pool[i].style.display = 'none';
 }
+// ---------- 攻守城 siege: shouted orders on siege events, interaction prompts and the siege status panel ----------
+const SGUI = { el: null, pr: null, t: 0 };
+const SG_LINES = {
+  ladderUp: [['梯子立住了，上！', "The ladder's up — climb!"], ['梯子上來了！推下去！', 'Ladder on the wall — throw it down!']],
+  ladderDown: [['梯子倒了！', "The ladder's down!"], ['推倒了！', 'Down it goes!']],
+  oil: [['火油！散開！', 'Burning oil — spread out!'], ['倒油！點火！', 'Pour the oil — fire!']],
+  stone: [['頭上！石頭！', 'Above you — stones!'], ['放石頭！', 'Drop the stones!']],
+  dock: [['雲車靠城了！上城！', 'The tower is at the wall — over!'], ['敵樓靠上來了！', 'Their tower is against the wall!']],
+  breach: [['城門破了！殺進去！', 'The gate is broken — in!'], ['城門破了！守住街口！', 'The gate is down — hold the street!']],
+  hole: [['牆鑿穿了！', "We're through the wall!"], ['他們把牆鑿穿了！', "They've holed the wall!"]],
+  saltpeter: [['城下起火了！', 'Fire at the foot of the wall!'], ['點硝！', 'Light the saltpeter!']],
+  fill: [['壕溝填平了！', 'The ditch is filled!'], ['他們填了壕溝！', "They've filled the ditch!"]],
+  engine: [['車毀了！', "We've lost an engine!"], ['砸爛了！', 'Smashed it!']],
+  slip: [['冰上滑！抓緊！', 'The ice — hold on!'], null],
+};
+function sgShout(key, att) { if (typeof SPEECH === 'undefined') return; const L = SG_LINES[key]; const line = L && L[att ? 0 : 1]; if (!line) return; const sim = state.sim, me = sim.players[state.localIdx], h = localHero(); if (!h) return;
+  let best = -1, bd = 30; for (const u of sim.teamAlive[me.team]) { if (u.id === h.id || u.type === 'horse' || u.def.ai === 'cannon') continue; const d = Math.hypot(u.x - h.x, u.z - h.z); if (d < bd) { bd = d; best = u.id; } }
+  if (best >= 0) SPEECH.say(best, line[0], line[1], { prio: 2, loud: true, shout: true, cool: 3 }); }
+function siegeEvent(ev) {
+  const sim = state.sim, sg = sim.sg; if (!sg) return; const me = sim.players[state.localIdx]; const att = me.team === sg.A;
+  if (ev.t === 'sgladder') { sgShout(ev.up ? 'ladderUp' : 'ladderDown', att); if (ev.up && !att) toast('A ladder is up! Get to the top of it and press E to throw it down'); }
+  else if (ev.t === 'sgoil') sgShout('oil', att); else if (ev.t === 'sgstone') sgShout('stone', att); else if (ev.t === 'sgdock') { sgShout('dock', att); toast(att ? 'The siege tower is against the wall — its bridge is down' : 'A siege tower has reached the wall!'); }
+  else if (ev.t === 'sgbreach') { sgShout('breach', att); toast(att ? 'THE GATE IS BROKEN!' : 'The gate has fallen!'); MUSIC.accent('breach'); }
+  else if (ev.t === 'sghole') { sgShout('hole', att); toast(att ? 'The sappers are through the wall!' : 'They have chiselled through the wall!'); }
+  else if (ev.t === 'sgsaltpeter') sgShout('saltpeter', att); else if (ev.t === 'sgfill') sgShout('fill', att); else if (ev.t === 'sgengine') { sgShout('engine', att); feed(`${{ ram: 'The covered ram', tower: 'A siege tower', cart: 'A shield cart' }[ev.kind] || 'An engine'} is destroyed`, !att); }
+  else if (ev.t === 'sgslip') sgShout('slip', att);
+  else if (ev.t === 'sgman') { const h = localHero(); if (h && ev.id === h.id) toast(ev.on ? `Manning the ${ev.kind === 'gun' ? 'gun' : 'bed crossbow'}: aim with the mouse, left click to fire, E to leave it` : 'You leave the emplacement'); }
+}
+function siegeHUD(dt) {
+  const sim = state.sim, sg = sim && sim.sg; if (!SGUI.el) { SGUI.el = document.createElement('div'); SGUI.el.id = 'sgbar'; document.body.appendChild(SGUI.el); SGUI.pr = document.createElement('div'); SGUI.pr.id = 'sgprompt'; document.body.appendChild(SGUI.pr); }
+  if (!sg || state.ended || state.screen !== 'game') { SGUI.el.hidden = true; SGUI.pr.hidden = true; return; }
+  SGUI.t -= dt; if (SGUI.t > 0) return; SGUI.t = 0.2;
+  const W = S.TERR.swall, me = sim.players[state.localIdx], att = me.team === sg.A, h = localHero();
+  const bar = (v) => `<i style="width:${Math.max(0, Math.min(100, v * 100)).toFixed(0)}%"></i>`;
+  let s = `<b>${['一 · The ditch', '二 · The walls', '三 · The gatehouse', '四 · The streets'][Math.min(3, sim.sector)]}</b>`;
+  s += `<div class="r"><span>Gate</span><em>${bar(sg.gateHp / sg.gateMax)}</em></div>`;
+  for (const e of sg.engines) { if (e.kind === 'cart' && e.cover) continue; s += `<div class="r${e.hp <= 0 ? ' x' : ''}"><span>${{ ram: '衝車 Ram', tower: '雲車 Tower', cart: '洞車 Sap cart' }[e.kind]}${e.docked ? ' · at the wall' : e.atGate ? ' · at the gate' : e.burn > 0 ? ' · burning' : ''}</span><em>${bar(e.hp / e.max)}</em></div>`; }
+  s += `<div class="r"><span>Ladders up</span><strong>${sg.lads.filter(L => L.up).length} / ${sg.lads.length}</strong></div>`;
+  if (sg.holes.some(L => L.prog > 0 || L.up)) s += `<div class="r"><span>Sapping</span><strong>${sg.holes.map(L => L.up ? 'through' : Math.round(L.prog / 3.2) + '%').join(' · ')}</strong></div>`;
+  SGUI.el.innerHTML = s; SGUI.el.hidden = false;
+  // what E would do here
+  let p = ''; if (h && !h.dead) { if (h.manE >= 0) p = 'E · leave the emplacement · LMB fire';
+    else { for (const e of sg.emp) if (e.team === me.team && e.man < 0 && Math.hypot(e.x - h.x, e.z - h.z) < 2.6) { p = `E · man the ${e.kind === 'gun' ? 'gun' : 'bed crossbow (床弩)'}`; break; }
+      if (!p) for (const L of sg.lads) { if (Math.abs(L.x - h.x) > 2.4) continue; if (!att && L.up && h.z > W.z0 && h.z < W.z0 + 3.5) { p = 'E · throw the ladder down'; break; } if (att && !L.up && h.z < W.z0 - 0.5 && h.z > W.z0 - 5 && sim.sector >= 1) { p = 'E · help raise the ladder'; break; } } } }
+  SGUI.pr.textContent = p; SGUI.pr.hidden = !p;
+}
 function updateHUD(dt) {
   const sim = state.sim, r = state.renderer; const hero = localHero(); const me = sim.players[state.localIdx];
   if (state.toastT > 0) { state.toastT -= dt; if (state.toastT <= 0) $('toast').classList.remove('show'); }
@@ -818,7 +865,7 @@ function updateHUD(dt) {
     const hb = state.hitBy; if (hb && hb.t > 0) { hb.t -= dt; $('hitby').textContent = hb.text; $('hitby').style.opacity = Math.min(1, hb.t); } else $('hitby').style.opacity = 0; }
   if (sim.real && typeof soldierHUD === 'function') soldierHUD(dt); else { $('fallen').hidden = true; }
   if (sim.mission && typeof missionHUD === 'function') missionHUD(dt); else $('mobj').hidden = true;
-  depHUD(dt); hudMarks();
+  depHUD(dt); hudMarks(); siegeHUD(dt);
   if (sim.real && !state.replayMode) { const plain = !me.squads.length; $('cmdpanel').hidden = plain; $('fury').hidden = true; }
   { const bl = $('bombs') && $('bombs').parentNode; if (bl) bl.hidden = true; } // grenades removed
   { const hq = $('hitq'); if (r.hitQ) { hq.textContent = r.hitQ.text; hq.style.color = r.hitQ.c; hq.style.opacity = Math.min(1, r.hitQ.t * 2.5); } else hq.style.opacity = 0;
