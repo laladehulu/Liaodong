@@ -11,25 +11,26 @@ const mine = [];
 const N0 = [0, 1].map(t => mine.filter(id => sim.units[id].team === t).length);
 sim.phase = 1; sim.battleTick = sim.tick; const SQ = sim.squads.filter(q => q.alive && !q.inactive);
 function general() { for (const q of SQ) { if (!q.alive) continue; const e = SQ.find(r => r.alive && r.team !== q.team); if (!e) continue; q.order = S.ORD_CHARGE; q.tx = e.cx; q.tz = e.cz; q.facing = Math.atan2(e.cx - q.cx, e.cz - q.cz); } }
-const dRole = {}, kRole = {}; let lunges = 0, covers = 0, shBlocks = 0, slotS = 0, slotN = 0, contact = false, ent = 0, entFar = 0, kills = 0, spearK = 0, spearKpin = 0, brushK = 0, maxRun = 0, maxFrac = 0, end = -1; const run = {}, hist = {};
+const dRole = {}, kRole = {}, LQ = []; let lHit = 0, lKill = 0, lDist = 0, lEnt = 0; let lunges = 0, covers = 0, shBlocks = 0, slotS = 0, slotN = 0, contact = false, ent = 0, entFar = 0, kills = 0, spearK = 0, spearKpin = 0, brushK = 0, maxRun = 0, maxFrac = 0, end = -1; const run = {}, hist = {};
 const locked = (u) => (u.entT > 0) || u.st === 4 || (u.hrT > 0);
 for (let t = 0; t < maxT; t++) {
   if (t % 30 === 0) general();
   const entB = {}; for (const id of mine) { const u = sim.units[id]; entB[id] = u.entT; }
   sim.step([]);
   for (const e of sim.events) {
-    if (e.t === 'yylunge') lunges++; if (e.t === 'yycover') covers++;
+    if (e.t === 'yylunge') { lunges++; const v = sim.units[e.at], s = sim.units[e.id]; LQ.push([sim.tick + 30, e.at, v.hp]); lDist += Math.hypot(v.x - s.x, v.z - s.z); } if (e.t === 'yycover') covers++;
     if (e.t === 'block') { const b = sim.units[e.by]; if (b && b.team === 0 && (b.role === 'shield' || b.role === 'lead')) shBlocks++; }
     if (e.t === 'entangle') { ent++; const v = sim.units[e.id]; let bd = 99; for (const id of mine) { const b = sim.units[id]; if (b.dead || !b.def.brush) continue; bd = Math.min(bd, Math.hypot(b.x - v.x, b.z - v.z)); } if (bd > 2.8) entFar++; }
     if (e.t === 'death') { const v0 = sim.units[e.id]; if (v0.team === 0) dRole[v0.role] = (dRole[v0.role] || 0) + 1; const k0 = e.killer >= 0 ? sim.units[e.killer] : null; if (k0 && k0.team === 0) kRole[k0.role] = (kRole[k0.role] || 0) + 1; }
     if (e.t === 'death') { const v = sim.units[e.id], k = e.killer >= 0 ? sim.units[e.killer] : null; if (!k || k.team !== 0 || v.team !== 1) continue; kills++; if (k.role === 'spear' || k.role === 'trident') { spearK++; if (entB[v.id] > 0 || v.entT > 0) spearKpin++; } if (k.def.brush) brushK++; } }
   if (!contact) { for (const id of mine) { const u = sim.units[id]; if (u.team !== 0 || u.dead) continue; for (const id2 of mine) { const v = sim.units[id2]; if (v.team === 1 && !v.dead && Math.hypot(v.x - u.x, v.z - u.z) < 6) { contact = true; break; } } if (contact) break; } }
   if (contact && t % 6 === 0) { const q = sim.squads[sim.units[mine[0]].squad]; if (q && q.aliveCount >= q.count * 0.5) for (const id of mine) { const u = sim.units[id]; if (u.team !== 0 || u.dead || u.wounded) continue; slotS += Math.hypot(u.x - u.slotX, u.z - u.slotZ); slotN++; } }
+  while (LQ.length && LQ[0][0] <= sim.tick) { const [, id, hp0] = LQ.shift(); const v = sim.units[id]; if (v.dead) { lKill++; lHit++; } else if (v.hp < hp0) lHit++; }
   for (const id of mine) { const u = sim.units[id]; if (u.team !== 1 || u.dead) continue; const L = locked(u);
-    run[id] = L ? (run[id] || 0) + 1 : 0; maxRun = Math.max(maxRun, run[id]);
+    run[id] = L ? (run[id] || 0) + 1 : 0; if (L) { const why = (u.entT > 0 ? 'E' : '') + (u.st === 4 ? 'S' + (u.stunDur || 0).toFixed(1) : '') + (u.hrT > 0 ? 'H' : ''); (globalThis.WHY = globalThis.WHY || {})[id] = run[id] === 1 ? why : (globalThis.WHY[id] + (globalThis.WHY[id].endsWith(why) ? '' : '|' + why)); } if (run[id] > maxRun) { maxRun = run[id]; globalThis.MW = globalThis.WHY[id]; }
     const h = hist[id] || (hist[id] = []); h.push(L ? 1 : 0); if (h.length > 60) h.shift(); if (h.length === 60) { const f = h.reduce((a, b) => a + b, 0) / 60; if (f > maxFrac) maxFrac = f; } }
   const al = [0, 1].map(tm => mine.filter(id => !sim.units[id].dead && !sim.units[id].wounded && sim.units[id].team === tm).length);
   if (al[0] <= N0[0] * 0.2 || al[1] <= N0[1] * 0.2) { end = t; break; }
 }
 const al = [0, 1].map(tm => mine.filter(id => !sim.units[id].dead && sim.units[id].team === tm).length);
-console.log(JSON.stringify({ foe, seed, xc, secs: +((end < 0 ? maxT : end) / 30).toFixed(1), ended: end >= 0, duckWin: al[1] <= N0[1] * 0.2 && al[0] > N0[0] * 0.2, duckLost: N0[0] - al[0], foeLost: N0[1] - al[1], ent, entFar, kills, spearK, spearKpin, brushK, lunges, covers, shBlocks, slotDist: +(slotS / Math.max(1, slotN)).toFixed(2), dRole, kRole, maxLockS: +(maxRun / 30).toFixed(2), maxLockFrac2s: +maxFrac.toFixed(2) }));
+console.log(JSON.stringify({ foe, seed, xc, secs: +((end < 0 ? maxT : end) / 30).toFixed(1), ended: end >= 0, duckWin: al[1] <= N0[1] * 0.2 && al[0] > N0[0] * 0.2, duckLost: N0[0] - al[0], foeLost: N0[1] - al[1], ent, entFar, kills, spearK, spearKpin, brushK, lunges, lHit, lKill, lDist: +(lDist / Math.max(1, lunges)).toFixed(1), covers, shBlocks, slotDist: +(slotS / Math.max(1, slotN)).toFixed(2), why: globalThis.MW, dRole, kRole, maxLockS: +(maxRun / 30).toFixed(2), maxLockFrac2s: +maxFrac.toFixed(2) }));

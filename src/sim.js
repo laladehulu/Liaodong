@@ -1040,6 +1040,7 @@ class Sim {
     }
     if (sq.order === ORD_MOVE && len(sq.cx - sq.tx, sq.cz - sq.tz) < 2.5) sq.order = ORD_HOLD;
     if (this.xc) this.xcFront(sq);
+    if (sq.def.yuanyang) this.yyAnchor(sq, n);
     const fx = sin(sq.facing), fz = cos(sq.facing), rx = -cos(sq.facing), rz = sin(sq.facing), s = spacingOf(sq.def);
     let k = 0;
     // friendly companies given the same ground slide apart instead of merging into one mob
@@ -1052,7 +1053,7 @@ class Sim {
       const u = units[sq.unitIds[i]]; if (u.dead) continue;
       let [lat, dep] = slotOffset(sq.formation, k++, n, s, sq.cols); if (sq.def.yuanyang && sq.formation !== FORM_COLUMN) { const r = YY_SLOT[i % 12]; lat = r[0] * 0.92; dep = r[1] * 0.82; }
       if (u.restT > this.tick) dep -= 3.4;
-      u.slotX = clamp((sq.front ? sq.fax : sq.tx) + ox + rx * lat + fx * dep, -HALF, HALF); u.slotZ = clamp((sq.front ? sq.faz : sq.tz) + oz + rz * lat + fz * dep, -HALF, HALF);
+      u.slotX = clamp((sq.yyA ? sq.yax : sq.front ? sq.fax : sq.tx) + ox + rx * lat + fx * dep, -HALF, HALF); u.slotZ = clamp((sq.yyA ? sq.yaz : sq.front ? sq.faz : sq.tz) + oz + rz * lat + fz * dep, -HALF, HALF);
       for (const p of this.players) { if (p.ai || p.team !== sq.team) continue; const h = units[p.heroId]; if (!h || h.dead || h === u) continue; const hx = u.slotX - h.x, hz = u.slotZ - h.z, hd = len(hx, hz); if (hd < 1.9) { const e = hd > 0.05 ? 1.9 / hd : 0; u.slotX = h.x + (hd > 0.05 ? hx * e : rx * 1.9); u.slotZ = h.z + (hd > 0.05 ? hz * e : rz * 1.9); } } // leave the player room to move
       if (sq.def.ai === 'ranged' && sq.order === ORD_HOLD) this.coverSlot(u, fx, fz);
     }
@@ -1714,7 +1715,7 @@ class Sim {
   posture(u, amt, by) {
     if (u.dead || u.type === 'horse' || u.def.ai === 'cannon') return; const max = u.champ ? 240 : u.type === 'hero' ? 200 : 100 + (u.squad >= 0 ? (this.squads[u.squad].stars || 0) * 15 : 0);
     u.pos += amt; u.posT = 1.1;
-    if (u.pos >= max) { u.pos = 0; u.blocking = false; u.st = ST_STUN; u.stT = 0; u.stunDur = u.champ ? 1.3 : 1.7; u.openT = 1.9; this.events.push({ t: 'posturebreak', id: u.id, x: u.x, y: u.y + 1.2, z: u.z, by: by ? by.id : -1 }); }
+    if (u.pos >= max) { u.pos = 0; u.blocking = false; u.st = ST_STUN; u.stT = 0; u.stunDur = u.champ ? 1.3 : u.entT > 0 ? 0.5 : 1.7; u.entT = 0; u.openT = 1.9; /* a man already held by the brush is not then frozen as well */ this.events.push({ t: 'posturebreak', id: u.id, x: u.x, y: u.y + 1.2, z: u.z, by: by ? by.id : -1 }); }
   }
   tryKick(u) {
     const n = this.gatherNear(u.x, u.z, 3); let best = null, bd = 1e9;
@@ -3791,18 +3792,32 @@ const HR_IMM = 0.7, HR_WIN = 60, HR_CAP = 0.6;
 Sim.prototype.brushCatch = function (v, b, nx, nz, blocked, hx, hy, hz) {
   if (v.dead || v.type === 'horse') return;
   const imm = (v.entImm || 0) > this.tick, m = 1 / (v.mass || 1);
-  if (imm) { v.vx += nx * 1.8 * m; v.vz += nz * 1.8 * m; return; }
+  if (imm) { v.vx += nx * 3.4 * m; v.vz += nz * 3.4 * m; return; }
   const dur = v.champ ? 0.35 : blocked ? 0.42 : 0.65;
   v.entT = Math.max(v.entT, dur); v.entImm = this.tick + Math.round((dur + 1.2) * 30); v.entBy = b.id;
   v.vx += nx * (blocked ? 3.5 : 5.5) * m; v.vz += nz * (blocked ? 3.5 : 5.5) * m;
   if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } v.blocking = false;
   if (v.hrT > 0) v.hrT = 0;
-  this.posture(v, blocked ? 14 : 22, b);
+  this.posture(v, blocked ? 5 : 8, b);
   this.events.push({ t: 'entangle', id: v.id, by: b.id, blocked: !!blocked, x: hx, y: hy, z: hz });
 };
 // the duck team fights as one body from its places: the brushes screen and sweep, the spears lunge at what the brushes
 // catch and step back, the shields and the leader step up a pace to meet whoever gets through, the tridents guard the
 // flanks and finish the fallen. Only a broken team (half gone) falls apart into single fights.
+// in contact the duck team does not run onto the enemy: its body stops with the enemy at the end of the brushes and
+// presses forward slowly as one, turning to face him; a team cut down to half loses this and fights man to man
+Sim.prototype.yyAnchor = function (sq, n) {
+  if (n < sq.count * 0.5 || sq.routing || (sq.order !== ORD_CHARGE && sq.order !== ORD_HOLD && sq.order !== ORD_FORM)) { sq.yyA = false; return; }
+  let e = null, bd = 13; const m = this.gatherNear(sq.cx, sq.cz, 13);
+  for (let i = 0; i < m; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === sq.team || v.dead || v.wounded || v.type === 'horse' || v.inactive) continue; const dv = len(v.x - sq.cx, v.z - sq.cz); if (dv < bd) { bd = dv; e = v; } }
+  if (!e) { if (sq.yyA) { sq.yyA = false; } return; }
+  const dx = e.x - sq.cx, dz = e.z - sq.cz, l = len(dx, dz) || 1, want = atan2(dx, dz);
+  const df = wrap(want - sq.facing), turn = 1.0 * 15 * DT; sq.facing = wrap(sq.facing + clamp(df, -turn, turn));
+  const ax = e.x - sin(sq.facing) * 4.6, az = e.z - cos(sq.facing) * 4.6;
+  if (!sq.yyA) { sq.yyA = true; sq.yax = sq.cx; sq.yaz = sq.cz; }
+  const mx = ax - sq.yax, mz = az - sq.yaz, ml = len(mx, mz), step = 1.3 * 15 * DT; // squadThink runs every 15 ticks: the body moves at about a walking pace
+  if (ml > step) { sq.yax += mx / ml * step; sq.yaz += mz / ml * step; } else { sq.yax = ax; sq.yaz = az; }
+};
 Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
   const r = u.role; if (!r || r === 'cook' || !sq.def.yuanyang) return false;
   if (sq.aliveCount !== undefined && sq.count && sq.aliveCount < sq.count * 0.5) return false;
@@ -3824,9 +3839,11 @@ Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
     home(1.0); if (tgt && idle && d <= reach + 0.2 && this.rng.next() < 0.08) this.startWindup(u, DIR_DOWN); return true;
   }
   if (r === 'brush') { home(1.0);
-    if (tgt && idle) { const caught = tgt.entT > 0 || (tgt.entImm || 0) > this.tick + 12;
-      if (d <= reach + 0.3 && !caught && this.rng.next() < 0.3) this.startWindup(u, (u.id + (this.tick >> 4)) & 1 ? DIR_UP : DIR_DOWN);
-      else if (d < 11 && this.tick >= (u.yySw || 0)) { u.yySw = this.tick + 55 + (u.id % 5) * 7; this.startWindup(u, DIR_UP); } } // the brush is never still: it sweeps the front of the team
+    if (idle) { let c = null, cd = reach + 1.6, near = 99; const n = this.gatherNear(u.x, u.z, reach + 2);
+      for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.team === u.team || v.dead || v.wounded || v.type === 'horse') continue; const dv = len(v.x - u.x, v.z - u.z); if (dv < near) near = dv;
+        if (v.entT > 0 || (v.entImm || 0) > this.tick + 8 || dv >= cd || Math.abs(wrap(atan2(v.x - u.x, v.z - u.z) - u.yaw)) > 1.1) continue; c = v; cd = dv; }
+      if (c) { u.target = c.id; if (this.rng.next() < 0.45) this.startWindup(u, (u.id + (this.tick >> 4)) & 1 ? DIR_UP : DIR_DOWN); }
+      else if (tgt && d < 11 && near > reach + 1 && this.tick >= (u.yySw || 0)) { u.yySw = this.tick + 55 + (u.id % 5) * 7; this.startWindup(u, DIR_UP); } } // the brush is never still: it sweeps the front of the team
     return true; }
   if (r === 'shield' || r === 'lead') {
     // a man who got past the brushes, close to the spears or the brushes: step up a pace, take him on the shield, cut him
