@@ -439,9 +439,11 @@ document.addEventListener('keydown', (e) => { // the dialogue panel takes the ke
 // ---------- in battle ----------
 function zheSay(ev) { // scripted lines come out of a man's mouth when you are near enough to hear him; otherwise by runner
   const sim = state.sim, h = localHero(); if (!ZB) return false;
-  const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'], qi: ['戚金', 'General Qi Jin'], chen: ['陳策', 'General Chen Ce'], sichuan: ['周敦吉', 'Zhou Dunji of the White Poles'] }[ev.who] || ['', ev.who];
-  let id = -1;
-  if (ev.who === 'liu') { const g = sim.mg.liu; id = g ? sim.players[g.p].heroId : -1; }
+  const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'], qi: ['戚金', 'General Qi Jin'], chen: ['陳策', 'General Chen Ce'], sichuan: ['周敦吉', 'Zhou Dunji of the White Poles'], col: ['', 'The column officer'], folk: ['', 'A woman from Kaiyuan'] }[ev.who] || ['', ev.who];
+  let id = -1; const zi = ZR.findIndex(r => r.k === ev.who && r.k !== 'me' && !r.guest);
+  if (zi >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === zi && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded) id = +uid; if (id >= 0) { W[0] = ZR[zi].zh; W[1] = ZR[zi].en; } else { W[0] = ''; W[1] = 'A soldier'; } }
+  else if (ev.who === 'qi' && sim.mg.zhe && sim.mission.ch === 2) id = sim.players[sim.mg.zhe.p].heroId;
+  else if (ev.who === 'liu') { const g = sim.mg.liu; id = g ? sim.players[g.p].heroId : -1; }
   else if (sim.mg[ev.who]) { const g = sim.mg[ev.who]; id = sim.players[g.p].heroId; }
   else if (ev.who === 'chief' || ev.who === 'fang') { const want = ev.who === 'chief' ? 0 : 8; for (const uid in ZB.map) if (ZB.map[uid] === want) id = +uid; }
   if (id >= 0 && sim.units[id] && sim.units[id].dead) id = -1;
@@ -452,6 +454,7 @@ function zheSay(ev) { // scripted lines come out of a man's mouth when you are n
 }
 function zheEvent(ev) {
   const sim = state.sim; if (!ZB || !sim || !sim.mission || !sim.mission.soldier) return; const me = sim.players[state.localIdx];
+  if (ev.t === 'mkill' && ev.gid === 'zhe' && ZB.ch2 && !ZB.chK) { MUSIC.stop(); setTimeout(() => { if (state.sim === sim && !state.ended) { MUSIC.play('battle'); MUSIC.setIntensity(0.35); } }, 12000); } // Qi Jin falls: the war drums stop, and for a while there is only the fighting
   if (ev.t === 'zpromote' && ev.p === state.localIdx && ZB.ch2) { state.fpSel = null; banner('你領隊 · Your file', 'You lead the file: F follow me / H halt / C charge / Z form up where you look', 6); }
   else if (ev.t === 'zpromote' && ev.p === state.localIdx) { state.fpSel = null; const q = sim.squads[ev.sq]; const w = q.unitIds.map(id => sim.units[id]).find(u => !u.dead && u.ctrl < 0 && !u.wounded);
     if (w) setTimeout(() => SPEECH.say(w.id, `隊長沒了！${ZS.name.zh}，你說怎麼走？`, `The chief is dead! ${ZS.name.en}, you're senior now — what do we do?`, { prio: 3, dur: 5 }), 1600);
@@ -552,13 +555,15 @@ ZR.push(
   { k: 'bao', zh: '鮑二', en: 'Bao Er', role: 'spear', t: 'long spear · new draft · a Ningbo boatman', ch: 2 },
   { k: 'shao', zh: '邵阿福', en: 'Shao Afu', role: 'brush', t: 'wolf-brush · new draft · 17', ch: 2 },
   { k: 'ran', zh: '冉家虎', en: 'Ran Jiahu', role: 'spear', t: 'White Pole of Shizhu · 白杆兵', ch: 2, guest: true },
-  { k: 'qijin', zh: '戚金', en: 'Qi Jin', role: 'lead', t: 'deputy general of the Zhejiang men · 副將', ch: 2, guest: true });
+  { k: 'qijin', zh: '戚金', en: 'Qi Jin', role: 'lead', t: 'deputy general of the Zhejiang men · 副將', ch: 2, guest: true },
+  { k: 'chence', zh: '陳策', en: 'Chen Ce', role: 'lead', t: 'regional commander of the relief army · 總兵', ch: 2, guest: true });
 Object.assign(ZLOOK, {
   xiaoman: { hat: 'rattan', brows: 'thick', young: true, skin: 0xd6a880 },
   bao: { hat: 'wrap', wrap: 0x3a3a3a, brows: 'thin', beard: 'stubble', skin: 0xb48a62 },
   shao: { hat: 'band', brows: 'high', young: true, rosy: true, skin: 0xe2bc96 },
   ran: { hat: 'wrap', wrap: 0xe8e2d0, brows: 'thick', beard: 'mous', skin: 0xb8865e },
   qijin: { h: 1.04, hat: 'chief', brows: 'knit', beard: 'full', grey: true, longBeard: true, skin: 0xc49a74 },
+  chence: { h: 1.1, hat: 'chief', brows: 'thick', beard: 'longmous', longBeard: true, bulk: true, skin: 0xb88c66 },
 });
 const ZP2 = [['北邊的冰還沒化。', 'The ice up north hasn\'t melted yet.'], ['聽說瀋陽的城牆矮。', 'They say Shenyang\'s walls are low.'], ['川兵吃辣子，冬天也不怕冷。', 'The Sichuan men eat chillies. Cold doesn\'t touch them.'], ['火藥多領一包，總沒錯。', 'Draw an extra bag of powder. Never hurts.'], ['又是三月，又在打仗。', 'March again, and war again.']];
 const ZP3 = [['……', '...'], ['遼陽那邊有消息沒？', 'Any word from Liaoyang?'], ['別往北看了。', 'Stop looking north.'], ['火小一點，別讓他們看見。', 'Keep the fire low. Don\'t let them see it.']];
@@ -574,12 +579,12 @@ const INTRO2 = [
 ];
 // ---------- the camp, night before and night after ----------
 const ZSPOT2 = { lou: [-2.5, -0.9, 'squat'], liu6: [-0.9, 2.4, 'squat'], luo: [1.0, 2.4, 'squat'], jin: [2.6, -0.6, 'squat'], ye: [-1.9, 1.6, 'squat'], wang: [7.0, -3.4, 'stand'], fang: [2.1, 1.7, 'squat'], he: [-6.8, -2.6, 'stand'], du: [3.1, -2.4, 'stand'], zhu: [8.9, -3.7, 'stand'],
-  xiaoman: [-2.9, 0.6, 'squat'], bao: [5.2, -6.6, 'stand'], shao: [0.1, 2.8, 'squat'], ran: [-1.6, -2.8, 'stand'], qijin: [-4.4, -4.6, 'stand'] };
+  xiaoman: [-2.9, 0.6, 'squat'], bao: [5.2, -6.6, 'stand'], shao: [0.1, 2.8, 'squat'], ran: [-1.6, -2.8, 'stand'], qijin: [-4.4, -4.6, 'stand'], chence: [5.6, -1.2, 'stand'] };
 function zCampCfg2(night) {
   const npcs = [], beds = [], file = zFile2(), rows = [{ k: 'me' }].concat(file), n = rows.length;
   rows.forEach((r, i) => { const a = -0.5 + (i / Math.max(8, n)) * Math.PI * 1.55 + Math.PI * 0.55; const bx = Math.sin(a) * 6.3, bz = Math.cos(a) * 6.3; const alive = r.k === 'me' || ZS.alive[r.k];
     beds.push([+bx.toFixed(2), +bz.toFixed(2), +(a + Math.PI).toFixed(3), !alive]); });
-  for (const r of file.concat(night === 2 ? [zRow('ran'), zRow('qijin')] : [])) { if (!ZS.alive[r.k] && !r.guest) continue; const sp = ZSPOT2[r.k] || [4, 4, 'stand']; const [x, z] = sp; const tx = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? 8 : 0, tz = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? -5 : 0;
+  for (const r of file.concat(night === 2 ? [zRow('ran'), zRow('qijin'), zRow('chence')] : [])) { if (!ZS.alive[r.k] && !r.guest) continue; const sp = ZSPOT2[r.k] || [4, 4, 'stand']; const [x, z] = sp; const tx = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? 8 : 0, tz = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? -5 : 0;
     npcs.push({ role: r.role, x, z, yaw: +Math.atan2(tx - x, tz - z).toFixed(3), ci: ZR.indexOf(r), pose: night === 3 && r.k !== 'zhu' ? 'squat' : sp[2] }); }
   const mb = beds[0]; ZC = { bed: [mb[0], mb[1]] };
   return { fires: ZCAMP.fires, tents: ZCAMP.tents, props: ZCAMP.props, bedrolls: beds, npcs, me: { x: 0.4, z: -3.4, yaw: 0, role: 'lead' } };
@@ -606,6 +611,7 @@ function zStart2(scene) {
     const left = []; for (const r of zFile2()) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role === r.role); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } else left.push(r); }
     for (const r of left) { const id = q.unitIds.find(uid => !used[uid] && sim.units[uid].role !== 'lead'); if (id !== undefined) { used[id] = 1; ZB.map[id] = ZR.indexOf(r); } } // a place for every man, even if it is not his usual trade
     for (const uid in ZB.map) zDress(sim.units[uid], ZB.map[uid]);
+    for (const [g, k] of [['zhe', 'qijin'], ['chen', 'chence']]) { const G = sim.mg[g]; if (G) zDress(sim.units[sim.players[G.p].heroId], ZR.findIndex(r => r.k === k)); }
     setTimeout(() => storyCard('Spring 1621. You lead your file in Qi Jin\'s wagon camp south of the Hun River. F follow me · H halt · C charge · Z form up where you look. The flag on your back is the file\'s.', '渾河 · The Hun River'), 700);
   }
 }
@@ -646,6 +652,15 @@ function zTalk2(k, night) {
     ye: { g: ['我女兒七歲了。我還沒見過七歲的她。', 'My daughter is seven. I\'ve never seen her at seven.'], t: [{ q: 'You\'ll see her at eight.', bond: 1, a: [['……你答應我？', '...You promise?']] }] },
     wang: { g: ['我現在一頓吃三個餅。長力氣。', 'I eat three cakes a meal now. Building strength.'], t: [{ q: 'Stay by me tomorrow.', bond: 1, a: [['你在前頭，我就在你左邊。誰都別想過去。', 'You\'re at the front, I\'m at your left. Nobody gets through.']] }] },
     du: { g: ['五十兩一顆首級。兩年了，我一顆也沒拿到。', 'Fifty taels a head. Two years, and I haven\'t taken one.'], t: [{ q: 'Chunhua?', bond: 1, a: [['她嫁人了。去年。……不提了。', 'She married. Last year. ...Let\'s not talk about it.']] }] },
+    qijin: { g: [`你就是從阿布達里岡出來的那個隊長？${nm.zh}，是吧。坐，坐。`, `You're the chief who came out of Abudali Pass? ${nm.en}, isn't it. Sit, sit.`], t: [
+      { q: 'You know about Abudali?', a: [['劉總兵的浙兵，我認得好幾個。都是義烏人。', 'Liu Ting\'s Zhejiang men — I knew a good few of them. Yiwu men, all of them.'], ['你帶出來的人，名字記住。我也記。', 'The men you brought out — keep their names. I keep them too.']] },
+      { q: 'Are you kin to Marshal Qi?', a: [['他是我叔父。', 'He was my uncle.'], ['人人都說戚家軍。可戚家軍從來不是姓戚的人，是你們這些人。', 'Everyone talks about the Qi family army. It was never the men named Qi. It was men like you.']] },
+      { q: 'What do they think of us here?', a: [['熊經略頭一回見我們，說南兵虛而猾。', 'The first time Commissioner Xiong saw us, he said the southern troops were hollow and sly.'], ['（他笑了一聲。）明天讓他們看看。', '(He gives a short laugh.) Tomorrow we let them see.']] },
+      { q: 'Will we cross the river?', a: [['陳總兵要回遼陽，川兵要過河。不管誰對，總得有個地方讓人退回來。', 'General Chen wants to go back to Liaoyang; the Sichuan men want to cross. Whoever is right, there has to be somewhere for men to fall back to.'], ['所以我們挖壕、立柵、排車。聽我的鼓。鼓在響，營就在。', 'So we dig the ditch, raise the palisade, line up the wagons. Listen for my drum. While it beats, the camp holds.']] },
+      { q: 'Eat with us.', a: [['（他從懷裡掏出一塊乾餅，掰成兩半，一半遞給你，一半遞給樓小滿。）', '(He takes a dry cake from inside his coat, breaks it in two, and hands one half to you and the other to Lou Xiaoman.)']] }] },
+    chence: { g: ['南兵？這麼冷的天，腳還好吧？', 'Southern men? In this cold — how are your feet?'], t: [
+      { q: 'Will we cross the river?', a: [['瀋陽已經丟了。過河去救一座空城，是白白送死。', 'Shenyang is already lost. Crossing to save an empty city is throwing men away.'], ['可底下的人不肯走。……明早再說。', 'But the officers won\'t turn back. ...We\'ll see in the morning.']] },
+      { q: 'Where do you want us?', a: [['跟著戚副將。他的車營比城牆還結實。', 'Stay with Deputy General Qi. His wagon camp is sturdier than a city wall.'], ['看見東邊那面大旗沒有？那是我的。旗在，兵就在。', 'See the big banner on the east side? That\'s mine. While it stands, the army stands.']] }] },
     zhu: { g: ['今天有鹽。川兵分給我們的。', 'Salt today. The Sichuan men shared theirs.'], t: [{ q: 'Any news?', a: [['陳總兵要回遼陽，底下的將爺不肯，說來都來了。', 'General Chen wants to march back to Liaoyang. His officers won\'t have it — we\'ve come this far, they say.'], ['朱萬良、姜弼的馬兵在白塔鋪，說是接應。……接應誰，誰知道。', 'Zhu Wanliang and Jiang Bi have cavalry at Baitapu, to support us, they say. ...Support whom, who knows.']] }] },
   })[k];
   // the night after
