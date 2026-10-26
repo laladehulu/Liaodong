@@ -38,5 +38,23 @@ const CFG = {
   await page.screenshot({ path: out + '/deeds_result.png', timeout: 90000 });
   const res = await page.evaluate(() => ({ text: (document.getElementById('resultText') || {}).innerHTML || '', save: (JSON.parse(localStorage.getItem('mingZhe') || 'null') || {}).dd }));
   console.log(JSON.stringify({ r1, r2, r3, resText: res.text.slice(-400), log: res.save && res.save.log && res.save.log.map(B => ({ kills: B.kills, help: B.help, left: B.left, saved: B.saved, blocks: B.blocks })) }), 'errors', errors);
+  // the next camp: the roll by the bedroll, and the man you got up has something to say
+  await page.evaluate(([k, g, st]) => { const s = JSON.parse(localStorage.getItem(k)); s.stage = st; localStorage.setItem(k, JSON.stringify(s)); localStorage.setItem(g, st); }, [CFG.key, CFG.go, CFG.camp]);
+  await page.reload({ waitUntil: 'load', timeout: 90000 }); await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; }); await page.waitForTimeout(4500);
+  const c1 = await page.evaluate(() => { const st = window.__boshin.state, sim = st.sim, h = sim.units[sim.players[0].heroId]; document.getElementById('pause').hidden = true; const sc = document.getElementById('storycard'); if (sc) sc.classList.remove('show');
+    const pos = window.__ddRollPos ? window.__ddRollPos() : null; if (!pos) return { pos: null };
+    h.x = h.px = pos[0] - 1.1; h.z = h.pz = pos[1]; window.__boshin.Input.yaw = Math.PI / 2; return { pos, mission: sim.cfg.mission }; });
+  await page.waitForTimeout(700);
+  const prompt = await page.evaluate(() => { const p = document.getElementById('zhePrompt'); return p && !p.hidden ? p.textContent : null; });
+  await page.screenshot({ path: out + '/deeds_roll_prompt.png', timeout: 90000 });
+  await page.keyboard.press('KeyE'); await page.waitForTimeout(500);
+  await page.screenshot({ path: out + '/deeds_roll.png', timeout: 90000 });
+  await page.evaluate(() => { const b = document.getElementById('zheNext'); if (b) b.click(); });
+  const talk = await page.evaluate(() => { const st = window.__boshin.state, sim = st.sim; const u = sim.units.find(v => v.camp && window.__ddCampKey && window.__ddCampKey(v) === 'lou'); if (!u) return 'no lou';
+    const h = sim.units[sim.players[0].heroId]; h.x = h.px = u.x; h.z = h.pz = u.z - 1.6; window.__boshin.Input.yaw = 0; return 'ok'; });
+  await page.waitForTimeout(500); await page.keyboard.press('KeyE'); await page.waitForTimeout(600);
+  const dlg = await page.evaluate(() => { const d = document.getElementById('zheDlg'); return d && !d.hidden ? d.innerText.slice(0, 400) : null; });
+  await page.screenshot({ path: out + '/deeds_talk.png', timeout: 90000 });
+  console.log(JSON.stringify({ c1, prompt, talk, dlg }), 'errors', errors);
   await browser.close();
 })();

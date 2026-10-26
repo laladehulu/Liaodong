@@ -167,3 +167,6 @@ function ddFrame(dt) {
   if (ZC && sim.mission.camp && !state.zheDlg && DD.obj && ddNearRoll()) { const pr = $('zhePrompt'); if (pr) { pr.hidden = false; pr.innerHTML = '<kbd>E</kbd>Read the roll · 功過簿'; } }
 }
 { const st = document.createElement('style'); st.textContent = '.ddres { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; } .ddres span, .ddroll span { font: 13px sans-serif; padding: 2px 8px; border-radius: 3px; } .ddp { background: rgba(120,150,80,.22); color: #cfe0b0; } .ddm { background: rgba(170,60,50,.25); color: #f0b8a8; } .ddn { opacity: .5; } .ddroll { max-height: 56vh; overflow: auto; text-align: left; } .ddrow { margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; } .ddrow b { width: 100%; font-size: 15px; letter-spacing: .04em; }'; document.head.appendChild(st); }
+// test hooks (read-only)
+window.__ddRollPos = () => (DD.obj ? ddRollPos() : null);
+window.__ddCampKey = (u) => { const R = (ZC && ZC.R) || ZR; return u && u.ci !== undefined && R[u.ci] ? R[u.ci].k : null; };
