@@ -15,28 +15,51 @@ const SPEECH = (() => {
   function listener() { const r = state.renderer; return r ? r.camera.position : null; }
   // say(unitId, zh, en, opts): opts.prio (0 bark … 3 story), opts.loud (scripted: heard farther), opts.radio (fall back to the radio panel), opts.who (name override), opts.shout
   // ---- the face of whoever is speaking: rendered once per man in the studio above the field, then cached ----
-  // Rendering a face costs one extra frame of the scene, so faces are queued, drawn at most one every 0.35 s, and drawn
-  // BEFORE the main frame (SPEECH.pump runs ahead of the renderer) so the studio shot is never left on screen. The result
-  // is kept as a small canvas and copied into the HUD with drawImage: no JPEG encoding, no stall.
-  const faces = {}, faceQ = []; let faceT = 0;
+  // ---- live 3D heads in the HUD ----
+  // Each speaker in the stack is a small 3D bust (head, shoulders, his own hat, face and kit) built from the same gear
+  // description as his body, drawn every frame by a second tiny renderer on a transparent overlay canvas, one small
+  // scissored viewport per face box. That costs a few dozen meshes, not a second pass of the battle.
+  const BUST = { r: null, cv: null, scene: null, cam: null, cache: new Map(), geo: null, any: false };
   const faceKey = (u) => u.id + ':' + ((u.look && u.look.id) || '');
-  function face(u) { if (!u) return null; const key = faceKey(u); if (faces[key]) return faces[key]; if (!faceQ.some(q => q.key === key)) faceQ.push({ key, id: u.id }); return null; }
-  function renderFace(u, key) {
-    const r = state.renderer; if (!r) return;
-    const c = Object.assign({}, u, { st: S.ST_IDLE, stT: 0, blocking: false, aiming: false, speedNow: 0, walk: 0, mounted: false, mount: -1, downT: 0, flinchT: 0, dead: false, wounded: false, downed: false, ctrl: -1, posT: 0, entT: 0 });
-    const Y = 420, prevC = r.cine, prevS = r.studio; r.studio = { id: u.id, u: c, x: 0, y: Y, z: 0, yaw: 0 };
-    const hh = 1.62 * ((u.look && u.look.h) || 1); r.cine = { pos: [0.25, Y + hh + 0.05, 1.35], look: [0, Y + hh - 0.02, 0], fov: 28 };
-    try { r.render(1, 0, { mode: 'cmd', yaw: 0, pitch: 0, selected: [] }); const cv = document.getElementById('c'); const t = document.createElement('canvas'); t.width = t.height = 96; const g = t.getContext('2d'); const W = cv.width, H = cv.height, s = Math.min(W, H) * 0.62; g.drawImage(cv, (W - s) / 2, (H - s) / 2, s, s, 0, 0, 96, 96); faces[key] = t; } catch (e) { faces[key] = null; }
-    r.studio = prevS; r.cine = prevC;
-    for (const el of document.querySelectorAll('.facebox')) if (el._fk === key) paintFace(el, key);
+  function bustInit() {
+    const cv = document.createElement('canvas'); cv.id = 'bustcv'; document.body.appendChild(cv);
+    const r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true }); r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); r.setClearColor(0x000000, 0); r.autoClear = false;
+    const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xe8e4dc, 0x3a3028, 0.85)); const d = new THREE.DirectionalLight(0xfff0dc, 0.75); d.position.set(0.6, 1.2, 1.4); sc.add(d);
+    const R = RENDER.roundBox; BUST.geo = { b: R(0.3, 6, 4), c: new THREE.ConeGeometry(0.5, 1, 10), y: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), head: R(0.62, 10, 7), torso: R(0.38, 10, 6), limb: R(0.5, 6, 4) };
+    BUST.r = r; BUST.cv = cv; BUST.scene = sc; BUST.cam = new THREE.PerspectiveCamera(26, 1, 0.05, 10); BUST.cam.position.set(0.16, 0.5, 1.28); BUST.cam.lookAt(0, 0.4, 0);
   }
-  function paintFace(el, key) { const f = faces[key]; let cv = el.firstChild; if (!f) { el.classList.add('none'); return; } if (!cv) { cv = document.createElement('canvas'); cv.width = cv.height = 96; el.appendChild(cv); } cv.getContext('2d').drawImage(f, 0, 0); el.classList.remove('none'); }
-  function setFace(el, u) { el.classList.add('facebox'); el._fk = u ? faceKey(u) : ''; if (el.firstChild) el.firstChild.remove(); if (u) face(u); paintFace(el, el._fk); }
-  let warmFor = null;
-  function pump(dt) { faceT -= dt;
-    if (warmFor !== state.sim && state.sim && state.sim.tick > 45) { warmFor = state.sim; const m = Object.assign({}, typeof ZB !== 'undefined' && ZB ? ZB.map : {}, typeof ZC !== 'undefined' && ZC ? ZC.map : {}); prewarm(Object.keys(m)); } // the file's faces, early and one at a time
-    if (faceT > 0 || !faceQ.length) return; const q = faceQ.shift(); const u = unit(q.id); if (u) renderFace(u, q.key); faceT = 0.35; }
-  function prewarm(ids) { for (const id of ids) { const u = unit(+id); if (u) face(u); } }
+  function bustFor(u) {
+    const key = faceKey(u); let b = BUST.cache.get(key); if (b) return b;
+    const G = BUST.geo; const grp = new THREE.Group(), head = new THREE.Group(); head.position.set(0, 0.47, 0.01); grp.add(head);
+    const skinC = new THREE.Color(); { const t = RENDER.uhash(u.id, 3); skinC.setRGB(0.9 - t * 0.14, 0.76 - t * 0.16, 0.6 - t * 0.17); if (u.look && u.look.skin) skinC.set(u.look.skin); }
+    const tc = (RENDER.GEAR_HOOK.torso && RENDER.GEAR_HOOK.torso(u)) || RENDER.torsoColor(u);
+    const add = (parent, geo, c, x, y, z, sx, sy, sz, rot) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: c })); m.position.set(x, y, z); if (rot) m.rotation.set(rot[0], rot[1], rot[2]); m.scale.set(sx, sy, sz); parent.add(m); return m; };
+    add(grp, G.torso, tc, 0, 0, 0, 0.5, 0.64, 0.3); add(head, G.head, skinC, 0, 0, 0, 0.28, 0.3, 0.28);
+    for (const sx of [-1, 1]) add(grp, G.limb, tc, sx * 0.29, 0.08, 0, 0.13, 0.36, 0.14, [0, 0, sx * 0.12]);
+    const FR = { c: [grp, 0, 0, 0], h: [head, 0, 0, 0], sl: [grp, 0.2, 0.22, 0], sr: [grp, -0.2, 0.22, 0] };
+    for (const p of RENDER.gearFor(u).parts) { const F = FR[p.f]; if (!F || !G[p.m]) continue; add(F[0], G[p.m], p.k, F[1] + p.o[0], F[2] + p.o[1], F[3] + p.o[2], p.s[0], p.s[1], p.s[2], p.r); }
+    grp.visible = false; BUST.scene.add(grp);
+    b = { grp, head, seed: u.id * 1.7 }; BUST.cache.set(key, b);
+    if (BUST.cache.size > 40) { const k0 = BUST.cache.keys().next().value; const o = BUST.cache.get(k0); BUST.scene.remove(o.grp); BUST.cache.delete(k0); }
+    return b;
+  }
+  function setFace(el, u) { el.classList.add('facebox'); el._uid = u ? u.id : -1; el.classList.toggle('none', !u); el.classList.toggle('live', !!u); el._t0 = performance.now(); }
+  function face() { return null; }
+  function bustFrame() { // after the battle frame: draw every visible speaker's head into his box
+    const boxes = [...document.querySelectorAll('.facebox.live')].filter(el => el.offsetParent !== null && el._uid >= 0);
+    if (!boxes.length) { if (BUST.any) { BUST.r.setScissorTest(false); BUST.r.clear(); BUST.any = false; } return; }
+    if (!BUST.r) bustInit(); const r = BUST.r, W = window.innerWidth, H = window.innerHeight;
+    const sz = r.getSize(new THREE.Vector2()); if (sz.x !== W || sz.y !== H) r.setSize(W, H, false);
+    r.setScissorTest(false); r.clear(); r.setScissorTest(true); BUST.any = true; const now = performance.now() / 1000;
+    for (const el of boxes) { const u = unit(el._uid); if (!u) continue; const host = el.closest('.ce, #dlgcard, .tk') || el; const fade = +getComputedStyle(host).opacity; if (fade < 0.2) continue;
+      const rc = el.getBoundingClientRect(); if (rc.width < 4 || rc.bottom < 0 || rc.top > H) continue; const b = bustFor(u); b.grp.visible = true;
+      const talk = (performance.now() - el._t0) / 1000 < 2.5; b.grp.rotation.y = 0.25 + Math.sin(now * 0.6 + b.seed) * 0.12; b.head.rotation.set(talk ? Math.sin(now * 11 + b.seed) * 0.04 : 0, Math.sin(now * 0.9 + b.seed) * 0.1, 0);
+      if (u.dead || u.downed || u.wounded) b.head.rotation.set(0.2, 0, 0.25);
+      r.setViewport(rc.left, H - rc.bottom, rc.width, rc.height); r.setScissor(rc.left, H - rc.bottom, rc.width, rc.height); BUST.cam.aspect = rc.width / rc.height; BUST.cam.updateProjectionMatrix();
+      r.render(BUST.scene, BUST.cam); b.grp.visible = false; }
+  }
+  function pump() { }
+  function prewarm() { }
   let cardEl = null, cardT = 0;
   function card(u, who, zh, en, dur) { // the dialogue card: face on the left, the words on the right
     if (!cardEl) { cardEl = document.createElement('div'); cardEl.id = 'dlgcard'; cardEl.innerHTML = '<div class="f"></div><div class="t"><b></b><span class="z"></span><span class="e"></span></div>'; document.body.appendChild(cardEl); }
@@ -88,7 +111,9 @@ const SPEECH = (() => {
   function say(id, zh, en, o) {
     o = o || {}; const u = unit(id); const L = listener(); const now = performance.now() / 1000; const prio = o.prio || 0;
     const range = o.loud ? 48 : 26;
-    if (prio >= 2 && u && !u.dead) { const n0 = o.who || nameOf(id); comms(u, prio >= 3 ? 'story' : 'alert', typeof n0 === 'string' ? n0 : n0 ? n0.zh + ' ' + n0.en : '', zh, en, o.dur || (prio >= 3 ? Math.min(8, 3 + (en || '').length / 20) : 4.5)); if (prio >= 3 && (!L || Math.hypot(u.x - L.x, u.z - L.z) > range)) return true; }
+    const mine = (v) => { const sim = state.sim, me = sim && sim.players[state.localIdx]; if (!v || !me) return false; if (nameOf(v.id)) return true; const sq = v.squad >= 0 ? sim.squads[v.squad] : null; return !!sq && (v.squad === me.soldierSq || sq.owner === state.localIdx); };
+    // the stack is for your own men, and for the named commanders whose words carry the story; everyone else speaks only where he stands
+    if (prio >= 2 && u && !u.dead && (mine(u) || (prio >= 3 && o.who))) { const n0 = o.who || nameOf(id); comms(u, prio >= 3 ? 'story' : 'alert', typeof n0 === 'string' ? n0 : n0 ? n0.zh + ' ' + n0.en : '', zh, en, o.dur || (prio >= 3 ? Math.min(8, 3 + (en || '').length / 20) : 4.5)); if (prio >= 3 && (!L || Math.hypot(u.x - L.x, u.z - L.z) > range)) return true; }
     if (!u || u.dead || !L || Math.hypot(u.x - L.x, u.z - L.z) > range) { if (o.radio && typeof radio === 'function' && typeof MIS !== 'undefined' && MIS) radio(o.who || 'Voice', `${zh ? zh + '  ' : ''}${en}`); return false; }
     if (prio < 2 && (cool[id] || 0) > now) return false; cool[id] = now + (o.cool || 6);
     for (let i = live.length - 1; i >= 0; i--) if (live[i].id === id) { kill(i); }
@@ -105,7 +130,7 @@ const SPEECH = (() => {
     const r = state.renderer; if (!r || !state.sim) { while (live.length) kill(0); return; }
     const cam = r.camera, W = canvas.clientWidth, H = canvas.clientHeight;
     if (cardEl && cardT > 0) { cardT -= dt; if (cardT <= 0) cardEl.classList.remove('on'); }
-    commsFrame(dt);
+    commsFrame(dt); bustFrame();
     const edgeUsed = { l: [], r: [] };
     for (let i = live.length - 1; i >= 0; i--) { const l = live[i]; l.t += dt; const u = unit(l.id);
       if (l.t > l.dur || !u || (u.dead && l.t > 0.8)) { kill(i); continue; }

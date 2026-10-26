@@ -356,7 +356,8 @@ body.deploying #sgbar, body.deploying #sgprompt { visibility: hidden; }
 #comms { position: fixed; left: 14px; top: 16%; z-index: 21; display: flex; flex-direction: column; gap: 4px; pointer-events: none; width: 290px; }
 #comms .ce { display: flex; gap: 7px; align-items: center; padding: 4px 8px 4px 4px; background: linear-gradient(90deg, rgba(16,12,9,.88), rgba(16,12,9,.55)); border-left: 3px solid #c8962e; border-radius: 4px; color: #f3e8cf; transition: opacity .3s; }
 #comms .ce.alert { border-left-color: #e0583e; padding: 4px 9px 4px 5px; }
-.facebox canvas { width: 100%; height: 100%; display: block; border-radius: inherit; }
+#bustcv { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 23; pointer-events: none; }
+.facebox.live { background: rgba(30,24,18,.55) !important; }
 #comms .ce i { flex: none; width: 38px; height: 38px; border-radius: 4px; background: #2a2018 center/cover no-repeat; border: 1px solid #6a5236; }
 #comms .ce.alert i { width: 26px; height: 26px; }
 #comms .ce i.none { background: #2a2018 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='15' r='8' fill='%235a4a36'/%3E%3Cpath d='M6 38c2-9 8-13 14-13s12 4 14 13z' fill='%235a4a36'/%3E%3C/svg%3E") center/70% no-repeat; }

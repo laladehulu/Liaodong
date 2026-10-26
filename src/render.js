@@ -2359,5 +2359,5 @@ class Renderer {
     return { x: clamp(px, -HALF, HALF), z: clamp(pz, -HALF, HALF) };
   }
 }
-return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear };
+return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, roundBox, uhash };
 })();
