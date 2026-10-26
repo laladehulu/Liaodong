@@ -56,7 +56,8 @@ const SPEECH = (() => {
       const talk = (performance.now() - el._t0) / 1000 < 2.5; b.grp.rotation.y = 0.25 + Math.sin(now * 0.6 + b.seed) * 0.12; b.head.rotation.set(talk ? Math.sin(now * 11 + b.seed) * 0.04 : 0, Math.sin(now * 0.9 + b.seed) * 0.1, 0);
       if (u.dead || u.downed || u.wounded) b.head.rotation.set(0.2, 0, 0.25);
       r.setViewport(rc.left, H - rc.bottom, rc.width, rc.height); r.setScissor(rc.left, H - rc.bottom, rc.width, rc.height); BUST.cam.aspect = rc.width / rc.height; BUST.cam.updateProjectionMatrix();
-      r.render(BUST.scene, BUST.cam); b.grp.visible = false; }
+      if (u.dead) { if (!BUST.grey) BUST.grey = new THREE.MeshLambertMaterial({ color: 0x5a5856 }); BUST.scene.overrideMaterial = BUST.grey; b.head.rotation.set(0.35, 0, 0.3); }
+      r.render(BUST.scene, BUST.cam); BUST.scene.overrideMaterial = null; b.grp.visible = false; }
   }
   function pump() { }
   function prewarm() { }
@@ -464,7 +465,6 @@ function zheObjLines() {
   const sim = state.sim; if (!ZB) return ''; const h = localHero(); let n = 0, all = 0;
   for (const uid in ZB.map) { const u = sim.units[uid]; if (+uid === (h && h.id)) continue; all++; if (!u.dead && h && Math.hypot(u.x - h.x, u.z - h.z) < 24) n++; }
   let s = `<div class="ob"><i>伍</i><span>Your file with you: ${n} of ${all}</span></div>`;
-  { let row = ''; for (const uid in ZB.map) { const u = sim.units[uid], rr = ZR[ZB.map[uid]]; if (!rr || +uid === (h && h.id)) continue; const cls = u.dead ? 'x' : u.wounded ? (u.helpedBy >= 0 ? 'w' : 'd') : u.hp < u.def.hp * 0.5 ? 'w' : 'a'; row += `<b class="zr ${cls}" title="${rr.en} · ${rr.t}">${u.dead ? '✕' : u.wounded ? (u.helpedBy >= 0 ? '✚' : '▼') : '●'} ${rr.zh}</b>`; } s += `<div class="zroster">${row}</div>`; } // every man of the file by name: ● fighting, ✚ wounded, ▼ down, ✕ dead
   if (ZB.wounded !== undefined) { const u = sim.units[ZB.wounded]; s += `<div class="ob${u.helpedBy >= 0 ? ' done' : ''}"><i>!</i><span>${(() => { const wn = (SPEECH.nameOf(ZB.wounded) || { en: 'The wounded man' }).en; return u.dead ? wn + ' is dead' : u.helpedBy >= 0 ? wn + ' is on his feet' : 'Get ' + wn + ' up (E beside him)'; })()}</span></div>`; }
   return s;
 }
@@ -494,8 +494,32 @@ function zheFinish(winner) {
     { title: '伍 · Your file', year: `${outN} of twelve`, html: `<ul>${li}</ul>`, p: [ZS.flags.saved6 ? 'You did not leave Chen Xiaoliu in the valley.' : ZS.alive.liu6 ? '' : 'Chen Xiaoliu did not come out of the valley.'].filter(Boolean), btn: 'Night falls →' },
   ], () => zGo('camp1')); };
 }
+// ---------- the file at a glance (story battles): twelve live heads, top right, each showing how the man is doing ----------
+// fighting · hurt (amber) · DOWN, needs help (pulsing red ✚, bleed-out bar) · on his feet with help (green 扶) · dead (grey, ✕)
+// · missing. The grid follows the roster, not your body, so it stays right when you carry on as another man.
+const ZG = { el: null, cells: {}, t: 0 };
+function zGrid(dt) {
+  const sim = state.sim, on = !!(sim && sim.mission && sim.mission.soldier && ZB && !state.ended);
+  document.body.classList.toggle('zgrid', on);
+  if (!on) { if (ZG.el) ZG.el.hidden = true; return; }
+  if (!ZG.el) { ZG.el = document.createElement('div'); ZG.el.id = 'zgrid'; document.body.appendChild(ZG.el); }
+  ZG.el.hidden = false; ZG.t -= dt; if (ZG.t > 0) return; ZG.t = 0.2;
+  const h = localHero(), ids = Object.keys(ZB.map).map(Number).sort((a, b) => ZB.map[a] - ZB.map[b]);
+  for (const uid of ids) {
+    const rr = ZR[ZB.map[uid]]; if (!rr) continue; let c = ZG.cells[uid];
+    if (!c) { c = document.createElement('div'); c.className = 'zc'; c.innerHTML = '<i></i><em></em><b></b><u><s></s></u>'; ZG.el.appendChild(c); ZG.cells[uid] = c; c.children[2].textContent = rr.zh; c.title = rr.en; }
+    const u = sim.units[uid], f = c.firstChild;
+    if (!u) { if (f._uid !== -1) setFaceZ(f, null); c.className = 'zc miss'; c.children[1].textContent = '?'; continue; }
+    if (f._uid !== uid) setFaceZ(f, u);
+    const st = u.dead ? 'dead' : u.downed ? (u.reviveBy >= 0 ? 'rise' : 'down') : u.wounded ? 'help' : u.hp < u.def.hp * 0.5 ? 'hurt' : 'ok';
+    c.className = 'zc ' + st + (h && uid === h.id ? ' you' : '') + (SPEECH.speaking(uid) ? ' talk' : '');
+    c.children[1].textContent = st === 'dead' ? '✕' : st === 'down' ? '✚' : st === 'rise' ? '↑' : st === 'help' ? '扶' : h && uid === h.id ? '你' : '';
+    const bar = c.children[3]; bar.style.display = u.downed ? '' : 'none'; if (u.downed) bar.firstChild.style.width = Math.max(0, Math.min(100, (u.bleed || 0) / (30 * (u.zfile ? 45 : 30)) * 100)).toFixed(0) + '%';
+  }
+}
+function setFaceZ(el, u) { el.classList.add('facebox'); el._uid = u ? u.id : -1; el.classList.toggle('none', !u); el.classList.toggle('live', !!u); el._t0 = -1e9; }
 function zheHUD(dt) {
-  zTags();
+  zTags(); zGrid(dt);
   const sim = state.sim; let pr = $('zhePrompt');
   if (sim && sim.mission && sim.mission.camp) $('status').style.visibility = 'hidden';
   if (!sim || !sim.mission || !sim.mission.camp || !ZC || state.zheDlg) { if (pr) pr.hidden = true; return; }
