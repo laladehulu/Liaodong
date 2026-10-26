@@ -24,7 +24,9 @@ const ANIM = (function () {
   function spring(S, V, i, t, w, dt) { const x = S[i] - t, v = V[i], e = Math.exp(-w * dt), g = v + w * x; S[i] = (x + g * dt) * e + t; V[i] = (v - w * g * dt) * e; }
   function d3(A, i, B, j) { return Math.hypot(A[i] - B[j], A[i + 1] - B[j + 1], A[i + 2] - B[j + 2]); }
   // put B (at j) back at distance L from A (at i) along its current direction
-  function keep(A, i, B, j, L) { const dx = B[j] - A[i], dy = B[j + 1] - A[i + 1], dz = B[j + 2] - A[i + 2], l = Math.hypot(dx, dy, dz) || 1e-6, k = L / l; B[j] = A[i] + dx * k; B[j + 1] = A[i + 1] + dy * k; B[j + 2] = A[i + 2] + dz * k; }
+  // (only a small correction: when a limb whips through, the lagging joints can cross and the direction flips, and a
+  // full correction would then throw the hand or foot to the wrong side)
+  function keep(A, i, B, j, L) { const dx = B[j] - A[i], dy = B[j + 1] - A[i + 1], dz = B[j + 2] - A[i + 2], l = Math.hypot(dx, dy, dz) || 1e-6; if (l < L * 0.5 || Math.abs(L - l) > 0.08) return; const k = L / l; B[j] = A[i] + dx * k; B[j + 1] = A[i + 1] + dy * k; B[j + 2] = A[i + 2] + dz * k; }
   // r: renderer, u: unit, a: its anim state; legs/J/C are edited in place; returns [pel, pz, dp, oy]
   function rig(r, u, a, legs, J, C, pel, pz, dp, oy, dt, x, z) {
     const out = a.smOut || (a.smOut = new Float64Array(4));
