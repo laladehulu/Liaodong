@@ -14,7 +14,7 @@ const ANIM = (function () {
   // stiffness (rad/s) per scalar: the trunk and the fall are slower, hands and feet quick
   (function () {
     for (let i = 0; i < 18; i++) W[OL + i] = 42;
-    const jw = [22, 26, 30, 22, 26, 30, 30, 24, 18, 16]; // shL elL handL shR elR handR grip dir chest head
+    const jw = [20, 23, 25, 20, 23, 25, 25, 22, 17, 15]; // shL elL handL shR elR handR grip dir chest head
     for (let k = 0; k < 10; k++) for (let q = 0; q < 3; q++) W[OJ + k * 3 + q] = jw[k];
     for (let i = 0; i < 9; i++) W[OC + i] = 18;
     W[OP] = 26; W[OP + 1] = 24; W[OP + 2] = 11; W[OP + 3] = 11;
@@ -52,7 +52,7 @@ const ANIM = (function () {
     let S = a.smS, V = a.smV; const now = r.time || 0;
     const snap = far || !S || now - (a.smT || -9) > 0.3 || dt <= 0;
     if (!S) { S = a.smS = new Float64Array(N); V = a.smV = new Float64Array(N); }
-    a.smT = now; a.smDead = u.dead;
+    a.smT = now; a.smSn = snap;
     if (snap) { for (let i = 0; i < N; i++) { S[i] = T[i]; V[i] = 0; } }
     else { st.sprung++; const h = Math.min(dt, 0.05); for (let i = 0; i < 61; i++) spring(S, V, i, T[i], W[i], h); }
     // write back, with the constraints restored
