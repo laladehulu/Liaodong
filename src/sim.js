@@ -2698,7 +2698,7 @@ const MISSIONS = {
     title: '寧遠 · Ningyuan', year: 'The first month of 1626', battle: 'siegecity', side: 0, soldier: { group: 'zhe' }, hidden: true, ch: 3, siege: true, attacker: 1,
     brief: 'Nurhaci has crossed the Liao River with the Eight Banners. Every Ming fort beyond the Pass has been abandoned on orders from the new commissioner, except one: Ningyuan, where Yuan Chonghuan has refused to leave. You lead your file on the west wall.',
     start: [-18, 60, Math.PI],
-    zones: [{ key: 'ditchW', x: -28, z: 22, r: 9, name: '壕 · The ditch (west)', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 9, name: '壕 · The ditch (east)', rate: 0.5 },
+    zones: [{ key: 'ditchW', x: -28, z: 22, r: 9, name: '壕 · The ditch (west)', rate: 1.6 }, { key: 'ditchE', x: 28, z: 22, r: 9, name: '壕 · The ditch (east)', rate: 1.6 },
       { key: 'wallW', x: -25, z: 43.5, r: 7, name: 'A · Your post: the west wall', owner: 0, rate: 0.35 }, { key: 'wallE', x: 25, z: 43.5, r: 7, name: 'B · The east wall', owner: 0, rate: 0.35 }],
     sectors: [['ditchW', 'ditchE'], ['wallW', 'wallE']],
     groups: {
@@ -2708,8 +2708,10 @@ const MISSIONS = {
       ew: { team: 0, name: 'East wall garrison', army: ['rifle_imp', 'rifle_spencer', 'samurai'], at: [28, 44, Math.PI] },
       gate: { team: 0, name: 'The gate guard', army: ['samurai', 'rifle_imp'], at: [0, 58, Math.PI] },
       camp: { team: 1, name: 'The Jin vanguard camp', army: ['cavalry', 'samurai', 'archer'], exit: [-30, -150], at: [-30, -110, 0], dir: ['hold', -30, -62], stay: true },
-      van: { team: 1, name: 'The Bordered banners', army: ['samurai', 'samurai', 'archer', 'archer'], exit: [-40, -150], at: [-40, -122, 0], reserve: true },
-      carts: { team: 1, name: 'The shield carts', army: ['samurai', 'ashigaru', 'archer', 'horokutai'], exit: [30, -150], at: [30, -122, 0], reserve: true },
+      van: { team: 1, name: 'The Bordered banners', army: ['samurai', 'samurai', 'archer', 'archer'], exit: [-40, -150], at: [-40, -96, 0], reserve: true },
+      carts: { team: 1, name: 'The shield carts', army: ['samurai', 'ashigaru', 'archer', 'horokutai'], exit: [30, -150], at: [30, -96, 0], reserve: true },
+      van2: { team: 1, name: 'The Plain Blue banner', army: ['samurai', 'samurai', 'archer', 'horokutai'], exit: [-10, -150], at: [-10, -104, 0], reserve: true },
+      east: { team: 1, name: 'The Mongol auxiliaries', army: ['ronin', 'samurai', 'ashigaru', 'archer'], exit: [40, -150], at: [40, -104, 0], reserve: true },
       sap: { team: 1, name: 'Sappers', zh: '穴城', army: ['ashigaru', 'ashigaru', 'samurai'], exit: [-20, -150], at: [-20, -120, 0], reserve: true },
       guard: { team: 1, name: 'The Khan\'s guard', zh: '巴牙喇', army: ['shinsengumi', 'samurai', 'archer', 'archer'], exit: [0, -150], at: [0, -126, 0], reserve: true },
     },
@@ -2723,23 +2725,24 @@ const MISSIONS = {
           [28, 'lookout', 'They\'re making camp out on the plain — close, too close!', '他們在平地上紮營了——太近了！'],
           [33, 'gunner', 'Inside the red cannon\'s reach! Light the match!', '進了紅夷砲的射程了！點火！'],
           [40, 'lookout', 'They\'re pulling the camp back! They didn\'t know how far our guns carry!', '他們拔營往後退了！不知道我們的砲打多遠！']] },
-      { title: '二 · 攻城 · The assault', text: 'The Jin come on with shield carts and ladders. Hold the west wall: throw down any ladder that goes up (E at its top) and keep your file together.', show: ['ditchW', 'ditchE'],
+      { title: '二 · 攻城 · The assault', text: 'The Jin come on with shield carts and ladders. Hold the west wall: throw down any ladder that goes up (E at its top) and keep your file together.',
         start: [['release', 'van'], ['release', 'carts'], ['dir', 'yuan', 'hold', 0, 50]],
-        obj: { survive: 110, keep: 'wallW' }, at: [[40, ['sector', 1]], [74, ['wound', 4]]],
+        obj: { survive: 110, keep: 'wallW' }, at: [[34, ['sector', 1, 'fill']], [74, ['wound', 4]]],
         say: [[3, 'captain', 'Shield carts! They\'re filling the ditch!', '盾車！他們在填壕！'],
           [20, 'yuan', 'Let them come close. Muskets and guns, all together when I give the word.', '放近了打。銃砲齊發，聽我號令。'],
+          [30, 'lookout', 'They\'re throwing bundles of brushwood into the ditch — it\'s filling!', '他們往壕裡扔柴捆——壕快填平了！'],
           [42, 'lookout', 'Ladders at the wall! Saltpeter at the foot — fire it!', '雲梯靠城了！城下的硝——點！'],
           [60, 'captain', 'Throw the ladders down! Get to the top of them!', '把梯子推下去！上梯頭！']] },
       { title: '三 · 穴城 · Under the wall', text: 'Under their carts, men are chiselling at the foot of the wall where arrows and stones cannot reach them. Hold your post while the wall burns them out.',
-        start: [['release', 'sap']],
+        start: [['release', 'sap'], ['release', 'van2']],
         obj: { survive: 110, keep: 'wallW' },
         say: [[4, 'lookout', 'They\'re digging into the wall under the carts! We can\'t hit them from up here!', '他們躲在車底下鑿城！從上面打不著！'],
           [14, 'yuan', 'Bedding! Quilts, straw, oil and powder — roll them up, light them, throw them down!', '把被褥、柴草拿來！澆油裹藥，點著了往下扔！'],
           [40, 'soldier', 'It\'s caught under the cart — they\'re running out!', '燒到車底下了——他們往外跑了！'],
           [75, 'captain', 'The cold\'s on our side. The ground is frozen hard as iron. Let them dig.', '天冷幫我們。地凍得跟鐵一樣。讓他們挖。']] },
       { title: '四 · 紅夷砲 · The red cannon', text: 'The Khan\'s own guard comes at the walls. The guns are firing over your heads. Hold until they break.',
-        start: [['release', 'guard'], ['dir', 'yuan', 'hold', -14, 45]],
-        obj: { survive: 100, keep: 'wallW' }, at: [[66, ['break', 'guard']], [68, ['break', 'van']], [70, ['break', 'carts']], [72, ['break', 'sap']], [74, ['break', 'camp']]],
+        start: [['release', 'guard'], ['release', 'east'], ['dir', 'yuan', 'hold', -14, 45]],
+        obj: { survive: 100, keep: 'wallW' }, at: [[66, ['break', 'guard']], [68, ['break', 'van']], [70, ['break', 'carts']], [72, ['break', 'sap']], [73, ['break', 'van2']], [74, ['break', 'east']], [75, ['break', 'camp']]],
         say: [[3, 'lookout', 'Yellow banners — the Khan\'s guard!', '黃旗！大汗的親兵！'],
           [16, 'gunner', 'Again! Swab it, load it, again!', '再來！洗膛，裝藥，再來！'],
           [58, 'lookout', 'A great chief is hit! They\'re carrying him off wrapped in red cloth!', '打中一個大頭目！他們用紅布裹著抬走了！'],
@@ -2880,7 +2883,7 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'promote') this.zPromote();
   else if (a[0] === 'break') this.mBreak(a[1]);
   else if (a[0] === 'wound') this.zWound(a[1] | 0);
-  else if (a[0] === 'sector') { this.sector = a[1] | 0; if (this.sg) this.siegeDirs(); }
+  else if (a[0] === 'sector') { this.sector = a[1] | 0; if (a[2] && this.sg) for (const f of TERR.sditch.fills) if (!f.done) { f.done = true; this.sgRewater(f); this.events.push({ t: 'sgfill', x: f.x, z: TERR.sditch.zc }); } if (this.sg) { this.navBoxes(); this.siegeDirs(); } }
 };
 // the section chief falls and the file is yours: his squad passes to the man who is left
 Sim.prototype.zPromote = function () {
