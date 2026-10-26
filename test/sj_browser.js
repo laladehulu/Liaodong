@@ -21,8 +21,8 @@ const path = require('path'); const out = process.argv[2], file = process.argv[3
     res[sc] = await page.evaluate(() => { const st = window.__boshin.state, s = st.sim; document.getElementById('pause').hidden = true; if (!s) return 'no sim';
       const me = s.players[0], h = s.units[me.heroId]; return { mission: s.cfg.mission, type: h && h.type, npcs: s.units.filter(u => u.camp).length, grid: document.querySelectorAll('#zgrid .zc').length, goal: (document.querySelector('#status .goal') || {}).textContent || '', card: (document.querySelector('#zheCard:not([hidden]) h2') || {}).textContent || '' }; });
     if (/^camp/.test(sc)) { // face the nearest man and talk to him
-      res[sc + 'talk'] = await page.evaluate(() => { const st = window.__boshin.state, sim = st.sim, h = sim.units[sim.players[0].heroId]; const u = sim.units.filter(v => v.camp)[0]; if (!u) return 'none'; h.x = h.px = u.x - 1.2; h.z = h.pz = u.z; return u.ci; });
-      await page.waitForTimeout(300); await page.evaluate(() => { const st = window.__boshin.state, sim = st.sim, h = sim.units[sim.players[0].heroId]; const u = sim.units.filter(v => v.camp)[0]; Input.yaw = Math.atan2(u.x - h.x, u.z - h.z); });
+      res[sc + 'talk'] = await page.evaluate(() => { const st = window.__boshin.state, sim = st.sim, h = sim.units[sim.players[0].heroId]; const u = sim.units.filter(v => v.camp)[0]; if (!u) return 'none'; h.x = h.px = u.x; h.z = h.pz = u.z - 1.3; return u.ci; });
+      await page.waitForTimeout(400);
       await page.keyboard.press('KeyE'); await page.waitForTimeout(400);
       res[sc + 'dlg'] = await page.evaluate(() => { const d = document.getElementById('zheDlg'); return d && !d.hidden ? d.textContent.slice(0, 160) : 'no dialog'; }); }
     else await page.waitForTimeout(6000);
