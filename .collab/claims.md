@@ -20,3 +20,4 @@
 - turnanim (fork): render.js drawFigure yaw smoothing + turn pose (twist/lean/pivot steps), horse neck lead
 - downfall (fork): render.js drawFigure downed/crawl pose transition (dp/oy lines), zdown fall timing
 - campLife (fork): sim.js camp NPC think (new Sim.prototype.campThink + 1 hook in unitAI), render.js drawFigure camp pose hook + new campPose fn, props
+- melee-anim (fork): render.js POSES/KF attack keyframes, drawFigure attack pose/torso twist, viewmodel swing
