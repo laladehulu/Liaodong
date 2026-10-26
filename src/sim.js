@@ -2906,7 +2906,7 @@ const MISSIONS = {
           [31, 'lookout', 'The big standard is down! Liu Ting is down!', '大纛倒了！劉綎倒了！'],
           [44, 'sose', 'One of ours is down. Get him up, get him up!', '我們的人倒了！扶他起來，快！']] },
       { title: '四 · 鴛鴦陣 · The duck teams', goal: 'Break the duck teams holding the road', text: 'The column is broken, but the southern infantry will not run. Their duck teams have closed up across the road. Break them.', show: ['road'],
-        start: [['break', 'liu'], ['break', 'tusi'], ['break', 'kang'], ['release', 'duck'], ['calm', 'duck', 40], ['dir', 'duck', 'hold', 0, -98], ['dir', 'niru', 'hold', 0, -92], ['dir', 'hong', 'hold', 0, -96], ['dir', 'daisan', 'hold', 0, -96]],
+        start: [['break', 'liu'], ['break', 'tusi'], ['break', 'kang'], ['release', 'duck'], ['calm', 'duck', 40], ['dir', 'duck', 'hold', 0, -98], ['dir', 'niru', 'attack'], ['dir', 'hong', 'attack'], ['dir', 'daisan', 'attack']],
         obj: { defeat: ['duck'], frac: 0.65 }, limit: 480, fail: 'Night fell with the southerners still standing across the road.',
         at: [[10, ['promote']]],
         say: [[2, 'muktan', 'Southerners. They fight in twelves: the shields, then those bamboo things, then the spears.', '南兵。他們十二個人一隊：藤牌在前，竹子在中間，長槍在後。'],
@@ -2990,7 +2990,8 @@ Sim.prototype.setupMission = function (teams, aiPl) {
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
     for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, 0.82, 0.82) : tune(u.def, 1.12, 1.05); u.hp = u.def.hp; } }
   if (M.siege && (ass || M.soldier)) { if (!ass) this.sector = 0; this.siegeInit(); if (!ass) this.sg.emp = this.sg.emp.filter(e => e.team === this.sg.D); } // a story chapter on the walls uses the siege engines too (the Jin of 1626 had no field guns)
-  if (ass) { let n = 0; for (const u of this.units) if (u.team === M.attacker && u.type !== 'horse' && u.type !== 'hero') n++; this.tickets = Math.round(n * 0.8); for (const o of this.objectives) o.rate *= 0.6; this.sector = 0; M.sectors[0].forEach(k => this.missionZone(k).hidden = false); this.assaultDirs(); this.mv.ph = 0; }
+  if (ass) { let n = 0; for (const u of this.units) if (u.team === M.attacker && u.type !== 'horse' && u.type !== 'hero') n++; this.tickets = M.tickets || Math.round(n * 0.8);
+    this.assaultCap();  for (const o of this.objectives) o.rate *= 0.6; this.sector = 0; M.sectors[0].forEach(k => this.missionZone(k).hidden = false); this.assaultDirs(); this.mv.ph = 0; }
   // humans: in the campaign each leads a squad of the troops they chose (two when alone) and rides with it
   if (M.soldier) { // a story chapter: you are one man in a mandarin duck team of the named group
     const g = this.mg[M.soldier.group], gp = g ? this.players[g.p] : null;
@@ -3095,6 +3096,15 @@ Sim.prototype.zRevive = function (u, by) {
   this.events.push({ t: 'zrevive', id: u.id, by, limp: !!(limp && h && h.ctrl >= 0) });
 };
 // a raid, a picket, a handful of scouts: keep the first n men of a group and send its general and the rest away before the field opens
+// assault: however big the manpower pool, no more than about 64 men per side stand on the field at once
+Sim.prototype.assaultCap = function () {
+  const M = this.mission, A = M.attacker, CAP = M.cap || 64; const size = (p) => { let n = 0; for (const id of p.squads) { const q = this.squads[id]; for (const uid of q.unitIds) if (!this.units[uid].dead) n++; } return n; };
+  const groups = (team, res) => Object.keys(this.mg).filter(g => this.mg[g].G.team === team && !!this.mg[g].G.reserve === res).map(g => this.players[this.mg[g].p]);
+  const fit = (list, budget) => { const tot = list.reduce((s, p) => s + size(p), 0); if (tot <= budget) return; for (const p of list) { const n = Math.max(4, Math.floor(size(p) * budget / tot)); this.mTrim(p, n); } };
+  const humanMen = this.players.filter(p => !p.ai && p.team === A).reduce((s, p) => s + size(p), 0), humanDef = this.players.filter(p => !p.ai && p.team !== A).reduce((s, p) => s + size(p), 0);
+  fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > 22) this.mTrim(p, 22);
+  fit(groups(1 - A, false), Math.max(16, Math.round(CAP * 0.85) - humanDef)); for (const p of groups(1 - A, true)) if (size(p) > 14) this.mTrim(p, 14);
+};
 Sim.prototype.mTrim = function (p, n) {
   let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
   for (const uid of [p.heroId, p.horseId]) { const u = uid >= 0 ? this.units[uid] : null; if (u) { u.dead = true; u.hp = 0; u.inactive = true; if (u.type !== 'horse') this.total[u.team]--; } }
@@ -3228,7 +3238,15 @@ Sim.prototype.assaultThink = function () {
   const M = this.mission, A = M.attacker; const keys = M.sectors[this.sector];
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
-  if (act < 150 && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  const CAP = M.cap || 64;
+  if (act + 20 <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
+  let revivable = false;
+  if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;
+    for (const u of this.units) { if (room <= 0) break; if (!u.dead || u.inactive || u.team !== A || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.def.ai === 'cannon' || u.ctrl >= 0) continue; revivable = true;
+      if (this.tick - (u.deathTick || 0) < 30 * 8) continue; const g = this.mg[this.players[this.squads[u.squad].owner] ? this.players[this.squads[u.squad].owner].gid : ''] ; if (g && !g.released) continue;
+      this.reviveUnit(u, clamp(M.attAt[0] + ((k % 6) - 2.5) * 3, -HALF + 4, HALF - 4), clamp(M.attAt[1] + Math.floor(k / 6) * 3 * (A === 1 ? -1 : 1), -HALF + 4, HALF - 4)); k++; room--; } }
+  else if (this.tickets > 0) revivable = this.units.some(u => u.dead && !u.inactive && u.team === A && u.type !== 'horse' && u.type !== 'hero' && u.squad >= 0 && u.def.ai !== 'cannon');
   if (keys.every(k => this.missionZone(k).owner === A)) {
     this.events.push({ t: 'msector', sector: this.sector, team: A });
     for (const k of keys) this.missionZone(k).hidden = true;
@@ -3239,11 +3257,11 @@ Sim.prototype.assaultThink = function () {
     this.assaultDirs();
   }
   if (this.tick % 150 === 0) this.assaultDirs();
-  if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
+  if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(CAP, (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75)) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
     for (const u of this.units) { if (!u.dead || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * 25) continue;
       const k = u.id % 9; this.reviveUnit(u, clamp(nz.x + (k % 3 - 1) * 3, -HALF + 4, HALF - 4), clamp(nz.z + fz * (14 + Math.floor(k / 3) * 3), -HALF + 4, HALF - 4)); } }
   const left = Object.keys(this.mg).some(g => this.mg[g].G.team === A && !this.mg[g].released);
-  if (this.tickets <= 0 || (act < 8 && !left)) { this.mwin = 1 - A; this.events.push({ t: 'mend', won: false, text: 'The attackers have no men left to send.', att: A }); }
+  if (this.tickets <= 0 || (act < 8 && !left && !revivable)) { this.mwin = 1 - A; this.events.push({ t: 'mend', won: false, text: 'The attackers have no men left to send.', att: A }); }
 };
 
 // ===== 攻守城 · Siege: walls, ditch, ladders, siege towers, covered rams, shield carts, sappers, oil, stones and bed crossbows =====

@@ -461,6 +461,7 @@ function zheSay(ev) { // scripted lines come out of a man's mouth when you are n
 }
 function zheEvent(ev) {
   const sim = state.sim; if (!ZB || !sim || !sim.mission || !sim.mission.soldier) return; const me = sim.players[state.localIdx];
+  if (ZHOOK.event) ZHOOK.event(ev);
   if (ev.t === 'mkill' && ev.gid === 'zhe' && ZB.ch2 && !ZB.chK) { MUSIC.stop(); setTimeout(() => { if (state.sim === sim && !state.ended) { MUSIC.play('battle'); MUSIC.setIntensity(0.35); } }, 12000); } // Qi Jin falls: the war drums stop, and for a while there is only the fighting
   if (ev.t === 'zpromote' && ev.p === state.localIdx && ZB.ch2) { state.fpSel = null; banner('你領隊 · Your file', 'You lead the file: F follow me / H halt / C charge / Z form up where you look', 6); }
   else if (ev.t === 'zpromote' && ev.p === state.localIdx) { state.fpSel = null; const q = sim.squads[ev.sq]; const w = q.unitIds.map(id => sim.units[id]).find(u => !u.dead && u.ctrl < 0 && !u.wounded);
