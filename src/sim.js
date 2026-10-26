@@ -844,6 +844,7 @@ class Sim {
     u.yaw = wrap((inp[1] | 0) * TAU / 65536); u.pitch = clamp((inp[2] | 0) / 10000, -1.45, 1.45);
     if (a & A_MOUNT) this.tryMount(u, p);
     const disabled = u.downT > 0 || u.st === ST_STUN;
+    this.heroRegen(u);
     if (u.mount >= 0) this.horseControl(this.units[u.mount], keys, disabled, false);
     else if (u.mounted) this.horseControl(u, keys, disabled, true);
     else this.footControl(u, keys, a, disabled);
@@ -1749,7 +1750,7 @@ class Sim {
     best.vx += dx / d * 3; best.vz += dz / d * 3; best.lastAttacker = u.id;
   }
   applyDamage(u, dmg, attackerId, ix, iy, iz, cause, hx, hy, hz) {
-    if (u.dead || u.inactive) return false;
+    if (u.dead || u.inactive) return false; if (dmg > 0) u.hurtTk = this.tick;
     if (u.ctrl >= 0 && this.players[u.ctrl] && this.players[u.ctrl].god) return false; // debug mode: the tester cannot be hurt
     if (this.xc && u.ctrl >= 0 && !this.players[u.ctrl].ai && (cause === 'melee' || cause === 'trample' || cause === 'spear' || cause === 'counter' || cause === 'arrow' || cause === 'shot')) { // no instant deaths in a crowd or under a whole company's volley
       const dec = (this.tick - (u.xcT === undefined ? this.tick : u.xcT)) * DT * 0.3 * u.def.hp; u.xcB = Math.max(0, (u.xcB || 0) - dec); u.xcT = this.tick;
@@ -3321,6 +3322,14 @@ Sim.prototype.assaultCap = function () {
   // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
   // (an assault needs odds: the attackers field the full cap, the defenders about 70% of it, as before the cap)
   fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, Math.round(CAP * 0.7) - humanDef));
+};
+// a man you play gets his breath and some strength back once he's out of the fight: nobody hurt him for 6 s and no
+// enemy within 12 m; he mends about 4% of his health a second, up to full
+Sim.prototype.heroRegen = function (u) {
+  if (u.dead || u.wounded || u.downed || u.type === 'horse' || u.hp >= u.def.hp) return;
+  if (this.tick - (u.hurtTk === undefined ? -1e9 : u.hurtTk) < 30 * 6) return;
+  if (this.tick % 15 === u.id % 15) { u.regenOk = true; const n = this.gatherNear(u.x, u.z, 12); for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (!v.dead && v.team !== u.team && v.type !== 'horse' && !v.inactive && len(v.x - u.x, v.z - u.z) < 12) { u.regenOk = false; break; } } }
+  if (u.regenOk) u.hp = Math.min(u.def.hp, u.hp + u.def.hp * 0.04 * DT);
 };
 Sim.prototype.mTrim = function (p, n, keepHero) {
   let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; u.trimmed = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }

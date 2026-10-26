@@ -895,7 +895,9 @@ function siegeHUD(dt) {
 function updateHUD(dt) {
   const sim = state.sim, r = state.renderer; const hero = localHero(); const me = sim.players[state.localIdx];
   if (state.toastT > 0) { state.toastT -= dt; if (state.toastT <= 0) $('toast').classList.remove('show'); }
-  $('vignette').style.opacity = r.hitFlash > 0 || r.imp.blur > 0.02 ? Math.min(1, r.hitFlash * 1.6 + r.imp.blur * 0.4) : 0; $('vignette').style.transform = r.imp.blur > 0.02 ? `scale(${1 + r.imp.blur * 0.06})` : '';
+  { // the red at the edges grows as you lose blood, and beats when you are close to the end; a hit flashes on top
+    const hp0 = hero && !hero.dead ? Math.max(0, Math.min(1, 1 - hero.hp / hero.def.hp)) : 0, low = Math.max(0, (hp0 - 0.25) / 0.75), pulse = hp0 > 0.7 ? 0.12 * (0.5 + 0.5 * Math.sin(performance.now() / 260)) : 0;
+    const fl = r.hitFlash > 0 || r.imp.blur > 0.02 ? Math.min(1, r.hitFlash * 1.6 + r.imp.blur * 0.4) : 0; $('vignette').style.opacity = Math.max(fl, Math.min(0.85, low * 0.7 + pulse)); } $('vignette').style.transform = r.imp.blur > 0.02 ? `scale(${1 + r.imp.blur * 0.06})` : '';
   $('parry').style.opacity = r.parryFlash > 0 ? r.parryFlash : 0;
   if (hero && !hero.dead && !Input.cmdMode && sim.phase === 1) { // a horseman bearing down on you: warn in time to dodge or brace
     state.cavT = (state.cavT || 0) - dt; if (state.cavT <= 0) { for (const v of sim.teamAlive[1 - hero.team]) { if (!v.mounted || Math.abs(v.hspeed || 0) < 5.5) continue; const dx = hero.x - v.x, dz = hero.z - v.z, d = Math.hypot(dx, dz); if (d > 28 || d < 3) continue; if ((dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw)) / d < 0.9) continue;
