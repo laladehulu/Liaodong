@@ -214,6 +214,7 @@ JCH[3] = {
   guests: ['tobohui'],
   chat: [['冷死了。', 'It\'s freezing.'], ['城上那些是什麼？大得跟牛一樣。', 'What are those things on the walls? Big as oxen.'], ['汗六十八了，還親自來。', 'The Khan is sixty-eight and still comes himself.'], ['明天把盾車推到壕邊。', 'Tomorrow we push the shield carts up to the ditch.'], ['聽說那砲是紅毛番造的，叫紅衣。', 'They say that gun was made by the red-haired barbarians.']],
   dawn: { title: '黎明 · Dawn', year: 'The twenty-fourth day of the first month', p: ['The niru forms up behind the shield carts: heavy wooden frames on wheels, faced with hides and packed with earth. Ahead is the wall of Ningyuan, and on it the long dark muzzles of the red cannon.'], btn: 'To the walls →' },
+  resultTitle: '退 · Back from the walls',
   battleCard: ['January 1626. Keep behind the carts. When the ditch is filled, raise a ladder at the foot of the wall (E).', '寧遠 · Ningyuan'],
   who: { niru: ['托博輝', 'Tobohui, captain of the niru'], lookout: ['', 'A lookout'], soldier: ['', 'A bannerman'] },
   fateText: { out: 'came back from the walls', dead: 'killed under the walls of Ningyuan', lost: 'left under the walls' },
@@ -429,7 +430,7 @@ function jFinish(winner) {
   JS.stage = 'e' + n; JS.lastWon = won; jSave();
   const ft = C.fateText, rows = list.map(k => { const r = jRow(k), f = fate[k]; const nm = k === JS.me ? `${JS.name.zh} ${JS.name.en} (you)` : k === meK && JS.me !== meK ? `${oldName.zh} ${oldName.en} (you, until you fell)` : `${r.zh} ${r.en}`; return `<li class="${f === 'out' || f === 'home' ? 'out' : f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : f === 'home' ? '·' : '?'} ${nm} — ${ft[f] || ft.out}</li>`; }).join('');
   const outN = list.filter(k => fate[k] === 'out').length;
-  $('resultTitle').textContent = won ? '勝 · The field is ours' : '退 · Pulled back'; $('resultTitle').className = won ? 'win' : 'lose';
+  $('resultTitle').textContent = won ? (C.resultTitle || '勝 · The field is ours') : '退 · Pulled back'; $('resultTitle').className = won ? 'win' : 'lose';
   const head = outN <= 1 ? (won ? 'The field is the banners\', but of your file almost no one is left to stand on it.' : 'You came back alone.') : won ? M.win : (M.loseText || 'The banners pulled back.');
   $('resultText').innerHTML = `${head} ${outN} of ${list.length} of your file came through.`;
   $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';

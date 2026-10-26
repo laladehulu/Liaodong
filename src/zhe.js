@@ -446,6 +446,7 @@ document.addEventListener('keydown', (e) => { // the dialogue panel takes the ke
 // ---------- in battle ----------
 function zheSay(ev) { // scripted lines come out of a man's mouth when you are near enough to hear him; otherwise by runner
   const sim = state.sim, h = localHero(); if (!ZB) return false;
+  if (ZHOOK.whoMap) { const w = ZHOOK.whoMap(ev.who); if (w !== ev.who) ev = Object.assign({}, ev, { who: w }); }
   const W = { liu: ['劉綎', 'General Liu Ting'], chief: ['吳老栓', 'Chief Wu'], fang: ['方秀才', 'Fang the Scholar'], lookout: ['', 'Lookout'], soldier: ['', 'A soldier'], rider: ['', 'A rider in Ming colours'], qi: ['戚金', 'General Qi Jin'], chen: ['陳策', 'General Chen Ce'], sichuan: ['周敦吉', 'Zhou Dunji of the White Poles'], col: ['', 'The column officer'], folk: ['', 'A woman from Kaiyuan'] }[ev.who] || (ZHOOK.who && ZHOOK.who[ev.who]) || ['', ev.who];
   let id = -1; const ZRR = zRos(), zi = ZRR.findIndex(r => r.k === ev.who && r.k !== 'me' && !r.guest);
   if (zi >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === zi && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded) id = +uid; if (id >= 0) { W[0] = ZRR[zi].zh; W[1] = ZRR[zi].en; } else { W[0] = ''; W[1] = 'A soldier'; } }

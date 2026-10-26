@@ -120,7 +120,7 @@ function realGear(u) {
     case 'cavalry': mingKui(iron, 0x9a2222, gold); dingjia(0x9a2222, gold); mirror(); tallFlag(verm, gold); hoof(0x9a2222); break;
     case 'ashigaru': hatOn(() => { c('h', [0, 0.13, 0], [0.66, 0.2, 0.66], 0xc8a868); y('h', [0, 0.07, 0], [0.5, 0.02, 0.5], 0x9a7a40); b('h', [0, 0.26, 0], [0.07, 0.06, 0.07], red); }); coat(verm, 0x2a2622); kyahanW(); break;
     case 'rifle_imp': gunnerKui(0x5a6168, 0x7a1a16); gunnerArmour(0xa8261e, gold); kyahanW(); yaopai(); break;
-    case 'rifle_spencer': gunnerKui(0x4a5056, 0x3a2a24); gunnerArmour(0x7a2a22, 0xc9c0a8); kyahanW(); break;
+    case 'rifle_spencer': if (u.look && u.look.hat) R.lookGear(u.look, b, c, y, hatOn, 'head'); else gunnerKui(0x4a5056, 0x3a2a24); gunnerArmour(0x7a2a22, 0xc9c0a8); kyahanW(); break;
     case 'jinshotai': gunnerKui(0x5a6168, 0x1c2438); gunnerArmour(0x24304a, gold); kyahanW(); break;
     case 'jigen': mingKui(0x6e757c, 0x3a3a40, brass); dingjia(0x4a2024, 0x9a9ea6, [0.15, 0.06, -0.03, -0.12]); mirror(); break;
     case 'horokutai': mingHair(); b('h', [0, 0.115, 0], [0.285, 0.045, 0.285], red); robe(0x7a3422, 0x2a2a34); bombs(); y('c', [0.12, -0.02, -0.17], [0.2, 0.2, 0.2], 0x2a2a2e); break;

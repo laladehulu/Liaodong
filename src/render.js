@@ -175,7 +175,7 @@ function gearFor(u) {
     case 'cavalry': petalHelm(iron, red); dingjia(0x9a2222, gold); mirror(); backflag(verm); break;
     case 'ashigaru': hatOn(() => { c('h', [0, 0.13, 0], [0.62, 0.2, 0.62], 0xc8a868); b('h', [0, 0.26, 0], [0.06, 0.05, 0.06], red); }); coat(verm, 0x2a2622); kyahan(0xe8e2d0); break;
     case 'rifle_imp': liKui(); buMian(0xa8261e, gold); kyahan(0xe8e2d0); yaopai(); break;
-    case 'rifle_spencer': liKui(0x8a8f94); buMian(0x7a2a22, 0xc9c0a8); kyahan(0xe8e2d0); break;
+    case 'rifle_spencer': if (u.look && u.look.hat) lookGear(u.look, b, c, y, hatOn, 'head'); else liKui(0x8a8f94); buMian(0x7a2a22, 0xc9c0a8); kyahan(0xe8e2d0); break;
     case 'jinshotai': liKui(); buMian(0x24304a, gold); kyahan(0xe8e2d0); break;
     case 'jigen': petalHelm(iron, 0x1a1a1a); dingjia(0x5a2226, 0x9a9ea6); mirror(); break;
     case 'horokutai': mingHair(); hachimaki(red); robe(0x7a3422, 0x2a2a34); b('p', [-0.24, -0.02, 0.04], [0.14, 0.18, 0.2], 0x6a5038); y('p', [0.24, -0.02, 0.06], [0.16, 0.14, 0.16], 0x2a2a2e); b('p', [0.24, 0.07, 0.06], [0.03, 0.06, 0.03], 0xe8e2cc); break;

@@ -223,22 +223,22 @@ const SR = [
   { k: 'zhang', zh: '張春', en: 'Zhang Chun', t: 'intendant of the relief army · 監軍道 · sixty years old', guest: true },
 ];
 const SLOOK = {
-  sj_hu: { h: 1.04, brows: 'knit', beard: 'longmous', grey: true, scar: true, skin: 0xb88c66 },
+  sj_hu: { h: 1.04, hat: 'chief', brows: 'knit', beard: 'longmous', grey: true, scar: true, skin: 0xb88c66 },
   sjme: { h: 1.0, brows: 'thin', skin: 0xd8b08a },
-  sj_tian: { h: 0.88, brows: 'high', young: true, rosy: true, skin: 0xe8c6a2 },
-  sj_lin: { h: 0.95, brows: 'thin', beard: 'goatee', skin: 0xb07e58 },
-  sj_ma: { h: 1.13, brows: 'thick', beard: 'full', bulk: true, bigNose: true, skin: 0xc49a72 },
-  sj_zhao: { h: 0.97, brows: 'sad', beard: 'stubble', patch: true, scar: true, skin: 0xc8a07a },
-  sj_song: { h: 1.02, brows: 'thin', beard: 'mous', skin: 0xe2c4a0 },
-  sj_wu: { h: 1.1, brows: 'thick', bulk: true, rosy: true, grin: true, skin: 0xcd9f78 },
-  sj_qian: { h: 0.93, brows: 'high', beard: 'mous', grin: true, skin: 0xd6a880 },
+  sj_tian: { h: 0.88, hat: 'band', brows: 'high', young: true, rosy: true, skin: 0xe8c6a2 },
+  sj_lin: { h: 0.95, hat: 'straw', brows: 'thin', beard: 'goatee', skin: 0xb07e58 },
+  sj_ma: { h: 1.13, hat: 'cookcap', brows: 'thick', beard: 'full', bulk: true, bigNose: true, skin: 0xc49a72 },
+  sj_zhao: { h: 0.97, hat: 'wrap', wrap: 0x3a3430, brows: 'sad', beard: 'stubble', patch: true, scar: true, skin: 0xc8a07a },
+  sj_song: { h: 1.02, hat: 'scholar', brows: 'thin', beard: 'mous', skin: 0xe2c4a0 },
+  sj_wu: { h: 1.1, hat: 'felt', brows: 'thick', bulk: true, rosy: true, grin: true, skin: 0xcd9f78 },
+  sj_qian: { h: 0.93, hat: 'wrap', wrap: 0x5a2a2a, brows: 'high', beard: 'mous', grin: true, skin: 0xd6a880 },
   sj_gao: { h: 0.99, brows: 'sad', beard: 'longmous', longBeard: true, grey: true, skin: 0xb48a62 },
-  sj_n1: { h: 0.84, brows: 'high', young: true, skin: 0xdcb48e },
-  sj_n3: { h: 1.0, brows: 'knit', beard: 'stubble', skin: 0xc49a72 },
-  sj_n4: { h: 1.06, brows: 'thick', beard: 'full', bulk: true, skin: 0xb88c66 },
+  sj_n1: { h: 0.84, hat: 'band', bandCol: 0x2a4a8a, brows: 'high', young: true, skin: 0xdcb48e },
+  sj_n3: { h: 1.0, hat: 'felt', brows: 'knit', beard: 'stubble', skin: 0xc49a72 },
+  sj_n4: { h: 1.06, hat: 'wrap', wrap: 0x4a4e54, brows: 'thick', beard: 'full', bulk: true, skin: 0xb88c66 },
   sj_n6: { h: 0.96, brows: 'thin', young: true, skin: 0xe2bc96 },
   sj_n5: { h: 1.01, brows: 'thick', beard: 'mous', skin: 0xc8a07a },
-  sj_n2: { h: 1.08, brows: 'thick', beard: 'goatee', rosy: true, skin: 0xb07e58 },
+  sj_n2: { h: 1.08, hat: 'felt', brows: 'thick', beard: 'goatee', rosy: true, skin: 0xb07e58 },
   sjf: { h: 1.05, brows: 'knit', beard: 'mous', skin: 0xc49a72 },
   mangui: { h: 1.12, brows: 'thick', beard: 'full', scar: true, bulk: true, rosy: true, skin: 0xa87a54 },
   yuan: { h: 0.98, brows: 'knit', beard: 'longmous', longBeard: true, skin: 0xc8a07a },
@@ -254,8 +254,16 @@ function sjFresh() { const s = { v: 1, sj: true, stage: 'drill', name: { zh: '�
 function sjName() { const r = sRow('sjme'); if (ZS && ZS.name && ZS.me === 'sjme') { r.zh = ZS.name.zh; r.en = ZS.name.en; } else if (ZS && ZS.oldName) { r.zh = ZS.oldName.zh; r.en = ZS.oldName.en; } }
 // who says the scripted lines (commanders by their group id)
 const SJWHO = { sjf: ['崔英', 'Captain Cui Ying'], mangui: ['滿桂', 'General Man Gui'], hou: ['侯世祿', 'General Hou Shilu'], yuan: ['袁崇煥', 'Governor Yuan Chonghuan'], zu: ['祖大壽', 'General Zu Dashou'], zhang: ['張春', 'Intendant Zhang Chun'], wuxiang: ['吳襄', 'General Wu Xiang'] };
+// Chief Hu's scripted lines are the chief's: if Hu is gone (or falls in the fight) the senior man on his feet says them
+function sjWhoMap(who) {
+  if (who !== 'sj_hu' || !ZB || !ZB.sj || !state.sim) return who; const sim = state.sim;
+  const up = (k) => { const ci = sIdx(k); for (const uid in ZB.map) { const u = sim.units[uid]; if (ZB.map[uid] === ci && u && !u.dead && !u.wounded && u.ctrl < 0) return true; } return false; };
+  if (ZS.alive.sj_hu && up('sj_hu')) return who;
+  const pref = [ZS.team[0], 'sj_gao', 'sj_lin', 'sj_ma', 'sj_zhao', 'sj_song', 'sj_qian', 'sj_wu', 'sj_tian'].concat(ZS.team);
+  return pref.find(k => k && k !== ZS.me && k !== 'sj_hu' && ZS.team.includes(k) && up(k)) || who;
+}
 function sjActivate() {
-  ZKEY = SKEY; Object.assign(ZHOOK, { talk: sjTalk, sleep: sjSleep, finish: sjFinish, who: SJWHO, chatter: sjChatter, event: sjEvent });
+  ZKEY = SKEY; Object.assign(ZHOOK, { talk: sjTalk, sleep: sjSleep, finish: sjFinish, who: SJWHO, chatter: sjChatter, event: sjEvent, whoMap: sjWhoMap });
 }
 function sjGo(scene) { try { localStorage.setItem('mingShenjiGo', scene); } catch (e) { } location.reload(); }
 // the dead stay dead: before a new chapter every empty place gets a named draft
@@ -433,6 +441,11 @@ function sjBattle(scene) {
 function sjEvent(ev) {
   const sim = state.sim; if (!ZB || !ZB.sj || !sim) return;
   if (ev.t === 'possess' || ev.t === 'zcarry') sjVM();
+  if (ev.t === 'bounce' && state.renderer) { const r = state.renderer, h = localHero(), d = h ? Math.hypot(ev.x - h.x, ev.z - h.z) : 99;
+    r.dust(ev.x, ev.y + 0.2, ev.z, 22, 0, 6.5, 0, 2.6, 1.6, 0.5, 2.4); r.dust(ev.x, ev.y + 0.4, ev.z, 10, 0, 9, 0, 1.2, 1.1, 0.3, 1.2);
+    const cart = sim.boxes.find(b => b.kind === 'mantlet' && Math.abs(ev.x - b.x) < b.hw + 2.5 && Math.abs(ev.z - b.z) < b.hd + 2.5);
+    if (cart && r.burstSparks) r.burstSparks(ev.x, ev.y + 0.9, ev.z, 26, 7, 0.55, 0.38, 0.2, 1.1, 0.09);
+    if (d < 34) { const k = 1 - d / 34; r.shake = Math.max(r.shake, 1.25 * k); r.suppress = Math.min(1.2, (r.suppress || 0) + 0.8 * k); if (d < 12) { r.hitFlash = Math.max(r.hitFlash || 0, 0.18 * k); if (cart) feed('Splinters off the cart!', false); } AUDIO.play('explosion', ev.x, ev.y, ev.z, 0.35 + 0.5 * k); } }
   if (ev.t === 'msay' && ev.who === 'sj_lin' && /^(Fire|First rank)/.test(ev.text)) banner(ev.text.startsWith('Fire') ? '放 · Fire!' : '舉銃 · Present!', ev.text.startsWith('Fire') ? 'Left mouse: three barrels, one after another · R to reload' : 'Raise your gun and wait for the drum', 3);
   if (ev.t === 'zhelp' && ev.id === ZB.wounded && ZB.scene === 'battle1' && ZB.map[ev.id] === sIdx('sj_zhao')) ZS.flags.helpedZhao = true;
   if (ev.t === 'zpromote' && ev.p === state.localIdx) { const n = SPEECH.nameOf(ev.chief); const q = sim.squads[ev.sq]; const w = q.unitIds.map(id => sim.units[id]).find(u => !u.dead && u.ctrl < 0 && !u.wounded);
