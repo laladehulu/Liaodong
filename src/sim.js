@@ -833,13 +833,17 @@ class Sim {
     if (disabled) { u.blocking = false; u.atkHeld = !!(a & A_ATK); u.blockHeld = !!(a & A_BLOCK); return; }
     const ws = u.def.weapons;
     if ((a & A_SWAP) && ws.length > 1) { u.nextWeapon = ws[(ws.indexOf(u.weapon) + 1) % ws.length]; u.swapQ = true; }
+    // a man with only a gun turns it round to fight with it as a club (and back); turning it breaks off a reload
+    else if ((a & A_SWAP) && ws.length === 1 && u.weapon === 'rifle' && (u.st === ST_IDLE || u.st === ST_RELOAD || u.st === ST_AIM)) { u.club = !u.club; u.aiming = false; u.fireQ = 0; if (u.st !== ST_IDLE) { u.st = ST_IDLE; u.stT = 0; } this.events.push({ t: 'grip', id: u.id, club: u.club }); }
     if (wsel > 0 && wsel <= ws.length) { const w = ws[wsel - 1]; if (w !== u.weapon) { u.nextWeapon = w; u.swapQ = true; } else u.swapQ = false; }
+    if (u.swapQ && (u.st === ST_RELOAD || u.st === ST_AIM)) { u.st = ST_IDLE; u.stT = 0; u.aiming = false; } // drawing the other weapon breaks off a reload
     if (u.swapQ && u.st === ST_IDLE) { u.swapQ = false; if (u.nextWeapon && u.nextWeapon !== u.weapon) { u.st = ST_SWAP; u.stT = 0; u.blocking = false; u.aiming = false; } }
     const gun = gunOf(u.def, u.weapon);
     if (gun && this.phase === 1) {
       u.aiming = !!(a & A_AIM) && (u.st === ST_IDLE || u.st === ST_RELOAD) && !(a & A_BLOCK); u.aimHold = u.aiming && u.st === ST_IDLE ? (u.aimHold || 0) + DT : 0;
       const have = u.weapon === 'revolver' ? u.ammoR : u.ammo;
-      if (a & A_FIRE) u.fireQ = 0.45;
+      if ((a & A_RELOAD) && u.club) { u.club = false; this.events.push({ t: 'grip', id: u.id, club: false }); }
+      if ((a & A_FIRE) && !u.club) u.fireQ = 0.45;
       if (u.fireQ > 0) { u.fireQ -= DT; if (u.st === ST_IDLE) { u.fireQ = 0; if (have > 0) this.fireHeroGun(u, gun); else this.startReload(u, gun.reload, true); } }
       if ((a & A_RELOAD) && u.st === ST_IDLE && have < (gun.mag || 1)) this.startReload(u, gun.reload, true);
     } else u.aiming = false;
