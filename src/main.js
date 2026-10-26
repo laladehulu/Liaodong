@@ -678,12 +678,20 @@ function collectInput() {
   const cmds = Input.cmds; Input.cmds = []; const wsel = Input.wsel; Input.wsel = 0;
   return [Input.cmdMode ? 0 : Input.keys, yawQ, pitchQ, acts, Input.atkDir, Input.blockDir, cmds, wsel];
 }
+function combatLog(text, col) {
+  let el = document.getElementById('clog'); if (!el) { el = document.createElement('div'); el.id = 'clog'; el.style.cssText = 'position:fixed;left:16px;bottom:118px;z-index:30;pointer-events:none;font:600 13px/1.35 Georgia,serif;text-shadow:0 1px 2px #000,0 0 6px #000;display:flex;flex-direction:column;align-items:flex-start;gap:1px;max-width:60vw'; document.body.appendChild(el); }
+  const ln = document.createElement('div'); ln.textContent = text; ln.style.color = col; ln.style.transition = 'opacity .8s'; el.appendChild(ln); while (el.children.length > 5) el.removeChild(el.firstChild);
+  setTimeout(() => { ln.style.opacity = '0'; }, 3800); setTimeout(() => { ln.remove(); }, 4700);
+}
 function handleEvents(events) {
   const sim = state.sim;
   { const me = sim.players[state.localIdx]; for (const ev of events) if (ev.t === 'hit' && me && ev.id === me.heroId && ev.att >= 0) { const a = sim.units[ev.att], h = sim.units[me.heroId]; if (!a || !h) continue;
       const d = Math.hypot(a.x - h.x, a.z - h.z); state.hitDir = { ang: Math.atan2(a.x - h.x, a.z - h.z), t: 2.2 };
       const what = ev.cause === 'melee' ? 'Cut by' : ev.cause === 'arrow' ? 'Arrow from' : ev.cause === 'explosion' ? 'Blast from' : 'Shot by';
       state.hitBy = { text: `${what} ${a.type === 'hero' ? 'an enemy general' : 'a ' + a.def.name.replace(/s$/, '').replace(/men$/, 'man')}${ev.cause === 'melee' ? '' : ` · ${Math.round(d)} m`}${ev.killed ? ' — fatal' : ''}`, t: ev.killed ? 6 : 2.6 }; } }
+  { const me = sim.players[state.localIdx]; if (me) for (const ev of events) if (ev.t === 'hit' && ev.dmg >= 1 && ev.id !== ev.att && (ev.att === me.heroId || ev.id === me.heroId)) { /* the battle log, after Bannerlord: what each blow did */
+      const v = sim.units[ev.id]; if (!v || v.type === 'horse') continue; const mine = ev.att === me.heroId, d = Math.round(ev.dmg);
+      combatLog(mine ? `Delivered ${d} damage${ev.cause === 'headshot' ? ' · head shot' : ''}${ev.killed ? ' · he goes down' : ''}` : `Received ${d} damage`, mine ? (ev.killed ? '#ffd27a' : '#f2ead8') : '#ff8a7a'); } }
   if (sim.real && typeof soldierEvent === 'function') for (const ev of events) soldierEvent(ev);
   if (sim.mission && typeof missionEvent === 'function') for (const ev of events) missionEvent(ev);
   if (sim.sg) for (const ev of events) siegeEvent(ev);

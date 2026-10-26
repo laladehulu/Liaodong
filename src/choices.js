@@ -300,7 +300,7 @@ CHD.z2tent = {
 };
 // ---------------- starting and finishing the branch battles ----------------
 const CHZB = {
-  zford: { m: 'zford', zone: 'south', next: 'kai', card: ['April 1619. Two days south of Abudali, the remnants come down out of the hills to a river. Your wounded limps on a spear-shaft crutch; keep the file around him. F follow · H halt · C charge · Z form up.', '無名河 · The ford'], init: 0, file: () => zFileK() },
+  zford: { m: 'zford', zone: 'south', next: 'kai', card: ['April 1619. Two days south of Abudali, the remnants come down out of the hills to a river. Your wounded man is with the file; if he goes down, get him up (E). F follow · H halt · C charge · Z form up.', '無名河 · The ford'], init: 0, file: () => zFileK() },
   zfucha: { m: 'zfucha', zone: 'south', next: 'kai', card: ['April 1619. East to Fucha, where Gang Hong-rip\'s Korean army is camped behind its palisade. Bring your file and your wounded in. F follow · H halt · C charge · Z form up.', '富察 · Fucha'], init: 0, file: () => zFileK() },
 };
 function chStartZ(scene) {
@@ -351,9 +351,6 @@ function chFinishZ(winner) {
 }
 { const _st = zStart; zStart = function (scene) { if (CHZB[scene]) return chStartZ(scene); return _st(scene); }; }
 { const _f = zheFinish; zheFinish = function (w) { if (ZB && ZB.chz && CHZB[ZB.chz]) { try { if (typeof ddFinish === 'function') ddFinish(w); } catch (e) { } const r = chFinishZ(w); try { if (typeof ddResultLine === 'function') ddResultLine(); } catch (e) { } return r; } return _f(w); }; }
-{ const _e = zheEvent; zheEvent = function (ev) { // in the branch battles the wounded man of the ravine limps with you: nobody can "get him up"
-  if (ZB && ZB.chz && ev.t === 'zwound' && state.sim && ev.p === state.localIdx) { const n = SPEECH.nameOf(ev.id); SPEECH.say(ev.id, '別丟下我……我走得動。', 'Don\'t leave me... I can walk.', { prio: 3, dur: 4 }); toast(`${n ? n.zh + ' ' + n.en : 'Your wounded man'} can only limp. Keep the file around him`); return; }
-  return _e(ev); }; }
 // the in-battle choices: when the sim reaches the moment, the panel burns; the answer goes to the sim as a command
 const CHBT = {
   zfucha: [{ ph: 2, t: 3, id: 'z2tent', cid: 1, when: () => ZB && ZB.wk >= 0 && chGot(chCtx(), 'z2tent') < 0 }],

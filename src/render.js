@@ -1232,6 +1232,7 @@ class Renderer {
     kat.add(bx(0.016, 0.42, 0.05, blade, 0, 0.25, 0.004)); kat.add(bx(0.014, 0.34, 0.068, blade, 0, 0.62, 0.016, -0.09)); kat.add(bx(0.012, 0.12, 0.05, blade, 0, 0.82, 0.03, -0.35));
     const tsuba = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.012, 8), brass); tsuba.position.y = 0.04; tsuba.scale.set(1.3, 1, 0.8); kat.add(tsuba);
     kat.add(bx(0.03, 0.2, 0.032, new THREE.MeshLambertMaterial({ color: 0x5a1a1a }), 0, -0.08, 0)); kat.add(bx(0.036, 0.03, 0.036, brass, 0, -0.19, 0));
+    { const bm = new THREE.MeshBasicMaterial({ color: 0x4a0606, transparent: true, opacity: 0, depthWrite: false }); const b1 = bx(0.019, 0.36, 0.052, bm, 0, 0.6, 0.017, -0.09); kat.add(b1); this.vmBloodMat = bm; } /* blood gathers on the blade with each cut and dries off slowly */
     vm.add(kat); this.vmKatana = kat;
     const yari = new THREE.Group(); yari.add(bx(0.026, 2.3, 0.026, new THREE.MeshLambertMaterial({ color: 0x8b6b4a }), 0, 0.95, 0)); yari.add(bx(0.014, 0.3, 0.05, blade, 0, 2.24, 0)); yari.add(bx(0.09, 0.12, 0.09, red, 0, 2.05, 0)); vm.add(yari); this.vmYari = yari;
     { // 狼筅 wolf-brush: a long bamboo with its side branches left on, trimmed into layered, iron-tipped spikes
@@ -1498,13 +1499,15 @@ class Renderer {
               if (armd) this.burstSparks(ev.x, ev.y, ev.z, mine ? 10 : 5, 4, 1, 0.8, 0.45, 0.25, 0.07);
               /* hit mist, dust and red sparks on the struck man removed (user: no green/red particles on fallen men) */
               AUDIO.play(armd ? 'strikearmor' : heavyB ? 'strikeheavy' : 'strike', ev.x, ev.y, ev.z, mine ? 1.25 : 0.95);
+              if (!armd) AUDIO.play('flesh', ev.x, ev.y, ev.z, mine ? 1.1 : 0.7); if (mine && (heavyB || ev.killed)) AUDIO.play('thud', ev.x, ev.y, ev.z, 0.9); /* layered: the steel, the meat, the weight */
             } else if (shot && vic) { this.dust(ev.x, ev.y, ev.z, 3, dx * 0.6, 0.4, dz * 0.6, 0.25, 0.45, 0.12, 0.45); this.blood(ev.x, ev.y, ev.z, 4, dx * 2.5, 0.6, dz * 2.5); AUDIO.play('strike', ev.x, ev.y, ev.z, 0.5); }
             if (vic && ev.id !== heroId && (melee || shot)) this.hitImpulse(ev.id, dx, dz, k * (shot ? 0.6 : 1), heavyB);
+            if (melee && att && ev.cause !== 'trample') { const aa = this.anim(att.id); aa.dragT = armd ? 0.07 : heavyB || ev.killed ? 0.16 : 0.11; if (mine) { this.swDrag = aa.dragT + 0.02; this.bladeBlood = Math.min(1, (this.bladeBlood || 0) + (ev.killed ? 0.4 : 0.22)); } }
             if (mine && melee) { this.recoil = Math.max(this.recoil, heavyB ? 0.75 : 0.45); this.recoilRoll = (Math.random() - 0.5) * (heavyB ? 1.4 : 0.8); this.shake = Math.max(this.shake, heavyB || ev.killed ? 0.35 : 0.18);
               if (this.imp) { this.imp.fov = Math.min(9, this.imp.fov + (heavyB ? 3 : 1.2)); this.imp.vp -= heavyB ? 2.2 : 1.1; }
               this.hitMarkPop = ev.killed ? 2 : 1; if (ev.killed) AUDIO.play('killcue', undefined, 0, 0, 0.9); } }
           if (ev.id === heroId) { this.hitFlash = 0.6; this.shake = Math.max(this.shake, 0.6); const hh = units[heroId], a = ev.att >= 0 ? units[ev.att] : null; if (hh && ev.cause !== 'fire') { const k = clamp((ev.dmg || 20) / Math.max(40, hh.def.hp * 0.45), 0.25, 1.4) * (ev.cause === 'trample' || ev.cause === 'explosion' ? 1.4 : 1); this.impact(a ? a.x : ev.x, a ? a.z : ev.z + 0.01, k, ev.cause === 'trample' || ev.cause === 'explosion'); } }
-          if (ev.att === heroId && ev.id !== heroId && (ev.cause === 'melee' || ev.cause === 'spear')) { const at0 = units[heroId], hv = !!(at0 && (at0.heavy || at0.lunge)) || (ev.dmg || 0) >= 60; this.hitMark = ev.killed ? 0.5 : 0.32; this.hitMarkHead = false; AUDIO.play('hitmark', undefined, 0, 0, 0.8); this.hitstop = Math.max(this.hitstop, ev.killed ? 0.09 : hv ? 0.075 : 0.05); }
+          if (ev.att === heroId && ev.id !== heroId && (ev.cause === 'melee' || ev.cause === 'spear')) { const at0 = units[heroId], hv = !!(at0 && (at0.heavy || at0.lunge)) || (ev.dmg || 0) >= 60; this.hitMark = ev.killed ? 0.5 : 0.32; this.hitMarkHead = false; AUDIO.play('hitmark', undefined, 0, 0, 0.8); this.hitstop = Math.max(this.hitstop, ev.killed ? 0.035 : hv ? 0.03 : 0); }
           break;
         }
         case 'block': {
@@ -1654,7 +1657,9 @@ class Renderer {
   drawFigure(slot, u, x, y, z, yaw, alpha, hide) {
     if (hide) { this.hideFigure(slot); return; }
     const f = this.fig, a = this.anim(u.id), dt = this.fdt, tg = this.tg, def = u.def;
-    const stT = u.st === ST_IDLE ? 0 : u.stT + alpha * DT;
+    /* a blade that bites drags through: the swing slows hard for a moment, then follows through (no frozen frame) */
+    if (a.dragT > 0) { a.dragT -= dt; a.lag = (a.lag || 0) + dt * 0.8; } else if (a.lag > 0) a.lag = Math.max(0, a.lag - dt * 2.2); if (u.st === ST_IDLE || u.st === ST_WINDUP) { a.lag = 0; a.dragT = 0; }
+    const stT = u.st === ST_IDLE ? 0 : Math.max(0, u.stT + alpha * DT - ((u.st === ST_RELEASE || u.st === ST_RECOVER) ? (a.lag || 0) : 0));
     const mounted = u.mounted || u.mount >= 0, wnd = !!(u.wounded && !u.dead) && !mounted;
     // a wounded man going down (and being got up again) is animated, not snapped: a.dw runs 0 (on his feet) to 1 (on the ground)
     if (a.dw === undefined) a.dw = 0;
@@ -2217,7 +2222,8 @@ class Renderer {
     I.fov *= Math.exp(-dt * 7); I.jolt *= Math.exp(-dt * 6); I.blur *= Math.exp(-dt * 4);
   }
   updateViewmodel(hero, alpha, dt, moveF, mounted) {
-    const vm = this.vm, st = this.vmState; const stT = hero.st === ST_IDLE ? 0 : hero.stT + alpha * DT;
+    const vm = this.vm, st = this.vmState; { const dt0 = this.fdt || 0.016; if (this.swDrag > 0) { this.swDrag -= dt0; this.swLag = (this.swLag || 0) + dt0 * 0.82; } else if (this.swLag > 0) this.swLag = Math.max(0, this.swLag - dt0 * 2.2); if (hero.st === ST_IDLE || hero.st === ST_WINDUP) { this.swLag = 0; this.swDrag = 0; } }
+    const stT = hero.st === ST_IDLE ? 0 : Math.max(0, hero.stT + alpha * DT - ((hero.st === ST_RELEASE || hero.st === ST_RECOVER) ? (this.swLag || 0) : 0));
     const P = (px, py, pz, rx, ry, rz) => ({ px, py, pz, rx, ry, rz });
     const xbow = hero.weapon === 'bow' && hero.def.bow && hero.def.bow.xbow; const w = xbow ? 'rifle' : hero.weapon, T = this.tmp;
     this.vmXbar.visible = xbow; this.vmBow.visible = hero.weapon === 'bow' && !xbow;
@@ -2230,6 +2236,7 @@ class Renderer {
         const nocked = hero.ammo > 0 || (hero.st === ST_RELOAD && hero.stT > (hero.reloadT || 0.8) * 0.6); this.vmBowA.visible = nocked; this.vmBowA.position.set(0.012, 0, nz); } }
     { const arm = hero.def.arm, K = this.vmKatana.scale; if (arm === 'guandao') K.set(1.1, 1.8, 2.2); else if (arm === 'mace') K.set(3, 0.72, 1.3); else if (arm === 'jian') K.set(0.75, 1.15, 0.6); else K.set(1, 1, 1); }
     { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * 14); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
+    if (this.vmBloodMat) { this.bladeBlood = Math.max(0, (this.bladeBlood || 0) - (this.fdt || 0.016) / 90); this.vmBloodMat.opacity = 0.82 * Math.sqrt(this.bladeBlood); }
     const yrole = w === 'yari' ? (hero.kitRole !== undefined ? hero.kitRole : hero.role) : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
     // a three-eyed gun model added by a campaign (vmSj) replaces the musket parts every frame, whoever you now are
     /* swung as a club the gun is stood on end in the hands: the three-eyed gun by the end of its pole with the barrels up as the head, a musket by the muzzle with the butt up */
