@@ -2419,16 +2419,16 @@ class Renderer {
 Renderer.prototype.buildBeijing = function () {
   const sc = this.scene, snow = this.biome.snow, grp = new THREE.Group(); sc.add(grp); this.beijing = grp;
   const brick = new THREE.MeshLambertMaterial({ color: 0x6f6b64 }), brickD = new THREE.MeshLambertMaterial({ color: 0x5c5852 }), red = new THREE.MeshLambertMaterial({ color: 0x8a3226 }),
-    roof = new THREE.MeshLambertMaterial({ color: snow ? 0xc9ccd0 : 0x3d433e }), roofD = new THREE.MeshLambertMaterial({ color: 0x2c302c }), win = new THREE.MeshLambertMaterial({ color: 0x2a2420 });
-  const Z0 = 176, H = 13, T = 8, X0 = -330, X1 = 330, gx = 6, base = -8;
+    roof = new THREE.MeshLambertMaterial({ color: snow ? 0x5a605e : 0x3d433e }), roofD = new THREE.MeshLambertMaterial({ color: 0x2c302c }), win = new THREE.MeshLambertMaterial({ color: 0x2a2420 });
+  const Z0 = 176, H = 17, T = 9, X0 = -330, X1 = 330, gx = 6, base = -8;
   const box = (m, x, y, z, w, h, d, ry) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); if (ry) o.rotation.y = ry; grp.add(o); return o; };
   // a hip roof (廡殿/歇山 read as a hip at this distance): a flattened four-sided cone rotated to sit square
   const hip = (m, x, y, z, w, d, h) => { const o = new THREE.Mesh(new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1), m); o.rotation.y = Math.PI / 4; o.scale.set(w, h, d); o.position.set(x, y + h / 2, z); grp.add(o); return o; };
   const tower = (x, z, w, d, storeys, s) => { // a gate or corner tower: brick platform part is the wall itself, then red-pillared storeys under deep eaves
-    let y = H; for (let k = 0; k < storeys; k++) { const sw = w * (1 - k * 0.12), sd = d * (1 - k * 0.12), bh = 5.2 * s;
+    let y = H; for (let k = 0; k < storeys; k++) { const sw = w * (1 - k * 0.12), sd = d * (1 - k * 0.12), bh = 6.5 * s;
       box(red, x, y + bh / 2, z, sw, bh, sd); hip(roof, x, y + bh - 0.6 * s, z, sw * 1.32, sd * 1.4, (k === storeys - 1 ? 6.5 : 2.6) * s); y += bh + (k === storeys - 1 ? 0 : 1.6 * s); } };
   const arrowTower = (x, z, w, d) => { // 箭樓: a tall brick box pierced with rows of arrow windows, a hip roof on top
-    const h = 13; box(brickD, x, H + h / 2, z, w, h, d); for (let row = 0; row < 4; row++) for (let c = 0; c < 12; c++) box(win, x - w / 2 + (c + 0.5) * w / 12, H + 2.2 + row * 2.8, z - d / 2 - 0.05, 0.9, 1.1, 0.2);
+    const h = 16; box(brickD, x, H + h / 2, z, w, h, d); for (let row = 0; row < 4; row++) for (let c = 0; c < 12; c++) box(win, x - w / 2 + (c + 0.5) * w / 12, H + 2.6 + row * 3.4, z - d / 2 - 0.05, 1.1, 1.4, 0.2);
     hip(roof, x, H + h - 0.4, z, w * 1.25, d * 1.5, 6); };
   // the wall itself in 20 m lengths standing on the ground, so its foot follows the land; bastions every 80 m
   for (let x = X0; x < X1; x += 20) { const cx = x + 10; if (Math.abs(cx - gx) < 12) continue; const y0 = Math.min(terrainH(Math.max(-HALF - 25, Math.min(HALF + 25, cx)), Z0 - T / 2), 0) + base; box(brick, cx, (y0 + H) / 2, Z0, 20.2, H - y0, T); }
@@ -2440,7 +2440,7 @@ Renderer.prototype.buildBeijing = function () {
   box(brick, gx - 20, (base + H) / 2, Z0 - 14, 4, H - base, 28); box(brick, gx + 20, (base + H) / 2, Z0 - 14, 4, H - base, 28); box(brick, gx, (base + H) / 2, Z0 - 27, 44, H - base, 5);
   box(win, gx, 3.5, Z0 - 29.6, 6, 7 - base, 0.4);
   arrowTower(gx, Z0 - 27, 30, 9);
-  box(brick, gx, (base + H) / 2, Z0, 24, H - base, T + 2); box(win, gx, 4, Z0 - T / 2 - 1.1, 6, 8 - base, 0.4); tower(gx, Z0, 26, 13, 2, 1);
+  box(brick, gx, (base + H) / 2, Z0, 24, H - base, T + 2); box(win, gx, 4, Z0 - T / 2 - 1.1, 6, 8 - base, 0.4); tower(gx, Z0, 30, 15, 2, 1.25);
   // corner towers (角樓) where the wall turns away, and small watch towers (敵臺) on a few bastions
   for (const s of [-1, 1]) { const x = gx + s * 300; box(brick, x, (base + H) / 2, Z0 - 6, 22, H - base, 20); arrowTower(x, Z0 - 6, 20, 16);
     box(brick, x + s * 8, (base + H) / 2, Z0 + 60, 8, H - base, 120); }
