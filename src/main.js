@@ -910,7 +910,11 @@ function updateHUD(dt) {
     const hp0 = hero && !hero.dead ? Math.max(0, Math.min(1, 1 - hero.hp / hero.def.hp)) : 0, low = Math.max(0, (hp0 - 0.08) / 0.92);
     const beat = hp0 > 0.5 ? (hp0 - 0.5) * 2 : 0, ph = performance.now() / (520 - beat * 220), pulse = beat * (0.5 + 0.5 * Math.pow(Math.max(0, Math.sin(ph)), 6)) * 0.35;
     const fl = r.hitFlash > 0 || r.imp.blur > 0.02 ? Math.min(1, r.hitFlash * 1.6 + r.imp.blur * 0.4) : 0; $('vignette').style.opacity = Math.max(fl, Math.min(1, low * 0.85 + pulse));
-    const cv = $('c'); if (cv) { const k = Math.round(low * 100) / 100, f = k > 0.01 ? `saturate(${(1 - k * 0.75).toFixed(2)}) brightness(${(1 - k * 0.28 - pulse * 0.25).toFixed(2)}) contrast(${(1 + k * 0.12).toFixed(2)})${hp0 > 0.8 ? ` blur(${((hp0 - 0.8) * 4).toFixed(1)}px)` : ''}` : ''; if (cv._f !== f) { cv.style.filter = f; cv._f = f; } } } $('vignette').style.transform = r.imp.blur > 0.02 ? `scale(${1 + r.imp.blur * 0.06})` : '';
+    // near fainting (below about a third): the colour all but goes, the view swims in and out of focus and closes in
+    const fa = Math.max(0, (hp0 - 0.65) / 0.35), swim = fa > 0 ? fa * (0.55 + 0.45 * Math.sin(performance.now() / 900)) : 0;
+    const cv = $('c'); if (cv) { const k = Math.round(low * 100) / 100, f = k > 0.01 ? `saturate(${Math.max(0.08, 1 - k * 0.7 - fa * 0.25).toFixed(2)}) brightness(${(1 - k * 0.25 - pulse * 0.25 - fa * 0.12).toFixed(2)}) contrast(${(1 + k * 0.12).toFixed(2)})${swim > 0.02 ? ` blur(${(swim * 3.2).toFixed(1)}px)` : ''}` : ''; if (cv._f !== f) { cv.style.filter = f; cv._f = f; } }
+    { let t = document.getElementById('faintv'); if (!t) { t = document.createElement('div'); t.id = 'faintv'; t.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:6;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,.92) 85%)'; document.body.appendChild(t); }
+      const o = (fa * (0.75 + 0.25 * Math.sin(performance.now() / 700))).toFixed(2); if (t._o !== o) { t.style.opacity = o; t._o = o; } } } $('vignette').style.transform = r.imp.blur > 0.02 ? `scale(${1 + r.imp.blur * 0.06})` : '';
   $('parry').style.opacity = r.parryFlash > 0 ? r.parryFlash : 0;
   if (hero && !hero.dead && !Input.cmdMode && sim.phase === 1) { // a horseman bearing down on you: warn in time to dodge or brace
     state.cavT = (state.cavT || 0) - dt; if (state.cavT <= 0) { for (const v of sim.teamAlive[1 - hero.team]) { if (!v.mounted || Math.abs(v.hspeed || 0) < 5.5) continue; const dx = hero.x - v.x, dz = hero.z - v.z, d = Math.hypot(dx, dz); if (d > 28 || d < 3) continue; if ((dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw)) / d < 0.9) continue;
@@ -958,7 +962,10 @@ function updateHUD(dt) {
     const g = S.gunOf(hero.def, w);
     if (g) {
       const mag = g.mag || 1; const have = w === 'revolver' ? hero.ammoR : hero.ammo;
-      if (hero.st === S.ST_RELOAD && hero.reloadT > 0.6) { $('ammoFill').style.width = (hero.stT / hero.reloadT * 100).toFixed(1) + '%'; $('ammoText').textContent = mag > 1 ? `Reloading… ${have}/${mag}` : 'Reloading…'; }
+      if (bowMode()) { const q = hero.shots === undefined ? '' : ` · ${hero.shots} in the quiver`, d = Math.min(1, (hero.drawT || 0) / 0.8);
+        if (hero.st === S.ST_RELOAD) { $('ammoFill').style.width = (hero.stT / Math.max(0.1, hero.reloadT) * 100).toFixed(0) + '%'; $('ammoText').textContent = 'Nocking…' + q; }
+        else { $('ammoFill').style.width = (hero.ammo > 0 ? (d > 0 ? d * 100 : 100) : 0).toFixed(0) + '%'; $('ammoText').textContent = (hero.ammo > 0 ? (d > 0 ? (d >= 1 ? 'Full draw · let go' : 'Drawing…') : 'Hold LMB to draw') : 'No arrow') + q; } }
+      else if (hero.st === S.ST_RELOAD && hero.reloadT > 0.6) { $('ammoFill').style.width = (hero.stT / hero.reloadT * 100).toFixed(1) + '%'; $('ammoText').textContent = mag > 1 ? `Reloading… ${have}/${mag}` : 'Reloading…'; }
       else { $('ammoFill').style.width = (have / mag * 100).toFixed(0) + '%'; $('ammoText').textContent = mag > 1 ? `${'●'.repeat(have)}${'○'.repeat(mag - have)}${have === 0 ? ' · R reload · Q club' : ''}` : (have > 0 ? 'Loaded' : 'Empty · R reload' + (hero.def.weapons.length > 1 ? '' : ' · Q club')); }
     } else { $('ammoFill').style.width = (hero.st === S.ST_WINDUP ? Math.min(1, (hero.stT) / 0.28) * 100 : hero.blocking ? 100 : 0).toFixed(0) + '%'; $('ammoText').textContent = hero.st === S.ST_WINDUP ? `Winding up: ${DIRN[hero.atkDir]}` : hero.blocking ? `Blocking ${BLKN[hero.blockDir]}` : hero.st === S.ST_RECOVER ? 'Recovering' : ''; }
     $('dirText').textContent = (!hero.dead && !Input.cmdMode && !gunMode()) ? (hero.weapon === 'yari' ? 'LMB thrust · wheel↑ slam · RMB block · double-tap A/D slide' : 'LMB slash · hold heavy · wheel↑ overhead · R stab · RMB block · double-tap A/D slide') : (me.rallyT > 0 ? `rally in ${Math.ceil(me.rallyT / 30)}s` : 'V · rally');

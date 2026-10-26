@@ -3418,7 +3418,7 @@ Sim.prototype.assaultCap = function () {
   // attackers come as many small companies (about a fifth of the field each) so there are enough to fill the ditch,
   // push every engine and climb every ladder at once
   // a siege needs more, smaller companies: one at each ditch, one at the ram, one at each tower
-  const per = Math.max(8, Math.round(CAP / (M.siege ? 5 : 3))); fit(groups(A, false), Math.max(16, CAP - humanMen)); if (M.siege) for (const p of groups(A, false)) if (size(p) > per) this.mTrim(p, per, true); for (const p of groups(A, true)) if (size(p) > per) this.mTrim(p, per, true);
+  const per = Math.max(8, Math.round(CAP / 3)); fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > per) this.mTrim(p, per, true);
   // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
   // (an assault needs odds: the attackers field the full cap, the defenders about 70% of it, as before the cap)
   fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, Math.round(CAP * 0.7) - humanDef));
@@ -3750,7 +3750,7 @@ Sim.prototype.assaultThink = function () {
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
   const CAP = M.cap || 64;
-  if (act + Math.round(CAP / (M.siege ? 5 : 3)) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  if (act + Math.round(CAP / 3) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
   // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
   let revivable = false;
   if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;
@@ -4000,7 +4000,7 @@ Sim.prototype.siegeDirs = function () {
   // every time an engine is hit or a ladder falls
   const ram = eng('ram')[0]; if (ram && !(ram.atGate && sg.gateHp <= 0)) jobs.push([ram.x, ram.z - 5, false, 'ram']);
   eng('tower').forEach((t, i) => jobs.push(t.docked ? [t.x, W.z0 + 2.5, false, 'tw' + t.id] : [t.x, t.z - 5, false, 'tw' + t.id]));
-  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, false, 'z' + k]; }); jobs.unshift(...dz); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
+  if (s === 0) { const dz = M.sectors[0].map(k => { const z = this.missionZone(k); return [z.x, z.z, false, 'z' + k]; }); jobs.unshift(...dz, ...dz.map(j => [j[0], j[1], false, j[3] + 'b'])); for (const c of eng('cart')) if (c.cover) jobs.push([c.x, c.z - 4, false, 'ct' + c.id]); }
   else { sg.lads.forEach((L, i) => jobs.push(L.up ? [L.x, W.z0 + 2.5, false, 'ld' + i] : [L.x, W.z0 - 3, false, 'ld' + i])); for (const c of eng('cart')) if (!c.cover) jobs.push([c.lane, W.z0 - 2.5, false, 'ct' + c.id]); if (sg.gateHp <= 0) jobs.unshift([0, W.z1 + 6, false, 'gate']); }
   const load = {}; for (const g of att) { const G = this.mg[g]; if (G.jid && G.jsec === s && jobs.some(j => j[3] === G.jid)) load[G.jid] = (load[G.jid] || 0) + 1; else { G.jid = null; G.jsec = s; } }
   att.forEach((g) => { const G = this.mg[g], p = this.players[G.p]; if (!jobs.length) return;
