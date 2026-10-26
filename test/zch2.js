@@ -6,7 +6,7 @@ const S = ctx.SIM, seed = +process.argv[2] || 1, beh = process.argv[3] || 'lead'
 const sim = new S.Sim({ seed, mode: 'campaign', mission: 'hunz', players: [{ name: 'me', team: 0, yyRole: 'lead' }] });
 const p = sim.players[0]; const q0 = sim.squads[p.soldierSq]; const first = p.heroId; const file = q0.unitIds.filter(id => id !== first);
 const yq = (y) => ((Math.round(y / (Math.PI * 2) * 65536) % 65536) + 65536) % 65536;
-const ph = []; let wounded = -1, helped = false, carry = 0, promoted = -1; const fdp = [0, 0, 0, 0];
+const ph = []; let wounded = -1, helped = false, carry = 0, promoted = -1, downs = 0, revs = 0; const fdp = [0, 0, 0, 0];
 for (let t = 0; t < maxT && sim.winner < 0; t++) {
   const h = sim.units[p.heroId]; let keys = 0, yaw = h ? h.yaw : 0, acts = 0;
   if (h && !h.dead && beh !== 'idle') {
@@ -21,9 +21,10 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
   }
   sim.step([[keys, yq(yaw), 0, acts, 0, 0, [], 0]]);
   if (process.env.DBG && t % 300 === 0 && sim.mv.ph >= 3) { const hh = sim.units[p.heroId]; console.log(Math.round(t / 30), 'me', hh && hh.x.toFixed(0), hh && hh.z.toFixed(0), hh && hh.dead, 'file', file.filter(id => !sim.units[id].dead).length); }
-  for (const e of sim.events) { if (e.t === 'mphase') ph.push(Math.round(sim.tick / 30)); if (e.t === 'zpromote') promoted = Math.round(sim.tick / 30); if (e.t === 'zwound') wounded = e.id; if (e.t === 'zhelp' && e.id === wounded) helped = true; if (e.t === 'zcarry') carry++;
+  for (const e of sim.events) { if (e.t === 'mphase') ph.push(Math.round(sim.tick / 30)); if (e.t === 'zpromote') promoted = Math.round(sim.tick / 30); if (e.t === 'zwound') wounded = e.id; if (e.t === 'zhelp' && e.id === wounded) helped = true; if (e.t === 'zcarry') carry++; if (e.t === 'zdown') downs++; if (e.t === 'zrevive') revs++;
     if (e.t === 'death' && file.includes(e.id)) fdp[Math.max(0, sim.mv.ph)]++; }
 }
 const h = sim.units[p.heroId], z = sim.missionZone('road'); const won = sim.mwin === 0; let out = 0, dead = 0, lost = 0;
 for (const id of file) { const u = sim.units[id]; if (u.dead) { dead++; continue; } const ok = (h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < (won ? 26 : 12)) || Math.hypot(u.x - z.x, u.z - z.z) < z.r + 10; if (ok) out++; else lost++; }
-console.log(JSON.stringify({ seed, beh, won, end: Math.round(sim.tick / 30), phases: ph, promoted, helped, carry, out, dead, lost, of: file.length, deathsByPhase: fdp, alive: sim.teamAlive.map(a => a.length), meRole: sim.units[first].role }));
+let hurt = 0; for (const id of file) { const u = sim.units[id]; if (!u.dead && u.hp < u.def.hp * 0.5) hurt++; }
+console.log(JSON.stringify({ seed, beh, won, downs, revs, hurt, kills: p.kills, end: Math.round(sim.tick / 30), phases: ph, promoted, helped, carry, out, dead, lost, of: file.length, deathsByPhase: fdp, alive: sim.teamAlive.map(a => a.length), meRole: sim.units[first].role }));

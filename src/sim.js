@@ -2978,10 +2978,10 @@ Sim.prototype.siegeInit = function () {
   // the outer face of the wall: parapet segments, with lanes where a ladder, a tower's bridge or a sapped hole can open a way up
   const lanes = [];
   SG.ladders.forEach((x) => { const L = { kind: 'ladder', x, z: W.z0, hd: 0.5, w: 1.4, up: false, prog: 0, hp: 0 }; sg.lads.push(L); lanes.push(L); });
-  SG.towers.forEach((x) => { const L = { kind: 'tower', x, z: W.z0, hd: 0.5, w: 2.4, up: false, prog: 0, hp: 0 }; lanes.push(L); sg.engines.push({ id: sg.engines.length, kind: 'tower', team: A, x, z: -82, lane: x, tz: W.z0 - 3.2, hp: 2600, max: 2600, burn: 0, docked: false, lad: L, push: 0, need: 4 }); });
-  SG.holes.forEach((x) => { const L = { kind: 'hole', x, z: W.z0, hd: 0.5, w: 1.4, up: false, prog: 0, hp: 0 }; sg.holes.push(L); lanes.push(L); sg.engines.push({ id: sg.engines.length, kind: 'cart', team: A, x, z: -62, lane: x, tz: W.z0 - 3, hp: 900, max: 900, burn: 0, push: 0, need: 2 }); });
-  sg.engines.push({ id: sg.engines.length, kind: 'ram', team: A, x: 0, z: -72, lane: 0, tz: W.z0 - 2.9, hp: 1800, max: 1800, burn: 0, atGate: false, push: 0, need: 2 });
-  for (const x of [-10, 10]) sg.engines.push({ id: sg.engines.length, kind: 'cart', team: A, x, z: -58, lane: x * 1.2, tz: SG.ditchZ - 6.5, hp: 900, max: 900, burn: 0, push: 0, need: 2, cover: true });
+  SG.towers.forEach((x) => { const L = { kind: 'tower', x, z: W.z0, hd: 0.5, w: 2.4, up: false, prog: 0, hp: 0 }; lanes.push(L); sg.engines.push({ id: sg.engines.length, kind: 'tower', team: A, x, z: -82, lane: x, tz: W.z0 - 3.2, hp: 3600, max: 3600, burn: 0, docked: false, lad: L, push: 0, need: 4 }); });
+  SG.holes.forEach((x) => { const L = { kind: 'hole', x, z: W.z0, hd: 0.5, w: 1.4, up: false, prog: 0, hp: 0 }; sg.holes.push(L); lanes.push(L); sg.engines.push({ id: sg.engines.length, kind: 'cart', team: A, x, z: -62, lane: x, tz: W.z0 - 3, hp: 1300, max: 1300, burn: 0, push: 0, need: 2 }); });
+  sg.engines.push({ id: sg.engines.length, kind: 'ram', team: A, x: 0, z: -72, lane: 0, tz: W.z0 - 2.9, hp: 2400, max: 2400, burn: 0, atGate: false, push: 0, need: 2 });
+  for (const x of [-10, 10]) sg.engines.push({ id: sg.engines.length, kind: 'cart', team: A, x, z: -58, lane: x * 1.2, tz: SG.ditchZ - 6.5, hp: 1300, max: 1300, burn: 0, push: 0, need: 2, cover: true });
   lanes.sort((a, b) => a.x - b.x);
   for (const L of lanes) this.boxes.push({ x: L.x, z: W.z0, hw: L.w, hd: 0.5, h: 1.3, kind: 'sface', lad: L });
   let x0 = -HALF; const gaps = lanes.map(L => [L.x - L.w, L.x + L.w]).concat([[-W.gate - 0.01, W.gate + 0.01]]).sort((a, b) => a[0] - b[0]);
@@ -3012,7 +3012,7 @@ Sim.prototype.siegeTick = function () {
   const ps = this.projectiles;
   for (let i = ps.length - 1; i >= 0; i--) { const p = ps[i]; if (p.kind === 'bomb') continue;
     for (const e of sg.engines) { if (e.hp <= 0 || p.team === e.team) continue; const S = SGE[e.kind]; if (Math.abs(p.x - e.x) > S.hw || Math.abs(p.z - e.z) > S.hd || p.y > terrainH(e.x, e.z) + S.h) continue;
-      const dmg = p.kind === 'shell' ? 300 : p.kind === 'solid' ? (p.bolt ? 110 : 260) : 6; this.sgHurt(e, dmg); if (p.kind === 'arrow' && e.kind !== 'cart' && this.rng.next() < 0.04 && !this.rain) e.burn = Math.max(e.burn, 6);
+      const dmg = p.kind === 'shell' ? 260 : p.kind === 'solid' ? (p.bolt ? 50 : 180) : 4; this.sgHurt(e, dmg); if (p.kind === 'arrow' && e.kind !== 'cart' && this.rng.next() < 0.04 && !this.rain) e.burn = Math.max(e.burn, 6);
       this.events.push({ t: 'sghit', x: p.x, y: p.y, z: p.z, kind: p.kind, eng: e.kind }); ps[i] = ps[ps.length - 1]; ps.pop(); break; } }
   for (const e of sg.emp) { if (e.cd > 0) e.cd--; if (e.man < 0) continue; const u = this.units[e.man];
     if (!u || u.dead || len(u.x - e.x, u.z - e.z) > 3.2) { e.man = -1; if (u) u.manE = -1; continue; }
@@ -3020,10 +3020,10 @@ Sim.prototype.siegeTick = function () {
     if ((u.st === ST_WINDUP || u.st === ST_AIM || u.st === ST_RELEASE) && e.cd <= 0) { this.sgFire(e, e.yaw, e.pitch); u.st = ST_IDLE; u.stT = 0; } else if (u.st === ST_WINDUP) { u.st = ST_IDLE; u.stT = 0; } }
   if (this.tick % 15 === 0) this.siegeThink();
 };
-const SGE = { ram: { hw: 1.5, hd: 3, h: 3.6, sp: 1.5 }, tower: { hw: 2.5, hd: 2.5, h: 9.5, sp: 0.75 }, cart: { hw: 1.7, hd: 0.9, h: 2.6, sp: 1.6 } };
+const SGE = { ram: { hw: 1.5, hd: 3, h: 3.6, sp: 1.5 }, tower: { hw: 2.5, hd: 2.5, h: 9.5, sp: 1.0 }, cart: { hw: 1.7, hd: 0.9, h: 2.6, sp: 1.6 } };
 Sim.prototype.sgHurt = function (e, dmg) { if (e.hp <= 0) return; e.hp -= dmg; if (e.hp <= 0) { e.hp = 0; if (e.lad && e.lad.up) { e.lad.up = false; this.navBoxes(); } this.events.push({ t: 'sgengine', kind: e.kind, x: e.x, z: e.z }); for (const sq of this.squads) if (sq.alive && sq.team === e.team && !sq.def.fearless) sq.morale = Math.max(0, sq.morale - 6); } };
 Sim.prototype.sgFire = function (e, yaw, pitch) {
-  const bow = e.kind === 'bow', v = bow ? 62 : 78; e.cd = bow ? 30 * 4 : 30 * 7;
+  const bow = e.kind === 'bow', v = bow ? 62 : 78; e.cd = bow ? 30 * 5 : 30 * 9;
   const cp = cos(pitch), x = e.x + sin(yaw) * 1.6, z = e.z + cos(yaw) * 1.6, y = e.y + (bow ? 1.4 : 1.2);
   this.projectiles.push({ kind: 'solid', bolt: bow, x, y, z, vx: sin(yaw) * cp * v, vy: sin(pitch) * v, vz: cos(yaw) * cp * v, team: e.team, owner: -1, life: 0, hits: 0 });
   this.events.push({ t: 'sgshot', x, y, z, dx: sin(yaw), dz: cos(yaw), gun: !bow, team: e.team });
@@ -3031,7 +3031,7 @@ Sim.prototype.sgFire = function (e, yaw, pitch) {
 // pick a mark for an unmanned emplacement: defenders prefer engines, then the thickest crowd of the enemy
 Sim.prototype.sgAim = function (e) {
   let tx = 0, tz = 0, ty = 0, best = 1e18;
-  if (e.team === this.sg.D) for (const g of this.sg.engines) { if (g.hp <= 0) continue; const d = len(g.x - e.x, g.z - e.z); if (d < 125 && d < best) { best = d; tx = g.x; tz = g.z; ty = terrainH(g.x, g.z) + 1.5; } }
+  if (e.team === this.sg.D && this.rng.next() < 0.6) for (const g of this.sg.engines) { if (g.hp <= 0) continue; const d = len(g.x - e.x, g.z - e.z); if (d < 125 && d < best) { best = d; tx = g.x; tz = g.z; ty = terrainH(g.x, g.z) + 1.5; } }
   if (best > 1e17) for (const q of this.squads) { if (!q.alive || q.inactive || q.team === e.team) continue; const d = len(q.cx - e.x, q.cz - e.z); if (d < 125 && d > 12 && d - q.aliveCount * 0.6 < best) { best = d - q.aliveCount * 0.6; tx = q.cx; tz = q.cz; ty = terrainH(q.cx, q.cz) + 1; } }
   if (best > 1e17) return false;
   const bow = e.kind === 'bow', v = bow ? 62 : 78, d = len(tx - e.x, tz - e.z), dy = ty - (e.y + 1.3);

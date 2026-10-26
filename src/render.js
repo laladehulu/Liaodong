@@ -496,7 +496,7 @@ class Renderer {
     this.deadHorses = []; this.cannonRecoil = new Map(); this.heroStates = new Map();
     this.msgs = [];
     this.localTeam = sim.cfg.players[localIdx] ? (sim.cfg.players[localIdx].team ? 1 : 0) : 0;
-    this.buildLights(); this.buildSky(); this.buildTerrain(); this.buildDeco(); this.buildStructures(); this.campFires = []; if (sim.cfg.camp) this.buildCamp(sim.cfg.camp); this.buildFigures(); this.buildHorses(); this.buildCannons(); this.buildMarkers(); this.buildFX(); this.buildViewmodel();
+    this.buildLights(); this.buildSky(); this.buildTerrain(); this.buildDeco(); this.buildStructures(); this.campFires = []; if (sim.cfg.camp) this.buildCamp(sim.cfg.camp); if (sim.sg) this.buildSiege(); this.buildFigures(); this.buildHorses(); this.buildCannons(); this.buildMarkers(); this.buildFX(); this.buildViewmodel();
     this.ragdolls = []; for (let i = 0; i < MAXRAG; i++) this.ragdolls.push(new Ragdoll());
     this.ragNext = 0;
     this.buildEnvironment(); this.buildWater();
@@ -594,6 +594,70 @@ class Renderer {
       else if (kind === 'wagon') { const bed = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 3), L(0x5a4430)); bed.position.y = 0.9; grp.add(bed); for (const sx of [-0.8, 0.8]) for (const sz of [-0.9, 0.9]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 12), L(0x3a2c1e)); w.rotation.z = Math.PI / 2; w.position.set(sx, 0.42, sz); grp.add(w); } const load = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.6, 2.2), L(0x8a7a5a)); load.position.y = 1.45; grp.add(load); }
       else if (kind === 'shields') { for (let k = 0; k < 3; k++) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 16), L(0xa8844a)); d.rotation.x = Math.PI / 2 - 0.25; d.position.set((k - 1) * 0.5, 0.42, 0); grp.add(d); } }
       else if (kind === 'log') { const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 2.2, 8), L(0x4a3a2a)); lg.rotation.z = Math.PI / 2; lg.position.y = 0.2; grp.add(lg); } }
+  }
+  // ---------- 攻守城 siege: the rampart, the gatehouse, the ditch, the engines and the emplacements ----------
+  buildSiege() {
+    const sim = this.sim, sg = sim.sg, W = SIM.TERR.swall, Dt = SIM.TERR.sditch, sc = this.scene, T = this.tmp;
+    const L = (c) => new THREE.MeshLambertMaterial({ color: c }); const brick = L(0x6f6a62), brickD = L(0x58544e), top = L(0x8a857c), wood = L(0x5a3a20), woodL = L(0x7a5a38), hide = L(0x6e5a3e), iron = L(0x34363a), red = L(0x8a2a20), tile = L(0x2c2e32);
+    const box = (w, h, d, m, x, y, z, g) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; (g || sc).add(o); return o; };
+    const gy = (x, z) => SIM.terrainH(x, z);
+    // the rampart: two long brick bodies either side of the gate passage, a walkway, battlements on the outer edge
+    const zc = (W.z0 + W.z1) / 2, dep = W.z1 - W.z0, base = -2.5;
+    for (const sx of [-1, 1]) { const x0 = W.gate, x1 = 152, cx = sx * (x0 + x1) / 2, len2 = x1 - x0; const hTop = gy(cx, zc);
+      box(len2, hTop - base, dep + 0.2, brick, cx, (hTop + base) / 2, zc); box(len2, 0.08, dep - 0.6, top, cx, hTop + 0.04, zc + 0.2); }
+    { const pos = []; for (let x = -150; x <= 150; x += 1.7) { if (Math.abs(x) < W.gate + 0.6) continue; pos.push(x); }
+      const m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.95, 1.25, 0.55), brickD, pos.length); pos.forEach((x, i) => { T.m.compose(T.v.set(x, gy(x, W.z0 + 0.3) + 0.62, W.z0 + 0.28), T.q.identity(), T.v2.set(1, 1, 1)); m.setMatrixAt(i, T.m); }); m.castShadow = true; sc.add(m); }
+    // inner ramps (stairways up from the town)
+    for (const r of W.ramps) { const z0 = W.z1, z1 = W.z1 + 14, h0 = gy(r, z0 - 1); const len2 = Math.hypot(z1 - z0, h0); const o = box(6, 0.5, len2, brickD, r, h0 / 2, (z0 + z1) / 2); o.rotation.x = Math.atan2(h0, z1 - z0); }
+    // the gatehouse (城樓) over the passage, with its two-eaved roof
+    { const g = new THREE.Group(); const hTop = gy(W.gate + 2, zc); g.position.set(0, hTop, zc); sc.add(g);
+      box(2 * W.gate + 0.2, 1.4, dep + 0.2, brick, 0, 0.7 - 1.4 + 0.02, 0, g); box(16, 0.3, dep + 1.6, top, 0, 0.15, 0, g);
+      for (const x of [-6.5, -2.2, 2.2, 6.5]) for (const z of [-2.6, 2.6]) box(0.45, 4.2, 0.45, red, x, 2.25, z, g);
+      box(14.4, 3.6, 5.4, L(0x7a3a28), 0, 2.2, 0, g); const roof = (w, d, y, h) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 1, 1, 4, 1), tile); o.rotation.y = Math.PI / 4; o.scale.set(w * 0.72, h, d * 0.72); o.position.y = y; o.castShadow = true; g.add(o); };
+      roof(19, 8.5, 5.0, 1.6); box(11, 2, 4.4, L(0x7a3a28), 0, 6.4, 0, g); roof(14.5, 7, 8.1, 2.2);
+      const banner = box(0.08, 4, 0.08, wood, 7.6, 9.5, 2.7, g); }
+    // the gate doors in the passage
+    { const g = new THREE.Group(); g.position.set(0, gy(0, W.z0 + 1), W.z0 + 0.9); sc.add(g); const studs = L(0x9a8a5a);
+      for (const sx of [-1, 1]) { const d = box(W.gate - 0.15, W.h - 0.6, 0.5, L(0x5a2e1c), sx * (W.gate / 2), (W.h - 0.6) / 2, 0, g); for (let r2 = 0; r2 < 5; r2++) for (let c = 0; c < 3; c++) box(0.16, 0.16, 0.08, studs, sx * (0.9 + c * 1.2), 0.9 + r2 * 1.05, -0.3, g); }
+      box(2 * W.gate + 1, 0.8, dep + 0.2, brick, 0, W.h + 0.1, (dep / 2) - 0.9, g); this.sgDoors = g; }
+    // the ditch: an iced bottom, rows of sharpened stakes on the far bank, the causeway at the gate, fascines where it is filled
+    { const ice = new THREE.Mesh(new THREE.PlaneGeometry(300, Dt.w * 1.3), new THREE.MeshLambertMaterial({ color: sim.bdef.biome === 'winter' ? 0xa8b8c4 : 0x4a5a5a })); ice.rotation.x = -Math.PI / 2; ice.position.set(0, gy(40, Dt.zc) + 0.12, Dt.zc); ice.receiveShadow = true; sc.add(ice);
+      const st = []; for (let x = -148; x <= 148; x += 1.3) { if (Math.abs(x) < Dt.bridge + 1) continue; st.push([x, Dt.zc + Dt.w + 0.6 + (Math.floor(x / 1.3) % 2) * 0.5]); }
+      const m = new THREE.InstancedMesh(new THREE.ConeGeometry(0.09, 1.5, 4), woodL, st.length); st.forEach(([x, z], i) => { T.m.compose(T.v.set(x, gy(x, z) + 0.45, z), T.q.setFromEuler(T.e.set(-0.7, 0, (i % 3 - 1) * 0.15)), T.v2.set(1, 1, 1)); m.setMatrixAt(i, T.m); }); sc.add(m);
+      const deck = box(2 * Dt.bridge, 0.3, Dt.w * 2 + 1.5, woodL, 0, gy(0, Dt.zc) + 0.05, Dt.zc); deck.receiveShadow = true;
+      this.sgFills = Dt.fills.map(f => { const n = Math.round(f.hw * 2 / 0.9) * 3; const mm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.35, 2.2, 6), L(0x8a7a50), n); for (let i = 0; i < n; i++) mm.setMatrixAt(i, T.zero); sc.add(mm); return { f, m: mm, n, shown: -1 }; }); }
+    // engines
+    this.sgEng = sg.engines.map(e => { const g = new THREE.Group(); sc.add(g);
+      if (e.kind === 'ram') { box(2.8, 0.25, 6, wood, 0, 0.7, 0, g); for (const sx of [-1, 1]) { box(0.18, 2.8, 0.18, wood, sx * 1.3, 2.1, -2.6, g); box(0.18, 2.8, 0.18, wood, sx * 1.3, 2.1, 2.6, g); const r1 = box(1.8, 0.12, 6.4, hide, sx * 0.75, 3.5, 0, g); r1.rotation.z = sx * 0.55; }
+        const log = new THREE.Group(); log.position.set(0, 1.9, 0); const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 6.6, 10), wood); lg.rotation.x = HPI; log.add(lg); const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.3, 0.7, 10), iron); tip.rotation.x = HPI; tip.position.z = 3.5; log.add(tip); g.add(log); g.userData.log = log; }
+      else if (e.kind === 'tower') { box(4.8, 0.4, 4.8, wood, 0, 0.6, 0, g); for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(0.32, 9.6, 0.32, wood, sx * 2.2, 5.2, sz * 2.2, g); for (const y of [3.4, 6.6, 9.6]) box(4.8, 0.25, 4.8, wood, 0, y, 0, g);
+        box(4.7, 9, 0.2, hide, 0, 5.1, 2.35, g); for (const sx of [-1, 1]) box(0.2, 9, 4.6, hide, sx * 2.35, 5.1, 0, g); box(4.9, 0.9, 4.9, hide, 0, 10.4, 0, g);
+        const br = new THREE.Group(); br.position.set(0, 6.6, 2.4); box(2.6, 0.18, 3.2, woodL, 0, 0, 1.6, br); g.add(br); g.userData.bridge = br; }
+      else { box(3.4, 0.3, 1.6, wood, 0, 0.6, 0, g); const sh = box(3.4, 2.5, 0.22, hide, 0, 1.9, 0.85, g); sh.rotation.x = -0.18; box(3.5, 0.12, 0.12, iron, 0, 3.05, 1.05, g); }
+      const nW = e.kind === 'tower' ? 4 : 4; for (let k = 0; k < nW; k++) { const sx = k % 2 ? 1 : -1, sz = k < 2 ? -1 : 1; const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.22, 10), wood); wh.rotation.z = HPI; const S = e.kind === 'tower' ? [2.5, 2] : e.kind === 'ram' ? [1.5, 2.2] : [1.8, 0.5]; wh.position.set(sx * S[0], 0.55, sz * S[1]); g.add(wh); }
+      return g; });
+    // emplacements: bed crossbows (床弩) and guns
+    this.sgEmp = sg.emp.map(e => { const g = new THREE.Group(); g.position.set(e.x, e.y, e.z); sc.add(g); const aim = new THREE.Group(); aim.position.y = 1.2; g.add(aim);
+      if (e.kind === 'bow') { box(0.5, 1.0, 0.5, wood, 0, 0.5, 0, g); box(0.25, 0.22, 3.2, wood, 0, 0, 0.3, aim); for (const sx of [-1, 1]) { const arm = box(1.9, 0.12, 0.14, wood, sx * 0.9, 0, 1.4, aim); arm.rotation.y = -sx * 0.32; } box(0.08, 0.08, 2.6, L(0xb08a50), 0, 0.14, 0.6, aim); box(0.02, 0.02, 2.4, L(0xd8d4c8), 0, 0.05, 0.6, aim); }
+      else { box(1.2, 0.5, 1.8, wood, 0, 0.45, 0, g); for (const sx of [-1, 1]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.16, 10), wood); wh.rotation.z = HPI; wh.position.set(sx * 0.7, 0.5, 0); g.add(wh); } const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2.9, 10), iron); tube.rotation.x = HPI; tube.position.z = 0.5; aim.add(tube); }
+      g.userData.aim = aim; return g; });
+    // sapped holes in the wall face
+    this.sgHoles = sg.holes.map(L => { const o = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.8, 0.4), L0x(0x16120e)); o.position.set(L.x, gy(L.x, W.z0 - 1) + 1.4, W.z0 - 0.45); o.scale.set(0.01, 0.01, 1); sc.add(o); return o; });
+    function L0x(c) { return new THREE.MeshBasicMaterial({ color: c }); }
+    this.sgv = true;
+  }
+  updateSiege(dt) {
+    const sim = this.sim, sg = sim.sg, W = SIM.TERR.swall, T = this.tmp;
+    sg.engines.forEach((e, i) => { const g = this.sgEng[i]; if (!g) return; g.visible = e.hp > 0; if (e.hp <= 0) return; const y = SIM.terrainH(e.x, e.z); g.position.set(e.x, y, e.z);
+      if (e.kind === 'ram') { const sw = e.atGate && sg.gateHp > 0 ? Math.sin(this.time * 4.2) : 0; g.userData.log.position.z = sw * 0.9; }
+      if (e.kind === 'tower') { const br = g.userData.bridge; const k = e.docked ? 1 : 0; br.rotation.x += ((k ? 0 : -1.4) - br.rotation.x) * Math.min(1, dt * 3); }
+      if (e.burn > 0 && Math.random() < dt * 16) { const S = { ram: [1.4, 3, 3.6], tower: [2.4, 2.4, 10], cart: [1.6, 0.8, 2.6] }[e.kind]; this.sparks.spawn(e.x + rnd(-S[0], S[0]), y + rnd(0.5, S[2]), e.z + rnd(-S[1], S[1]), rnd(-0.4, 0.4), rnd(1.5, 3.5), rnd(-0.4, 0.4), rnd(0.5, 1.1), rnd(0.5, 1.1), 0.1, 1, 0.55, 0.15, 1, 0.8, -2, 0.9, 0.25, 0.05); if (Math.random() < 0.4) this.smoke.spawn(e.x, y + S[2], e.z, rnd(-0.3, 0.3), 1.5, rnd(-0.3, 0.3), 4, 0.8, 3.5, 0.18, 0.16, 0.15, 0.5, 0.8, 0); } });
+    sg.emp.forEach((e, i) => { const g = this.sgEmp[i]; if (!g) return; g.rotation.y = e.yaw; g.userData.aim.rotation.x = -(e.pitch || 0); });
+    sg.holes.forEach((L, i) => { const o = this.sgHoles[i]; const k = L.up ? 1 : Math.min(0.85, L.prog / 320); o.scale.set(Math.max(0.01, k), Math.max(0.01, k), 1); });
+    if (this.sgDoors) this.sgDoors.visible = sg.gateHp > 0;
+    for (const F of this.sgFills) { const z = sim.missionZone(F.f.key); const k = F.f.done ? 1 : z ? Math.max(0, sg.A === 1 ? -z.ctrl / 100 : z.ctrl / 100) : 0; const show = Math.round(F.n * k); if (show === F.shown) continue; F.shown = show;
+      const Dt = SIM.TERR.sditch, per = Math.round(F.f.hw * 2 / 0.9); for (let i = 0; i < F.n; i++) { if (i >= show) { F.m.setMatrixAt(i, T.zero); continue; } const col = i % per, lay = Math.floor(i / per); const x = F.f.x - F.f.hw + 0.45 + col * 0.9; T.m.compose(T.v.set(x, SIM.terrainH(x, Dt.zc) + 0.35 + lay * 0.6, Dt.zc + ((col * 7) % 3 - 1) * 0.6), T.q.setFromEuler(T.e.set(HPI, 0, 0)), T.v2.set(1, Dt.w * 1.1, 1)); F.m.setMatrixAt(i, T.m); }
+      F.m.instanceMatrix.needsUpdate = true; }
   }
   updateCamp(dt) {
     for (const f of this.campFires) { f.t += dt; const k = 0.82 + 0.18 * Math.sin(f.t * 11) * Math.sin(f.t * 7.3 + 1) + 0.08 * Math.sin(f.t * 23); f.lt.intensity = 2.3 * k;
@@ -1315,6 +1379,19 @@ class Renderer {
         case 'ladderup': { const gy = terrainH(ev.x, ev.z); AUDIO.play('thud', ev.x, gy + 3, ev.z, 1.5); AUDIO.play('shout', ev.x, gy, ev.z, 1.4); this.dust(ev.x, gy + 0.3, ev.z - 2, 8, 0, 1, 0, 1.5, 1, 0.4, 1.4); break; }
         case 'ladderdown': { const gy = terrainH(ev.x, ev.z); AUDIO.play('scream', ev.x, gy + 3, ev.z, 1.2); AUDIO.play('thud', ev.x, gy, ev.z, 1.6); for (let i = 0; i < 6; i++) this.spawnDebris('b', ev.x + rnd(-0.5, 0.5), gy + 2 + i * 0.6, ev.z - 2, rnd(-1, 1), rnd(1, 3), rnd(-4, -1), 0.9, 0.08, 0.08, 0x6a4a2c, 0.6); this.dust(ev.x, gy + 0.3, ev.z - 3, 14, 0, 1.4, 0, 2.5, 1.2, 0.5, 2); break; }
         case 'oil': { const gy = terrainH(ev.x, ev.z); for (let i = 0; i < 30; i++) this.sparks.spawn(ev.x + rnd(-0.6, 0.6), gy + 4 + rnd(0, 1), ev.z + rnd(-0.6, 0.6), rnd(-2.5, 2.5), rnd(-3, 0), rnd(-2.5, 2.5), rnd(0.6, 1.4), rnd(0.8, 1.6), 0.2, 1, 0.6, 0.15, 1, 0.6, 1, 0.9, 0.2, 0.05); this.puffSmoke(ev.x, gy + 1, ev.z, 20, 0, 2.5, 0, 2, 5, 1, 4.5, 0.2, 0.7); this.flash(ev.x, gy + 1, ev.z, 5, 0.25); AUDIO.play('fire', ev.x, gy, ev.z, 2); AUDIO.play('scream', ev.x, gy + 1, ev.z, 1); break; }
+        case 'sgoil': { const gy = SIM.terrainH(ev.x, ev.z); for (let i = 0; i < 40; i++) this.sparks.spawn(ev.x + rnd(-0.8, 0.8), gy + ev.y - 1 + rnd(0, 1), ev.z + 1.5 + rnd(-0.4, 0.4), rnd(-2, 2), rnd(-6, -1), rnd(-2.5, 0), rnd(0.6, 1.4), rnd(0.8, 1.8), 0.2, 1, 0.6, 0.15, 1, 0.6, 1, 0.9, 0.2, 0.05); this.puffSmoke(ev.x, gy + 1, ev.z, 26, 0, 2.5, 0, 2.5, 6, 1, 5, 0.2, 0.75); this.flash(ev.x, gy + 1, ev.z, 6, 0.3); AUDIO.play('fire', ev.x, gy, ev.z, 2.2); AUDIO.play('scream', ev.x, gy + 1, ev.z, 1); break; }
+        case 'sgstone': { const gy = SIM.terrainH(ev.x, ev.z); for (let i = 0; i < 9; i++) this.spawnDebris('b', ev.x + rnd(-1.2, 1.2), gy + ev.y + rnd(0, 1.5), ev.z + 1.2, rnd(-1.5, 1.5), rnd(-4, 0), rnd(-2.5, -0.5), rnd(0.3, 0.7), rnd(0.3, 0.6), rnd(0.3, 0.7), 0x77726a, 1); this.dust(ev.x, gy + 0.3, ev.z, 18, 0, 1.4, 0, 2.6, 1.3, 0.5, 2.2); AUDIO.play('thud', ev.x, gy, ev.z, 2); AUDIO.play('scream', ev.x, gy + 1, ev.z, 0.8); break; }
+        case 'sgladder': { const gy = SIM.terrainH(ev.x, ev.z - 2); if (ev.up) { AUDIO.play('thud', ev.x, gy + 3, ev.z, 1.5); this.dust(ev.x, gy + 0.3, ev.z - 2.5, 8, 0, 1, 0, 1.5, 1, 0.4, 1.4); } else { AUDIO.play('scream', ev.x, gy + 3, ev.z, 1.2); AUDIO.play('thud', ev.x, gy, ev.z, 1.6); for (let i = 0; i < 6; i++) this.spawnDebris('b', ev.x + rnd(-0.5, 0.5), gy + 2 + i * 0.6, ev.z - 2, rnd(-1, 1), rnd(1, 3), rnd(-4, -1), 0.9, 0.08, 0.08, 0x6a4a2c, 0.6); this.dust(ev.x, gy + 0.3, ev.z - 3, 14, 0, 1.4, 0, 2.5, 1.2, 0.5, 2); } break; }
+        case 'sgbreach': { const gy = SIM.terrainH(ev.x, ev.z - 4); for (let i = 0; i < 16; i++) this.spawnDebris('b', ev.x + rnd(-3, 3), gy + rnd(0.5, 4), ev.z + rnd(-1, 1), rnd(-4, 4), rnd(3, 8), rnd(2, 9), rnd(0.15, 0.4), rnd(0.8, 2.4), 0.2, 0x5a2a1a, 1); this.puffSmoke(ev.x, gy + 2, ev.z, 60, 0, 3, 2, 6, 10, 2, 9, 0.6, 0.7); AUDIO.play('collapse', ev.x, gy + 2, ev.z, 1.6); this.shake = Math.max(this.shake, 1); break; }
+        case 'sghole': { const gy = SIM.terrainH(ev.x, ev.z - 2); for (let i = 0; i < 12; i++) this.spawnDebris('b', ev.x + rnd(-1, 1), gy + rnd(0.5, 3), ev.z - 0.5, rnd(-2, 2), rnd(1, 4), rnd(-4, -1), rnd(0.2, 0.5), rnd(0.2, 0.5), rnd(0.2, 0.5), 0x6f6a62, 1); this.puffSmoke(ev.x, gy + 1.5, ev.z - 1, 30, 0, 1.5, -1, 3, 6, 1.5, 6, 0.6, 0.7); AUDIO.play('collapse', ev.x, gy + 2, ev.z, 1.2); break; }
+        case 'sgdock': { const gy = SIM.terrainH(ev.x, ev.z); AUDIO.play('thud', ev.x, gy + 6, ev.z, 2); this.dust(ev.x, gy + 6.6, ev.z + 4, 14, 0, 0.5, 0, 2, 1.2, 0.5, 2); break; }
+        case 'sgengine': { const gy = SIM.terrainH(ev.x, ev.z); for (let i = 0; i < 22; i++) this.spawnDebris('b', ev.x + rnd(-2, 2), gy + rnd(1, ev.kind === 'tower' ? 9 : 3), ev.z + rnd(-2, 2), rnd(-5, 5), rnd(2, 8), rnd(-5, 5), rnd(0.15, 0.45), rnd(0.8, 3), rnd(0.15, 0.4), 0x5a3a20, 1); this.puffSmoke(ev.x, gy + 2, ev.z, 40, 0, 2.5, 0, 4, 8, 1.5, 6, 0.25, 0.7); AUDIO.play('collapse', ev.x, gy + 2, ev.z, 1.3); break; }
+        case 'sghit': { this.burstSparks(ev.x, ev.y, ev.z, ev.kind === 'arrow' ? 3 : 14, 5, 0.8, 0.6, 0.35, 0.35, 0.08); if (ev.kind !== 'arrow') { for (let i = 0; i < 5; i++) this.spawnDebris('b', ev.x, ev.y, ev.z, rnd(-3, 3), rnd(1, 4), rnd(-3, 3), 0.5, 0.06, 0.06, 0x6a4a2c, 1); AUDIO.play('thud', ev.x, ev.y, ev.z, 1.4); } break; }
+        case 'sgshot': { this.flash(ev.x, ev.y, ev.z, ev.gun ? 5 : 1.5, ev.gun ? 0.2 : 0.08); if (ev.gun) { this.puffSmoke(ev.x + ev.dx * 1.5, ev.y, ev.z + ev.dz * 1.5, 30, ev.dx * 3, 0.6, ev.dz * 3, 1.5, 5, 1, 4.5, 0.85, 0.7); AUDIO.play('cannon', ev.x, ev.y, ev.z, 1.6); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 40) this.shake = Math.max(this.shake, 0.6 * (1 - dc / 40)); } else AUDIO.play('thud', ev.x, ev.y, ev.z, 1.2); break; }
+        case 'sgsaltpeter': AUDIO.play('fire', this.camera.position.x, 0, ev.z, 1.6); break;
+        case 'sgram': { const gy = SIM.terrainH(ev.x, ev.z - 2); this.dust(ev.x, gy + 1.5, ev.z - 1, 10, 0, 1, -1, 2, 1, 0.4, 1.6); this.burstSparks(ev.x, gy + 1.8, ev.z - 0.5, 8, 4, 0.9, 0.7, 0.4, 0.3, 0.08); AUDIO.play('ram', ev.x, gy + 1.5, ev.z, 2); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 25) this.shake = Math.max(this.shake, 0.35 * (1 - dc / 25)); break; }
+        case 'sgfill': AUDIO.play('thud', ev.x, 0, ev.z, 1.2); break;
+        case 'sgpush': AUDIO.play('thud', ev.x, 6, ev.z, 1.2); break;
         case 'execute': { this.blood(ev.x, ev.y + 0.6, ev.z, 20, 0, 1.5, 0); AUDIO.play('flesh', ev.x, ev.y, ev.z, 1.8); if (ev.id === heroId) { this.hitstop = Math.max(this.hitstop, 0.09); this.shake = Math.max(this.shake, 0.5); } break; }
         case 'streak': { const u = units[ev.id]; if (u) { this.burstSparks(u.x, u.y + 2.2, u.z, 50, 7, 1, 0.8, 0.3, 1, 0.15); AUDIO.play('kiai', u.x, u.y + 1.5, u.z, 1.5); } break; }
         case 'quake': { const fx = Math.sin(ev.yaw), fz = Math.cos(ev.yaw); for (let i = 0; i < 40; i++) { const a = ev.yaw + rnd(-1.1, 1.1), d = rnd(0.5, 6.5); const x = ev.x + Math.sin(a) * d, z = ev.z + Math.cos(a) * d; this.dust(x, terrainH(x, z) + 0.2, z, 1, Math.sin(a) * 6, 2.5, Math.cos(a) * 6, 0.4, 1.4, 0.6, 2.2); } for (let i = 0; i < 6; i++) this.decal(ev.x + fx * i, ev.y, ev.z + fz * i, 1.2, 0x2a2218); AUDIO.play('explosion', ev.x, ev.y, ev.z, 0.6); const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 25) this.shake = Math.max(this.shake, 1 * (1 - dc / 25)); break; }
@@ -1949,7 +2026,7 @@ class Renderer {
   render(alpha, dt, view) {
     this.alpha = alpha; // overlays (speech captions) read positions interpolated the same way the bodies are
     if (this.hitstop > 0 && !this.studio) { this.hitstop -= dt; this.present(this.camera); return; }
-    this.time += dt; const sim = this.sim, units = sim.units, T = this.tmp; if (this.campFires && this.campFires.length) this.updateCamp(dt);
+    this.time += dt; const sim = this.sim, units = sim.units, T = this.tmp; if (this.campFires && this.campFires.length) this.updateCamp(dt); if (this.sgv) this.updateSiege(dt);
     this.fdt = Math.min(0.05, Math.max(0.001, dt)); this.speedLines = 0;
     const local = sim.players[this.localIdx]; const hero = local ? units[local.heroId] : null;
     const fp = view.mode === 'fp' && hero && !hero.dead; this.lastMode = fp ? 'fp' : 'cmd';
@@ -2088,6 +2165,7 @@ class Renderer {
     let si = 0, ai = 0;
     for (let i = 0; i < sim.projectiles.length; i++) {
       const p = sim.projectiles[i];
+      if (p.bolt) { if (ai >= 128) continue; T.v.set(p.vx, p.vy, p.vz).normalize(); T.q.setFromUnitVectors(T.v2.set(0, 0, 1), T.v); T.m.compose(T.v3.set(p.x, p.y, p.z), T.q, T.v4.set(2.4, 2.4, 2.6)); this.arrows.setMatrixAt(ai++, T.m); continue; }
       if (p.kind === 'arrow') { if (ai >= 128) continue; T.v.set(p.vx, p.vy, p.vz).normalize(); T.q.setFromUnitVectors(T.v2.set(0, 0, 1), T.v); T.m.compose(T.v3.set(p.x, p.y, p.z), T.q, T.v4.set(1, 1, 1)); this.arrows.setMatrixAt(ai++, T.m); }
       else { if (si >= 64) continue; const sc = p.kind === 'solid' ? 1.6 : 1; T.m.compose(T.v.set(p.x, p.y, p.z), T.q.identity(), T.v2.set(sc, sc, sc)); this.shells.setMatrixAt(si++, T.m); if (p.kind === 'shell' && Math.random() < 0.6) this.smoke.spawn(p.x, p.y, p.z, rnd(-0.3, 0.3), rnd(0, 0.4), rnd(-0.3, 0.3), 0.8, 0.3, 1.2, 0.6, 0.6, 0.6, 0.4, 0.9, -0.05); }
     }
