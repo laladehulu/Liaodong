@@ -255,6 +255,7 @@ class Sim {
     this.solo = (cfg.players || []).length === 1; this.xc = XCOMBAT || !!cfg.xcombat; this.noRout = true; // nobody routs: squads fight on (and beaten mission groups withdraw by script)
     this.mode = MODES[cfg.mode] ? cfg.mode : 'standard'; this.chaos = this.mode === 'chaos'; this.real = this.mode === 'soldier' || this.mode === 'assault'; this.lethal = this.mode === 'soldier';
     this.mission = this.mode === 'campaign' ? (MISSIONS[cfg.mission] || MISSIONS.taizhou) : this.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang) : null;
+    if (this.mission && this.mission.bdef) this.bdef = Object.assign({}, this.bdef, this.mission.bdef); // a story mission can re-dress a map: another season, rain, another name
     this.layout = this.planTerrain(); setTerrain(this.layout);
     this.rangeMul = 1 - 0.35 * this.bdef.fog;
     this.tick = 0; this.events = []; this.units = []; this.squads = []; this.players = []; this.generals = [];
@@ -2640,6 +2641,51 @@ const MISSIONS = {
           [56, 'lookout', 'General Qi has fallen!', '戚副將陣亡了！']] },
     ],
     win: 'You got out by the Liaoyang road.',
+  },
+  // ===== 開原道 · Interlude: the Kaiyuan road, July 1619. Three months after Abudali the survivors are in the Tieling garrison.
+  // Kaiyuan is under attack in heavy rain; a relief column goes north from Tieling and is turned back on the road (as the
+  // second relief force historically was). Your file holds a rise while the people of Kaiyuan stream south past it.
+  kaiyuan: {
+    title: '開原道 · The Kaiyuan road', year: 'July 1619', battle: 'field', side: 0, soldier: { group: 'zhe' }, hidden: true, ch: 'k',
+    bdef: { name: 'The Kaiyuan road', jp: '開原道', when: 'July 1619', biome: 'summer', weather: 'storm', fog: 0.3 },
+    brief: 'Kaiyuan, the northern anchor of Liaodong, is under attack. A relief column marches north from Tieling in the rain. You lead what is left of your file with it.',
+    start: [0, -112, 0],
+    zones: [{ key: 'crest', x: 0, z: -10, r: 14, name: 'The rise on the road' }, { key: 'tieling', x: 0, z: -138, r: 14, name: 'The road back to Tieling' }],
+    groups: {
+      zhe: { team: 0, name: 'Your file', zh: '浙兵', army: ['yuanyang'], at: [0, -112, 0], dir: ['hold', 0, -108], stay: true },
+      col: { team: 0, name: 'The Tieling column', zh: '鐵嶺援兵', army: ['cavalry', 'rifle_imp', 'samurai', 'rifle_imp'], at: [0, -98, 0], dir: ['hold', 0, -84] },
+      folk: { team: 0, name: 'People from Kaiyuan', zh: '開原百姓', army: ['ronin', 'ronin', 'ronin'], at: [-4, 96, PI], reserve: true, stay: true },
+      jin1: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry', 'archer'], at: [-130, 30, PI / 2], reserve: true },
+      jin2: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'byakkotai'], at: [130, 0, -PI / 2], reserve: true },
+      jin3: { team: 1, name: 'Jin horsemen', army: ['cavalry', 'cavalry'], at: [0, 140, PI], reserve: true },
+    },
+    phases: [
+      { title: '一 · 雨 · North in the rain', text: 'Lead your file up the road with the column, to the rise where you can see north toward Kaiyuan.', show: ['crest'],
+        obj: { reach: 'crest' },
+        at: [[1, ['promote']], [16, ['dir', 'col', 'hold', 0, -40]], [40, ['dir', 'col', 'hold', 0, -16]]],
+        say: [[3, 'col', 'Kaiyuan has sent for help twice. The last party that went north never got there. Close up and keep moving.', '開原兩次求援，上回派去的人一個也沒到。跟緊，快走。'],
+          [10, 'fang', 'Rain like this, half the matches will be out by noon. Keep your cord under your hat.', '這種雨，不到中午火繩就滅一半。把火繩塞帽子裡。'],
+          [24, 'he', 'Three months since the mountains, and we are walking north again.', '從山裡出來才三個月，又往北走了。'],
+          [36, 'lookout', 'Smoke — north, under the rain. That is Kaiyuan.', '北邊有煙，雨裡還在燒。那是開原。']] },
+      { title: '二 · 百姓 · The people on the road', text: 'The people of Kaiyuan are coming down the road. Hold the rise with your file until they are past you, and keep the horsemen off them.', show: ['crest'],
+        start: [['release', 'folk'], ['dir', 'folk', 'hold', 0, -136], ['dir', 'col', 'hold', 0, -6]],
+        obj: { survive: 80 }, waves: [[18, 'jin1', ['attack']], [44, 'jin2', ['attack']]],
+        say: [[3, 'lookout', 'People on the road! Carts, children — the whole town is coming south!', '路上有人！推車的，抱孩子的——整個城的人都往南跑！'],
+          [10, 'folk', 'The wall is down on the east side. They are fighting in the streets, house by house.', '東邊城牆塌了。在街上打，一家一家地打。'],
+          [16, 'folk', 'The general took his men out of the gate to fight them in the open. After that there was nobody left on the walls.', '總兵帶人出城去打。後來城上就沒人了。'],
+          [20, 'lookout', 'Horsemen out of the trees on the left!', '左邊林子裡出來馬兵了！'],
+          [24, 'he', 'Stand in front of the carts. They want the people, not us.', '站到車前頭去。他們要的是百姓，不是我們。'],
+          [46, 'lookout', 'More on the right!', '右邊也來了！'],
+          [62, 'folk', 'Heaven keep you, soldiers. Heaven keep you.', '老天保佑你們，老天保佑。']] },
+      { title: '三 · 回鐵嶺 · Back to Tieling', text: 'The column cannot get through to Kaiyuan, and it is turning back. Get your file down the road toward Tieling — and leave no one who can still walk.', show: ['tieling'], hide: ['crest'],
+        start: [['release', 'jin3'], ['dir', 'jin3', 'attack'], ['dir', 'col', 'hold', 0, -138]],
+        obj: { extract: 'tieling' }, limit: 360, fail: 'The horsemen closed the road.',
+        at: [[9, ['wound', 4]]],
+        say: [[2, 'col', 'We cannot get through. Back to Tieling — with the people!', '過不去了！回鐵嶺——帶著百姓走！'],
+          [6, 'fang', 'Half a day north to watch it burn, and half a day back.', '走了半天去看它燒，再走半天回來。'],
+          [14, 'lookout', 'Riders behind us on the road!', '後面路上有馬兵！']] },
+    ],
+    win: 'You brought your file back to Tieling.',
   },
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };

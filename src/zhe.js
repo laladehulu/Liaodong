@@ -370,6 +370,7 @@ function zCampCfg(night) {
 }
 function zStart(scene) {
   if (/^(ch2|camp2|battle2|camp3)$/.test(scene)) return zStart2(scene);
+  if (/^(kai|battlek)$/.test(scene)) return zStartK(scene);
   ZS = zLoad(); if (!ZS) { ZS = zFresh(); }
   $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
   const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'shield', connected: true }];
@@ -406,7 +407,7 @@ function zheKeyE() {
 function zSleep() {
   if (ZC.night >= 2) return zSleep2();
   if (ZC.night === 0) { ZS.stage = 'battle1'; zSave(); zCards([{ title: '黎明 · Dawn', year: 'April 1619', p: ['Drums before light. The column breaks camp and climbs on into the valleys. Ahead, somewhere, is Hetu Ala; behind, the guns and the grain carts are already falling back along the track.', 'Chief Wu walks down the file, tugging straps and checking match-cord. "Twelve men," he says. "One life."'], btn: 'March →' }], () => zGo('battle1')); }
-  else { ZS.stage = 'end1'; zSave(); zCards([{ title: '第一章終 · End of Chapter One', year: 'Abudali Pass, April 1619', p: [`${ZR.filter(r => r.k !== 'me' && ZS.alive[r.k]).length} of your file sleep around the embers. In the morning you will walk south out of the mountains with the remnants of Liu Ting's army.`, 'Two years later, in the spring of 1621, what is left of the Zhejiang men will stand with the Sichuan White Poles on the south bank of the Hun River, outside Shenyang.'], zh: '第二章 · 渾河 · The Hun River, 1621', btn: 'Chapter Two →' }], () => { zGo('ch2'); }); }
+  else { ZS.stage = 'end1'; zSave(); zCards([{ title: '第一章終 · End of Chapter One', year: 'Abudali Pass, April 1619', p: [`${ZR.filter(r => r.k !== 'me' && ZS.alive[r.k]).length} of your file sleep around the embers. In the morning you will walk south out of the mountains with the remnants of Liu Ting's army.`, 'What is left of the southern troops is spread among the northern garrisons. Your file is sent to Tieling, a walled town on the road between Shenyang and Kaiyuan.'], zh: '間章 · 開原道 · The Kaiyuan road, summer 1619', btn: 'Summer →' }], () => { zGo('kai'); }); }
 }
 function zDialog(k, u) {
   const sim = state.sim, D = zTalk(k, ZC.night); if (!D) return; const r = zRow(k); state.zheDlg = { k };
@@ -456,7 +457,7 @@ function zheEvent(ev) {
     banner('你領隊 · The file is yours', 'Chief Wu is dead. F follow me / H halt / C charge / Z form up where you look', 6); }
   else if (ev.t === 'zwound' && ev.p === state.localIdx) { ZB.wounded = ev.id; const u = sim.units[ev.id]; const n = SPEECH.nameOf(ev.id);
     SPEECH.say(ev.id, '我的腿……走不了了！', 'My leg... I can\'t walk!', { prio: 3, dur: 4 }); toast(`${n ? n.zh + ' ' + n.en : 'A man of your file'} is hit and can't walk. Get to him and press E to get him up`); }
-  else if (ev.t === 'zhelp' && ev.id === ZB.wounded) { ZS.flags[ZB.ch2 ? 'helped2' : 'helped6'] = true; feed(`You get ${(SPEECH.nameOf(ev.id) || { en: 'him' }).en}'s arm over your shoulder`, true); }
+  else if (ev.t === 'zhelp' && ev.id === ZB.wounded) { ZS.flags[ZB.chK ? 'helpedK' : ZB.ch2 ? 'helped2' : 'helped6'] = true; feed(`You get ${(SPEECH.nameOf(ev.id) || { en: 'him' }).en}'s arm over your shoulder`, true); }
   else if (ev.t === 'zcarry' && ev.p === state.localIdx) { const k = ZB.map[ev.id]; ZB.fell = true; const prev = ZB.cur; if (prev && ZS.alive[prev] !== false) { ZB.deadMe = ZB.deadMe || []; ZB.deadMe.push(prev); }
     ZB.cur = k !== undefined ? ZR[k].k : 'stranger'; const n = SPEECH.nameOf(ev.id); const h = sim.units[ev.id]; if (h) { Input.yaw = h.yaw; Input.pitch = 0; }
     toast(n ? `You fall. The fight goes on — you are ${n.zh} ${n.en} now` : 'You fall. The fight goes on — you are another man of the column now'); }
@@ -470,6 +471,7 @@ function zheObjLines() {
 }
 function zheFinish(winner) {
   if (ZB && state.sim.mission && state.sim.mission.ch === 2) return zheFinish2(winner);
+  if (ZB && state.sim.mission && state.sim.mission.ch === 'k') return zheFinishK(winner);
   const sim = state.sim, h = localHero(); if (!ZB) return; const M = sim.mission, z = sim.missionZone('mouth'); const won = winner === M.side;
   const fate = {}; const near = (u, r) => h && !h.dead && Math.hypot(u.x - h.x, u.z - h.z) < r;
   for (const uid in ZB.map) { const k = ZR[ZB.map[uid]].k; const u = sim.units[uid]; if (u.dead) { fate[k] = 'dead'; continue; }
@@ -535,7 +537,7 @@ function zMenu() {
   const s = zLoad(); const b = $('btnZhe'), nb = $('btnZheNew'); if (!b) return;
   const cont = s && s.stage && s.stage !== 'end2'; b.textContent = cont ? 'Continue' : s ? 'Play again' : 'Begin'; nb.hidden = !cont;
   const begin = () => { AUDIO.init(); AUDIO.play('ui'); ZS = zFresh(); zSave(); zCards(INTRO, () => { ZS.stage = 'camp0'; zSave(); zStart('camp0'); }); };
-  b.onclick = () => { if (cont) { AUDIO.init(); AUDIO.play('ui'); zStart(s.stage === 'after1' ? 'camp1' : s.stage === 'end1' ? 'ch2' : s.stage); } else begin(); };
+  b.onclick = () => { if (cont) { AUDIO.init(); AUDIO.play('ui'); zStart(s.stage === 'after1' ? 'camp1' : s.stage === 'end1' ? 'kai' : s.stage === 'endk' ? 'ch2' : s.stage); } else begin(); };
   nb.onclick = begin;
 }
 zMenu();
