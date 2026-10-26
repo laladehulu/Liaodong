@@ -330,7 +330,7 @@ function fpAimPoint() { const r = state.renderer; return r.groundFromScreen(canv
 function fpLayout() {
   const sim = state.sim; const g = fpAimPoint(); if (!g || !state.fpSel.length) return null;
   const sqs = state.fpSel.map(id => sim.squads[id]).filter(q => q && q.alive);
-  let W = -4; for (const q of sqs) W += lineCols(q.aliveCount) * S.spacingOf(q.def) * (q.def.skirmish ? 2 : 1) + 4;
+  let W = -4; for (const q of sqs) W += (q.def.yuanyang && q.formation !== S.FORM_COLUMN ? 4.2 : lineCols(q.aliveCount) * S.spacingOf(q.def) * (q.def.skirmish ? 2 : 1)) + 4;
   W = Math.max(4, W); const fy = enemyFacing(g.x, g.z, sqs[0] ? sqs[0].team : 0, Input.yaw); const rx = -Math.cos(fy), rz = Math.sin(fy);
   const keep = state.selected; state.selected = state.fpSel.slice();
   const lay = layoutLine({ x: g.x - rx * W / 2, z: g.z - rz * W / 2 }, { x: g.x + rx * W / 2, z: g.z + rz * W / 2 });
@@ -472,7 +472,9 @@ function layoutLine(a, b) {
     const cx = a.x + ux * (cursor + w / 2), cz = a.z + uz * (cursor + w / 2); cursor += w;
     out.push({ sq, cx, cz, cols });
     const fx = Math.sin(facing), fz = Math.cos(facing), rx = -Math.cos(facing), rz = Math.sin(facing);
-    for (let i = 0; i < sq.aliveCount; i++) { const [lat, dep] = S.slotOffset(sq.formation, i, sq.aliveCount, sp, cols); ghost.push([cx + rx * lat + fx * dep, cz + rz * lat + fz * dep, facing]); }
+    // a mandarin-duck team stands in its own 鴛鴦陣 layout (leader, shields, brushes, spears, tridents), not a line
+    if (sq.def.yuanyang && sq.formation !== S.FORM_COLUMN && S.YY_SLOT) { sq.unitIds.forEach((uid, i) => { const u = sim.units[uid]; if (!u || u.dead) return; const r = S.YY_SLOT[i % 12], lat = r[0] * 0.92, dep = r[1] * 0.82; ghost.push([cx + rx * lat + fx * dep, cz + rz * lat + fz * dep, facing]); }); }
+    else for (let i = 0; i < sq.aliveCount; i++) { const [lat, dep] = S.slotOffset(sq.formation, i, sq.aliveCount, sp, cols); ghost.push([cx + rx * lat + fx * dep, cz + rz * lat + fz * dep, facing]); }
   }
   return { out, facing, ghost };
 }
