@@ -355,6 +355,9 @@ body.deploying #sgbar, body.deploying #sgprompt { visibility: hidden; }
 .spk.edge .z { font-size: 15px; } .spk.edge .e { font-size: 11px; }
 #comms { position: fixed; left: 14px; top: 16%; z-index: 21; display: flex; flex-direction: column; gap: 4px; pointer-events: none; width: 290px; }
 #comms .ce { display: flex; gap: 7px; align-items: center; padding: 4px 8px 4px 4px; background: linear-gradient(90deg, rgba(16,12,9,.88), rgba(16,12,9,.55)); border-left: 3px solid #c8962e; border-radius: 4px; color: #f3e8cf; transition: opacity .3s; }
+@keyframes ceIn { from { opacity: 0; transform: translateX(-26px) scale(.97); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes ceUpd { from { background-color: rgba(200,150,46,.35); } to { background-color: transparent; } }
+#comms .ce { animation: ceIn .32s cubic-bezier(.2,.8,.3,1); } #comms .ce.upd { animation: ceUpd .5s ease-out; }
 #comms .ce.alert { border-left-color: #e0583e; padding: 4px 9px 4px 5px; }
 #bustcv { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 23; pointer-events: none; }
 .facebox.live { background: rgba(30,24,18,.55) !important; }

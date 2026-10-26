@@ -87,11 +87,11 @@ const SPEECH = (() => {
     if (!stackEl) { stackEl = document.createElement('div'); stackEl.id = 'comms'; document.body.appendChild(stackEl); }
     const key = u ? u.id : 'n:' + who; let s = stack.find(x => x.key === key);
     if (!s) { const el = document.createElement('div'); el.className = 'ce'; el.innerHTML = '<i></i><div><b></b><span class="z"></span><span class="e"></span></div>'; s = { key, el }; stack.push(s); }
-    Object.assign(s, { tier, who, zh, en, t: 0, dur: dur || LIFE[tier] }); s.el.className = 'ce ' + tier;
+    const fresh = !s.el.parentNode; Object.assign(s, { tier, who, zh, en, t: 0, dur: dur || LIFE[tier] }); s.el.className = 'ce ' + tier + (fresh ? '' : ' upd'); if (!fresh) { void s.el.offsetWidth; }
     setFace(s.el.firstChild, u); const tx = s.el.lastChild; tx.children[0].textContent = who; tx.children[1].textContent = zh || ''; tx.children[2].textContent = tier === 'story' ? (en || '') : (en || '').slice(0, 60);
     stack.sort((a, b) => RANK[a.tier] - RANK[b.tier] || a.t - b.t);
     while (stack.length > 4) { const w = stack.pop(); w.el.remove(); }
-    stack.forEach(x => stackEl.appendChild(x.el));
+    stack.forEach((x, i) => { x.el.style.order = i; if (!x.el.parentNode) stackEl.appendChild(x.el); }); // reorder by flex order, never by moving nodes (that would replay every entry's slide-in)
   }
   function ticker(u, who, zh, en) {
     if (!tickEl) { tickEl = document.createElement('div'); tickEl.id = 'ticker'; document.body.appendChild(tickEl); }
@@ -551,12 +551,14 @@ ZR.push(
   { k: 'xiaoman', zh: '樓小滿', en: 'Lou Xiaoman', role: 'shield', t: 'rattan shield · new draft', ch: 2 },
   { k: 'bao', zh: '鮑二', en: 'Bao Er', role: 'spear', t: 'long spear · new draft · a Ningbo boatman', ch: 2 },
   { k: 'shao', zh: '邵阿福', en: 'Shao Afu', role: 'brush', t: 'wolf-brush · new draft · 17', ch: 2 },
-  { k: 'ran', zh: '冉家虎', en: 'Ran Jiahu', role: 'spear', t: 'White Pole of Shizhu · 白杆兵', ch: 2, guest: true });
+  { k: 'ran', zh: '冉家虎', en: 'Ran Jiahu', role: 'spear', t: 'White Pole of Shizhu · 白杆兵', ch: 2, guest: true },
+  { k: 'qijin', zh: '戚金', en: 'Qi Jin', role: 'lead', t: 'deputy general of the Zhejiang men · 副將', ch: 2, guest: true });
 Object.assign(ZLOOK, {
   xiaoman: { hat: 'rattan', brows: 'thick', young: true, skin: 0xd6a880 },
   bao: { hat: 'wrap', wrap: 0x3a3a3a, brows: 'thin', beard: 'stubble', skin: 0xb48a62 },
   shao: { hat: 'band', brows: 'high', young: true, rosy: true, skin: 0xe2bc96 },
   ran: { hat: 'wrap', wrap: 0xe8e2d0, brows: 'thick', beard: 'mous', skin: 0xb8865e },
+  qijin: { h: 1.04, hat: 'chief', brows: 'knit', beard: 'full', grey: true, longBeard: true, skin: 0xc49a74 },
 });
 const ZP2 = [['北邊的冰還沒化。', 'The ice up north hasn\'t melted yet.'], ['聽說瀋陽的城牆矮。', 'They say Shenyang\'s walls are low.'], ['川兵吃辣子，冬天也不怕冷。', 'The Sichuan men eat chillies. Cold doesn\'t touch them.'], ['火藥多領一包，總沒錯。', 'Draw an extra bag of powder. Never hurts.'], ['又是三月，又在打仗。', 'March again, and war again.']];
 const ZP3 = [['……', '...'], ['遼陽那邊有消息沒？', 'Any word from Liaoyang?'], ['別往北看了。', 'Stop looking north.'], ['火小一點，別讓他們看見。', 'Keep the fire low. Don\'t let them see it.']];
@@ -572,12 +574,12 @@ const INTRO2 = [
 ];
 // ---------- the camp, night before and night after ----------
 const ZSPOT2 = { lou: [-2.5, -0.9, 'squat'], liu6: [-0.9, 2.4, 'squat'], luo: [1.0, 2.4, 'squat'], jin: [2.6, -0.6, 'squat'], ye: [-1.9, 1.6, 'squat'], wang: [7.0, -3.4, 'stand'], fang: [2.1, 1.7, 'squat'], he: [-6.8, -2.6, 'stand'], du: [3.1, -2.4, 'stand'], zhu: [8.9, -3.7, 'stand'],
-  xiaoman: [-2.9, 0.6, 'squat'], bao: [5.2, -6.6, 'stand'], shao: [0.1, 2.8, 'squat'], ran: [-1.6, -2.8, 'stand'] };
+  xiaoman: [-2.9, 0.6, 'squat'], bao: [5.2, -6.6, 'stand'], shao: [0.1, 2.8, 'squat'], ran: [-1.6, -2.8, 'stand'], qijin: [-4.4, -4.6, 'stand'] };
 function zCampCfg2(night) {
   const npcs = [], beds = [], file = zFile2(), rows = [{ k: 'me' }].concat(file), n = rows.length;
   rows.forEach((r, i) => { const a = -0.5 + (i / Math.max(8, n)) * Math.PI * 1.55 + Math.PI * 0.55; const bx = Math.sin(a) * 6.3, bz = Math.cos(a) * 6.3; const alive = r.k === 'me' || ZS.alive[r.k];
     beds.push([+bx.toFixed(2), +bz.toFixed(2), +(a + Math.PI).toFixed(3), !alive]); });
-  for (const r of file.concat(night === 2 ? [zRow('ran')] : [])) { if (!ZS.alive[r.k] && !r.guest) continue; const sp = ZSPOT2[r.k] || [4, 4, 'stand']; const [x, z] = sp; const tx = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? 8 : 0, tz = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? -5 : 0;
+  for (const r of file.concat(night === 2 ? [zRow('ran'), zRow('qijin')] : [])) { if (!ZS.alive[r.k] && !r.guest) continue; const sp = ZSPOT2[r.k] || [4, 4, 'stand']; const [x, z] = sp; const tx = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? 8 : 0, tz = r.k === 'zhu' || r.k === 'wang' || r.k === 'bao' ? -5 : 0;
     npcs.push({ role: r.role, x, z, yaw: +Math.atan2(tx - x, tz - z).toFixed(3), ci: ZR.indexOf(r), pose: night === 3 && r.k !== 'zhu' ? 'squat' : sp[2] }); }
   const mb = beds[0]; ZC = { bed: [mb[0], mb[1]] };
   return { fires: ZCAMP.fires, tents: ZCAMP.tents, props: ZCAMP.props, bedrolls: beds, npcs, me: { x: 0.4, z: -3.4, yaw: 0, role: 'lead' } };
