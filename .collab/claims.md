@@ -9,7 +9,7 @@
 - beijing fork: sim.js BATTLES.bjgate + planTerrain/genMap bjgate lines; render.js buildBeijing (new prototype) + 1-line call in buildStructures; shenji.js sj2 battle key
 - sj-ambush (fork): shenji.js new mission sjamb in <sj-missions> + flow lines; sim.js BATTLES new key 'sjvil' (+planTerrain/genMap lines if needed)
 - aidpost (fork): sim.js zCrawl/woundedAI/aiMedic + new Sim.prototype.aidPost/orderlyAI/zAid at wounded section, 1-line unitAI orderly hook; render.js carry viewmodel + aided/carried poses (guarded); main.js/zhe.js goal line + hudMarks aid marker
-- shoulders (fork): render.js drawFigure shoulder/uarm + gear sl/sr parts, real_gear.js shoulder plates
+- model-style (fork): render.js figure geometry (torso/limb/hips geo, drawFigure shoulder/uarm lines), gearFor sl/sr parts, real_gear.js shoulder plates
 - grounding (fork): render.js new Renderer.prototype.buildGroundMap (end of file) + 1-line call before toonify, houses/walls sink+plinth and mantlet planks in buildStructures/buildSpecialStructures; realism.js terrain shader ground-map lines + post FXAA; stylized.js terrain ground-map lines + post FXAA
 - brush-yy (fork): sim.js resolveMeleeHit brush entangle + block branch, unitAI yy hook (melee branch), new Sim.prototype.brushCatch/yyAI at end; test/zbrush.js
 - emplace (fork): sim manE input/fire (siege section), render viewmodel emplacement hands + aim aid, main.js HUD for manning

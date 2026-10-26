@@ -1399,7 +1399,7 @@ class Sim {
   unitAI(u) {
     const def = u.def, sq = u.squad >= 0 ? this.squads[u.squad] : null;
     u.atkHeld = false; u.blockHeld = false;
-    if (u.camp) { u.mx = 0; u.mz = 0; u.target = -1; return; } // a man at the fire
+    if (u.camp) { this.campThink(u); return; } // a man at the fire: his own small life (campThink)
     if (u.orderly) { this.orderlyAI(u); return; }
     if (u.wounded) { this.woundedAI(u); return; }
     if (this.story && u.team === this.mission.side && u.ctrl < 0 && !u.mounted && def.ai !== 'cannon' && this.aiMedic(u)) return;
@@ -3343,6 +3343,48 @@ Sim.prototype.aiMedic = function (u) {
 
 // a man down and waiting for help drags himself back toward his own people, slowly, and lies still when the enemy is
 // on top of him (playing dead); he stops once a comrade is within reach so whoever comes for him can find him
+// ---- camp life: what a man at the fire is doing (client draws it; u.cAct, u.cLook, u.cRise) ----
+// activities: 0 stand 1 warm hands 2 drink 3 eat 4 squat 5 sharpen 6 mend 7 sleep 8 stretch 9 talk 10 sentry 11 walk
+// 12 feed the fire 13 stir the pot 14 dice 15 pipe. Seated men stay at their place; a few standing men wander.
+const CAMP_SEAT = [1, 2, 3, 5, 6, 15, 4, 12, 14, 7], CAMP_STAND = [0, 2, 8, 9, 10, 0, 15];
+Sim.prototype.campThink = function (u) {
+  const C = this.cfg.camp || {}, rng = this.rng;
+  if (u.cAct === undefined) { u.cHx = u.x; u.cHz = u.z; u.cYaw0 = u.yaw; u.cSeat = u.campPose === 'squat'; u.cWander = !u.cSeat && rng.next() < 0.55; u.cT = (30 * (2 + rng.next() * 10)) | 0; u.cAct = u.cSeat ? CAMP_SEAT[(rng.next() * 6) | 0] : 0; u.cLook = 0; u.cRise = 0; u.cMate = -1; }
+  u.mx = 0; u.mz = 0; u.target = -1;
+  // a man you walk up to looks at you; a seated man close enough to talk to gets up
+  let h = null; for (const p of this.players) { if (p.ai) continue; const v = this.units[p.heroId]; if (v && !v.dead) { h = v; break; } }
+  if (h) { const dx = u.x - h.x, dz = u.z - h.z, d = len(dx, dz), face = d > 0.01 ? (dx * sin(h.yaw) + dz * cos(h.yaw)) / d : 0;
+    const was = u.cLook; u.cLook = d < 2.9 && face > 0.55 ? 1 : d < 1.7 ? 1 : 0; if (u.cLook && !was && u.cAct === 11) { u.cAct = 0; }
+    u.cRise = u.cLook && d < 2.2 && u.cAct !== 7 ? 1 : 0;
+    if (u.cLook) { this.turnTo(u, atan2(h.x - u.x, h.z - u.z), 3 * DT); return; } }
+  if (--u.cT <= 0) { // time for something else
+    u.cMate = -1;
+    if (u.cSeat) { u.cAct = CAMP_SEAT[(rng.next() * CAMP_SEAT.length) | 0];
+      if (u.cAct === 14) { const m = this.campNear(u, 2.4, true); if (m) { u.cMate = m.id; m.cAct = 14; m.cMate = u.id; m.cT = 30 * 20; } else u.cAct = 1; }
+      if (u.cAct === 7 && rng.next() < 0.6) u.cAct = 1; // not everyone sleeps
+      u.cT = (30 * (u.cAct === 7 ? 40 + rng.next() * 30 : 14 + rng.next() * 22)) | 0; }
+    else if (u.cWander && u.cAct !== 11 && rng.next() < 0.6) { // off for a walk: a fire, a tent, a cart, a friend
+      const T = []; for (const f of C.fires || []) { const a = rng.next() * 6.283; T.push([f[0] + Math.sin(a) * 2.3, f[1] + Math.cos(a) * 2.3]); }
+      for (const t of C.tents || []) T.push([t[0], t[1] + t[3] + 1.4]); for (const p of C.props || []) if (p[0] === 'wagon' || p[0] === 'pot' || p[0] === 'rack' || p[0] === 'cart') T.push([p[1] + 1.2, p[2] + 1.2]);
+      for (const v of this.units) if (v.camp && v !== u && !v.cSeat) T.push([v.x + 1.1, v.z + 0.6]);
+      T.push([u.cHx, u.cHz]); const t = T[(rng.next() * T.length) | 0]; u.cTx = t[0]; u.cTz = t[1]; u.cAct = 11; u.cT = 30 * 25; }
+    else { u.cAct = CAMP_STAND[(rng.next() * CAMP_STAND.length) | 0];
+      if (u.cAct === 9) { const m = this.campNear(u, 3.2, false); if (m && m.cAct !== 11) { u.cMate = m.id; if (!m.cSeat && !m.cLook) { m.cAct = 9; m.cMate = u.id; m.cT = 30 * 14; } } else u.cAct = 0; }
+      u.cT = (30 * (10 + rng.next() * 18)) | 0;
+      // by the pot, a standing man stirs it
+      for (const p of C.props || []) if (p[0] === 'pot' && len(p[1] - u.x, p[2] - u.z) < 2.2 && rng.next() < 0.5) { u.cAct = 13; u.cPot = [p[1], p[2]]; } } }
+  if (u.cAct === 11) { const d = len(u.cTx - u.x, u.cTz - u.z);
+    if (d > 0.6) { const y = this.steerFoot(u, u.cTx, u.cTz, 1.25); this.turnTo(u, y, 3 * DT); }
+    else { u.cAct = 9; const m = this.campNear(u, 3, false); if (m) { u.cMate = m.id; if (!m.cSeat && m.cAct !== 11 && !m.cLook) { m.cAct = 9; m.cMate = u.id; m.cT = 30 * 12; } } else { u.cAct = 0; } u.cT = (30 * (8 + rng.next() * 12)) | 0; }
+    return; }
+  // face: the friend you're talking or playing with, the pot you stir, else the fire (or where you were put)
+  let fy = u.cYaw0; const m = u.cMate >= 0 ? this.units[u.cMate] : null;
+  if (m && !m.dead) fy = atan2(m.x - u.x, m.z - u.z);
+  else if (u.cAct === 13 && u.cPot) fy = atan2(u.cPot[0] - u.x, u.cPot[1] - u.z);
+  else if (!u.cSeat && len(u.x - u.cHx, u.z - u.cHz) > 1.5) { let bd = 1e9, bf = null; for (const f of C.fires || []) { const d = len(f[0] - u.x, f[1] - u.z); if (d < bd) { bd = d; bf = f; } } if (bf && bd < 6) fy = atan2(bf[0] - u.x, bf[1] - u.z); }
+  this.turnTo(u, fy, 2 * DT);
+};
+Sim.prototype.campNear = function (u, r, seated) { let best = null, bd = r; for (const v of this.units) { if (!v.camp || v === u || v.dead || !!v.cSeat !== seated) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } } return best; };
 Sim.prototype.zCrawl = function (u) {
   if (this.tick % 6 === u.id % 6) { let best = null, bd = 45, foe = 99, near = false; const n = this.gatherNear(u.x, u.z, 45);
     for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.type === 'horse' || v.camp || v.noncomb) continue; const d = len(v.x - u.x, v.z - u.z);

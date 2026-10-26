@@ -1531,7 +1531,13 @@ class Renderer {
     if (hide) { this.hideFigure(slot); return; }
     const f = this.fig, a = this.anim(u.id), dt = this.fdt, tg = this.tg, def = u.def;
     const stT = u.st === ST_IDLE ? 0 : u.stT + alpha * DT;
-    const mounted = u.mounted || u.mount >= 0, down = u.downT > 0 && !mounted;
+    const mounted = u.mounted || u.mount >= 0, wnd = !!(u.wounded && !u.dead) && !mounted;
+    // a wounded man going down (and being got up again) is animated, not snapped: a.dw runs 0 (on his feet) to 1 (on the ground)
+    if (wnd || a.dw > 0) { const want = wnd && u.downed ? 1 : 0;
+      if (!wnd) a.dw = 0;
+      else if (want > a.dw) { if (!(a.dw > 0)) { a.dw = 0; a.dV = uhash(u.id, 23) < 0.5 ? 1 : -1; } a.dUp = false; a.dw = Math.min(1, a.dw + dt / 1.05); }
+      else if (want < a.dw) { a.dUp = true; a.dw = Math.max(0, a.dw - dt / 0.8); } }
+    const down = (u.downT > 0 && !mounted) || (wnd && a.dw > 0);
     const sq = u.squad >= 0 ? this.sim.squads[u.squad] : null, routing = !!(sq && sq.routing);
     // ---------- locomotion state ----------
     const k8 = 1 - Math.exp(-8 * dt);
@@ -1679,7 +1685,7 @@ class Renderer {
     // ---------- legs (root-local; +x left, +z forward) ----------
     const LT = 0.46, LS = 0.46;
     const legs = this._legs || (this._legs = new Float64Array(18)); // hipL,kneeL,footL,hipR,kneeR,footR
-    let pel;
+    let pel, wdp = null, woy = 0;
     const legPlane = (o, side, th, kn, bb) => {
       const fx = Math.sin(bb), fz = Math.cos(bb);
       const f1 = LT * Math.sin(th), v1 = LT * Math.cos(th), f2 = f1 + LS * Math.sin(th - kn), v2 = v1 + LS * Math.cos(th - kn);
@@ -1692,6 +1698,19 @@ class Renderer {
       const sx = [1, -1];
       for (let i = 0; i < 2; i++) { const o = i * 9, s = sx[i]; legs[o] = s * 0.1; legs[o + 1] = 0; legs[o + 2] = 0; legs[o + 3] = s * 0.34; legs[o + 4] = -0.3; legs[o + 5] = 0.28; legs[o + 6] = s * 0.32; legs[o + 7] = -0.78; legs[o + 8] = 0.1; }
       pel = 1.47 + (u.mount >= 0 ? this.anim(u.mount).hbob : a.hbob);
+    } else if (down && wnd && a.dw !== undefined) { // the fall of a wounded man: stagger, knees buckle, one knee, down on his back, up on an elbow
+      const g = u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1);
+      if (a.dpG === undefined || a.dw < 0.75) a.dpG = g; else a.dpG += (g - a.dpG) * (1 - Math.exp(-3.5 * dt));
+      const gp = a.dpG, kw = clamp(1 - Math.abs(gp) / 0.6, 0, 1), sv = a.dV || 1;
+      // each key: thigh/knee of the kneeling-side leg, thigh/knee of the other, pelvis height, body pitch, lift
+      const KS = [0.05, 0.1, -0.05, 0.1, 0.91, 0, 0], KG = [lerp(0.12, 1.1, kw), lerp(0.2, 1.5, kw), lerp(-0.05, 0.1, kw), lerp(0.3, 1.6, kw), lerp(0.92, 0.5, kw), gp, 0.15 * (1 - kw)];
+      const KN = [1.1, 1.5, 0.1, 1.6, 0.5, 0.18, 0], KT = [0.35, 0.5, -0.25, 0.25, 0.84, sv > 0 ? -0.22 : 0.2, 0], KB = [0.3, 0.6, 0.1, 0.5, 0.92, -1.3, 0.15];
+      const KEYS = a.dUp ? [[0, KS], [0.45, KN], [1, KG]] : [[0, KS], [0.22, KT], [0.5, KN], [0.78, KB], [1, KG]];
+      const w = a.dw, Q = this._dwq || (this._dwq = new Float64Array(7)); let i = 0; while (i < KEYS.length - 2 && w > KEYS[i + 1][0]) i++;
+      const k0 = KEYS[i], k1 = KEYS[i + 1]; let s = clamp((w - k0[0]) / Math.max(1e-4, k1[0] - k0[0]), 0, 1); s = s * s * (3 - 2 * s);
+      for (let j = 0; j < 7; j++) Q[j] = k0[1][j] + (k1[1][j] - k0[1][j]) * s;
+      const oA = sv > 0 ? 0 : 9, oB = sv > 0 ? 9 : 0; legPlane(oA, oA ? -1 : 1, Q[0], Q[1], 0); legPlane(oB, oB ? -1 : 1, Q[2], Q[3], 0);
+      pel = Q[4]; wdp = Q[5]; woy = Q[6];
     } else if (down) {
       legPlane(0, 1, 0.12, 0.2, 0); legPlane(9, -1, -0.05, 0.3, 0); pel = 0.92;
     } else if (u.airborne) {
@@ -1756,8 +1775,8 @@ class Renderer {
     else { toRoot(a.lh, tmpA, 0); ik(0, 6, tmpA[0], tmpA[1], tmpA[2], 1); }
     if (fkR && w !== 'bow' && w !== '') { J[18] = J[15]; J[19] = J[16]; J[20] = J[17]; const fx = J[15] - J[12], fy = J[16] - J[13], fz = J[17] - J[14]; const l = Math.hypot(fx, fy, fz) || 1; const cdir = routing ? [fx / l * 0.3 - C[6], fy / l * 0.3 - C[7] - 0.4, fz / l * 0.3 - C[8]] : [C[6], C[7] + 0.3, C[8]]; const cl2 = Math.hypot(cdir[0], cdir[1], cdir[2]) || 1; J[21] = cdir[0] / cl2; J[22] = cdir[1] / cl2; J[23] = cdir[2] / cl2; }
     // ---------- to world ----------
-    const dp = down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : 0, cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
-    const oy = down ? 0.15 : 0;
+    const dp = wdp !== null ? wdp : down ? (u.downed && u.crawling ? 1.22 + Math.sin((this.time || 0) * 5 + u.id) * 0.07 : u.downed ? -(0.55 + 0.45 * uhash(u.id, 21)) * (u.reviveBy >= 0 ? 1 - clamp((u.reviveT || 0) / 45, 0, 1) * 0.8 : 1) : -1.45 * (0.5 + 0.5 * Math.min(1, clamp(u.downT, 0, 1) * 4))) : 0, cP = Math.cos(dp), sP = Math.sin(dp); // a downed man is propped on an elbow or half-sitting, and rises as he is hauled up
+    const oy = wdp !== null ? woy : down ? 0.15 : 0;
     const vsc = u.look && u.look.h ? u.look.h : (u.type === 'byakkotai' ? 0.9 : 1) * (u.champ ? S.HCLASS[u.hclass | 0].scale : u.type === 'hero' ? 1.04 : 0.88 + uhash(u.id, 7) * 0.24); // men come in all sizes: about 12% either way
     const Wp = (lx, ly, lz, out, o) => { lx *= vsc; ly *= vsc; lz *= vsc; const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = x + lx * cy + z2 * sy; out[o + 1] = y + oy + y2; out[o + 2] = z - lx * sy + z2 * cy; };
     const Wd = (lx, ly, lz, out, o) => { const y2 = ly * cP - lz * sP, z2 = ly * sP + lz * cP; out[o] = lx * cy + z2 * sy; out[o + 1] = y2; out[o + 2] = -lx * sy + z2 * cy; };
