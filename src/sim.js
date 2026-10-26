@@ -1234,6 +1234,7 @@ class Sim {
     if (u.downT > 0 && u.type !== 'horse') { const k = u.downT; u.downT = 0; if (!u.dead && u.st !== ST_RELOAD) { u.st = ST_STUN; u.stT = 0; u.stunDur = Math.min(0.55, 0.25 + k * 0.15); u.blocking = false; u.aiming = false; } u.mx *= 0.3; u.mz *= 0.3; }
     if (u.downT > 0) { u.downT -= DT; u.blocking = false; u.aiming = false; if (u.st !== ST_RELOAD) { u.st = ST_IDLE; u.stT = 0; } u.mx = 0; u.mz = 0; if (u.mounted || u.type === 'horse') u.hspeed *= 0.8; }
     if (!u.ctrlActive) this.unitAI(u);
+    if (!u.ctrlActive && u.mount < 0 && !u.mounted && u.type !== 'horse' && !u.airborne && u.def.ai !== 'cannon') this.paceMove(u);
     if (!u.ctrlActive && u.mount < 0 && !u.mounted && u.type !== 'horse' && !u.airborne && u.def.ai !== 'cannon') this.steerAround(u);
     this.updateCombatState(u);
     this.integrate(u);
@@ -1484,7 +1485,7 @@ class Sim {
       const sm = (u.st === ST_WINDUP || u.st === ST_RELEASE) ? 0.45 : (u.st === ST_AIM && !def.skirmish) || u.st === ST_STUN ? 0 : (u.st === ST_RELOAD) ? 0.6 : 1;
       u.mx *= sm; u.mz *= sm;
     }
-    this.turnTo(u, wantYaw, (u.st === ST_AIM ? 2.4 : u.st === ST_WINDUP || u.st === ST_RELEASE ? 3.5 : 6) * DT);
+    if (!(u.faceLock > 0)) this.turnTo(u, wantYaw, (u.st === ST_AIM ? 2.4 : u.st === ST_WINDUP || u.st === ST_RELEASE ? 3.5 : 6) * DT);
   }
   aiReload(u) {
     const g = gunOf(u.def, u.weapon); if (!g) return;
@@ -3441,6 +3442,41 @@ Sim.prototype.freeRun = function (u, hx, hz, L) {
     for (let k = 0; k < bl.length; k++) { const b = this.boxes[bl[k]]; if (b.hw < 0.1 || b.kind === 'gate' || (b.lad && b.lad.up)) continue;
       if (Math.abs(px - b.x) < b.hw + r + 0.08 && Math.abs(pz - b.z) < b.hd + r + 0.08) return t - 0.5; } }
   return best;
+};
+// ---- pace: how a man on foot moves, not just where (choreography) ----
+// The AI only says where to go; this decides how fast and which way he faces. Men in formation march at a walk and
+// keep the pace of the line (the duck team closes to contact in step, like a phalanx); a man well out of his place
+// jogs, a long way off he runs; only charges, lunges, routs and the fight itself go at full speed. Speed changes
+// with a limited acceleration (no sudden rushes), slows into the slot (no rocking back and forth around it), and a
+// man going more than a few paces faces the way he walks instead of skating backward.
+// u.pace (for the renderer's gait): 0 still, 1 walk, 2 jog, 3 run, 4 sprint
+const PACE_WALK = 0.5, PACE_JOG = 0.75;
+Sim.prototype.paceMove = function (u) {
+  if (u.dead || u.downed || u.wounded || u.inactive) { u.vs = 0; u.pace = 0; return; }
+  const def = u.def, base = def.speed, m = len(u.mx, u.mz), sq = u.squad >= 0 ? this.squads[u.squad] : null, order = sq ? sq.order : ORD_HOLD;
+  const tgt = u.target >= 0 ? this.units[u.target] : null, td = tgt && !tgt.dead ? len(tgt.x - u.x, tgt.z - u.z) : 1e9;
+  const fighting = u.st === ST_WINDUP || u.st === ST_RELEASE || u.st === ST_RECOVER || u.st === ST_STUN || u.blocking || u.lunge || td < (def.reach || 2) + 2.5 || (u.entT || 0) > 0;
+  const sd = sq && u.slotX !== undefined ? len(u.slotX - u.x, u.slotZ - u.z) : -1;
+  let cap = base * 1.6;
+  if (u.camp) cap = base * PACE_WALK * 0.75;
+  else if (fighting || (sq && sq.routing) || u.flee) cap = base * 1.6;
+  else if (order === ORD_CHARGE) { // a charge: a disciplined close-order team keeps together (the slowest man's pace) until the last few paces
+    cap = def.yuanyang || def.shield ? base * (td < 8 ? 1 : 0.8) : base * 1.6; }
+  else if (sd >= 0) {
+    const close = td < 30; // advancing to contact: the line walks in step
+    cap = sd > 20 ? base : sd > 8 ? base * PACE_JOG : base * PACE_WALK;
+    if (close && sd <= 8) cap = base * PACE_WALK;
+    if (sd < 1.6) cap = Math.min(cap, base * PACE_WALK * Math.max(0.3, sd / 1.6)); }
+  const want = Math.min(m, cap), vs0 = u.vs || 0;
+  const vs = want > vs0 ? Math.min(want, vs0 + (fighting ? 14 : 5.5) * DT) : Math.max(want, vs0 - 11 * DT);
+  if (m > 0.01) { u.pdx = u.mx / m; u.pdz = u.mz / m; }
+  if (vs > 0.02 && u.pdx !== undefined) { u.mx = u.pdx * vs; u.mz = u.pdz * vs; } else { u.mx = 0; u.mz = 0; }
+  u.vs = m > 0.01 || vs > 0.02 ? vs : 0;
+  const r = u.vs / base; u.pace = r < 0.05 ? 0 : r < 0.62 ? 1 : r < 0.88 ? 2 : r < 1.08 ? 3 : 4;
+  // facing: going somewhere more than a few paces off (not in a fight), he turns and walks it
+  const far = sd < 0 ? m > base * 0.4 : sd > 3;
+  if (!fighting && far && u.vs > base * 0.3 && u.st !== ST_AIM && u.st !== ST_RELOAD) { this.turnTo(u, atan2(u.mx, u.mz), 7 * DT); u.faceLock = 2; }
+  else if (u.faceLock > 0) u.faceLock--;
 };
 Sim.prototype.steerAround = function (u) {
   if (u.ghostT > 0) u.ghostT -= DT; if (u.unstickT > 0) u.unstickT -= DT;
