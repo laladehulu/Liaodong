@@ -1697,7 +1697,7 @@ class Renderer {
     if (u.flinchT > 0 && !(u.hrA < 1)) { lean -= 0.3 * (u.flinchT / 0.35); }
     if (a.hiOn) { // hit impulse (hitImpulse): critically damped springs on a shove offset and a bend away from the blow
       const n = Math.max(1, Math.ceil(dt / 0.01)), h = dt / n; for (let i = 0; i < n; i++) { a.kbVx -= (a.kbX * 90 + a.kbVx * 19) * h; a.kbVz -= (a.kbZ * 90 + a.kbVz * 19) * h; a.kbX += a.kbVx * h; a.kbZ += a.kbVz * h; a.hbV -= (a.hb * 110 + a.hbV * 21) * h; a.hb += a.hbV * h; a.hsV -= (a.hs * 110 + a.hsV * 21) * h; a.hs += a.hsV * h; }
-      x += a.kbX; z += a.kbZ; lean += a.hb; twist += a.hs * 0.7; roll += a.hs * 0.45;
+      x += a.kbX; z += a.kbZ; lean += a.hb; twist += a.hs * 0.7; roll += a.hs * 0.45; crouch += Math.min(0.25, Math.abs(a.hb) * 0.35); // the knees give a little under the blow
       if (Math.abs(a.kbX) + Math.abs(a.kbZ) + Math.abs(a.hb) + Math.abs(a.hs) + Math.abs(a.kbVx) + Math.abs(a.hbV) < 0.002) a.hiOn = false; }
     if (u.champ) { // acrobatics: low dodges, a tucked leap, a coiled spin, a long lunge
       if (u.dodgeT > 0) { const k = Math.sin(clamp(u.dodgeT / 0.34, 0, 1) * PI); lean += (u.dodgeFwd ? 0.45 : -0.2) * k; crouch += 0.22 * k; twist += 0.25 * k * (u.dodgeX * Math.cos(yaw) - u.dodgeZ * Math.sin(yaw) > 0 ? -1 : 1) * (u.dodgeFwd ? 0 : 1); rateB = 24; }
@@ -2097,9 +2097,9 @@ class Renderer {
   // can read a.kbX/a.kbZ (shove offset), a.hb (bend back, rad, negative = away from the front) and a.hs (twist/side bend) instead
   hitImpulse(id, dx, dz, k, heavy) {
     const u = this.sim.units[id]; if (!u || u.type === 'horse') return; const a = this.anim(id); if (!a.hiOn) { a.kbX = a.kbZ = a.kbVx = a.kbVz = a.hb = a.hbV = a.hs = a.hsV = 0; } a.hiOn = true;
-    const sp = (heavy ? 3.2 : 2.0) * k; a.kbVx += dx * sp; a.kbVz += dz * sp;
+    const sp = (heavy ? 6.0 : 3.6) * k; a.kbVx += dx * sp; a.kbVz += dz * sp;
     const fwd = dx * Math.sin(u.yaw) + dz * Math.cos(u.yaw), side = dx * -Math.cos(u.yaw) + dz * Math.sin(u.yaw); // the blow's direction in his own frame
-    a.hbV += (fwd >= 0 ? 1 : -1) * Math.abs(fwd) * (heavy ? 9 : 6) * k - 2 * k; a.hsV += side * (heavy ? 8 : 5.5) * k;
+    a.hbV += (fwd >= 0 ? 1 : -1) * Math.abs(fwd) * (heavy ? 17 : 11) * k - 3 * k; a.hsV += side * (heavy ? 14 : 9) * k + (Math.random() - 0.5) * 3 * k;
   }
   impStep(dt) { // critically-damped-ish springs, sub-stepped so a long frame can't explode them
     const I = this.imp, n = Math.max(1, Math.ceil(dt / 0.008)), h = dt / n;
