@@ -1328,9 +1328,9 @@ class Sim {
     else u.cvStuck = 0;
     if (st === 0) { // run-up: full gallop straight at him; inside 8 m, fix a point well beyond and ride for it
       if (d < 8) { const fx = (tgt.x - u.x) / (d || 1), fz = (tgt.z - u.z) / (d || 1), far = 26 + this.rng.next() * 14;
-        u.cvX = clamp(tgt.x + fx * far, -HALF + 4, HALF - 4); u.cvZ = clamp(tgt.z + fz * far, -HALF + 4, HALF - 4); u.cv = 1; u.cvT = 0; this.cavSteer(u, u.cvX, u.cvZ, def.speed); return; }
-      this.cavSteer(u, tgt.x, tgt.z, def.speed); return; }
-    if (st === 1) { this.cavSteer(u, u.cvX, u.cvZ, def.speed); if (len(u.cvX - u.x, u.cvZ - u.z) < 6 || u.cvT > 7) { u.cv = 2; u.cvT = 0; } return; }
+        u.cvX = clamp(tgt.x + fx * far, -HALF + 4, HALF - 4); u.cvZ = clamp(tgt.z + fz * far, -HALF + 4, HALF - 4); u.cv = 1; u.cvT = 0; this.cavSteer(u, u.cvX, u.cvZ, def.speed, true); return; }
+      this.cavSteer(u, tgt.x, tgt.z, def.speed, true); return; } /* galloping turns: a charging horse never reins in to a walk */
+    if (st === 1) { this.cavSteer(u, u.cvX, u.cvZ, def.speed, true); if (len(u.cvX - u.x, u.cvZ - u.z) < 6 || u.cvT > 7) { u.cv = 2; u.cvT = 0; } return; }
     if (st === 3) { this.cavSteer(u, u.cvX, u.cvZ, 6, true); if (len(u.cvX - u.x, u.cvZ - u.z) < 4 || u.cvT > 2.6) { u.cv = 2; u.cvT = 0; } return; }
     // wheel: come round at a canter; charge again once facing him with room for a run-up (or give room first)
     const off = Math.abs(wrap(atan2(tgt.x - u.x, tgt.z - u.z) - u.hyaw));

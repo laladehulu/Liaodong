@@ -397,7 +397,7 @@ CH.missions2 = () => {
     groups: {
       zhe: { team: 0, name: 'Your file', zh: '浙兵', army: ['yuanyang'], at: [70, 24, 0], dir: ['hold', 70, 30], stay: true },
       sichuan: { team: 0, name: 'Qin Bangping (White Poles)', zh: '秦邦屏', army: ['ashigaru', 'ashigaru', 'ashigaru', 'samurai'], at: [80, 34, 0], dir: ['hold', 80, 40] },
-      ran: { team: 0, name: 'Ran Jiahu', zh: '冉家虎', army: ['ashigaru'], n: 5, at: [74, 30, 0], dir: ['hold', 74, 34], stay: true },
+      ran: { team: 0, name: 'Ran Jiahu', zh: '冉家虎', army: ['ashigaru'], at: [74, 30, 0], dir: ['hold', 74, 34], stay: true },
       qijin: { team: 0, name: 'Qi Jin', zh: '戚金', army: ['yuanyang', 'rifle_imp'], at: [58, -64, 0], dir: ['hold', 58, -60], stay: true },
       last: { team: 0, name: 'The last of the White Poles', zh: '白杆兵', army: ['ashigaru'], n: 9, at: [96, 62, PI], reserve: true, dir: ['hold', 72, -30] },
       bayara: { team: 1, name: 'The red Bayara', zh: '紅巴牙喇', army: ['shinsengumi', 'shinsengumi', 'cavalry'], at: [60, 138, PI], reserve: true, stay: true },
