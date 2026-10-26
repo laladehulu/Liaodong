@@ -5,7 +5,7 @@ exec 9>/tmp/ming-build.lock; flock -w 300 9
 cd "$(dirname "$0")"
 mkdir -p dist
 # career.js shares main.js's scope: splice it in before main's closing line
-python3 -c "m=open('src/main.js').read().rstrip(); assert m.endswith('})();'); open('src/_mainfull.js','w').write(m[:-5]+'\n'+open('src/career.js').read()+'\n'+open('src/zhe.js').read()+''.join('\n'+open(f).read() for f in ['src/jin.js','src/shenji.js'] if __import__('os').path.exists(f))+'\n})();\n')"
+python3 -c "m=open('src/main.js').read().rstrip(); assert m.endswith('})();'); open('src/_mainfull.js','w').write(m[:-5]+'\n'+open('src/career.js').read()+'\n'+open('src/zhe.js').read()+''.join('\n'+open(f).read() for f in ['src/jin.js','src/shenji.js','src/mode_beacon.js'] if __import__('os').path.exists(f))+'\n})();\n')"
 python3 - <<'PY'
 import base64, glob, os, json
 d={os.path.basename(f)[:-4]: base64.b64encode(open(f,'rb').read()).decode() for f in sorted(glob.glob('snd/*.mp3'))}
@@ -16,7 +16,7 @@ PY
   echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>'
   echo '<script>if (typeof THREE === "undefined") document.write("<script src=\"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js\"><\/script>");</script>'
   echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>'
-  for f in dmath sim snd_data audio music net render realism stylized real_gear _mainfull; do
+  for f in dmath sim beacon snd_data audio music net render realism stylized real_gear _mainfull; do
     echo "<script>"
     cat "src/$f.js"
     echo "</script>"
@@ -30,14 +30,14 @@ PY
   echo '</body></html>'
 } > dist/ming-dynasty-1619.html
 # syntax check every script
-for f in dmath sim snd_data audio music net render realism stylized real_gear _mainfull; do node --check "src/$f.js"; done
+for f in dmath sim beacon snd_data audio music net render realism stylized real_gear _mainfull; do node --check "src/$f.js"; done
 echo "built: $(wc -c < dist/index.html) bytes"
 # local test build (no CDN)
 {
   echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
   cat src/01_head.html | grep -v 'fonts.googleapis'
   echo '<script src="../test/libs/three.min.js"></script>'
-  for f in dmath sim snd_data audio music net render realism stylized real_gear _mainfull; do echo "<script>"; cat "src/$f.js"; echo "</script>"; done
+  for f in dmath sim beacon snd_data audio music net render realism stylized real_gear _mainfull; do echo "<script>"; cat "src/$f.js"; echo "</script>"; done
   echo '</body></html>'
 } > dist/test.html
 # experimental combat build: same game with the swept-blade melee, attack tokens and crowd damage cap switched on
