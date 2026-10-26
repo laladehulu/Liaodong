@@ -159,6 +159,7 @@ const BATTLES = {
   aizu:     { name: 'Liaoyang', jp: '遼陽', when: 'April 1621', biome: 'autumn', fog: 0.15, terrain: 0.6, features: ['castle', 'streets'], desc: 'The Liaodong capital: a gate tower on its stone base, ringed by a moat. Fight through the city streets to reach the gate.' },
   hakodate: { name: 'Ningyuan', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.05, terrain: 0.4, features: ['starfort', 'sea'], desc: 'Yuan Chonghuan\'s fortress by the Bohai Sea, its walls bristling with Portuguese-pattern cannon. The sea lies to the east.' },
   abudali:  { name: 'Abudali Pass', jp: '阿布達里岡', when: 'April 1619', biome: 'winter', fog: 0.3, terrain: 0.45, features: ['pass'], hidden: true, desc: 'A narrow valley in the mountains east of Hetu Ala, its slopes thick with pine and late snow.' },
+  zroad:    { name: 'The road', jp: '道', when: '1619', biome: 'winter', fog: 0.2, terrain: 0.3, features: [], hidden: true, desc: 'A cart road through the Liaodong hills, a village by the way.' },
   zcamp:    { name: 'Camp', jp: '營', when: '1619', biome: 'night', fog: 0.2, terrain: 0.25, features: [], hidden: true, desc: 'A night camp in the hills.' },
   siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
   bonari:   { name: 'Shanhai Pass', jp: '山海關', when: 'May 1644', biome: 'spring', fog: 0.25, terrain: 0.5, features: ['pass'], desc: 'The First Pass Under Heaven: a narrow gap between steep ridges, blocked by two lines of earthworks. Flanking over the slopes is slow and costly.' },
@@ -311,6 +312,7 @@ class Sim {
     if (b === 'bonari') L.pass = { r0: 24, r1: 56, h: 30 };
     if (b === 'siegecity') { L.swall = { z0: SG.z0, z1: SG.z1, h: SG.h, gate: SG.gate, ramps: [-60, -12, 12, 60] }; L.sditch = { zc: SG.ditchZ, w: SG.ditchW, depth: 2.6, bridge: SG.gate, fills: SG.fills.map((f, i) => ({ x: f[0], hw: f[1], done: false, key: i ? 'ditchE' : 'ditchW' })) }; }
     if (b === 'abudali') { L.pass = { r0: 15, r1: 46, h: 24 }; L.hills.push({ x: -34, z: 6, r: 30, h: 6 }); L.hills.push({ x: 30, z: -48, r: 26, h: 5 }); }
+    if (b === 'zroad') { L.hills.push({ x: -105, z: -30, r: 70, h: 13 }); L.hills.push({ x: 110, z: 50, r: 75, h: 15 }); L.hills.push({ x: -95, z: 110, r: 50, h: 9 }); L.hills.push({ x: 0, z: 70, r: 30, h: 2.5 }); }
     if (b === 'zcamp') { L.hills.push({ x: -90, z: 60, r: 70, h: 14 }); L.hills.push({ x: 100, z: -40, r: 80, h: 16 }); L.hills.push({ x: 0, z: 130, r: 70, h: 12 }); }
     // objectives worth holding
     const O = [];
@@ -369,6 +371,9 @@ class Sim {
       this.obstacles.push({ x: sx + sin(syaw) * 7, z: sz + cos(syaw) * 7, r: 3.2, kind: 3, yaw: syaw });
       keep.push({ x: sx, z: sz, r: 12 });
     }
+    if (B === 'zroad') { this.deco.push({ kind: 'road', x: 0, w: 6 }); this.roadX = 0;
+      for (const [x, z, hw, hd] of [[-13, 22, 3.2, 2.6], [-14, 36, 2.8, 2.4], [-24, 30, 3, 2.6], [12.5, 26, 3, 2.5], [13.5, 41, 3.3, 2.7], [23, 33, 2.6, 2.4], [-12.5, 50, 2.6, 2.2]]) { this.boxes.push({ x, z, hw, hd, h: 3.3, kind: 'house' }); keep.push({ x, z, r: 6 }); }
+      keep.push({ x: 0, z: 34, r: 16 }); }
     if (has('road')) { const rx = r.range(-30, 30); this.deco.push({ kind: 'road', x: rx, w: 7 }); this.roadX = rx; }
     if (has('temple')) {
       const cx = this.templeX !== undefined ? this.templeX : r.range(-40, 40), cz = 72; this.deco.push({ kind: 'temple', x: cx, z: cz });
@@ -2823,6 +2828,7 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   for (const p of this.players) if (p.ai) { const g = this.mg[p.gid], G = g.G; this.placeArmy({ player: p, army: p.army }, G.team, G.at[0], G.at[1], G.at[2]);
     const lab = G.team === 1 && M.labels; if (lab) for (const id of p.squads) { const q = this.squads[id], L = lab[q.type]; if (!L) continue; const nd = Object.assign({}, q.def, { name: L[0], jp: L[1] }); q.def = nd; for (const uid of q.unitIds) { const u = this.units[uid]; u.def = Object.assign({}, u.def, { name: L[0], jp: L[1] }); } }
     const h = this.units[p.heroId]; if (h && G.officer) { h.def = Object.assign({}, h.def, { hp: h.def.hp * G.officer, name: G.name, dmg: h.def.dmg.map(x => x * 1.4) }); h.hp = h.def.hp; h.officer = true; }
+    if (G.n) this.mTrim(p, G.n);
     if (G.reserve) { p.inactive = true; for (const id of p.squads) { const q = this.squads[id]; q.inactive = true; for (const uid of q.unitIds) this.units[uid].inactive = true; } for (const uid of [p.heroId, p.horseId]) if (uid >= 0) this.units[uid].inactive = true; }
     this.mDir(p.gid, G.dir); }
   if (M.soldier) { const cache = new Map(); const tune = (d, k, m) => { if (!cache.has(d)) cache.set(d, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return cache.get(d); }; // a story chapter: the Jin at near full strength, their generals no one-man armies
@@ -2921,10 +2927,10 @@ Sim.prototype.zDown = function (u, dmg, cause) {
   if (u.wounded || u.mounted || u.ctrl >= 0 || u.type === 'horse' || u.type === 'hero' || u.def.ai === 'cannon' || u.team !== this.mission.side) return false;
   if (dmg >= 1e5 || cause === 'explosion' || cause === 'solid' || cause === 'canister' || cause === 'headshot' || cause === 'lightning' || cause === 'fire' || cause === 'fall' || cause === 'bleed') return false; // the script's deaths, and blows no one gets up from
   let chance = 0;
-  if (u.zfile) chance = 0.82;
+  if (u.zfile) chance = this.mission.soft ? 1 : 0.82;
   else { for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - u.x, h.z - u.z) < 30) chance = 0.22; } }
   if (!chance || this.rng.next() >= chance) return false;
-  u.hp = 1; u.wounded = true; u.downed = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * (u.zfile ? 45 : 30); u.medic = -1;
+  u.hp = 1; u.wounded = true; u.downed = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * (u.zfile ? (this.mission.soft ? 240 : 45) : 30); u.medic = -1;
   u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.downT = Math.max(u.downT, 1.2); u.mx = 0; u.mz = 0;
   this.events.push({ t: 'zdown', id: u.id, x: u.x, z: u.z, file: !!u.zfile }); return true;
 };
@@ -2933,6 +2939,11 @@ Sim.prototype.zRevive = function (u, by) {
   u.downed = false; u.reviveBy = -1; u.reviveT = 0; u.bleed = 0; u.downT = 0; u.hp = Math.max(u.hp, u.def.hp * 0.4);
   if (limp && h && h.ctrl >= 0) { u.helpedBy = by; } else { u.wounded = false; u.helpedBy = -1; u.restT = this.tick + 30 * 5; }
   this.events.push({ t: 'zrevive', id: u.id, by, limp: !!(limp && h && h.ctrl >= 0) });
+};
+// a raid, a picket, a handful of scouts: keep the first n men of a group and send its general and the rest away before the field opens
+Sim.prototype.mTrim = function (p, n) {
+  let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
+  for (const uid of [p.heroId, p.horseId]) { const u = uid >= 0 ? this.units[uid] : null; if (u) { u.dead = true; u.hp = 0; u.inactive = true; if (u.type !== 'horse') this.total[u.team]--; } }
 };
 Sim.prototype.coverShield = function (v, p) { // a rattan shield beside you turns the arrow meant for you
   const src = atan2(-p.vx, -p.vz); const n = this.gatherNear(v.x, v.z, 1.9);
