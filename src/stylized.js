@@ -83,7 +83,7 @@
     this.sun.color.set(L.sun); this.sun.intensity = L.sunI; this.hemi.color.set(L.hemiS); this.hemi.groundColor.set(L.hemiG); this.hemi.intensity = L.hemiI;
     // crisp shadow shapes: plain PCF, small kernel; redrawn every other frame
     this.sun.shadow.radius = 1; this.sun.shadow.bias = -0.0005; this.sun.shadow.normalBias = 0.05;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap; this.sun.shadow.mapSize.set(q === 2 ? 2048 : 1536, q === 2 ? 2048 : 1536); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; this.sun.shadow.mapSize.set(q === 2 ? 2048 : 1536, q === 2 ? 2048 : 1536); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     this.renderer.shadowMap.enabled = q > 0; this.renderer.shadowMap.autoUpdate = q === 2; this.shadowTick = 0;
     this.renderer.setPixelRatio([0.7, 0.85, 1][q] * Math.min(window.devicePixelRatio || 1, 1.25)); this.resize();
     // restrained fog: linear, far away, the horizon colour (render.js eases near/far by view mode from fogBase)
