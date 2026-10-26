@@ -62,6 +62,8 @@ function beaconShopDraw() {
   const rows = K.SHOP.map((it, i) => { const d = S.defFor(it[0], 0), n = sim.beaconStock(i), ok = n > 0 && B.silver >= it[1];
     return `<div class="it${ok ? '' : ' no'}"><kbd>${i + 1}</kbd><span>${d.jp} ${d.name}<small>${d.count > 1 ? `${d.count} men` : 'one rocket cart'} · ${n ? `${n} on the road` : 'none left'}</small></span><b>${it[1]}</b></div>`; });
   rows.push(`<div class="it${B.silver >= K.MEND ? '' : ' no'}"><kbd>${K.SHOP.length + 1}</kbd><span>醫 Mend your men<small>Every man of yours back to full strength</small></span><b>${K.MEND}</b></div>`);
+  const rd = B.stage === 'lull' && (B.lit || B.fires >= K.NFIRE);
+  rows.push(`<div class="it${rd ? '' : ' no'}"><kbd>${K.SHOP.length + 2}</kbd><span>令 Ready<small>${rd ? 'Call the next raid on now' : 'Light this lull\'s fire first'}</small></span><b></b></div>`);
   el.innerHTML = `<h4>糧餉 · Quartermaster · 銀 ${B.silver}</h4>${rows.join('')}<div class="ft">Hired companies march up the south road to you. I or Esc to close.</div>`;
 }
 window.addEventListener('keydown', (e) => {
@@ -69,7 +71,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyI') { beaconShop(!BCN.open); e.preventDefault(); e.stopImmediatePropagation(); return; }
   if (!BCN.open) return;
   if (e.code === 'Escape') { beaconShop(false); e.preventDefault(); e.stopImmediatePropagation(); return; }
-  const m = /^Digit([1-7])$/.exec(e.code); if (!m) return;
+  const m = /^Digit([1-8])$/.exec(e.code); if (!m) return;
   Input.cmds.push([0, S.BEACON.ORD_BUY, +m[1] - 1, 0, 0, 0]); e.preventDefault(); e.stopImmediatePropagation();
 }, true);
 // ---- per frame: notices, the fire stoves and their smoke ----
@@ -104,7 +106,7 @@ function beaconFrame() {
   if (!B.relief) BCN.relief = false;
   BCN.stage = B.stage;
   if (B.log.length && B.log[B.log.length - 1][0] !== BCN.log) { const L = B.log[B.log.length - 1]; BCN.log = L[0];
-    if (L[1] === state.localIdx) { if (!L[3]) toast(L[4] === 'none' ? 'The road has no more of those to send' : 'Not enough silver'); else if (L[2] === S.BEACON.SHOP.length) toast('Your men are bound up and fed'); }
+    if (L[4] === 'ready') toast('Ready. The raid comes on in three seconds'); else if (L[1] === state.localIdx) { if (!L[3]) toast(L[4] === 'none' ? 'The road has no more of those to send' : L[4] === 'fire' ? 'Light the fire first' : 'Not enough silver'); else if (L[2] === S.BEACON.SHOP.length) toast('Your men are bound up and fed'); }
     beaconShopDraw(); }
   BCN.t -= 1 / 60; if (BCN.t <= 0) { BCN.t = 0.25; beaconShopDraw(); }
 }

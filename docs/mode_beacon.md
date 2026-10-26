@@ -17,7 +17,7 @@ Hold the tower and raise **five fires**. Liaoyang then sends its cavalry. Surviv
 
 ## Loop
 1. **Lull** (30 s, the first is 40 s): the golden line says *Light the next fire: stand at the stoves*. Stand at the row of five stoves by the north wall for 3 s to light the next one; only one fire can be lit per lull. Spend silver with **I** (the quartermaster): hire spearmen, musketeers, a duck team, three-eyed gunners, iron cavalry, a nest of bees, or mend your men.
-2. **Wave**: Jin raiders come from the north, east and west, getting heavier each time (Mongol scouts, then armoured bannermen, horse raids, Bayara and grenadiers). Each kill pays silver, and so does each wave you break.
+2. **Wave**: Jin raiders come from the north, east and west, getting heavier each time (Mongol scouts, then armoured bannermen, horse raids, Bayara and grenadiers). Each kill pays silver, and so does each wave you break. The raiders are a fixed set of bands that come back with fresh men, so the unit count stays bounded. A raid that stalls for 3 minutes draws off. The Jin also take the tower if they stand in it three to one for 20 s.
 3. After the 5th fire, the next wave is **the final assault**, led by a Beile. Forty seconds in, the Guanning relief arrives from the south.
 
 ## Win and lose
@@ -26,7 +26,7 @@ Hold the tower and raise **five fires**. Liaoyang then sends its cavalry. Surviv
 
 ## Controls (on top of the normal campaign controls: F follow, C charge, H hold, O overview)
 - **I**: open or close the quartermaster.
-- **1–7**: buy while it's open. Esc closes it.
+- **1–7**: buy while it's open (7 mends your men). **8** (Ready) calls the next raid early once this lull's fire burns. Esc closes it.
 - Lighting a fire is just standing at the stoves.
 
 ## UI

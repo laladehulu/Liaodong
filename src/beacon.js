@@ -16,18 +16,18 @@
   const WAVES = [
     [['A', 'N']],
     [['B', 'N'], ['A', 'E']],
-    [['C', 'E'], ['B', 'W']],
-    [['D', 'N'], ['C', 'W']],
-    [['E', 'NW'], ['F', 'E']],
-    [['G', 'W'], ['H', 'N'], ['A', 'E']],
-    [['E', 'NE'], ['D', 'N'], ['F', 'W']],
+    [['C', 'E'], ['B', 'W'], ['D', 'N']],
+    [['D', 'N'], ['C', 'W'], ['E', 'NE']],
+    [['E', 'NW'], ['F', 'E'], ['G', 'W'], ['A', 'N']],
+    [['G', 'W'], ['H', 'N'], ['A', 'E'], ['B', 'NE']],
+    [['E', 'NE'], ['D', 'N'], ['F', 'W'], ['C', 'E']],
   ];
-  const FINAL = [['FIN', 'N'], ['B', 'E'], ['H', 'W'], ['C', 'NE']];
+  const FINAL = [['FIN', 'N'], ['B', 'E'], ['H', 'W'], ['C', 'NE'], ['D', 'NW'], ['G', 'E']];
   // with two or more defenders each raid brings one more party, from another flank
   const EXTRA = [['X1', 'E'], ['X2', 'W'], ['X1', 'N'], ['X2', 'E'], ['X1', 'W'], ['X2', 'NW'], ['X1', 'NE'], ['X2', 'NW']];
   // what the quartermaster can send up from the road: [type, cost, how many companies the road holds]
-  const SHOP = [['ashigaru', 20, 3], ['rifle_imp', 30, 3], ['yuanyang', 35, 2], ['rifle_spencer', 35, 2], ['cavalry', 40, 2], ['gatling', 50, 1]];
-  const MEND = 15, FALL = 20, WAVE_MAX = 180, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 40;
+  const SHOP = [['ashigaru', 25, 2], ['rifle_imp', 35, 2], ['yuanyang', 45, 1], ['rifle_spencer', 40, 1], ['cavalry', 50, 1], ['gatling', 60, 1]];
+  const MEND = 20, FALL = 20, WAVE_MAX = 180, NFIRE = 5, LULL = 30, LULL0 = 40, LIGHT = 3, RELIEF_AT = 40;
   const groups = {
     garrison: { team: 0, name: 'Tower garrison', zh: '墩軍', army: ['rifle_imp', 'yuanyang'], at: [0, 0, 0], dir: ['hold', 0, 2], stay: true },
     relief: { team: 0, name: 'Guanning relief', zh: '關寧援兵', army: ['cavalry', 'cavalry', 'cavalry', 'rifle_imp'], at: [0, -132, 0], reserve: true, dir: ['hold', 0, 20] },
@@ -110,6 +110,8 @@
   P.beaconBuy = function (p, item) {
     const B = this.bc; if (!B || !this.mission || !this.mission.beacon || this.mwin !== undefined || p.ai) return;
     const note = (ok, why) => { B.log.push([this.tick, p.idx, item, ok ? 1 : 0, why || '']); if (B.log.length > 12) B.log.shift(); };
+    // 'ready': once this lull's fire burns, anyone may call the next raid on now rather than wait
+    if (item === SHOP.length + 1) { if (B.stage !== 'lull' || (!B.lit && B.fires < NFIRE)) return note(false, 'fire'); const L = (B.n === 0 ? LULL0 : LULL) * 30; if (this.tick - B.t0 < L - 90) B.t0 = this.tick - L + 90; return note(true, 'ready'); }
     if (item === SHOP.length) { if (B.silver < MEND) return note(false, 'silver');
       B.silver -= MEND; for (const id of p.squads) { const q = this.squads[id]; if (!q || !q.alive) continue; for (const uid of q.unitIds) { const u = this.units[uid]; if (!u.dead) { u.hp = u.def.hp; u.fat = 0; } } } return note(true); }
     const it = SHOP[item]; if (!it) return; if (B.silver < it[1]) return note(false, 'silver');

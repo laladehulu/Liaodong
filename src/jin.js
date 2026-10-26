@@ -76,7 +76,7 @@ function jGo(scene) { try { localStorage.setItem(JGO, scene); } catch (e) { } lo
 function jFile() { return JR.filter(r => !r.guest && r.k !== JS.me && JS.alive[r.k]); }
 // between chapters new men take the empty places (eleven besides you)
 function jFill(n) { let vac = 11 - jFile().length; for (const r of JR) { if (vac <= 0) break; if (!r.draft || JS.alive[r.k] !== undefined) continue; JS.alive[r.k] = true; JS.bond[r.k] = 0; JS.joined[r.k] = n; vac--; } }
-const jDead = () => JR.filter(r => !r.guest && r.k !== JS.me && JS.alive[r.k] === false && JS.fate[r.k] !== 'you');
+const jDead = () => JR.filter(r => !r.guest && r.k !== JS.me && JS.alive[r.k] === false && (JS.fate[r.k] === 'dead' || JS.fate[r.k] === 'lost'));
 
 // ---------- the chapters ----------
 const JCH = {};
@@ -98,11 +98,11 @@ JCH[1] = {
   dawn: { title: '黎明 · Dawn', year: 'The fourth day of the third month', p: ['Before light the niru rides east and climbs into the woods of the west ridge. Below, along the valley floor, Liu Ting\'s column is already moving.', 'Ulgen walks down the file, tugging straps. "Armour in front, bows behind," he says. "And nobody goes before the conch."'], btn: 'To the ridge →' },
   battleCard: ['April 1619. Hong Taiji\'s banners wait in the woods above the valley. Stay with your file. LMB cut, RMB guard.', '阿布達里岡 · Abdali'],
   who: { niru: ['托博輝', 'Tobohui, captain of the niru'], hong: ['皇太極', 'Hong Taiji, the Fourth Beile'], daisan: ['代善', 'Daišan, the Great Beile'], lookout: ['', 'A lookout'], soldier: ['', 'A bannerman'] },
-  fateText: { out: 'came down from the ridge', dead: 'killed at Abdali', lost: 'left in the valley' },
+  fateText: { out: 'came down from the ridge', dead: 'killed at Abdali', lost: 'left in the valley', home: 'lost his sword arm and went home to Hada' },
   after: (won, li, outN) => [
     { title: '阿布達里岡 · What happened', year: 'The fourth month of 1619', p: ['Liu Ting died fighting under his standard. Two days later the Korean army that marched with him, cut off and starving at Fucha, surrendered to Daišan. Of the four Ming columns, only Li Rubai\'s, called back in time, went home.',
-      'In five days the Khan had destroyed an army the Ming called four hundred and seventy thousand strong. The scribes of the niru wrote it all down in the new script, and Ulgen\'s name among the dead.'], zh: '天命四年三月，大破明兵於薩爾滸、阿布達里岡。' },
-    { title: '牛錄 · Your file', year: `${outN} came home`, html: `<ul>${li}</ul>`, p: ['Ulgen is dead. Tobohui gives his place to you: you are the bošokū of the file now.'], btn: 'Two years later →' },
+      'In five days the Khan had destroyed an army the Ming called four hundred and seventy thousand strong. The scribes of the banners wrote it all down in the new script.'], zh: '天命四年三月，大破明兵於薩爾滸、阿布達里岡。' },
+    { title: '牛錄 · Your file', year: `${outN} came home`, html: `<ul>${li}</ul>`, p: [`${JS.fate.ulgen === 'home' ? 'Ulgen lost his sword arm on the road and has gone home to Hada.' : 'Ulgen is dead.'} Tobohui gives his place to you: you are the bošokū of the file now.`], btn: 'Two years later →' },
   ],
   next: 'c2',
   talk: (k) => ({
@@ -422,9 +422,11 @@ function jFinish(winner) {
   if (ZB.cur === meK || ZB.cur === 'stranger') fate[meK] = alive ? 'out' : 'dead'; else fate[meK] = 'dead';
   if (ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && alive) { const nk = ZB.cur, r = jRow(nk); if (meK === 'me') JS.meName = oldName; JS.me = nk; JS.name = { zh: r.zh, en: r.en }; fate[nk] = 'out'; }
   const list = Object.keys(fate);
+  // Abdali takes the bošokū one way or another: if he lived, he lost his sword arm and went home, and the file is yours
+  if (n === 1 && fate.ulgen === 'out' && JS.me !== 'ulgen') fate.ulgen = 'home';
   for (const k of list) { JS.fate[k] = fate[k]; JS.alive[k] = fate[k] === 'out'; }
   JS.stage = 'e' + n; JS.lastWon = won; jSave();
-  const ft = C.fateText, rows = list.map(k => { const r = jRow(k), f = fate[k]; const nm = k === JS.me ? `${JS.name.zh} ${JS.name.en} (you)` : k === meK && JS.me !== meK ? `${oldName.zh} ${oldName.en} (you, until you fell)` : `${r.zh} ${r.en}`; return `<li class="${f === 'out' ? 'out' : f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${nm} — ${ft[f] || ft.out}</li>`; }).join('');
+  const ft = C.fateText, rows = list.map(k => { const r = jRow(k), f = fate[k]; const nm = k === JS.me ? `${JS.name.zh} ${JS.name.en} (you)` : k === meK && JS.me !== meK ? `${oldName.zh} ${oldName.en} (you, until you fell)` : `${r.zh} ${r.en}`; return `<li class="${f === 'out' || f === 'home' ? 'out' : f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : f === 'home' ? '·' : '?'} ${nm} — ${ft[f] || ft.out}</li>`; }).join('');
   const outN = list.filter(k => fate[k] === 'out').length;
   $('resultTitle').textContent = won ? '勝 · The field is ours' : '退 · Pulled back'; $('resultTitle').className = won ? 'win' : 'lose';
   $('resultText').innerHTML = `${won ? M.win : (M.loseText || 'The banners pulled back.')} ${outN} of ${list.length} of your file came through.`;
