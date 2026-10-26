@@ -17,7 +17,7 @@ const path = require('path'); const out = process.argv[2], file = process.argv[3
     await page.evaluate((sc) => { let s = null; try { s = JSON.parse(localStorage.getItem('mingShenji')); } catch (e) { } if (!s || !s.sj) { s = { v: 1, sj: true, name: { zh: '李順', en: 'Li Shun' }, me: 'sjme', team: ['sj_hu', 'sjme', 'sj_tian', 'sj_lin', 'sj_ma', 'sj_zhao', 'sj_song', 'sj_wu', 'sj_qian', 'sj_gao'], alive: {}, fate: {}, bond: {}, talked: {}, flags: {}, newMen: [], lost: [] }; for (const k of s.team) s.alive[k] = true; }
       s.stage = sc; localStorage.setItem('mingShenji', JSON.stringify(s)); localStorage.setItem('mingShenjiGo', sc); }, sc);
     await page.reload({ waitUntil: 'load', timeout: 150000 }); await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; });
-    await page.waitForTimeout(4500);
+    await page.waitForFunction(() => window.__boshin && window.__boshin.state.sim && window.__boshin.state.screen === 'game', null, { timeout: 150000 }).catch(() => {}); await page.waitForTimeout(3500);
     res[sc] = await page.evaluate(() => { const st = window.__boshin.state, s = st.sim; document.getElementById('pause').hidden = true; if (!s) return 'no sim';
       const me = s.players[0], h = s.units[me.heroId]; return { mission: s.cfg.mission, type: h && h.type, npcs: s.units.filter(u => u.camp).length, grid: document.querySelectorAll('#zgrid .zc').length, goal: (document.querySelector('#status .goal') || {}).textContent || '', card: (document.querySelector('#zheCard:not([hidden]) h2') || {}).textContent || '' }; });
     if (/^camp/.test(sc)) { // face the nearest man and talk to him

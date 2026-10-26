@@ -3065,7 +3065,7 @@ const MISSIONS = {
           [32, 'bater', 'The wind\'s turned. It\'s carrying the fire up the hill, into their own wagons!', '風轉了！火往坡上燒，燒進他們自己的車陣了！'],
           [52, 'niru', 'Their wagons are burning. Get ready.', '他們的車燒起來了。準備。']] },
       { title: '四 · 張春 · Zhang Chun', goal: 'Storm the camp and take Zhang Chun alive', text: 'The wagon line is broken and burning. The Khan wants the Ming commander alive.',
-        start: [['dir', 'niru', 'attack'], ['dir', 'white', 'attack'], ['dir', 'hong', 'attack'], ['dir', 'ujen', 'hold', 0, -40]], obj: { officer: 'zhang' },
+        start: [['dir', 'niru', 'attack'], ['dir', 'white', 'attack'], ['dir', 'hong', 'attack'], ['dir', 'ujen', 'hold', 0, -40]], obj: { all: [{ officer: 'zhang' }, { survive: 25 }] },
         say: [[2, 'hong', 'Take the old man alive. I want to talk with him.', '那個老頭要活的。我要跟他說話。'],
           [30, 'lookout', 'They\'re throwing down their guns!', '他們扔下火器了！']] },
     ],
@@ -3263,7 +3263,7 @@ Sim.prototype.assaultCap = function () {
   const humanMen = this.players.filter(p => !p.ai && p.team === A).reduce((s, p) => s + size(p), 0), humanDef = this.players.filter(p => !p.ai && p.team !== A).reduce((s, p) => s + size(p), 0);
   // attackers come as many small companies (about a fifth of the field each) so there are enough to fill the ditch,
   // push every engine and climb every ladder at once
-  const per = Math.max(8, Math.round(CAP / 5)); fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, false).concat(groups(A, true))) if (size(p) > per) this.mTrim(p, per, true);
+  const per = Math.max(8, Math.round(CAP / 3)); fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > per) this.mTrim(p, per, true);
   // the defenders' reserves count against the same field: garrison plus reserves never exceed the cap
   // (an assault needs odds: the attackers field the full cap, the defenders about 70% of it, as before the cap)
   fit(groups(1 - A, false).concat(groups(1 - A, true)), Math.max(16, Math.round(CAP * 0.7) - humanDef));
@@ -3403,7 +3403,7 @@ Sim.prototype.assaultThink = function () {
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
   const CAP = M.cap || 64;
-  if (act + Math.round(CAP / 5) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  if (act + Math.round(CAP / 3) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
   // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
   let revivable = false;
   if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;

@@ -388,7 +388,7 @@ function jHUD(dt) {
 function jSay(ev) {
   const sim = state.sim, h = localHero(), C = JCH[ZB.ch]; const W = (C.who || {})[ev.who] || ['', ev.who];
   let id = -1, who = W.slice(); const ji = JR.findIndex(r => r.k === ev.who && !r.guest);
-  if (ji >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === ji && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded && +uid !== (h && h.id)) id = +uid; if (id >= 0) who = [JR[ji].zh, JR[ji].en]; else who = ['', 'A bannerman']; }
+  if (ji >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === ji && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded && +uid !== (h && h.id)) id = +uid; if (id >= 0) who = [JR[ji].zh, JR[ji].en]; else return true; } // a man's own words are not spoken by someone else: if he is gone, the line goes with him
   else if (sim.mg[ev.who]) { const g = sim.mg[ev.who]; id = sim.players[g.p].heroId; }
   if (id >= 0 && sim.units[id] && sim.units[id].dead) id = -1;
   if (id < 0 && h) { const cand = sim.teamAlive[h.team].filter(u => u.id !== h.id && !u.wounded && u.type !== 'horse' && Math.hypot(u.x - h.x, u.z - h.z) < 22); if (cand.length) id = cand[Math.floor(Math.random() * cand.length)].id; }

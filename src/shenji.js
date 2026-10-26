@@ -442,14 +442,14 @@ function sjVM() {
     for (const z of [-0.33, -0.5, -0.67]) { const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.022, 9), band); ring.rotation.x = Math.PI / 2; ring.position.z = z; g.add(ring); }
     g.add(bx(0.034, 0.034, 0.95, wood, 0, -0.004, 0.15)); g.add(bx(0.012, 0.012, 0.012, new THREE.MeshBasicMaterial({ color: 0xff8a3a }), 0.03, 0.03, -0.3));
     g.visible = false; r.vmRifle.add(g); r.vmSj = g; }
-  const on = !!(h && h.type === 'rifle_spencer'); r.vmSj.visible = on; for (const c of r.vmRifle.children) if (c !== r.vmSj) c.visible = !on && c !== r.vmXbar ? true : c.visible && !on;
+  const on = !!(h && h.type === 'rifle_spencer'); r.vmSj.visible = on; for (const c of r.vmRifle.children) { if (c === r.vmSj) continue; if (c === r.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; }
 }
 // what the boxes of the sim stand for: mantlets in a 神機營 mission are side-box carts (偏廂車), the board toward the
 // enemy, two wheels and the shafts behind; in the drill, straw butts stand where the zone 'butts' is
 function sjProps(M) {
   const r = state.renderer, sim = state.sim; if (!r || !r.scene) return; const wood = new THREE.MeshLambertMaterial({ color: 0x5a3c22 }), dark = new THREE.MeshLambertMaterial({ color: 0x2e2218 }), red = new THREE.MeshLambertMaterial({ color: 0x8a2a1e });
   const sx = M.start[0], sz = M.start[1];
-  for (const b of sim.boxes) { if (b.kind !== 'mantlet') continue; const g = new THREE.Group(); const along = b.hw >= b.hd; g.position.set(b.x, terrainH(b.x, b.z), b.z);
+  for (const b of sim.boxes) { if (b.kind !== 'mantlet') continue; const g = new THREE.Group(); const along = b.hw >= b.hd; g.position.set(b.x, SIM.terrainH(b.x, b.z), b.z);
     const back = along ? Math.sign(sz - b.z) || -1 : Math.sign(sx - b.x) || 1; g.rotation.y = along ? (back > 0 ? 0 : Math.PI) : (back > 0 ? Math.PI / 2 : -Math.PI / 2);
     const L = Math.max(b.hw, b.hd) * 2;
     const add = (geo, m, x, y, z, rx, rz) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; o.castShadow = true; g.add(o); };
@@ -457,7 +457,7 @@ function sjProps(M) {
     for (const s of [-1, 1]) { add(new THREE.CylinderGeometry(0.58, 0.58, 0.1, 12), dark, s * L * 0.38, 0.58, 0.95, 0, Math.PI / 2); add(new THREE.BoxGeometry(0.08, 0.08, 1.9), wood, s * 0.45, 0.62, 2.4); }
     add(new THREE.BoxGeometry(L * 0.94, 0.16, 0.05), red, 0, 1.38, -0.02);
     r.scene.add(g); }
-  const z = M.zones && M.zones.find(q => q.key === 'butts'); if (z) for (let i = -2; i <= 2; i++) { const g = new THREE.Group(), x = z.x + i * 5; g.position.set(x, terrainH(x, z.z), z.z);
+  const z = M.zones && M.zones.find(q => q.key === 'butts'); if (z) for (let i = -2; i <= 2; i++) { const g = new THREE.Group(), x = z.x + i * 5; g.position.set(x, SIM.terrainH(x, z.z), z.z);
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.6, 0.12), wood); post.position.y = 0.8; g.add(post);
     const t = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.3, 14), new THREE.MeshLambertMaterial({ color: 0xc8a860 })); t.rotation.x = Math.PI / 2; t.position.y = 1.4; g.add(t);
     const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.32, 12), red); eye.rotation.x = Math.PI / 2; eye.position.y = 1.4; g.add(eye); r.scene.add(g); }
