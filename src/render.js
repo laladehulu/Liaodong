@@ -681,10 +681,10 @@ class Renderer {
     const sg = this.sim.sg, e = sg && hero.manE >= 0 ? sg.emp[hero.manE] : null, on = !!(e && e.man === hero.id) && hero.downT <= 0;
     const want = on && !this.empZoom ? 1 : 0; this.empK = (this.empK || 0) + (want - (this.empK || 0)) * (1 - Math.exp(-dt * 6)); const k0 = this.empK; if (k0 < 0.01 || !e) return;
     const k = k0 * k0 * (3 - 2 * k0), cam = this.camera, fx = Math.sin(yaw), fz = Math.cos(yaw), kick = (this.empKick || 0) * (this.empKick || 0);
-    const bow = e.kind === 'bow', back = (bow ? 3.0 : 3.6) + kick * 0.6, up = (bow ? 2.2 : 2.7) + kick * 0.15, side = bow ? 0.7 : 0.9, gy = e.y + 1.2;
+    const bow = e.kind === 'bow', back = (bow ? 2.6 : 3.2) + kick * 0.6, up = (bow ? 2.9 : 3.3) + kick * 0.15, side = bow ? 1.3 : 1.5, gy = e.y + 1.2;
     const px = e.x - fx * back - fz * side, py = gy + up, pz = e.z - fz * back + fx * side;
     cam.position.set(lerp(cam.position.x, px, k), lerp(cam.position.y, py, k), lerp(cam.position.z, pz, k));
-    const lp = pitch - 0.16, cp = Math.cos(lp); look.set(lerp(look.x, cam.position.x + fx * cp * 10, k), lerp(look.y, cam.position.y + Math.sin(lp) * 10, k), lerp(look.z, cam.position.z + fz * cp * 10, k));
+    const lp = pitch - 0.2, cp = Math.cos(lp); look.set(lerp(look.x, cam.position.x + fx * cp * 10, k), lerp(look.y, cam.position.y + Math.sin(lp) * 10, k), lerp(look.z, cam.position.z + fz * cp * 10, k));
   }
   // manning a bed crossbow or a gun: your own weapon is slung, your hands are on the piece (tiller and trigger bar, or the
   // two handspikes), and the ground shows where a shot at the present lay would first strike (Sim.sgPredict: the sim's own steps)
@@ -2316,7 +2316,7 @@ class Renderer {
       const yaw = lerpA(u.pyaw, u.yaw, alpha);
       if (u.mounted) { const hs = this.horseSlot.get(u.id); this.drawHorse(hs, u, x, y, z, lerpA(u.phyaw, u.hyaw, alpha), u.speedNow, u.walk, false, 0); }
       const sy = u.champ && u.spinT > 0 ? yaw + (1 - clamp(u.spinT / 0.55, 0, 1)) * PI * 2 : yaw;
-      this.drawFigure(i, u, x, y, z, sy, alpha, far || (fp && i === heroId && (this.tp || 0) < 0.3 && (this.empK || 0) < 0.35));
+      this.drawFigure(i, u, x, y, z, sy, alpha, far || (fp && i === heroId && (this.tp || 0) < 0.3));
     }
     this.ownMarkEnd(om, capt, view);
     // dead horses
