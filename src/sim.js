@@ -2876,7 +2876,7 @@ const MISSIONS = {
       liu: { team: 0, name: 'Liu Ting', zh: '劉綎', army: ['rifle_imp', 'ronin'], at: [0, -96, 0], dir: ['hold', 0, -64], stay: true },
       tusi: { team: 0, name: 'Sichuan and Miao levies', zh: '川黔土兵', army: ['ashigaru', 'ronin', 'ashigaru'], at: [0, -72, 0], dir: ['hold', 0, -40], stay: true },
       kang: { team: 0, name: 'Kang Yingqian\'s rearguard', zh: '康應乾', army: ['rifle_imp', 'ashigaru'], at: [0, -128, 0], dir: ['hold', 0, -112], stay: true },
-      duck: { team: 0, name: 'The Zhejiang duck teams', zh: '浙兵鴛鴦陣', army: ['yuanyang', 'yuanyang'], at: [4, -126, 0], dir: ['hold', 0, -114], stay: true, reserve: true },
+      duck: { team: 0, name: 'The Zhejiang duck teams', zh: '浙兵鴛鴦陣', army: ['yuanyang', 'yuanyang', 'yuanyang'], at: [4, -126, 0], dir: ['hold', 0, -114], stay: true, reserve: true },
     },
     phases: [
       { title: '一 · 西嶺 · The west ridge', goal: 'Wait in the trees with your niru', text: 'Hong Taiji\'s banners lie hidden in the woods of the west ridge. Below, Liu Ting\'s column hurries north toward Hetu Ala. Wait with your niru.',
@@ -3100,14 +3100,14 @@ Sim.prototype.zRevive = function (u, by) {
 Sim.prototype.assaultCap = function () {
   const M = this.mission, A = M.attacker, CAP = M.cap || 64; const size = (p) => { let n = 0; for (const id of p.squads) { const q = this.squads[id]; for (const uid of q.unitIds) if (!this.units[uid].dead) n++; } return n; };
   const groups = (team, res) => Object.keys(this.mg).filter(g => this.mg[g].G.team === team && !!this.mg[g].G.reserve === res).map(g => this.players[this.mg[g].p]);
-  const fit = (list, budget) => { const tot = list.reduce((s, p) => s + size(p), 0); if (tot <= budget) return; for (const p of list) { const n = Math.max(4, Math.floor(size(p) * budget / tot)); this.mTrim(p, n); } };
+  const fit = (list, budget) => { const tot = list.reduce((s, p) => s + size(p), 0); if (tot <= budget) return; for (const p of list) { const n = Math.max(4, Math.floor(size(p) * budget / tot)); this.mTrim(p, n, true); } };
   const humanMen = this.players.filter(p => !p.ai && p.team === A).reduce((s, p) => s + size(p), 0), humanDef = this.players.filter(p => !p.ai && p.team !== A).reduce((s, p) => s + size(p), 0);
-  fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > 22) this.mTrim(p, 22);
-  fit(groups(1 - A, false), Math.max(16, Math.round(CAP * 0.85) - humanDef)); for (const p of groups(1 - A, true)) if (size(p) > 14) this.mTrim(p, 14);
+  fit(groups(A, false), Math.max(16, CAP - humanMen)); for (const p of groups(A, true)) if (size(p) > 22) this.mTrim(p, 22, true);
+  fit(groups(1 - A, false), Math.max(16, Math.round(CAP * 0.85) - humanDef)); for (const p of groups(1 - A, true)) if (size(p) > 14) this.mTrim(p, 14, true);
 };
-Sim.prototype.mTrim = function (p, n) {
+Sim.prototype.mTrim = function (p, n, keepHero) {
   let k = 0; for (const id of p.squads) { const q = this.squads[id]; const keep = Math.max(0, Math.min(q.unitIds.length, n - k)); q.unitIds.forEach((uid, i) => { if (i < keep) return; const u = this.units[uid]; u.dead = true; u.hp = 0; u.inactive = true; this.total[u.team]--; }); k += keep; q.count = keep; q.aliveCount = keep; if (!keep) q.alive = false; }
-  for (const uid of [p.heroId, p.horseId]) { const u = uid >= 0 ? this.units[uid] : null; if (u) { u.dead = true; u.hp = 0; u.inactive = true; if (u.type !== 'horse') this.total[u.team]--; } }
+  if (!keepHero) for (const uid of [p.heroId, p.horseId]) { const u = uid >= 0 ? this.units[uid] : null; if (u) { u.dead = true; u.hp = 0; u.inactive = true; if (u.type !== 'horse') this.total[u.team]--; } }
 };
 Sim.prototype.coverShield = function (v, p) { // a rattan shield beside you turns the arrow meant for you
   const src = atan2(-p.vx, -p.vz); const n = this.gatherNear(v.x, v.z, 1.9);

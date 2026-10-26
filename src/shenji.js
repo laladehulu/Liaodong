@@ -23,7 +23,7 @@ const SJ_MISSIONS = (() => { const PI = Math.PI; const cartRow = (z, xs) => xs.m
     phases: [
       { title: '一 · 秋操 · The autumn review', goal: 'March to the firing line with your team', text: 'Drums, banners, the inspector on his stand. March your team up to the firing line.', show: ['line'],
         start: [['dir', 'sjf', 'hold', 0, -62], ['dir', 'niao', 'hold', -16, -60], ['dir', 'carts', 'hold', 16, -60]],
-        obj: { reach: 'line' },
+        obj: { all: [{ reach: 'line' }, { survive: 24 }] },
         say: [[2, 'sj_hu', 'Step on the drum. The inspector watches the banners. I watch your feet.', '踩著鼓點走。內臣看旗，我看你們的腳。'],
           [10, 'sj_tian', 'Is that the eunuch inspector? He has more silk on him than my whole street.', '那就是提督太監？他身上的綢子比我們整條街都多。'],
           [18, 'sj_qian', 'Smile for him. The pay goes through his hands.', '笑一個。餉銀要從他手裡過。']] },
