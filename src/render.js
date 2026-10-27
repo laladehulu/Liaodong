@@ -572,7 +572,7 @@ const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 			vec3 sc = shadowCoord.xyz / shadowCoord.w; float bs = 0.0, bn = 0.0;
 			for ( int i = 0; i < 8; i ++ ) { float a = float( i ) * 2.39996 + 0.7; vec2 o = vec2( cos( a ), sin( a ) ) * sqrt( ( float( i ) + 0.5 ) / 8.0 ) * ( 1.6 / 140.0 );
 				float d = unpackRGBAToDepth( texture2D( shadowMap, sc.xy + o ) ); if ( d < sc.z + shadowBias ) { bs += d; bn += 1.0; } }
-			if ( bn < 0.5 ) return 1.0;
+			if ( bn < 0.5 ) return 1.0; return 0.0;
 			float dist = ( sc.z - bs / bn ) * 390.0, inkK = smoothstep( 3.5, 10.0, dist );
 			vec2 w = sc.xy + inkShift;
 			vec2 warp = inkK * ( vec2( inkF( w * 55.0 ), inkF( w * 55.0 + 19.3 ) ) - 0.5 ) * ( 2.0 / 140.0 );
