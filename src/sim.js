@@ -675,7 +675,7 @@ class Sim {
     }
   }
   createSquad(k, team, owner, x, z, facing) {
-    const d = defFor(k, team);
+    let d = defFor(k, team); if (k === 'archer' && this.cfg && this.cfg.mode === 'campaign') { const C = this._arcD || (this._arcD = new Map()); let h = C.get(d); if (!h) { h = Object.assign({}, d, { count: Math.ceil(d.count * 0.55) }); C.set(d, h); } d = h; } /* campaign: bow companies at half strength */
     const sq = { id: this.squads.length, type: k, def: d, team, owner, unitIds: [], order: ORD_HOLD, tx: x, tz: z, facing, formation: d.skirmish ? FORM_LOOSE : FORM_LINE, cols: 0, abT: 0, abOn: 0, ability: abilityOf(d), fire: true, cx: x, cz: z, alive: true, count: d.count, aliveCount: d.count, morale: d.morale || 100, moraleMax: d.morale || 100, routing: false, routT: 0 };
     this.squads.push(sq);
     const fx = sin(facing), fz = cos(facing), rx = -cos(facing), rz = sin(facing), s = spacingOf(d);
@@ -3198,7 +3198,8 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   for (const e of teams[0].concat(teams[1])) { e.army = []; e.player.army = []; }
   const humans = this.players.filter(p => !p.ai);
   if (M.camp) return this.setupCamp(humans);
-  const mk = (gid, G) => { aiPl(G.team, G.name, G.army.slice()); const pl = this.players[this.players.length - 1]; pl.gid = gid; this.mg[gid] = { p: pl.idx, G, released: !G.reserve, broken: false }; return pl; };
+  const thin = (a) => { let n = 0; return a.map(k => k === 'archer' && n++ >= 1 ? 'samurai' : k); }; /* at most one company of bows to a group: the banners fought hand to hand as much as they shot */
+  const mk = (gid, G) => { aiPl(G.team, G.name, ass ? G.army.slice() : thin(G.army)); const pl = this.players[this.players.length - 1]; pl.gid = gid; this.mg[gid] = { p: pl.idx, G, released: !G.reserve, broken: false }; return pl; };
   if (ass) { // assault: defender garrisons per point, attacker corps that arrive as manpower allows
     const A = M.attacker, D = 1 - A;
     M.def.forEach((d, i) => mk('d' + i, { team: D, name: 'Garrison ' + (i + 1), army: d[0], at: [d[1], d[2], A === 1 ? PI : 0], reserve: i >= M.sectors[0].length + 0 && false }));

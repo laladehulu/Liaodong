@@ -3,7 +3,7 @@
 set -e
 V=$1; MSG=$2
 cd /home/claude/ming && tools/snap.sh "$V: $MSG" >/dev/null || true
-cd /home/claude/laladehulu.github.io/Liaodong && git pull -q --rebase && python3 /home/claude/ming/publish.py $V | tail -1
+cd /home/claude/laladehulu.github.io/Liaodong && git stash -q -u 2>/dev/null; git pull -q --rebase; git stash pop -q 2>/dev/null; python3 /home/claude/ming/publish.py $V | tail -1
 python3 - "$V" <<'PY'
 import re,sys
 V=sys.argv[1]
