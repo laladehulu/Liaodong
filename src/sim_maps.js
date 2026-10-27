@@ -188,5 +188,57 @@
       for (let x = -40; x <= 40; x += 10) sim.boxes.push({ x, z: 60, hw: 1.6, hd: 0.5, h: 1.5, kind: 'mantlet' });
       trees(sim, r, clear, 50, -140, 140, 30, 140, undefined); } };
 
+  // ---------- 開原 Kaiyuan, the sixth month of 1619 ----------
+  // 《滿文老檔》天命四年六月十六日 (the host marched in heavy rain, reached Kaiyuan at dawn; the garrison commander 馬林
+  // led his men out of the gate to fight in the open and was killed; the walls were scaled where the rain had brought
+  // the rammed earth down); 《明史》馬林傳; 《明神宗實錄》萬曆四十七年六月; 《遼東志》開原城 (the largest city of the north-east
+  // frontier: 周十三里, brick-faced, a moat; the Jurchen and Mongol horse fairs outside the gates). Here the south-east
+  // wall of Kaiyuan runs along the Ming edge with the gate Ma Lin rode out of; the horse-fair ground outside the gate,
+  // a slumped stretch of wall (the breach) to the east, rice and millet fields in the flat; rain all day.
+  B.kaiyuan = { name: 'Kaiyuan', jp: '開原', when: 'July 1619', biome: 'summer', weather: 'storm', fog: 0.3, terrain: 0.2, features: ['paddies'], horizon: { lo: 0.4, nokarst: true },
+    desc: 'Rain on the millet fields outside Kaiyuan. Ma Lin has ridden out of the gate to fight in the open; the walls behind him have slumped in the wet where the banners will climb. Matchlocks are fouled, the ground is mud.' };
+  M.kaiyuan = { trees: 50, rocks: 10,
+    terrain(L, r) { L.hills.push({ x: 140, z: 130, r: 50, h: 6 }); L.hills.push({ x: -140, z: 90, r: 60, h: 5 });
+      L.trenches = [{ x0: -150, z0: -146, x1: 150, z1: -146, w: 4, depth: 2.4, wet: true, gaps: [0, 70] }]; }, /* the moat; a causeway at the gate and the gap where the slumped wall's rubble filled it */
+    objectives: [{ x: 0, z: -92, r: 12, name: 'The horse-fair ground' }, { x: 70, z: -118, r: 11, name: 'The slumped wall' }, { x: -50, z: 20, r: 13, name: 'The Mongol road' }],
+    noTree(x, z) { return z < -100; },
+    build(sim, r, keep, clear) {
+      sim.deco.push({ kind: 'road', x: 0, w: 6 }); sim.roadX = 0;
+      cityWall(sim, { axis: 'x', at: -163, from: -150, to: 56, h: 11, hd: 4, out: 1, gx: 0, gw: 3.4, name: '開原', notower: true, nobast: true }); cityWall(sim, { axis: 'x', at: -163, from: 84, to: 150, h: 11, hd: 4, out: 1, notower: true, nobast: true });
+      cityWall(sim, { axis: 'x', at: -163, from: 56, to: 84, h: 4, hd: 5, out: 1, notower: true, nobast: true }); keep.push({ x: 0, z: -163, r: 24 }); keep.push({ x: 70, z: -150, r: 16 }); /* the breach: rammed earth slumped to a slope the men can climb (《滿文老檔》: 雨壞城) */
+      /* the horse-fair ground: stalls and pens outside the gate (《遼東志》: 馬市 at the 慶雲堡 gate), a few houses of the Mongol traders */
+      for (const [x, z] of [[-30, -120], [-44, -108], [36, -126], [48, -112]]) house(sim, keep, x, z, 2.6, 2.2, false);
+      for (const [x, z, dir] of [[-20, -100, 0], [20, -100, 0]]) { const n = 8; for (let i = 0; i <= n; i++) sim.obstacles.push({ x: x + i * 1.6 - 6.4, z, r: 0.22, kind: 5 }); sim.deco.push({ kind: 'fence', x: x - 6.4, z, yaw: Math.PI / 2, len: n * 1.6 }); }
+      /* the Jin host came by the Mongol road from the north-west: a hamlet on it, and the Khan's standard-camp */
+      for (const [x, z] of [[-60, 10], [-48, 24], [-72, 30]]) house(sim, keep, x, z, 2.8, 2.4, false);
+      stockade(sim, keep, 110, 100, 146, 130, 'w'); } };
+
+  // ---------- 覺華島 Juehua Island, the first month of 1626 ----------
+  // 《清太祖實錄》天命十一年正月二十六日 (after the repulse at Ningyuan the Khan sent 武訥格 with the Mongol horse across
+  // the frozen sea to Juehua; the Ming sailors under 姚撫民 and 金冠 had cut a channel fifteen li long through the
+  // ice, but it froze over in the night; the Jin crossed, killed seven thousand sailors and burned the grain and the
+  // ships); 《明史》袁崇煥傳, 《明熹宗實錄》天啟六年正月; 《寧遠衛志》. The island is low, the depot and the sailors' camp
+  // on its north shore facing the mainland. Here the mainland shore is the Jin edge (+z), the frozen strait across
+  // the middle (ice: slow going, the re-frozen channel a darker band that is slower still), and the island's north
+  // shore with the grain depot and the ships frozen in at the Ming edge.
+  B.juehua = { name: 'Juehua Island', jp: '覺華島', when: 'February 1626', biome: 'winter', fog: 0.25, terrain: 0.15, features: [], horizon: { lo: 0.3, nokarst: true, open: [-1.2, 1.2] },
+    desc: 'The frozen strait between the mainland and Juehua island. The sailors cut a channel through the ice but it froze again in the night; the Mongol horse come over the ice at the grain depot and the ships frozen in at the shore.' };
+  M.juehua = { trees: 30, rocks: 10, nomant: true,
+    terrain(L, r) { L.hills.push({ x: 0, z: -140, rx: 160, rz: 36, rot: 0, h: 6 }); L.hills.push({ x: 120, z: -120, r: 40, h: 5 }); L.hills.push({ x: -40, z: 172, rx: 190, rz: 40, rot: 0, h: 9 });
+      /* the strait: a wide frozen river across the field (ice: walked at ford speed); the cut channel re-frozen in the night as a second, thinner band */
+      L.river = { axis: 'x', c0: 20, amp: 3, freq: 0.012, ph: 0.5, w: 72, depth: 0.5, ice: true, bridges: [] };
+      L.rivers = [{ id: 1, axis: 'x', c0: -12, amp: 2, freq: 0.02, ph: 1.1, w: 5, depth: 0.7, ice: true, bridges: [] }]; },
+    objectives: [{ x: 0, z: -100, r: 13, name: 'The grain depot' }, { x: -80, z: -96, r: 12, name: 'The ships in the ice' }, { x: 70, z: 112, r: 12, name: 'The mainland shore' }],
+    noTree(x, z) { return z > -60 && z < 100; },
+    build(sim, r, keep, clear) {
+      /* the depot: granaries in rows behind a palisade (《明史》: 糧料八萬餘石, 船二千餘), the sailors' camp beside it */
+      stockade(sim, keep, -30, -118, 30, -84, 'n'); for (const [x, z] of [[-18, -108], [0, -108], [18, -108], [-18, -94], [18, -94]]) sim.boxes.push({ x, z, hw: 4, hd: 2.6, h: 3, kind: 'house' });
+      for (let i = 0; i < 6; i++) sim.boxes.push({ x: 40 + (i % 3) * 7, z: -100 - Math.floor(i / 3) * 7, hw: 2.4, hd: 2.4, h: 2.2, kind: 'tent' }); keep.push({ x: 47, z: -104, r: 12 });
+      /* the ships frozen in along the shore: hulls as long boxes (the renderer's 'wagon' kind draws a plank body: no ship model in the game, a known stand-in) */
+      for (let i = 0; i < 6; i++) { const x = -110 + i * 12, z = -92 + (i % 2) * 6; sim.boxes.push({ x, z, hw: 1.6, hd: 5, h: 2.2, kind: 'wagon' }); } keep.push({ x: -80, z: -90, r: 36 });
+      /* the mainland shore: the Mongol horse lines' stockade and a fishing hamlet on the beach */
+      stockade(sim, keep, 110, 112, 146, 140, 'w'); for (const [x, z] of [[-100, 118], [-86, 126], [-112, 130]]) house(sim, keep, x, z, 2.6, 2.2, false);
+      trees(sim, r, clear, 30, -140, 140, 110, 145, 0); } };
+
   // the picker shows BATTLES in table order: keep the new ones after the old
 })();

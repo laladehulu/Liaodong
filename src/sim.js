@@ -153,7 +153,7 @@ const STORY = [
 ];
 const FACTION = [{ name: 'Ming Army', jp: '大明', short: 'Ming' }, { name: 'Later Jin', jp: '後金', short: 'Jin' }];
 const BATTLES = {
-  field:    { name: 'Jiefan Hill', jp: '界凡 (薩爾滸)', when: 'April 1619', biome: 'autumn', fog: 0, terrain: 0.7, features: ['hill'], desc: 'Jiefan hill above the Hun River ford, the Jin\'s half-built stockade on the crest. Whoever holds the height shoots farther and cuts downhill.' },
+  field:    { name: 'Jiefan Hill', jp: '界凡 (薩爾滸)', when: 'April 1619', biome: 'autumn', fog: 0, terrain: 0.7, features: ['hill'], desc: 'The open hill country of Jiefan above the Hun River, a wayside shrine on the crest. Whoever holds the height shoots farther and cuts downhill.' },
   toba:     { name: 'Hun River', jp: '渾河', when: 'March 1621', biome: 'winter', fog: 0.35, terrain: 0.6, horizon: { lo: 0.45, nokarst: true }, features: ['river', 'village'], desc: 'A half-frozen river splits the field outside Shenyang. Two bridges and a shallow ford are the only quick crossings; mist shortens every musket.' },
   ueno:     { name: 'Songshan temple', jp: '松山 · 寺', when: 'Summer 1641', biome: 'summer', fog: 0.1, terrain: 0.7, horizon: { lo: 0.6, nokarst: true, open: [0.9, 2.3] }, features: ['temple', 'houses'], desc: 'Hong Chengchou\'s men hold a walled temple compound on a raised plateau. Storm the gate or shell it with heavy guns.' },
   nagaoka:  { name: 'Yangzhou', jp: '揚州', when: 'May 1645', biome: 'summer', weather: 'storm', fog: 0.3, terrain: 0.3, horizon: { lo: 0.3, nokarst: true }, features: ['paddies', 'flankriver'], desc: 'Jiangnan rice paddies under a spring thunderstorm. Rain fouls matchlocks, lightning seeks the banners, and one bridge guards the western flank.' },
@@ -330,21 +330,21 @@ class Sim {
       for (let cz = z0; cz <= z1; cz++) for (let cx = x0; cx <= x1; cx++) { const c = cz * W + cx; if (!this.boxCells[c]) this.boxCells[c] = []; this.boxCells[c].push(i); }
     }
     this.buildNav(); this.flowBudget = 4;
+    this.unstickSpawns(); /* (maps) a deployment row laid across a wall, a house or a river: those men are set on the nearest open ground */
   }
   // ---------- map ----------
   planTerrain() {
     const b = this.battle, L = { scale: this.bdef.terrain, hills: [], plateaus: [] };
     const r = new RNG(this.seed ^ 0x1234567);
     if (b === 'field') { L.hills.push({ x: 0, z: 2, r: 72, h: 12 }); L.hills.push({ x: r.range(-150, -110), z: r.range(-40, 40), r: 35, h: 5 }); L.hills.push({ x: r.range(110, 150), z: r.range(-40, 40), r: 35, h: 5 });
-      /* 界凡 1619: the hill stands in the fork of the 渾河 and the 蘇子河 (《滿文老檔》, 《明史》杜松傳: Du Song forded the Hun River below Jiefan with the water at his men's chests); the river is the field's south edge, a ford on the Ming side */
-      if (!this.mission) L.river = { axis: 'x', c0: -143, amp: 2, freq: 0.03, ph: r.range(0, 6), w: 6, depth: 2.2, bridges: [{ at: 0, hw: 24, ford: true }] }; }
+      /* 界凡 1619 (《明史》杜松傳): the hill stands in the fork of the 渾河 and the 蘇子河; the river itself is on the 'sarhu' map, this field stays open ground */ }
     if (b === 'toba') { L.river = { axis: 'x', c0: 0, amp: 9, freq: 0.019, ph: r.range(0, 6), w: 9, depth: 3.6, bridges: [{ at: -78, hw: 4 }, { at: 74, hw: 4 }, { at: 0, hw: 9, ford: true }] };
       /* 渾河 1621 (《明史》陳策傳, 《滿文老檔》天命六年三月): the Sichuan White Poles crossed the Hun River bridge and camped on the north bank, seven li from Shenyang's walls, the Zhejiang
          men under Chen Ce and Tong Zhongkui dug in south of the river (the Jin side is north: team 1 deploys at z > 0 here, so Shenyang's wall is the north-west skyline, a low rise behind the south camp) */
       L.hills.push({ x: -40, z: -118, r: 48, h: 4 }); L.hills.push({ x: 120, z: 30, r: 40, h: 3 }); }
     if (b === 'ueno') { const cx = r.range(-25, 25); this.templeX = cx; L.plateaus.push({ x: cx, z: 72, r0: 32, r1: 46, h: 7 }); }
     if (b === 'nagaoka') L.river = { axis: 'z', c0: -105, amp: 10, freq: 0.022, ph: r.range(0, 6), w: 11, depth: 3.2, bridges: [{ at: r.range(-30, 30), hw: 4.5 }] };
-    if (b === 'aizu') { L.plateaus.push({ x: 0, z: 96, r0: 21, r1: 27, h: 6 }); L.rmoat = { x: 0, z: 96, hw: 31, hd: 31, w: 5.5, depth: 2.8, gates: [[0, 63]] }; L.hills.push({ x: -150, z: 40, r: 60, h: 14 });
+    if (b === 'aizu') { L.plateaus.push({ x: 0, z: 96, r0: 21, r1: 27, h: 6 }); L.rmoat = { x: 0, z: 96, hw: 31, hd: 31, w: 5.5, depth: 2.8, gates: [[0, 63], [0, 129], [-33, 96], [33, 96]] }; /* causeways at four gates (《遼東志》遼陽城: 門六, the main four on the cardinal sides) */ L.hills.push({ x: -150, z: 40, r: 60, h: 14 });
       /* 遼陽 1621 (《滿文老檔》天命六年三月二十日, 《明史》袁應泰傳): a square walled city with a wide wet moat fed from the 太子河, which runs past the east side; the Jin cut the inlet dyke, drained the moat and filled it to cross.
          The river is the east edge of the field with one bridge on the east road; the moat is square now (the round one and the hill were a Japanese castle's) */
       L.river = { axis: 'z', c0: 132, amp: 4, freq: 0.03, ph: r.range(0, 6), w: 9, depth: 3.4, bridges: [{ at: 60, hw: 4 }] }; }
@@ -379,10 +379,10 @@ class Sim {
     const keep = []; // {x,z,r} exclusion circles
     const clear = (x, z, rad) => { if (waterAt(x, z) !== 0) return false; for (let i = 0; i < keep.length; i++) if (len(x - keep[i].x, z - keep[i].z) < rad + keep[i].r) return false; return true; };
     const B = this.battle;
-    if (B === 'field') { // 吉林崖 (Jiefan hill) 1619: the Jin stockade on the crest that Du Song's men were storming when the banners came (《滿文老檔》天命四年三月初一: 界凡山上築城, the half-built fort of 界藩 and its workmen); no shrine stood there
-      const sx = 0, sz = 6; const pal = (x0, x1, z) => { for (let x = x0; x < x1; x += 3) this.boxes.push({ x: x + 1.5, z, hw: 1.5, hd: 0.5, h: 1.6, kind: 'palisade' }); }; const palZ = (x, z0, z1) => { for (let z = z0; z < z1; z += 3) this.boxes.push({ x, z: z + 1.5, hw: 0.5, hd: 1.5, h: 1.6, kind: 'palisade' }); };
-      if (!this.mission) { pal(-12, -3, sz + 10); pal(3, 12, sz + 10); pal(-12, 12, sz - 10); palZ(-12, sz - 10, sz + 10); palZ(12, sz - 10, sz + 10); this.boxes.push({ x: sx, z: sz, hw: 2.2, hd: 2, h: 2.6, kind: 'house' }); } /* the Changshan mission (jin4) lays its own wagon camp on this hill */
-      keep.push({ x: sx, z: sz, r: 15 });
+    if (B === 'field') { // the generic open field: Jiefan hill as a rise with a wayside shrine on the crest (the historic Jin stockade is on the 'sarhu' map); open ground, nothing to fight into
+      const sx = 0, sz = 6, syaw = PI; this.deco.push({ kind: 'shrine', x: sx, z: sz, yaw: syaw }); const rx = -cos(syaw), rz = sin(syaw);
+      this.obstacles.push({ x: sx + rx * 1.6, z: sz + rz * 1.6, r: 0.35, kind: 2 }); this.obstacles.push({ x: sx - rx * 1.6, z: sz - rz * 1.6, r: 0.35, kind: 2 }); this.obstacles.push({ x: sx + sin(syaw) * 7, z: sz + cos(syaw) * 7, r: 3.2, kind: 3, yaw: syaw });
+      keep.push({ x: sx, z: sz, r: 12 });
       for (let i = 0; i < 40; i++) { const a = r.range(0, TAU), d = r.range(28, 60); const x = sin(a) * d, z = 2 + cos(a) * d; if (Math.abs(z) > 30 && Math.abs(x) < 30) continue; if (clear(x, z, 3)) this.obstacles.push({ x, z, r: 0.45, kind: 0, variant: r.next() < 0.6 ? 1 : 0, scale: r.range(0.9, 1.5), rot: r.range(0, TAU) }); }
     }
     for (const rv of (this.layout.river ? [this.layout.river] : []).concat(this.layout.rivers || [])) for (const b of rv.bridges) { const c = rv.c0 + rv.amp * sin(b.at * rv.freq + rv.ph); this.deco.push({ kind: b.ford ? 'ford' : 'bridge', axis: rv.axis, at: b.at, c, hw: b.hw, w: rv.w, rv: rv.id }); keep.push(rv.axis === 'x' ? { x: b.at, z: c, r: 16 } : { x: c, z: b.at, r: 16 }); }
@@ -4540,6 +4540,14 @@ Sim.prototype.hrTick = function (u) {
   if (u.st === ST_STUN) u.hrImm = Math.max(u.hrImm, 0.5);
   if (u.hrF > 0) u.hrF -= DT;
   if (u.hrA < 5) u.hrA += DT;
+};
+// (maps) men placed at setup inside a structure's collider or in deep water are moved to the nearest open ground; a
+// squad whose men move keeps its slots (its formation reference) where they were, so the company closes up again as it
+// marches. Deterministic: this.boxes order, freeSpot's fixed spiral.
+Sim.prototype.unstickSpawns = function () {
+  const inBox = (x, z) => { for (const b of this.boxes) { if (b.hw < 0.1 || b.kind === 'mantlet') continue; if (Math.abs(x - b.x) < b.hw + 0.3 && Math.abs(z - b.z) < b.hd + 0.3) return true; } return false; };
+  for (const u of this.units) { if (u.dead || u.inactive) continue; if (!inBox(u.x, u.z) && waterAt(u.x, u.z) !== 1) continue;
+    const p = this.freeSpot(u.x, u.z); u.x = u.px = p[0]; u.z = u.pz = p[1]; u.y = u.py = terrainH(u.x, u.z); if (u.mount >= 0 && this.units[u.mount]) { const h = this.units[u.mount]; h.x = h.px = u.x; h.z = h.pz = u.z; h.y = h.py = u.y; } }
 };
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, MAPS, cityWall, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, YY_SLOT, FORM_COLUMN, WPN, spacingOf, gunOf,
   KEY_W, KEY_S, KEY_A, KEY_D, A_ATK, A_BLOCK, A_FIRE, A_AIM, A_KICK, A_MOUNT, A_JUMP, A_SWAP, A_RELOAD, A_CMD, A_RALLY, A_READY, A_THROW, A_DUEL, AIM_RAISE, A_AB1, A_AB2, A_AB3, A_ULT, A_DODGE, A_DASHL, A_DASHR, A_GRIP, KEY_SPRINT, ORD_SPAWN, ORD_CLASS, HCLASS, HAB, SCEN, BOMBS, FURY_MAX, SROLE, ARMS, RANGED, MISSIONS, OPS,

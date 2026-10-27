@@ -6,7 +6,7 @@ const { chromium } = require('/opt/npm-tools/node_modules/playwright-core');
 const fs = require('fs'), path = require('path');
 const out = process.argv[2], tag = process.argv[3] || 'shot', maps = (process.argv[4] || 'field,toba,ueno,nagaoka,aizu,hakodate,abudali,bjgate,zroad,sjvil,siegecity,bonari').split(','), build = process.argv[5] || 'test.html';
 const CAMS = { hakodate: [[-70, 55, -40], [0, 2, 74]], aizu: [[-60, 60, -30], [0, 4, 80]], toba: [[-80, 50, -90], [0, 1, 0]], field: [[-60, 48, -110], [0, 4, 0]], ueno: [[-70, 55, -40], [0, 3, 72]],
-  abudali: [[0, 40, -130], [0, 4, 20]], bjgate: [[-60, 40, -60], [6, 6, 140]], bonari: [[-30, 45, -120], [0, 6, 60]], nagaoka: [[-90, 50, -90], [0, 2, 0]], siegecity: [[-70, 40, -60], [0, 4, 45]] };
+  abudali: [[0, 40, -130], [0, 4, 20]], bjgate: [[-60, 40, -60], [6, 6, 140]], bonari: [[-30, 45, -120], [0, 6, 60]], nagaoka: [[-90, 50, -90], [0, 2, 0]], siegecity: [[-70, 40, -60], [0, 4, 45]], juehua: [[-120, 40, -150], [0, 2, -60]], kaiyuan: [[-80, 45, -40], [0, 3, -110]] };
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
