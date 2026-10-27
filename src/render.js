@@ -1615,7 +1615,7 @@ class Renderer {
               if (armd) this.burstSparks(ev.x, ev.y, ev.z, mine ? 10 : 5, 4, 1, 0.8, 0.45, 0.25, 0.07);
               /* hit mist, dust and red sparks on the struck man removed (user: no green/red particles on fallen men) */
               AUDIO.play(armd ? 'strikearmor' : heavyB ? 'strikeheavy' : 'strike', ev.x, ev.y, ev.z, mine ? 1.25 : 0.95);
-              if (!armd) AUDIO.play('flesh', ev.x, ev.y, ev.z, mine ? 1.1 : 0.7); if (mine && (heavyB || ev.killed)) AUDIO.play('thud', ev.x, ev.y, ev.z, 0.9); /* layered: the steel, the meat, the weight */
+              if (!armd) AUDIO.play('flesh', ev.x, ev.y, ev.z, mine ? 1.3 : 0.8); { const me2 = ev.id === heroId; AUDIO.play('thud', ev.x, ev.y, ev.z, mine ? (heavyB || ev.killed ? 2.2 : 1.7) : me2 ? 1.6 : 0.75); if (mine || me2) AUDIO.play('bodythump', ev.x, ev.y - 0.4, ev.z, mine ? (heavyB || ev.killed ? 1.6 : 1.25) : 1.1); } /* layered: the steel, the meat, the weight */
             } else if (shot && vic) { this.dust(ev.x, ev.y, ev.z, 3, dx * 0.6, 0.4, dz * 0.6, 0.25, 0.45, 0.12, 0.45); this.blood(ev.x, ev.y, ev.z, 4, dx * 2.5, 0.6, dz * 2.5); AUDIO.play('strike', ev.x, ev.y, ev.z, 0.5); }
             if (vic && ev.id !== heroId && (melee || shot)) this.hitImpulse(ev.id, dx, dz, k * (shot ? 0.6 : 1), heavyB);
             if (melee && att && ev.cause !== 'trample') { const aa = this.anim(att.id); aa.dragT = armd ? 0.07 : heavyB || ev.killed ? 0.16 : 0.11; if (mine) { this.swDrag = aa.dragT + 0.02; this.bladeBlood = Math.min(1, (this.bladeBlood || 0) + (ev.killed ? 0.4 : 0.22)); } }
@@ -2491,11 +2491,18 @@ class Renderer {
     if (!this.omPts) { const N = this.sim.units.length; const g = new THREE.BufferGeometry(); this.omPos = new Float32Array(N * 3); g.setAttribute('position', new THREE.BufferAttribute(this.omPos, 3)); g.setDrawRange(0, 0);
       const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.translate(32, 32); c.beginPath(); c.moveTo(0, 26); c.lineTo(15, 2); c.lineTo(0, -14); c.lineTo(-15, 2); c.closePath(); c.fillStyle = 'rgba(6,20,10,.6)'; c.lineWidth = 7; c.strokeStyle = 'rgba(6,20,10,.6)'; c.stroke(); c.fillStyle = '#6fe08a'; c.fill();
       const tex = new THREE.CanvasTexture(cv); this.omPts = new THREE.Points(g, new THREE.PointsMaterial({ map: tex, size: 1.25, sizeAttenuation: true, transparent: true, depthWrite: false, alphaTest: 0.08, fog: false })); this.omPts.frustumCulled = false; this.omPts.renderOrder = 5; this.scene.add(this.omPts); this.omSpr = []; this.omTex = {}; }
-    if (!fp) { this.omPts.visible = false; for (const sp of this.omSpr) sp.visible = false; return null; }
-    this.omN = 0; const P = this.omPos, self = this; return { push(x, y, z) { const k = self.omN++ * 3; if (k + 2 < P.length) { P[k] = x; P[k + 1] = y; P[k + 2] = z; } } };
+    if (!this.ofPts) { // the same lozenge in blue over the men of a fellow player on your side
+      const N = this.sim.units.length; const g = new THREE.BufferGeometry(); this.ofPos = new Float32Array(N * 3); g.setAttribute('position', new THREE.BufferAttribute(this.ofPos, 3)); g.setDrawRange(0, 0);
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; const c = cv.getContext('2d'); c.translate(32, 32); c.beginPath(); c.moveTo(0, 26); c.lineTo(15, 2); c.lineTo(0, -14); c.lineTo(-15, 2); c.closePath(); c.lineWidth = 7; c.strokeStyle = 'rgba(6,14,26,.6)'; c.stroke(); c.fillStyle = '#6fc4ef'; c.fill();
+      this.ofPts = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), size: 1.1, sizeAttenuation: true, transparent: true, depthWrite: false, alphaTest: 0.08, fog: false })); this.ofPts.frustumCulled = false; this.ofPts.renderOrder = 5; this.scene.add(this.ofPts); }
+    if (!fp) { this.omPts.visible = false; this.ofPts.visible = false; for (const sp of this.omSpr) sp.visible = false; return null; }
+    this.omN = 0; this.ofN = 0; const P = this.omPos, F = this.ofPos, self = this;
+    const me = this.sim.players[this.localIdx]; this.friendOwner = this.sim.players.map((p, i) => i !== this.localIdx && p && !p.ai && me && p.team === me.team);
+    return { push(x, y, z) { const k = self.omN++ * 3; if (k + 2 < P.length) { P[k] = x; P[k + 1] = y; P[k + 2] = z; } }, pushF(x, y, z) { const k = self.ofN++ * 3; if (k + 2 < F.length) { F[k] = x; F[k + 1] = y; F[k + 2] = z; } } };
   }
   ownMarkEnd(om, capt, view) {
     if (!om) return; const g = this.omPts.geometry; g.setDrawRange(0, this.omN); g.attributes.position.needsUpdate = true; this.omPts.visible = this.omN > 0;
+    { const g2 = this.ofPts.geometry; g2.setDrawRange(0, this.ofN); g2.attributes.position.needsUpdate = true; this.ofPts.visible = this.ofN > 0; }
     const own = this.sim.players[this.localIdx].squads, sel = view.fpSel || []; let n = 0;
     for (let k = 0; k < own.length; k++) { const id = own[k], c = capt[id]; if (!c) continue; const on = sel.includes(id); const key = (k + 1) + (on ? 's' : '');
       let tex = this.omTex[key]; if (!tex) { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; const x = cv.getContext('2d'); x.fillStyle = on ? '#c8f5d0' : 'rgba(8,26,14,.78)'; x.strokeStyle = '#6fe08a'; x.lineWidth = 5; x.beginPath(); x.arc(32, 32, 25, 0, 7); x.fill(); x.stroke(); x.fillStyle = on ? '#0c3a1a' : '#a8f5b8'; x.font = 'bold 32px Georgia,serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(k + 1), 32, 34); tex = this.omTex[key] = new THREE.CanvasTexture(cv); }
@@ -2594,7 +2601,7 @@ class Renderer {
       const u = units[i];
       if (u.dead || u.inactive) continue;
       const x = lerp(u.px, u.x, alpha), y = lerp(u.py, u.y, alpha), z = lerp(u.pz, u.z, alpha);
-      if (om && u.squad >= 0 && i !== heroId && u.type !== 'horse' && !u.downed && !u.wounded && !(u.downT > 0)) { const q = sim.squads[u.squad]; if (q && (q.owner === this.localIdx || (q.id === sim.players[this.localIdx].soldierSq && sim.mission && sim.mission.soldier))) { const top = y + (u.mounted ? 3.15 : 2.55) * (u.look && u.look.h ? u.look.h : 1); om.push(x, top, z); if (capt[u.squad] === undefined) capt[u.squad] = [x, top, z]; } }
+      if (om && u.squad >= 0 && i !== heroId && u.type !== 'horse' && !u.downed && !u.wounded && !(u.downT > 0)) { const q = sim.squads[u.squad]; if (q && q.owner !== this.localIdx && this.friendOwner[q.owner] && sim.units[sim.players[q.owner].heroId] !== u) om.pushF(x, y + (u.mounted ? 3.15 : 2.55) * (u.look && u.look.h ? u.look.h : 1), z); if (q && (q.owner === this.localIdx || (q.id === sim.players[this.localIdx].soldierSq && sim.mission && sim.mission.soldier))) { const top = y + (u.mounted ? 3.15 : 2.55) * (u.look && u.look.h ? u.look.h : 1); om.push(x, top, z); if (capt[u.squad] === undefined) capt[u.squad] = [x, top, z]; } }
       const far = (x - cx) * (x - cx) + (z - cz) * (z - cz) > 330 * 330;
       if (this.fog && u.team !== this.localTeam && !this.seen[i]) { if (this.wasSeen[i]) { this.wasSeen[i] = 0; this.hideFigure(i); const hs = this.horseSlot.get(u.id); if (hs !== undefined) this.hideHorse(hs); const cs = this.cannonSlot.get(u.id); if (cs !== undefined) for (const k in this.cannon) this.cannon[k].setMatrixAt(cs, T.zero); } continue; }
       if (this.fog) this.wasSeen[i] = 1;

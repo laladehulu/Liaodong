@@ -151,7 +151,7 @@ const AUDIO = (() => {
     if (name === 'cannon' || name === 'cannonhit') { boom(x, y, z, vol === undefined ? 1 : vol, name === 'cannonhit' ? 'hit' : 'fire'); if (name === 'cannonhit' && SAMPLES.count) { sampled('dirt', x, y, z, (vol || 1) * 1.6); const sp = spatial(x, y, z, (vol || 1) * 0.9, 120), d = SAMPLES.pick('debris'); if (sp && d) samp(sp, ctx.currentTime + Math.min(1, sp.dist / 343) + 0.03, d, rr(0.9, 1.1), sp.gain * 0.8); } return; }
     if (name === 'ballwhistle') { whistle(x, y, z, vol === undefined ? 1 : vol); return; }
     const now = performance.now(); if (now - lastFrame > 40) { budget = 16; lastFrame = now; }
-    if (budget-- <= 0 && name !== 'explosion' && name !== 'collapse' && name !== 'siegehit' && name !== 'killcue' && !(name.startsWith('strike') && (vol || 1) > 1)) return;
+    if (budget-- <= 0 && name !== 'explosion' && name !== 'collapse' && name !== 'siegehit' && name !== 'killcue' && name !== 'bodythump' && !((name.startsWith('strike') || name === 'thud') && (vol || 1) > 1)) return;
     vol = vol === undefined ? 1 : vol;
     if (SAMPLES.count && sampled(name, x, y, z, vol)) return;
     name = { strike: 'thud', strikeheavy: 'thud', strikearmor: 'clang', killcue: 'hitmark', flesh: 'thud', shield: 'clang', thrust: 'swish', woodhit: 'dirt', gatehit: 'thud', ram: 'thud', collapse: 'explosion', siegehit: 'explosion', horsedie: 'death', arrow: 'whiz' }[name] || name;
@@ -173,6 +173,8 @@ const AUDIO = (() => {
       case 'explosion': { const sp = spatial(x, y, z, vol * 1.5, 600); if (!sp) return; late(sp); const f = noise(sp, t, 1.6, 'lowpass', 1500, 0.5, sp.gain, 0.008); f.frequency.exponentialRampToValueAtTime(110, t + 1.2); tone(sp, t, 0.9, 'sine', 55, 24, sp.gain * 1.3); noise(sp, t, 0.12, 'bandpass', 2500, 1, sp.gain * 0.5, 0.002); noise({ ...sp, wet: 1 }, t + 0.1, 3, 'lowpass', 300, 0.5, sp.gain * 0.5, 0.1); for (let i = 0; i < 5; i++) noise(sp, t + 0.25 + Math.random() * 0.9, 0.05, 'bandpass', 1800, 1.5, sp.gain * 0.12, 0.002); break; }
       case 'clang': { const sp = spatial(x, y, z, vol * 0.7, 80); if (!sp) return; tone(sp, t, 0.28, 'sine', 2150, 2100, sp.gain * 0.5); tone(sp, t, 0.22, 'sine', 3100, 3050, sp.gain * 0.3); tone(sp, t, 0.3, 'triangle', 1230, 1200, sp.gain * 0.25); noise(sp, t, 0.03, 'highpass', 3000, 0.7, sp.gain * 0.5, 0.002); break; }
       case 'swish': { const sp = spatial(x, y, z, vol * 0.45, 40); if (!sp) return; const f = noise(sp, t, 0.16, 'bandpass', 700, 1.2, sp.gain, 0.05); f.frequency.exponentialRampToValueAtTime(2600, t + 0.14); break; }
+      case 'bodythump': { const sp = spatial(x, y, z, vol, 40); if (!sp) return; /* the weight of a blow landing on a body: a deep punch felt more than heard */
+        tone(sp, t, 0.16, 'sine', 78, 34, sp.gain * 1.1); noise(sp, t, 0.07, 'lowpass', 260, 0.9, sp.gain * 0.9, 0.002); tone(sp, t, 0.05, 'triangle', 160, 60, sp.gain * 0.35); break; }
       case 'thud': { const sp = spatial(x, y, z, vol * 0.8, 60); if (!sp) return; noise(sp, t, 0.12, 'lowpass', 420, 0.7, sp.gain, 0.003); tone(sp, t, 0.1, 'sine', 90, 45, sp.gain * 0.7); break; }
       case 'ricochet': { const sp = spatial(x, y, z, vol * 0.5, 90); if (!sp) return; tone(sp, t, 0.25, 'sine', 3200, 900, sp.gain * 0.35); noise(sp, t, 0.05, 'highpass', 2500, 0.7, sp.gain * 0.4, 0.002); break; }
       case 'dirt': { const sp = spatial(x, y, z, vol * 0.5, 70); if (!sp) return; noise(sp, t, 0.08, 'lowpass', 900, 0.7, sp.gain, 0.003); break; }
