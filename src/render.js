@@ -2152,6 +2152,7 @@ class Renderer {
       const lx = G[o + 6], ly = G[o + 7], lz = G[o + 8], fx2 = Math.sin(u.yaw), fz2 = Math.cos(u.yaw);
       this.seg(f.shield, slot, lx + fx2 * 0.06, ly, lz + fz2 * 0.06, lx + fx2 * 0.13, ly, lz + fz2 * 0.13, 0.8, 0.8); this.seg(f.boss, slot, lx + fx2 * 0.12, ly, lz + fz2 * 0.12, lx + fx2 * 0.17, ly, lz + fz2 * 0.17, 0.2, 0.2);
     } else { f.shield.setMatrixAt(slot, Z); f.boss.setMatrixAt(slot, Z); }
+    if (lie && lie.kind !== 'sleep' && a.dw > 0.6) { for (const k of ['blade', 'hilt', 'rifle', 'barrel', 'yari', 'pistol', 'arrow', 'rod', 'flask']) f[k].setMatrixAt(slot, Z); for (const k of ['bow', 'bstring']) { f[k].setMatrixAt(slot * 2, Z); f[k].setMatrixAt(slot * 2 + 1, Z); } for (let k = 0; k < 9; k++) f.twig.setMatrixAt(slot * 9 + k, Z); } /* a man down has let go of his weapon: it lies where it fell, it does not stand up out of him */
     // blade trail while the cut is moving
     if (melee && (u.st === ST_RELEASE || (u.st === ST_RECOVER && stT < 0.06))) {
       const cx = this.camera.position.x - x, cz = this.camera.position.z - z;
