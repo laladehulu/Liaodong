@@ -44,7 +44,7 @@ function legColor(u) {
 // part: m = mesh kind ('b' box, 'c' cone, 'y' cylinder); f = frame (c chest, h head, p pelvis, sl/sr shoulders, or seg:[jointA, jointB, t0, t1]);
 // o = offset in the frame's axes, s = size, r = local euler, k = colour
 const GJ = { hipL: 0, kneeL: 3, footL: 6, hipR: 9, kneeR: 12, footR: 15, shL: 18, elL: 21, haL: 24, shR: 27, elR: 30, haR: 33 };
-const GEAR_K = { b: 50, c: 4, y: 5 }; /* raised from 40 for faces: eyes with lids, ears, face shapes */
+const GEAR_K = { b: 42, c: 4, y: 5 }; /* 40 + 2 for the eyes; every extra slot costs an instanced box per man, drawn twice */
 const uhash = (id, k) => (((id + 1) * 2654435761 + (k || 0) * 40503) >>> 0) % 1000 / 1000;
 const GEAR_CACHE = new Map();
 // hit reaction envelope: snaps in over 70 ms (ease-out), holds while he reels, eases back out over 0.25 s after the stun ends
@@ -64,16 +64,18 @@ const GEAR_HOOK = { fn: null }; // an edition may supply its own uniforms (the r
 // heavy upper lid line of an East Asian eye drawn over its top; the outer corner lifts or droops a little with the man's temper
 function faceEyes(b, fz, o) {
   o = o || {}; const SK = -1, SD = -2, sh = o.shape | 0; /* skin-toned parts take each man's own skin colour */
-  /* the shape of the face, so men can be told apart: ears; a broad square jaw, a narrow pointed chin, high cheekbones or a heavy brow ridge */
-  b('h', [0.158, -0.02, 0.0], [0.03, 0.075, 0.055], SD); b('h', [-0.158, -0.02, 0.0], [0.03, 0.075, 0.055], SD);
-  if (sh === 1) b('h', [0, -0.052, fz + 0.01], [0.058, 0.032, 0.022], SD); /* a broad flat nose */
-  else if (sh === 2) b('h', [0, -0.155, 0.075], [0.11, 0.05, 0.11], SK);
-  else if (sh === 3) { b('h', [0.095, -0.035, fz - 0.006], [0.065, 0.03, 0.02], SD); b('h', [-0.095, -0.035, fz - 0.006], [0.065, 0.03, 0.02], SD); }
-  else if (sh === 4) b('h', [0, 0.03, fz - 0.008], [0.25, 0.03, 0.02], SD); const ew = o.young ? 0.052 : 0.048, eh = o.young ? 0.03 : 0.025, tilt = o.tilt || 0.06, ink = 0x1a1410, sc = 0xe2d6c2, iris = o.iris || 0x2a1a12;
+  if (o.named) { /* the named men also get ears and a face shape of their own: a broad nose, a pointed chin, high cheekbones or a heavy brow */
+    b('h', [0.158, -0.02, 0.0], [0.03, 0.075, 0.055], SD); b('h', [-0.158, -0.02, 0.0], [0.03, 0.075, 0.055], SD);
+    if (sh === 1) b('h', [0, -0.052, fz + 0.01], [0.058, 0.032, 0.022], SD);
+    else if (sh === 2) b('h', [0, -0.155, 0.075], [0.11, 0.05, 0.11], SK);
+    else if (sh === 3) { b('h', [0.095, -0.035, fz - 0.006], [0.065, 0.03, 0.02], SD); b('h', [-0.095, -0.035, fz - 0.006], [0.065, 0.03, 0.02], SD); }
+    else if (sh === 4) b('h', [0, 0.03, fz - 0.008], [0.25, 0.03, 0.02], SD); }
+  /* each eye is two parts: a small warm off-white almond, and over it one dark shape that is both the heavy upper lid and the iris
+     beneath it (a hooded East Asian eye, no glint, no ring of white round the iris, so nothing stares) */
+  const ew = o.young ? 0.052 : 0.048, eh = o.young ? 0.03 : 0.025, tilt = o.tilt || 0.03;
   for (const sx of [1, -1]) { if (o.patch && sx < 0) continue;
-    b('h', [0.058 * sx, 0.0, fz - 0.002], [ew, eh, 0.01], sc, [0, 0, -tilt * sx]);
-    b('h', [0.058 * sx - 0.003 * sx, -0.002, fz + 0.002], [0.024, o.young ? 0.026 : 0.022, 0.01], iris);
-    b('h', [0.058 * sx, eh * 0.5, fz + 0.004], [ew + 0.008, o.lid || 0.011, 0.012], ink, [0, 0, -tilt * sx]); }
+    b('h', [0.058 * sx, 0.0, fz - 0.002], [ew, eh, 0.01], 0xe2d6c2, [0, 0, -tilt * sx]);
+    b('h', [0.056 * sx, eh * 0.18, fz + 0.003], [ew * 0.62, eh * 0.95, 0.012], 0x1e140f, [0, 0, -tilt * sx]); }
 }
 // ---- the named men of the story file: each his own face and headgear (u.look is set by the story module; render-only) ----
 function lookGear(L, b, c, y, hatOn, part) {
@@ -89,7 +91,7 @@ function lookGear(L, b, c, y, hatOn, part) {
     default: { const tall = L.hat === 'rattanTall' ? 1.35 : 1; c('h', [0, 0.17 * tall, 0], [0.4, 0.2 * tall, 0.4], 0xb8964e); y('h', [0, 0.07, 0], [0.4, 0.045, 0.4], 0x8a6a30); b('h', [0, 0.27 * tall + 0.03, 0], [0.07, L.plume ? 0.12 : 0.05, 0.07], L.plume || red); if (L.band) y('h', [0, 0.11, 0], [0.37, 0.035, 0.37], L.band); }
   } });
   if (part === 'face') {
-    faceEyes(b, fz, { young: L.young, patch: L.patch, tilt: L.brows === 'sad' ? -0.06 : L.brows === 'knit' || L.brows === 'thick' ? 0.07 : 0.02, lid: L.grey ? 0.014 : 0.011, shape: L.shape !== undefined ? L.shape : (String(L.id || '').split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) % 5) });
+    faceEyes(b, fz, { young: L.young, patch: L.patch, tilt: L.brows === 'sad' ? -0.06 : L.brows === 'knit' || L.brows === 'thick' ? 0.07 : 0.02, named: true, shape: L.shape !== undefined ? L.shape : (String(L.id || '').split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) % 5) });
     if (L.patch) { b('h', [-0.058, 0.004, fz + 0.004], [0.075, 0.065, 0.016], 0x111111); b('h', [0, 0.03, fz - 0.004], [0.3, 0.016, 0.012], 0x111111, [0, 0, -0.32]); }
     const BR = { thick: [0.08, 0.028, 0.06, 0.035], thin: [0.06, 0.012, 0.1, 0.04], knit: [0.075, 0.022, 0.32, 0.03], high: [0.065, 0.016, -0.18, 0.055], sad: [0.065, 0.018, -0.3, 0.035] }[L.brows || 'thin'] || [0.065, 0.016, 0.12, 0.035];
     b('h', [0.06, BR[3], fz], [BR[0], BR[1], 0.014], bh, [0, 0, -BR[2]]); b('h', [-0.06, BR[3], fz], [BR[0], BR[1], 0.014], bh, [0, 0, BR[2]]);
@@ -428,7 +430,7 @@ class Particles {
           ' if(vS<0.0){ float d=length(c); float a=smoothstep(0.5,0.12,d)*vC.a; if(a<0.01) discard; gl_FragColor=vec4(vC.rgb,a); return; }',
           /* each puff turns slowly and has its own patch of cloud noise */
           ' float an=vS*6.2832+vT*(vS-0.5)*1.6; float cs=cos(an), sn=sin(an); vec2 r=vec2(c.x*cs-c.y*sn, c.x*sn+c.y*cs);',
-          ' vec2 uv=r*0.6+vec2(vS*7.31, vS*3.17); float n1=texture2D(noiseT,uv).r; float n2=texture2D(noiseT,uv*2.3+vec2(vT*0.2,vS)).r;',
+          ' vec2 uv=r*0.6+vec2(vS*7.31, vS*3.17); vec4 tn=texture2D(noiseT,uv); float n1=tn.r; float n2=tn.g;',
           ' float nz=n1*0.62+n2*0.38; float d=length(c)*2.0;',
           /* a lumpy body that erodes into wisps as it ages, instead of a round dot fading out */
           ' float dens=(1.0-d*d)*1.15+(nz-0.5)*(1.0+vT*0.9); float thr=0.08+vT*0.55;',
@@ -457,7 +459,8 @@ class Particles {
       for (const [G, v] of lat) { const fx = x / N * G, fy = y / N * G, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
         const g = (a, b) => v[((b % G) * G + (a % G))]; const n = (g(x0, y0) * (1 - sx) + g(x0 + 1, y0) * sx) * (1 - sy) + (g(x0, y0 + 1) * (1 - sx) + g(x0 + 1, y0 + 1) * sx) * sy;
         s += n * amp; tot += amp; amp *= 0.5; }
-      const q = Math.round(s / tot * 255), k = (y * N + x) * 4; d[k] = d[k + 1] = d[k + 2] = q; d[k + 3] = 255; }
+      const q = Math.round(s / tot * 255), k = (y * N + x) * 4; d[k] = d[k + 2] = q; d[k + 3] = 255; }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const sx = Math.floor(x * 2.3 + 17) % N, sy = Math.floor(y * 2.3 + 5) % N; d[(y * N + x) * 4 + 1] = d[(sy * N + sx) * 4]; } /* a finer octave in green: one texture read per pixel, not two */
     const t = new THREE.DataTexture(d, N, N, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true; Particles._nt = t; return t;
   }
   update(dt) {
@@ -564,27 +567,7 @@ const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 	float shadowGraze( vec4 shadowCoord ) { vec3 c = shadowCoord.xyz / shadowCoord.w; float dxy = length( fwidth( c.xy ) ) * 140.0, dz = fwidth( c.z ) * 390.0; return smoothstep( 1.6, 4.0, dz / max( dxy, 1e-6 ) ); }
 	float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
 		float graze = shadowGraze( shadowCoord );
-		if ( REAL_SHADOW ) {
-			// realism: how far the shade lies from what casts it decides how it is painted. Far from its caster (a house,
-			// a wall, a tree) the shade is a full ink wash: a wandering wet edge, ink pooled at the rim, dry-brush grain inside.
-			// Close to its caster (a man, a horse, the foot of a wall) it is a single clean drop of ink that has spread into
-			// the paper: a soft round bleed with a darker rim and no grain, so it glides as he moves instead of crawling.
-			vec3 sc = shadowCoord.xyz / shadowCoord.w; float bs = 0.0, bn = 0.0;
-			for ( int i = 0; i < 8; i ++ ) { float a = float( i ) * 2.39996 + 0.7; vec2 o = vec2( cos( a ), sin( a ) ) * sqrt( ( float( i ) + 0.5 ) / 8.0 ) * ( 1.6 / 140.0 );
-				float d = unpackRGBAToDepth( texture2D( shadowMap, sc.xy + o ) ); if ( d < sc.z + shadowBias ) { bs += d; bn += 1.0; } }
-			if ( bn < 0.5 ) return 1.0;
-			float dist = ( sc.z - bs / bn ) * 390.0, inkK = smoothstep( 3.5, 10.0, dist );
-			vec2 w = sc.xy + inkShift;
-			vec2 warp = inkK * ( vec2( inkF( w * 40.0 ), inkF( w * 40.0 + 19.3 ) ) - 0.5 ) * ( 1.3 / 140.0 );
-			float rad = ( 0.2 + min( dist, 30.0 ) * 0.05 ) / 140.0, s = 0.0;
-			for ( int i = 0; i < 16; i ++ ) { float fi = float( i ); float a = fi * 2.39996; vec2 o = vec2( cos( a ), sin( a ) ) * sqrt( ( fi + 0.5 ) / 16.0 ) * rad;
-				s += step( sc.z + shadowBias, unpackRGBAToDepth( texture2D( shadowMap, sc.xy + warp + o ) ) ); }
-			s /= 16.0;
-			s = smoothstep( 0.04, 0.96, s + inkK * ( inkF( w * 90.0 ) - 0.5 ) * 0.3 );
-			float rim = s * ( 1.0 - s ) * 4.0; s -= rim * ( 0.1 + 0.06 * inkK );
-			s += ( 1.0 - s ) * ( mix( 0.1, 0.04, inkK ) + inkK * inkF( w * 120.0 ) * 0.1 ); /* a man's shade is a paler, diluted wash */
-			return mix( clamp( s, 0.0, 1.0 ), 1.0, graze );
-		}
+		if ( REAL_SHADOW ) return mix( getShadowBase( shadowMap, shadowMapSize, shadowBias, shadowRadius, shadowCoord ), 1.0, graze );
 		vec2 w = shadowCoord.xy / shadowCoord.w + inkShift;
 		// low-frequency wander only (features ~1-3 m): nothing finer than a few pixels, so nothing to shimmer
 		vec2 warp = ( vec2( inkF( w * 55.0 ), inkF( w * 55.0 + 19.3 ) ) - 0.5 ) * ( 2.0 / 140.0 );
