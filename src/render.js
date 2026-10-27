@@ -564,7 +564,27 @@ const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 	float shadowGraze( vec4 shadowCoord ) { vec3 c = shadowCoord.xyz / shadowCoord.w; float dxy = length( fwidth( c.xy ) ) * 140.0, dz = fwidth( c.z ) * 390.0; return smoothstep( 1.6, 4.0, dz / max( dxy, 1e-6 ) ); }
 	float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
 		float graze = shadowGraze( shadowCoord );
-		if ( REAL_SHADOW ) return mix( getShadowBase( shadowMap, shadowMapSize, shadowBias, shadowRadius, shadowCoord ), 1.0, graze );
+		if ( REAL_SHADOW ) {
+			// realism: how far the shade lies from what casts it decides how it is painted. Far from its caster (a house,
+			// a wall, a tree) the shade is a full ink wash: a wandering wet edge, ink pooled at the rim, dry-brush grain inside.
+			// Close to its caster (a man, a horse, the foot of a wall) it is a single clean drop of ink that has spread into
+			// the paper: a soft round bleed with a darker rim and no grain, so it glides as he moves instead of crawling.
+			vec3 sc = shadowCoord.xyz / shadowCoord.w; float bs = 0.0, bn = 0.0;
+			for ( int i = 0; i < 8; i ++ ) { float a = float( i ) * 2.39996 + 0.7; vec2 o = vec2( cos( a ), sin( a ) ) * sqrt( ( float( i ) + 0.5 ) / 8.0 ) * ( 1.6 / 140.0 );
+				float d = unpackRGBAToDepth( texture2D( shadowMap, sc.xy + o ) ); if ( d < sc.z + shadowBias ) { bs += d; bn += 1.0; } }
+			if ( bn < 0.5 ) return 1.0;
+			float dist = ( sc.z - bs / bn ) * 390.0, inkK = smoothstep( 3.5, 10.0, dist );
+			vec2 w = sc.xy + inkShift;
+			vec2 warp = inkK * ( vec2( inkF( w * 55.0 ), inkF( w * 55.0 + 19.3 ) ) - 0.5 ) * ( 2.0 / 140.0 );
+			float rad = ( 0.32 + min( dist, 30.0 ) * 0.045 ) / 140.0, s = 0.0;
+			for ( int i = 0; i < 16; i ++ ) { float fi = float( i ); float a = fi * 2.39996; vec2 o = vec2( cos( a ), sin( a ) ) * sqrt( ( fi + 0.5 ) / 16.0 ) * rad;
+				s += step( sc.z + shadowBias, unpackRGBAToDepth( texture2D( shadowMap, sc.xy + warp + o ) ) ); }
+			s /= 16.0;
+			s = smoothstep( 0.04, 0.96, s + inkK * ( inkF( w * 90.0 ) - 0.5 ) * 0.3 );
+			float rim = s * ( 1.0 - s ) * 4.0; s -= rim * ( 0.14 + 0.08 * inkK );
+			s += ( 1.0 - s ) * ( 0.05 + inkK * ( inkF( w * 140.0 ) * 0.16 - 0.01 ) );
+			return mix( clamp( s, 0.0, 1.0 ), 1.0, graze );
+		}
 		vec2 w = shadowCoord.xy / shadowCoord.w + inkShift;
 		// low-frequency wander only (features ~1-3 m): nothing finer than a few pixels, so nothing to shimmer
 		vec2 warp = ( vec2( inkF( w * 55.0 ), inkF( w * 55.0 + 19.3 ) ) - 0.5 ) * ( 2.0 / 140.0 );
