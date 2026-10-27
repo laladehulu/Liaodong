@@ -16,7 +16,7 @@ const DIR_UP = 0, DIR_RIGHT = 1, DIR_DOWN = 2, DIR_LEFT = 3;
 const ST_IDLE = 0, ST_WINDUP = 1, ST_RELEASE = 2, ST_RECOVER = 3, ST_STUN = 4, ST_RELOAD = 5, ST_AIM = 6, ST_SWAP = 7, ST_KICK = 8, ST_BURST = 9;
 const ORD_MOVE = 0, ORD_CHARGE = 1, ORD_HOLD = 2, ORD_FOLLOW = 3, ORD_FORM = 4, ORD_FIRE = 5, ORD_CONTROL = 6, ORD_AUTO = 7, ORD_ABILITY = 8, ORD_NAVAL = 9, ORD_DIRECTIVE = 10, ORD_WAVE = 12, ORD_SPAWN = 13;
 const DIR_ATTACK = 0, DIR_HOLD = 1, DIR_SUPPORT = 2, DIR_FLANK = 3;
-const FIRE_CS = 6, SCORE_WIN = 300;
+const FIRE_CS = 6, SCORE_WIN = 300, DUEL_WIN = 5;
 function d2fuse(d) { return d / 13 + 0.3; }
 const FORM_LINE = 0, FORM_COLUMN = 1, FORM_WEDGE = 2, FORM_LOOSE = 3;
 const BUDGET = 1500;
@@ -93,7 +93,7 @@ const ROSTER = [
   ['samurai', 'ashigaru', 'rifle_sho', 'archer', 'shinsengumi', 'byakkotai', 'horokutai', 'ronin', 'cavalry', 'cannon4'],
 ];
 const AI_NAMES = [['Yuan Chonghuan', 'Sun Chengzong', 'Mao Wenlong', 'Zu Dashou', 'Lu Xiangsheng'], ['Hong Taiji', 'Daišan', 'Dorgon', 'Ajige', 'Amin']];
-const MODES = { standard: { name: 'Field battle' }, grand: { name: 'Grand battle' }, chaos: { name: 'Chaos' }, officers: { name: 'Officers' }, story: { name: 'Story' }, heroes: { name: 'Heroes' }, soldier: { name: 'Path of a Soldier' }, campaign: { name: 'Co-op campaign' }, assault: { name: 'Assault' } };
+const MODES = { standard: { name: 'Field battle' }, grand: { name: 'Grand battle' }, chaos: { name: 'Chaos' }, officers: { name: 'Officers' }, story: { name: 'Story' }, heroes: { name: 'Heroes' }, soldier: { name: 'Path of a Soldier' }, campaign: { name: 'Co-op campaign' }, assault: { name: 'Assault' }, duel: { name: 'Duel' } };
 // 小兵之路: the role a soldier enlists in, by side
 const SROLE = [{ musket: 'rifle_imp', spear: 'ashigaru', shield: 'samurai', duck: 'yuanyang', sanyan: 'rifle_spencer', skirm: 'jinshotai', cavalry: 'cavalry', bomber: 'horokutai', militia: 'ronin' },
   { musket: 'rifle_sho', spear: 'ashigaru', shield: 'samurai', archer: 'archer', guard: 'shinsengumi', mongol: 'byakkotai', cavalry: 'cavalry', bomber: 'horokutai', militia: 'ronin' }];
@@ -279,7 +279,7 @@ class Sim {
     this.initFuel();
     if (this.mode === 'officers') for (const p of this.players) if (!p.ai) for (const id of p.squads) this.squads[id].order = ORD_FOLLOW;
     this.wagons = [];
-    if (!this.heroMode && !this.chaos && this.battle !== 'siegecity') for (let t = 0; t < 2; t++) { const zz = t === 0 ? -128 : 128; for (const xx of [-26, 26]) { let x = xx, z = zz; for (let k = 0; k < 8 && (waterAt(x, z) !== 0); k++) z += t === 0 ? 4 : -4; this.wagons.push({ id: this.wagons.length, team: t, x, z, burnt: false, raid: 0 }); } }
+    if (!this.heroMode && !this.chaos && this.mode !== 'duel' && this.battle !== 'siegecity') for (let t = 0; t < 2; t++) { const zz = t === 0 ? -128 : 128; for (const xx of [-26, 26]) { let x = xx, z = zz; for (let k = 0; k < 8 && (waterAt(x, z) !== 0); k++) z += t === 0 ? 4 : -4; this.wagons.push({ id: this.wagons.length, team: t, x, z, burnt: false, raid: 0 }); } }
     { const wr = new RNG(this.seed ^ 0x77a1); this.wx = { at: 30 * (110 + wr.int(130)), kind: this.rain ? 'clear' : wr.next() < 0.5 ? 'fog' : 'rain', done: !!(this.mission && (this.mission.camp || this.mission.soldier)), lift: 0 }; }
     if (this.vets && this.vets.length && this.players[0]) { // veterans of earlier chapters: their losses and their stars march with them
       const used = {}; this.vets.forEach((v) => { const sid = this.players[0].squads.find(id => !used[id] && this.squads[id].type === v.type); if (sid === undefined) return; used[sid] = 1; const sq = this.squads[sid]; const xp = clamp(v.xp | 0, 0, 200); sq.xp = xp; sq.stars = xp >= 30 ? 3 : xp >= 15 ? 2 : xp >= 6 ? 1 : 0; sq.moraleMax = (sq.def.morale || 100) + sq.stars * 10; sq.morale = sq.moraleMax; sq.veteran = true;
@@ -516,6 +516,7 @@ class Sim {
       return;
     }
     if (this.mission) { this.setupMission(teams, aiPl); return; }
+    if (this.mode === 'duel') { this.duelSetup(teams, aiPl); return; }
     if (this.mode === 'soldier') { // every human is one man in the ranks; AI commanders fight the battle around them
       const sc = this.cfg.soldier || {}; for (const e of teams[0].concat(teams[1])) { e.army = []; e.player.army = []; }
       for (let t = 0; t < 2; t++) { const n = clamp((sc.cmds || [3, 3])[t] | 0, 1, 5); for (let k = 0; k < n; k++) { const L = sc.armies && sc.armies[t] && sc.armies[t][k]; aiPl(t, (sc.names && sc.names[t] && sc.names[t][k]) || AI_NAMES[t][k % 5], L ? L.filter(x => DEFS[x]) : this.randomArmy(t, sc.size || 1500)); } }
@@ -759,12 +760,14 @@ class Sim {
     if (this.sg) this.siegeTick();
     for (let i = 0; i < units.length; i++) { const u = units[i]; if (!u.dead && u.mount >= 0) { const h = units[u.mount]; u.x = h.x; u.z = h.z; u.y = h.y; u.vy = 0; u.airborne = h.airborne; } }
     if (this.phase === 1 && this.tick % 30 === 0 && this.tick > this.battleTick + 150 && this.winner < 0) this.checkVictory();
+    if (this.mode === 'duel' && this.phase === 1 && this.winner < 0) this.duelThink2();
   }
   checkVictory() {
     let a0 = 0, a1 = 0;
     for (let i = 0; i < this.teamAlive[0].length; i++) if (this.teamAlive[0][i].def.ai !== 'cannon') a0++;
     for (let i = 0; i < this.teamAlive[1].length; i++) if (this.teamAlive[1][i].def.ai !== 'cannon') a1++;
     if (this.mission) { if (this.mwin !== undefined) this.winner = this.mwin; if (this.winner >= 0) this.events.push({ t: 'end', winner: this.winner }); return; }
+    if (this.mode === 'duel') { if (this.score[0] >= DUEL_WIN || this.score[1] >= DUEL_WIN) { this.winner = this.score[0] >= DUEL_WIN ? 0 : 1; this.events.push({ t: 'end', winner: this.winner }); } return; }
     if (a0 === 0 && a1 === 0) this.winner = 2; else if (a0 === 0) this.winner = 1; else if (a1 === 0) this.winner = 0;
     else if (this.heroMode) { if (this.citT >= 30 * 45) this.winner = 1; else if (this.tick >= this.scen.limit) this.winner = 0; }
     else if (this.score[0] >= SCORE_WIN || this.score[1] >= SCORE_WIN) this.winner = this.score[0] >= this.score[1] ? 0 : 1;
@@ -3946,6 +3949,33 @@ Sim.prototype.heroBow = function (u, a, g) {
     return;
   }
   if (!drawing) { u.drawT = 0; u.aiming = false; }
+};
+// ---- duel: players alone, each in the kit of the post he chose, fighting rounds in a ring; first to five rounds wins ----
+Sim.prototype.duelSetup = function (teams, aiPl) {
+  for (const e of teams[0].concat(teams[1])) { e.army = []; e.player.army = []; }
+  for (let t = 0; t < 2; t++) if (!this.players.some(p => !p.ai && p.team === t)) { const p = { idx: this.players.length, name: t === 0 ? 'Ming swordsman' : 'Jin swordsman', team: t, heroId: -1, horseId: -1, commanderId: -1, auto: true, ai: true, duelBot: true, squads: [], kills: 0, army: [], mounted: false, ready: true, rallyT: 0, bombs: 0, fury: 0 }; this.players.push(p); }
+  this.duelRound = 1; this.duelNext = -1; const cnt = [0, 0];
+  { // the ring: the nearest open, dry, level ground to the middle of the field, clear of every house and wall by twelve paces
+    const open = (x, z) => { for (const b of this.boxes) if (Math.abs(x - b.x) < b.hw + 12 && Math.abs(z - b.z) < b.hd + 12) return false; for (const o of this.obstacles) if (len(o.x - x, o.z - z) < 7) return false; for (let a = 0; a < 8; a++) { const px = x + sin(a * 0.785) * 10, pz = z + cos(a * 0.785) * 10; if (waterAt(px, pz) !== 0 || Math.abs(terrainH(px, pz) - terrainH(x, z)) > 1.6) return false; } return true; };
+    let rc = [0, 0]; search: for (let r = 0; r <= 110; r += 10) for (let k = 0; k < Math.max(1, r / 5); k++) { const a = k / Math.max(1, r / 5) * PI * 2; const x = sin(a) * r, z = cos(a) * r; if (Math.abs(x) < HALF - 20 && Math.abs(z) < HALF - 20 && open(x, z)) { rc = [x, z]; break search; } }
+    this.duelC = rc; }
+  for (const p of this.players) { const k = cnt[p.team]++; this.placeArmy({ player: p, army: [] }, p.team, 0, 0, p.team === 0 ? 0 : PI); const h = this.units[p.heroId]; if (!h) continue;
+    const c = this.cfg.players[p.idx] || {}; const type = p.duelBot ? (p.team === 0 ? 'samurai' : 'samurai') : roleType(c.role || 'shield', p.team); const d = defFor(type, p.team);
+    h.type = type; h.def = d; h.weapon = (d.weapons || ['katana'])[0]; const g = gunOf(d, h.weapon); h.ammo = g ? (g.mag || 1) : 1; h.loaded = true; if (d.revolver) h.ammoR = d.revolver.mag; h.hp = d.hp; h.bombs = 0; p.bombs = 0;
+    if (p.horseId >= 0 && this.units[p.horseId]) { const hr = this.units[p.horseId]; hr.dead = true; hr.inactive = true; hr.x = hr.px = -HALF + 1; hr.z = hr.pz = -HALF + 1; p.horseId = -1; } /* no horses in the ring */
+    h.duelSpot = this.freeSpot(this.duelC[0] + (k - (this.players.filter(q => q.team === p.team).length - 1) / 2) * 3, this.duelC[1] + (p.team === 0 ? -7 : 7)); this.duelPlace(h); }
+  this.phase = 1; this.battleTick = 0; for (const p of this.players) p.ready = true;
+};
+Sim.prototype.duelPlace = function (h) { const [x, z] = h.duelSpot; h.x = h.px = x; h.z = h.pz = z; h.y = h.py = terrainH(x, z); h.yaw = h.pyaw = h.team === 0 ? 0 : PI; h.vx = h.vz = h.vy = 0; h.mx = h.mz = 0; h.airborne = false; h.downT = 0; h.flinchT = 0; h.st = ST_IDLE; h.stT = 0; h.blocking = false; h.aiming = false; h.target = -1; h.fat = 0; h.bleed = 0; h.downed = false; h.wounded = false; h.chg = 0; h.lunge = false; h.heavy = false; h.loaded = true; const g = gunOf(h.def, h.weapon); if (g) h.ammo = g.mag || 1; };
+Sim.prototype.duelThink2 = function () {
+  const hs = this.players.map(p => this.units[p.heroId]).filter(Boolean); const up = [0, 0]; for (const h of hs) if (!h.dead && !h.downed) up[h.team]++;
+  if (this.duelNext < 0) { if (up[0] && up[1]) { for (const h of hs) if (!h.dead && h.ctrl >= 0 && this.players[h.ctrl].duelBot) { let best = null, bd = 1e9; for (const v of hs) if (!v.dead && v.team !== h.team) { const d = len(v.x - h.x, v.z - h.z); if (d < bd) { bd = d; best = v; } } if (best) h.target = best.id; } return; }
+    const w = up[0] ? 0 : up[1] ? 1 : -1; if (w >= 0) this.score[w]++; this.duelNext = this.tick + 30 * 4; this.events.push({ t: 'duelround', winner: w, score: this.score.slice(), round: this.duelRound }); return; }
+  if (this.tick < this.duelNext) return;
+  if (this.score[0] >= DUEL_WIN || this.score[1] >= DUEL_WIN) { this.checkVictory(); return; }
+  this.duelNext = -1; this.duelRound++;
+  for (const h of hs) { if (h.dead) { h.dead = false; this.total[h.team]++; } h.hp = h.def.hp; h.deathTick = -1; this.duelPlace(h); this.events.push({ t: 'respawn', id: h.id }); }
+  this.events.push({ t: 'duelstart', round: this.duelRound });
 };
 Sim.prototype.overParapet = function (u) { const W = TERR.swall; if (!this.sg || !W) return false; return u.z > W.z0 + 0.4 && u.z < W.z1 + 0.5 && u.y > W.h - 1.2; };
 Sim.prototype.siegeInit = function () {
