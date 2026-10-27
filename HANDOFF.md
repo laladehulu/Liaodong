@@ -31,6 +31,12 @@ Local test pages (no CDN): `dist/test.html`, `test-real.html`, `test-style.html`
   gear/uniforms (`gearFor`, `lookGear`, `faceEyes`; part budget `GEAR_K`), particles (`Particles` class: smoke shader),
   events → effects (`processEvents`), ink shadows (`inkShadows`, `inkInit`).
 - `anim.js` — render-only spring rig (`ANIM.rig`) and foot planting (`ANIM.feet`).
+  Figure animation (all render-only, in render.js): `SW` blow weights + `swKind` (precursor / whip / follow-through of each cut,
+  used by `drawFigure` and the viewmodel), the riposte (`u.counterT > 0` wind-up from the bind, `a.shv` shield shove), arrow deaths
+  (`dyingStart/dyingDraw/dyingPose/dyingArms`: a scripted collapse, then the ragdoll), `helperPose` (hauling a friend up),
+  `tigerSweep` (a surrounded 狼筅 man), `idleVar` (five idles), run styles by `u.pace`/`u.fat` (`a.rs`), faces (`FX` table,
+  `faceFX`, `tagFace`: expressions for men within `FACE_R` of the camera). Contact sheets: `node test/zanim_sheet.js <scene> out.png`,
+  a live smoke run: `node test/zanim_smoke.js`.
 - `arsenal.js` — story campaigns: weapons you carry off a field are kept in the save; in camp, I opens the arsenal to pick
   up to three for the next battle (sent as `cfg.players[].wkit`, so it is the same on every machine).
 - `realism.js`, `stylized.js`, `real_gear.js` — edition-specific renderer patches and uniforms.
