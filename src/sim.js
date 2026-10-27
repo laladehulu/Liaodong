@@ -1070,7 +1070,7 @@ class Sim {
       if (hero && !hero.dead) { // hysteresis: the company re-forms only when its leader has actually marched somewhere, not when he turns his head or shuffles about
         if (sq.fAx === undefined || len(hero.x - sq.fAx, hero.z - sq.fAz) > 40) { sq.fAx = hero.x; sq.fAz = hero.z; sq.fH = hero.yaw; sq.tx = hero.x - sin(hero.yaw) * 9; sq.tz = hero.z - cos(hero.yaw) * 9; sq.facing = hero.yaw; }
         const mv = len(hero.x - sq.fAx, hero.z - sq.fAz);
-        if (mv > 7) { const hd = atan2(hero.x - sq.fAx, hero.z - sq.fAz); const turn = Math.abs(wrap(hd - sq.fH)); if (turn < 1.2 || mv > 12) sq.fH = hd; sq.fAx = hero.x; sq.fAz = hero.z;
+        if (mv > ((hero.speedNow || 0) > 4.6 ? 3 : 7)) { const hd = atan2(hero.x - sq.fAx, hero.z - sq.fAz); /* a running leader is followed closely, a walking one with hysteresis */ const turn = Math.abs(wrap(hd - sq.fH)); if (turn < 1.2 || mv > 12) sq.fH = hd; sq.fAx = hero.x; sq.fAz = hero.z;
           sq.tx = hero.x - sin(sq.fH) * 9; sq.tz = hero.z - cos(sq.fH) * 9; sq.facing = sq.fH; }
         else if (len(sq.tx - hero.x, sq.tz - hero.z) > 22) { sq.tx = hero.x - sin(sq.fH) * 9; sq.tz = hero.z - cos(sq.fH) * 9; } }
       else sq.order = ORD_HOLD;
@@ -1550,7 +1550,7 @@ class Sim {
       if (d > 1.5) { this.cavSteer(u, u.slotX, u.slotZ, Math.min(u.def.speed, d * 1.2)); return u.hyaw; }
       this.cavSteer(u, u.x, u.z, 0); u.hyaw = sq.facing; return sq.facing;
     }
-    if (d > 0.45) return this.steerFoot(u, u.slotX, u.slotZ, u.def.speed);
+    if (d > 0.45) return this.steerFoot(u, u.slotX, u.slotZ, u.def.speed * (sq.order === ORD_FOLLOW && d > 2.5 ? 1.45 : 1)); /* a man left behind his leader runs for his place (the pace cap below keeps it to the leader's own speed) */
     u.mx = 0; u.mz = 0; return sq.facing;
   }
   horseIdle(u) {
@@ -3569,7 +3569,7 @@ Sim.prototype.paceMove = function (u) {
     const e = len((u.x - sq.pcx) - (u.slotX - sq.psx), (u.z - sq.pcz) - (u.slotZ - sq.psz));
     cap = order === ORD_FOLLOW ? (sd > 12 ? base : sd > 5 ? base * PACE_JOG : base * PACE_WALK) : sd > 35 ? base * PACE_JOG : base * PACE_WALK; // following his leader he keeps the leader's pace; otherwise the company marches
     const lp = order === ORD_FOLLOW && sq.owner >= 0 ? this.players[sq.owner] : this.players.find(p => !p.ai && p.soldierSq === sq.id); // your own file in a story keeps your pace too
-    if (lp) { const L = this.units[lp.heroId]; if (L && !L.dead) { const lv = len(L.x - L.px, L.z - L.pz) / DT; if (lv > 0.5) cap = Math.max(cap, Math.min(base * 1.15, lv * 1.05)); } } // when you run, your men run with you
+    if (lp) { const L = this.units[lp.heroId]; if (L && !L.dead) { const lv = Math.max(L.speedNow || 0, len(L.x - L.px, L.z - L.pz) / DT); /* speedNow: the leader may not have moved yet this tick */ if (lv > 0.5) cap = Math.max(cap, Math.min(base * 1.5, lv * 1.08 + (sd > 4 ? 1.2 : sd > 2 ? 0.5 : 0))); } } // when you run, your men run with you: a sprinting leader is matched at the sprint, and a man who has fallen behind runs harder to close up
     const away = tgt && m > 0.01 && ((tgt.x - u.x) * u.mx + (tgt.z - u.z) * u.mz) < -0.3 * td * m; // falling back from the enemy: no strolling
     if (away && td < 40 && sd > 3) cap = base;
     else if (td < 30 && order !== ORD_FOLLOW) cap = base * PACE_WALK; // advancing to contact: the line walks in step
