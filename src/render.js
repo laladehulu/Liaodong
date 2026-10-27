@@ -1066,7 +1066,7 @@ class Renderer {
       const a0 = rv.a0 === undefined ? -HALF - 40 : rv.a0 - 8, a1 = rv.a1 === undefined ? HALF + 40 : rv.a1 + 8;
       for (let al = a0; al <= a1; al += 2.5) {
         const c = rv.c0 + rv.amp * Math.sin(al * rv.freq + rv.ph); const e1 = at(al, c - rv.w), e2 = at(al, c + rv.w);
-        const lvl = Math.min(terrainH(e1[0], e1[1]), terrainH(e2[0], e2[1])) - rv.depth * 0.32; const a = at(al, c - rv.w * 0.86), b = at(al, c + rv.w * 0.86);
+        const lvl = rv.ice ? Math.min(terrainH(e1[0], e1[1]), terrainH(e2[0], e2[1])) - rv.depth * 0.08 : Math.min(terrainH(e1[0], e1[1]), terrainH(e2[0], e2[1])) - rv.depth * 0.32; const a = at(al, c - rv.w * 0.86), b = at(al, c + rv.w * 0.86); /* an iced river: the sheet lies at the bank, near the surface */
         pts.push([a[0], lvl, a[1], b[0], lvl, b[1]]);
       }
       strip(pts);
