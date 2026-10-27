@@ -257,7 +257,7 @@ Object.assign(CHBT, {
   sjleng: [{ ph: 2, t: 10, id: 'sjcaps', cid: 1 }],
 });
 CHD.sjpowder = {
-  build: (C) => ({ id: 'sjpowder', urgent: true, timer: 14, def: 0, kick: '抉擇 · The powder', title: '火藥車 · The powder carts', ltitle: 'The powder train for Zunhua', year: 'The Sha River ford, November 1629', who: ['馬大車 Ma Dache'],
+  build: (C) => ({ id: 'sjpowder', urgent: true, timer: 14, def: 0, kick: '抉擇 · The powder', title: '火藥車 · The powder carts', ltitle: 'The powder train for Zunhua', year: 'The Sha River ford, November 1629', who: chAlive(C, 'sj_ma') ? ['馬大車 Ma Dache'] : ['趙獨眼 One-Eye Zhao'],
     lines: [chL('拉著車跑不掉！炸了，還是拉回去？', 'We can\'t outrun them with the carts! Blow them, or drag them back?')],
     opts: [{ q: 'Blow the carts when the Jin reach them', led: 'Blew up the powder train at the ford.', a: [chL('趙獨眼：點火！都趴下！', 'One-Eye Zhao: Fire in the hole! Everyone down!')], fx: (C) => { C.S.flags.powderBlown = 1; chBond(C, 'sj_zhao', 1); chBond(C, 'sj_ma', -1); } },
       { q: 'Drag them back down the road', led: 'Dragged the powder train back down the road under the Jin horse.', a: [chL('馬大車：拉！騾子，拉！', 'Ma Dache: Pull! Pull, you mules!')], fx: (C) => { C.S.flags.powderSaved = 1; chBond(C, 'sj_ma', 2); } }] }),
@@ -265,7 +265,7 @@ CHD.sjpowder = {
   murmur: (C, o) => o === 1 ? ['sj_ma', '車拉回來了。騾子瘦了一圈。', 'The carts came back. The mules came back thinner.'] : ['sj_zhao', '那一聲……耳朵到今天還在響。', 'That bang... my ears are still ringing.'],
 };
 CHD.sjcoats = {
-  build: (C) => ({ id: 'sjcoats', urgent: true, timer: 12, def: 1, kick: '抉擇 · NOW', title: '明衣 · Men in our coats', ltitle: 'The men in Ming coats at the Yongding Gate', year: 'The Yongding Gate, January 1630', who: ['高老槍 Old Gao'],
+  build: (C) => ({ id: 'sjcoats', urgent: true, timer: 12, def: 1, kick: '抉擇 · NOW', title: '明衣 · Men in our coats', ltitle: 'The men in Ming coats at the Yongding Gate', year: 'The Yongding Gate, January 1630', who: chAlive(C, 'sj_gao') ? ['高老槍 Old Gao'] : ['林阿水 Lin Ashui'],
     lines: [chL('紅衣，可走得太齊了。放不放？', 'Red coats. But they walk too straight. Fire or not?')],
     opts: [{ q: 'Fire on them', led: 'Fired on the men in Ming coats.', a: [chL('放！管他是誰！', 'Fire! Whoever they are!')], fx: (C) => { C.S.flags.coats = 'fire'; chBond(C, 'sj_gao', 1); } },
       { q: 'Hold fire — they may be ours', led: 'Held fire on the men in Ming coats.', a: [chL('……別放！是自己人——', '...Hold! They\'re ours —')], fx: (C) => { C.S.flags.coats = 'hold'; chBond(C, 'sj_tian', 1); } },
@@ -274,7 +274,7 @@ CHD.sjcoats = {
   murmur: (C, o) => o === 1 ? ['sj_tian', '我以為是我們的人。他們穿的是我們的衣裳。', 'I thought they were ours. They were wearing our coats.'] : null,
 };
 CHD.sjcaps = {
-  build: (C) => ({ id: 'sjcaps', urgent: true, timer: 13, def: 0, kick: '抉擇 · NOW', title: '冷口 · Captives or the banner', ltitle: 'The captives at the Lengkou pass', year: 'The Lengkou pass, June 1630', who: ['胡老鐵 Chief Hu'],
+  build: (C) => ({ id: 'sjcaps', urgent: true, timer: 13, def: 0, kick: '抉擇 · NOW', title: '冷口 · Captives or the banner', ltitle: 'The captives at the Lengkou pass', year: 'The Lengkou pass, June 1630', who: chAlive(C, 'sj_hu') ? ['胡老鐵 Chief Hu'] : ['隊長 The chief'],
     lines: [chL('押解的拖著百姓往北跑，阿敏的旗也在跑！救人，還是奪旗？', 'The guards are dragging the captives north, and Amin\'s banner is running too! The people, or the banner?')],
     opts: [{ q: 'Go for the captives', led: 'Went down for the captives and let the banner go.', a: [chL('救人！打押解的！', 'The people! Get the guards!')], fx: (C) => { C.S.flags.caps = 1; chBond(C, 'sj_tian', 2); chBond(C, 'sj_n7', 2); chRep(C, 'care', 1); } },
       { q: 'Go for Amin\'s banner', led: 'Ran down Amin\'s rearguard banner and let the guards take the captives.', a: [chL('奪旗！一面旗值一百顆頭！', 'The banner! One banner is worth a hundred heads!')], fx: (C) => { C.S.flags.banner = 1; chBond(C, 'sj_qian', 1); chBond(C, 'sj_n7', -2); chRep(C, 'glory', 2); } }] }),
