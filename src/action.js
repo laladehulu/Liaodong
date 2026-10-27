@@ -71,6 +71,12 @@ P.amStart = function (u, k, t) {
   u.st = ST_WINDUP; u.stT = 0; u.atkDir = M.steps.find(s => s.hit) ? (M.steps.find(s => s.hit).hit.dir) : DIR_DOWN; u.wMul = 99; u.heavy = false; u.blocking = false; u.aiming = false; u.windupId++; u.swingHit = true; u.relQ = false;
   this.events.push(M.big ? { t: 'amtele', id: u.id, k, at: u.amTgt, x: u.x, y: u.y + 1.5, z: u.z } : { t: 'windup', id: u.id, dir: u.atkDir });
 };
+// a press during a move is remembered and becomes the next move of the chain (as in Dark Souls)
+const baseMC = P.meleeControl;
+P.meleeControl = function (u, a, ad, bd) {
+  if (u.amK && usesMoves(u) && (a & S.A_ATK) && !u.atkHeld) { u.amQ = ad; u.amQt = this.tick; }
+  return baseMC.call(this, u, a, ad, bd);
+};
 // the specials an AI man may open with on his own
 const baseAI = P.unitAI;
 P.unitAI = function (u) {
@@ -130,7 +136,8 @@ P.amStep = function (u) {
   // recovery: rooted while he finds his feet; late in it the player may chain the next move (the base input path starts it)
   u.mx = 0; u.mz = 0; u.st = ST_RECOVER; u.stT = (u.amT / M.rec) * (u.def.recover || 0.4);
   if (u.amT >= M.rec) { this.amEnd(u, 0); u.st = ST_IDLE; u.stT = 0; u.amHitAny = 0; }
-  else if (human && u.amT > M.rec * 0.55) { u.amLast = u.amK; u.amLastTk = this.tick; u.amK = null; u.wMul = 1; u.amHitAny = 0; } // the chain window: hand him back to the input, still in his recovery
+  else if (human && u.amT > M.rec * 0.55) { u.amLast = u.amK; u.amLastTk = this.tick; u.amK = null; u.wMul = 1; u.amHitAny = 0; // the chain window: hand him back to the input, still in his recovery
+    if (u.amQ !== undefined && u.amQ !== null && this.tick - u.amQt < 30) { const q = u.amQ; u.amQ = null; u.st = ST_IDLE; u.stT = 0; this.startWindup(u, q); } else u.amQ = null; }
 };
 P.amTargets = function (u, h, fx, fz) {
   const R = (u.def.reach || 2.2) + (h.r || 0); const out = [];
