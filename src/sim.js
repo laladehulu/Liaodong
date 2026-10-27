@@ -3351,6 +3351,8 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'show') { const z = this.missionZone(a[1]); if (z) z.hidden = false; }
   else if (a[0] === 'hide') { const z = this.missionZone(a[1]); if (z) z.hidden = true; }
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
+  else if (a[0] === 'goto') { const M = this.mission, mv = this.mv; const n = a[1] | 0; if (M && M.phases && n > mv.ph && n < M.phases.length) { for (const k of M.phases[mv.ph].hide || []) this.mAct(['hide', k]); mv.ph = n; mv.t0 = this.tick; this.mStart(); } } /* a choice takes the story down one branch, skipping the other */
+  else if (a[0] === 'explode') { const x = a[1], z = a[2]; this.explode(x, terrainH(x, z) + 0.8, z, a[5] === undefined ? 0 : a[5], -1, a[3] || 7, a[4] || 170); this.events.push({ t: 'mblast', x, z, r: a[3] || 7 }); }
   else if (a[0] === 'promote') this.zPromote();
   else if (a[0] === 'lead') this.zPromote(true);
   else if (a[0] === 'burn') this.mBurn(a[1], a[2], a[3]);
@@ -3815,7 +3817,7 @@ Sim.prototype.missionThink = function () {
   let r = lost ? -1 : this.mObj(P.obj, el);
   if (r === 0 && P.limit && el > P.limit) r = -1;
   if (r < 0) { this.mOver(false, lost ? 'Your companies are gone.' : (P.fail || 'The objective is lost.')); return; }
-  if (r > 0) { for (const a of P.done || []) this.mAct(a); for (const k of P.hide || []) this.mAct(['hide', k]); if (mv.ph + 1 >= M.phases.length) { this.mOver(true, M.win); return; } mv.ph++; mv.t0 = this.tick; this.mStart(); }
+  if (r > 0) { for (const a of P.done || []) this.mAct(a); for (const k of P.hide || []) this.mAct(['hide', k]); const nx = P.next !== undefined ? P.next : mv.ph + 1; /* a branch phase names the one that follows it */ if (nx >= M.phases.length) { this.mOver(true, M.win); return; } mv.ph = nx; mv.t0 = this.tick; this.mStart(); }
 };
 // ---- debug / testing (solo only: travels in the input stream like any order, so it stays deterministic) ----
 Sim.prototype.debugCmd = function (p, sub, val) {
