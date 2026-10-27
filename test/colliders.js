@@ -1,23 +1,23 @@
 // node test/colliders.js [page] : for every map, finds solid-looking building geometry a man could walk into (no sim collider under it)
-const { chromium } = require('/opt/npm-tools/node_modules/playwright-core');
+const { chromium } = require('playwright');
 const path = require('path');
 const PAGE = process.argv[2] || 'test.html';
 const CASES = (process.argv[3] || 'grand:field,grand:toba,grand:ueno,grand:nagaoka,grand:aizu,grand:hakodate,grand:abudali,grand:bjgate,grand:zroad,grand:sjvil,grand:siegecity,grand:bonari,assault:op=ningyuan_siege,assault:op=liaoyang,assault:op=shanhai').split(',');
 (async () => {
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
+  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
   for (const cs of CASES) {
     const [mode, b] = cs.split(':');
     const page = await browser.newPage({ viewport: { width: 400, height: 300 } }); const errs = [];
     page.on('pageerror', e => errs.push(e.message));
     await page.goto('file://' + path.resolve(__dirname, '..', 'dist', PAGE), { waitUntil: 'load' }); await page.waitForTimeout(300);
-    await page.evaluate(([mode, b]) => { AUDIO.init = () => {}; const S = window.__boshin.state; S.mode = mode; if (b.startsWith('op=')) S.op = b.slice(3); else S.battle = b; }, [mode, b]);
+    await page.evaluate(([mode, b]) => { AUDIO.init = () => {}; const S = window.__boshin.state; S.mode = mode; if (mode === 'story') { S.chapter = +b; return; } if (b.startsWith('op=')) S.op = b.slice(3); else S.battle = b; }, [mode, b]);
     await page.click('#btnSolo'); await page.waitForTimeout(1500);
     const res = await page.evaluate(() => {
       const r = window.__boshin.state.renderer, sim = r.sim, TH = SIM.terrainH; const out = [];
       const ray = new THREE.Raycaster(); const dirs = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(-0.6, 0, 0.8)];
       const inBox = (x, z, y) => { for (const b of sim.boxes) { if (b.hw < 0.1) continue; const c = Math.cos(b.rot || 0), s = Math.sin(b.rot || 0), dx = x - b.x, dz = z - b.z, lx = dx * c + dz * s, lz = -dx * s + dz * c; if (Math.abs(lx) < b.hw + 0.05 && Math.abs(lz) < b.hd + 0.05) return true; } for (const o of sim.obstacles) if ((x - o.x) ** 2 + (z - o.z) ** 2 < (o.r + 0.05) ** 2) return true; if (sim.navBlk && sim.navBlk[sim.navCell(x, z)] & 1) return true; return sim.siegeSolid ? sim.siegeSolid(x, z) : false; };
       const m4 = new THREE.Matrix4(), bb = new THREE.Box3(), tmp = new THREE.Mesh();
-      const meshes = []; r.scene.traverse(o => { if ((o.isMesh || o.isInstancedMesh) && o.visible && o.geometry && !o.isSkinnedMesh && !(o.material && o.material.isShaderMaterial) && !(o.material && o.material.transparent)) meshes.push(o); });
+      const meshes = []; r.scene.traverseVisible(o => { if ((o.isMesh || o.isInstancedMesh) && o.visible && o.geometry && !o.isSkinnedMesh && !(o.material && o.material.isShaderMaterial) && !(o.material && o.material.transparent)) meshes.push(o); });
       for (const o of meshes) { if (o === r.terrain || (r.fig && Object.values(r.fig).includes(o))) continue; o.updateWorldMatrix(true, false); const n = o.isInstancedMesh ? o.count : 1; if (n > 3000) continue;
         if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
         for (let i = 0; i < n; i++) { if (o.isInstancedMesh) { o.getMatrixAt(i, m4); m4.premultiply(o.matrixWorld); } else m4.copy(o.matrixWorld);
