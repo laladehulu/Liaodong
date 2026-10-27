@@ -334,13 +334,23 @@ function diffUI(host, id) {
   const cur = diffPref(); el.innerHTML = '<span>Difficulty</span>' + DIFFS.map((d, i) => `<button type="button" class="${i === cur ? 'on' : ''}" data-d="${i}">${d[0]} ${d[1]}</button>`).join('') + `<small>${DIFFS[cur][2]}</small>`;
   el.querySelectorAll('button').forEach(b => b.onclick = () => { try { localStorage.setItem('mingDiff', b.dataset.d); } catch (e) { } AUDIO.init(); AUDIO.play('ui'); diffUI(host, id); if ($('diffRowStory') && id !== 'diffRowStory') diffUI($('zheCta'), 'diffRowStory'); if ($('diffRowMis') && id !== 'diffRowMis') diffUI($('missionList'), 'diffRowMis'); });
 }
+// your place in the mandarin duck team, kept per browser like the difficulty: the story casts you as a shield man (and later the
+// leader) unless you have chosen a trade here; any team-based battle starts you in that trade when the team has it
+const YY_PICK = [['', '隊 Story', 'as the story casts you'], ['shield', '藤牌 Shield', 'rattan shield and dao, the front of the team'], ['brush', '狼筅 Brush', 'the wolf-brush: catch and hold'], ['spear', '長槍 Spear', 'the long spear behind the brushes'], ['trident', '鏜鈀 Trident', 'the flanks and the finishing thrust'], ['lead', '隊長 Leader', 'the dao at the head of the team']];
+function yyPref() { try { const v = localStorage.getItem('mingYyRole') || ''; return YY_PICK.some(r => r[0] === v) ? v : ''; } catch (e) { return ''; } }
+function yyRolePick(def) { const v = yyPref(); return v || def; }
+function yyUI(host, id) {
+  if (!host) return; let el = $(id); if (!el) { el = document.createElement('div'); el.id = id; el.className = 'diffrow'; host.parentNode.insertBefore(el, host); }
+  const cur = yyPref(); el.innerHTML = '<span>Your place</span>' + YY_PICK.map(r => `<button type="button" class="${r[0] === cur ? 'on' : ''}" data-r="${r[0]}">${r[1]}</button>`).join('') + `<small>${YY_PICK.find(r => r[0] === cur)[2]}</small>`;
+  el.querySelectorAll('button').forEach(b => b.onclick = () => { try { localStorage.setItem('mingYyRole', b.dataset.r); } catch (e) { } AUDIO.init(); AUDIO.play('ui'); yyUI(host, id); });
+}
 function renderMissions() {
   const sgm = state.mode === 'siege', as = state.mode === 'assault' || sgm; const L = as ? S.OPS : S.MISSIONS;
   if (as && (!L[state.op] || !!L[state.op].siege !== sgm)) state.op = Object.keys(L).find(k => !L[k].hidden && !!L[k].siege === sgm);
   const cur = as ? state.op : state.mission;
   $('missionHead').textContent = as ? 'Operation' : 'Mission';
   $('missionList').innerHTML = Object.keys(L).filter(k => !L[k].hidden && (!as || !!L[k].siege === sgm)).map(k => { const M = L[k]; return `<button type="button" class="chap${k === cur ? ' on' : ''}" data-k="${k}"><b>${M.title}</b><small>${M.year} · ${M.brief}</small></button>`; }).join('');
-  if (!as) diffUI($('missionList'), 'diffRowMis'); else if ($('diffRowMis')) $('diffRowMis').remove();
+  if (!as) { diffUI($('missionList'), 'diffRowMis'); yyUI($('missionList'), 'yyRowMis'); } else { if ($('diffRowMis')) $('diffRowMis').remove(); if ($('yyRowMis')) $('yyRowMis').remove(); }
   $('missionList').querySelectorAll('button').forEach(b => b.onclick = () => { if (as) state.op = b.dataset.k; else state.mission = b.dataset.k; AUDIO.init(); AUDIO.play('ui'); renderMissions(); });
   const side = as ? state.faction : 0; const list = side === 1 ? ROLE_INFO_JIN : ROLE_INFO; if (!list.some(r => r[0] === state.role)) state.role = list[0][0];
   $('mroleList').innerHTML = list.map(r => `<button type="button" class="chap${r[0] === state.role ? ' on' : ''}" data-r="${r[0]}"><b>${r[1]} · ${r[2]}</b><small>${r[3]}</small></button>`).join('');

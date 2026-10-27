@@ -387,3 +387,4 @@ const SJ2ZONE = { battleZ: 'south', battleY: 'wall', battleK: 'ridge' };
 
 // the difficulty row above the story campaigns (the same choice the co-op missions use)
 if (typeof diffUI === 'function' && $('zheCta')) diffUI($('zheCta'), 'diffRowStory');
+if (typeof yyUI === 'function' && $('zheCta')) yyUI($('zheCta'), 'yyRowStory');

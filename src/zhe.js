@@ -381,7 +381,7 @@ function zStart(scene) {
   if (/^(kai|battlek)$/.test(scene)) return zStartK(scene);
   ZS = zLoad(); if (!ZS) { ZS = zFresh(); }
   $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
-  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'shield', connected: true }];
+  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: yyRolePick('shield'), connected: true }];
   if (scene === 'camp0' || scene === 'camp1') {
     const night = scene === 'camp1' ? 1 : 0; const camp = zCampCfg(night);
     startGame({ seed, battle: 'zcamp', mode: 'campaign', mission: 'zcamp', camp, players: pl }, 0, null, 1);
@@ -582,7 +582,7 @@ function zStartK(scene) {
         'In the sixth month Nurhaci comes for Kaiyuan, in rain that does not stop. Word reaches Tieling that the town is under attack, and a relief column is made ready to march.'], zh: '萬曆四十七年六月，努爾哈赤冒雨攻開原。' },
       { title: '伍 · Your file', year: n ? `${n + 1} men` : 'You alone', p: [n ? `${n} of your file came out of the mountains with you. Chief Wu is dead; the file is yours. When you give an order you hear his voice in it.` : 'None of your file came out of the mountains with you. The garrison has put you over a file of strangers.', 'F follow me · H halt · C charge · Z form up where you look.'], btn: 'March →' },
     ], () => { ZS.stage = 'battlek'; zSave(); zStartK('battlek'); }); return; }
-  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'lead', connected: true }];
+  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: yyRolePick('lead'), connected: true }];
   startGame({ seed, battle: 'field', mode: 'campaign', mission: 'kaiyuan', players: pl }, 0, null, 1);
   const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; const meIdx = ZR.findIndex(r => r.k === (ZS.me || 'me'));
   ZB = { map: {}, sq: q.id, first: me.heroId, cur: ZS.me || 'me', fell: false, ch2: true, chK: true };
@@ -668,7 +668,7 @@ function zStart2(scene) {
     if (!ZS.ch2init) { for (const r of ZR) if (r.ch === 2) { ZS.alive[r.k] = true; ZS.bond[r.k] = 0; delete ZS.fate[r.k]; } ZS.fate1 = Object.assign({}, ZS.fate); ZS.ch2init = true; ZS.stage = 'ch2'; zSave(); }
     zCards(INTRO2, () => { ZS.stage = 'camp2'; zSave(); zStart2('camp2'); }); return;
   }
-  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: 'lead', connected: true }];
+  const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: yyRolePick('lead'), connected: true }];
   if (scene === 'camp2' || scene === 'camp3') {
     const night = scene === 'camp2' ? 2 : 3; const camp = zCampCfg2(night);
     startGame({ seed, battle: 'zcamp', mode: 'campaign', mission: 'zcamp', camp, players: pl }, 0, null, 1);
@@ -933,7 +933,7 @@ function zStartR(scene) {
   const key = scene.slice(4), D = ZROAD[key]; if (!D) return;
   $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
   if (D.pre && !ZS.flags['pre' + key]) { ZS.flags['pre' + key] = 1; zSave(); zCards(D.pre, () => zStartR(scene)); return; }
-  const lead = key !== 'A', seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: lead ? 'lead' : 'shield', connected: true }];
+  const lead = key !== 'A', seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: ZS.name.zh || 'You', team: 0, yyRole: yyRolePick(lead ? 'lead' : 'shield'), connected: true }];
   startGame({ seed, battle: 'zroad', mode: 'campaign', mission: D.mission, camp: D.camp, players: pl }, 0, null, 1);
   const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq]; const meK = lead ? (ZS.me || 'me') : 'me', meIdx = ZR.findIndex(r => r.k === meK);
   ZB = { map: {}, sq: q.id, first: me.heroId, cur: meK, fell: false, ch2: lead, road: key };
