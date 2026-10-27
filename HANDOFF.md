@@ -80,8 +80,28 @@ Publishing (main session only): `tools/pub.sh vN "message"` snapshots, builds ev
 - Don't lower resolution to fix performance — find the expensive thing.
 - First-person immersion in tight formation is the core of the game; duels are secondary.
 
-## 6. Current state (v106, 27 Oct 2026)
+## 6. Current state (v118, 27 Oct 2026)
 Recent work, newest first:
+- **Melee in the xc editions (v108–v115)**, all gated on `this.xc`: AI swordsmen fight from *measure* (`Sim.prototype.xcMeasure`:
+  stop ~0.35 m outside reach, step in with the cut so it lands at ~1.7 m, give the pace back in recovery; tempo, feints, a second
+  cut after one that lands, one pace given when crowded then a cut; `u.xcIn` lets the step through the 0.45 movement scale);
+  AI wind-ups jittered ±20%. The player's attack button runs **combo chains** (`Sim.prototype.comboDir`, table `CB`): the sim reads the
+  fight and picks the cut's side and the chain (連環/雙敵/短打/探/破/追/反); R and wheel-up are thrown in; the last step is heavy
+  (`u.cbHeavy`), chained cuts quicker (`u.cbFast`); event `combo` → HUD. Hit reactions follow the blade (`hitReact` reads
+  `a.atkDir`), deaths follow the blow (`death` event carries `hdir/heavy/hx/hz`; `Ragdoll.spawn` per-point velocities), hitstop is
+  back at its old values (the owner: a freeze is not weight) — weight comes from the blade drag, the camera lurch (`imp.vx/vr`), the
+  struck man's reaction and `AUDIO.punch`. Sidestep ~1.4 m, no back-hop (soldier modes). **Strike cue** (`dangerHUD` in main.js,
+  `#dangers`): a mark at each attacker's bearing closes on the crosshair through his wind-up, white = parry now; no text.
+  Weapon AI: spear files keep their places (`tight`), the file guards its own (findTarget), swordsmen work round the end of a spear
+  file (`wall`) and come in off the line of the point (`rushSpear`). Harnesses: `test/zfeel.js` (line fight feel, 8-seed means),
+  `test/zduelfeel.js`, `test/zcombo.js`, `test/zspear.js`, `test/zfollow.js`, `test/zmeasure_shot.js` / `test/zreact_shot.js` (frames).
+- **HUD/UI (v110–v116)**: deploy picker redraws at once; mid-battle phases are a banner (title + goal) with the text in the feed;
+  pennants over friendly AI men (`fcPts`, no mark = enemy); the camera rides your own gun ball / bed-crossbow bolt (`shotCam`);
+  first-person order gestures (`renderer.gesture`, set by `shout`); "Your place" row (`yyUI`, `localStorage.mingYyRole`) casts you
+  in the duck team; assault spawns are camp/zones only; siege assaults count bows at a third toward the field cap and send blade-only
+  waves once the field has enough bows; followers match a sprinting leader (`speedNow`) and stand 5 m behind him.
+- **Maps (v116–v118, `src/sim_maps.js`)**: ten new battlefields (Sarhu, Songjin, Fushun, Shaling, Dalinghe, Jinzhou, Kaiyuan, Juehua,
+  Tieling, Xifengkou) and audit fixes to the old ones; `Sim.prototype.unstickSpawns`; `test/maps_sim.js` must print "all maps ok".
 - **No hold-outs**: a `survive` objective now ends ~3 s after the phase's fight is over (`mThreat`, `mQuietDone`); while
   quiet, the phase's waves/`at` beats are brought forward. `hold` needs at most 12 s. Phases can branch (`next`, action `goto`);
   action `explode [x, z, r, dmg]`.
