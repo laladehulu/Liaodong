@@ -531,6 +531,10 @@ class Ragdoll {
         if (p[i * 3 + 1] < gh) { p[i * 3 + 1] = gh; q[i * 3] = p[i * 3] - (p[i * 3] - q[i * 3]) * 0.4; q[i * 3 + 2] = p[i * 3 + 2] - (p[i * 3 + 2] - q[i * 3 + 2]) * 0.4; }
       }
     }
+    // a dead man goes all the way down: after the first moment the trunk and head are drawn on to the ground, so a body never
+    // stays propped on its knees or folded upright like a statue (knees and feet slide out from under it)
+    if (this.age > 0.45) { const k = Math.min(1, (this.age - 0.45) * 1.6) * dt * 9; for (const i of [0, 1, 2]) { const gh = terrainH(p[i * 3], p[i * 3 + 2]) + (i === 0 ? 0.14 : 0.12); const over = p[i * 3 + 1] - gh; if (over > 0.05) p[i * 3 + 1] -= over * k; }
+      for (const i of [5, 6]) { const gh = terrainH(p[i * 3], p[i * 3 + 2]) + 0.1; if (p[i * 3 + 1] < gh + 0.02) { const vx = p[i * 3] - q[i * 3], vz = p[i * 3 + 2] - q[i * 3 + 2]; q[i * 3] = p[i * 3] - vx * 0.9; q[i * 3 + 2] = p[i * 3 + 2] - vz * 0.9; } } }
     if (moving < 0.004) this.settle += dt; else this.settle = 0;
     if (this.settle > 2 || this.age > 20) { const sink = (this.settle > 2 ? (this.settle - 2) : 0) * 0.08 + (this.age > 20 ? (this.age - 20) * 0.1 : 0); for (let i = 0; i < 7; i++) { p[i * 3 + 1] -= sink * dt * 2; q[i * 3 + 1] -= sink * dt * 2; } if (sink > 1.4) this.active = false; }
   }
@@ -2586,6 +2590,9 @@ class Renderer {
     for (const [id, v] of this.cannonRecoil) { const nv = v - dt; if (nv <= 0) this.cannonRecoil.delete(id); else this.cannonRecoil.set(id, nv); }
     // ragdolls
     const sub = Math.min(dt, 0.05);
+    { const A = this.ragdolls.filter(r => r.active && r.age < 6); // bodies don't pass through each other into a heap: they slide aside and lie side by side
+      for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) { const a = A[i].p, b = A[j].p; const dx = b[6] - a[6], dz = b[8] - a[8], d2 = dx * dx + dz * dz; if (d2 > 0.64 || d2 < 1e-6) continue; const d = Math.sqrt(d2), push = (0.8 - d) * 0.5 * Math.min(1, sub * 20) / d;
+        const qa = A[i].q, qb = A[j].q; for (let k = 0; k < 7; k++) { const ex = dx * push * 0.5, ez = dz * push * 0.5; a[k * 3] -= ex; a[k * 3 + 2] -= ez; qa[k * 3] -= ex; qa[k * 3 + 2] -= ez; b[k * 3] += ex; b[k * 3 + 2] += ez; qb[k * 3] += ex; qb[k * 3 + 2] += ez; } } }
     for (const rag of this.ragdolls) {
       if (!rag.active) continue;
       rag.step(sub * 0.5); rag.step(sub * 0.5);
