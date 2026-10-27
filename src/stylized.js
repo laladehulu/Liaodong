@@ -85,7 +85,7 @@
     this.sun.shadow.radius = 1; this.sun.shadow.bias = -0.0005; this.sun.shadow.normalBias = 0.05;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; this.sun.shadow.mapSize.set(q === 2 ? 2048 : 1536, q === 2 ? 2048 : 1536); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     this.renderer.shadowMap.enabled = q > 0; this.renderer.shadowMap.autoUpdate = q === 2; this.shadowTick = 0;
-    this.renderer.setPixelRatio([0.7, 0.85, 1][q] * (this.safari ? 1 : Math.min(window.devicePixelRatio || 1, 1.25))); this.resize();
+    this.renderer.setPixelRatio([0.7, 0.85, 1][q] * Math.min(window.devicePixelRatio || 1, 1.25)); this.resize();
     // restrained fog: linear, far away, the horizon colour (render.js eases near/far by view mode from fogBase)
     const fogC = C(L.fog); sc.fog = new THREE.Fog(fogC, 70, 330); this.fogBase = [this.biome.night ? 30 : 70, this.biome.night ? 170 : this.sim.rain ? 230 : 330]; this.realFog = null; sc.background = C(L.hor);
     if (this.dragon) { for (const k of ['body', 'fins', 'belly']) this.dragon[k].visible = false; this.dragon.head.visible = false; this.dragon.pearl.visible = false; this.dragon = null; }

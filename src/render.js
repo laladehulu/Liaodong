@@ -550,13 +550,14 @@ const INK_SHIFT = { value: new THREE.Vector2() };
 // the shoulder by ARM_REACH, so swings, thrusts and gestures sweep wider arcs and read from further away
 const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 (function inkShadows() {
-  const REAL = typeof window !== 'undefined' && window.MING_REAL;
+  const REAL = typeof window !== 'undefined' && window.MING_REAL, STYLE = typeof window !== 'undefined' && window.MING_STYLE;
   const C = THREE.ShaderChunk; let src = C.shadowmap_pars_fragment; if (!src || src.indexOf('getShadowBase') >= 0) return;
   const sig = 'float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord )';
   if (src.indexOf(sig) < 0) return;
   src = src.replace(sig, 'float getShadowBase( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord )');
   const ink = `
-	#define REAL_SHADOW ${REAL ? 'true' : 'false'}
+	#define REAL_SHADOW ${REAL && STYLE ? 'true' : 'false'}
+	#define INK_TAPS ${REAL ? 6 : 12}
 	uniform vec2 inkShift;
 	float inkH( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
 	float inkV( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f ); return mix( mix( inkH( i ), inkH( i + vec2( 1.0, 0.0 ) ), f.x ), mix( inkH( i + vec2( 0.0, 1.0 ) ), inkH( i + vec2( 1.0, 1.0 ) ), f.x ), f.y ); }
@@ -572,9 +573,9 @@ const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 		// low-frequency wander only (features ~1-3 m): nothing finer than a few pixels, so nothing to shimmer
 		vec2 warp = ( vec2( inkF( w * 55.0 ), inkF( w * 55.0 + 19.3 ) ) - 0.5 ) * ( 2.0 / 140.0 );
 		float s = 0.0;
-		for ( int i = 0; i < 12; i ++ ) { float fi = float( i ); float a = fi * 2.39996; float r = sqrt( ( fi + 0.5 ) / 12.0 ) * ( 1.25 / 140.0 );
+		for ( int i = 0; i < INK_TAPS; i ++ ) { float fi = float( i ); float a = fi * 2.39996; float r = sqrt( ( fi + 0.5 ) / float( INK_TAPS ) ) * ( 1.25 / 140.0 );
 			s += getShadowBase( shadowMap, shadowMapSize, shadowBias, shadowRadius, shadowCoord + vec4( warp + vec2( cos( a ), sin( a ) ) * r, 0.0, 0.0 ) ); }
-		s /= 12.0;
+		s /= float( INK_TAPS );
 		// a wet wash: soft bloom, a little darker where the ink pools at the rim, paler and patchy inside
 		s = smoothstep( 0.05, 0.95, s + ( inkF( w * 90.0 ) - 0.5 ) * 0.35 );
 		float rim = s * ( 1.0 - s ) * 4.0; s -= rim * 0.2;
@@ -594,7 +595,7 @@ class Renderer {
     this.lowfx = !!(window.__boshin && window.__boshin.state && window.__boshin.state.lowfx);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !this.lowfx, powerPreference: 'high-performance' });
     this.safari = typeof navigator !== 'undefined' && /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent); /* Safari's WebGL is slower: native pixels, smaller shadow map */
-    this.renderer.setPixelRatio(this.lowfx || this.safari ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+    this.renderer.setPixelRatio(this.lowfx ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.shadowMap.enabled = !this.lowfx; this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.biome.fog);
@@ -633,7 +634,7 @@ class Renderer {
   buildLights() {
     this.hemi = new THREE.HemisphereLight(this.biome.hemi[0], this.biome.hemi[1], 0.65); this.scene.add(this.hemi); this.lightFlash = 0;
     const sun = new THREE.DirectionalLight(this.biome.sun[0], this.biome.sun[1]); this.sunDir = new THREE.Vector3(-70, 48, 85).normalize(); sun.position.copy(this.sunDir).multiplyScalar(150); sun.castShadow = true;
-    sun.shadow.mapSize.set(this.lowfx ? 512 : this.safari ? 1024 : 2048, this.lowfx ? 512 : this.safari ? 1024 : 2048); const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 10; sc.far = 400; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.09; sun.shadow.radius = 2;
+    sun.shadow.mapSize.set(this.lowfx ? 512 : 2048, this.lowfx ? 512 : 2048); const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 10; sc.far = 400; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.09; sun.shadow.radius = 2;
     this.sun = sun; this.scene.add(sun); this.scene.add(sun.target);
   }
   buildSky() {
