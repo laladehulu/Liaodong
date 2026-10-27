@@ -2736,11 +2736,14 @@ const MISSIONS = {
           [4, 'liu', 'Levies, hold them! Duck teams, close up behind and be ready!', '土兵頂住！鴛鴦陣隨後待命！'],
           [7, 'chief', 'Shields down! Brushes up! Spears behind me — as Marshal Qi taught us!', '藤牌在前，狼筅次之，長槍隨後！'],
           [52, 'chief', 'They give way! Hold the line — nobody chases!', '他們退了！穩住，不許追！']] },
-      { title: '三 · 皇太極 · The ridge', goal: 'Turn and fight off the ridge attack', text: 'A second Jin host comes down the west ridge into the side of the column.', start: [['release', 'hong'], ['release', 'ridge'], ['dir', 'hong', 'attack']],
-        obj: { survive: 48 },
+      /* story2 · the contrast: the flank charge scatters the file into open ground (loose order, every man alone); the order is to close up on the chief's shoulder, and the team is a team again only when you are back in line (紀效新書·卷二 「一人失伍… 隊長與同伍俱斬」) */
+      { title: '三 · 皇太極 · The ridge', goal: 'Close up on Chief Wu — back in line!', text: 'A second Jin host comes down the west ridge into the side of the column. The file is scattered; close up on the chief.', start: [['release', 'hong'], ['release', 'ridge'], ['dir', 'hong', 'attack'], ['form', 'zhe', 3], ['morale', 'zhe', -25]],
+        obj: { survive: 48 }, x: { close: { k: 0, r: 5, t: 4, on: [['form', 'zhe', 0], ['morale', 'zhe', 30]] } },
         at: [[13, ['kill', 'liu']], [17, ['promote']], [23, ['wound', 3]]],
         say: [[1, 'fang', 'The west ridge — more banners! The rider lied. Du Song is not coming!', '西嶺上還有！那人是假的，杜總兵不會來了！'],
+          [3, 'chief', 'They hit us side-on — the file is scattered! On me! Shields to my left, brushes behind!', '側面撞上來了——隊散了！靠我！藤牌到我左邊，狼筅在後！'],
           [6, 'lookout', 'Arrows from the east slope!', '東坡有弓手！'],
+          [9, 'he', 'Alone in the open a brush is a stick. Get back to the chief!', '一個人在空地上，狼筅就是根棍子。回隊長身邊去！'],
           [14, 'soldier', 'General Liu has fallen! Liu Ting is dead!', '劉總兵陣亡了！']] },
       { title: '四 · 突圍 · Break out', goal: 'Get your file out to the south gorge', text: 'The column is broken. Get your file back down the valley to the south gorge, where the Koreans are camped. Leave no one who can still walk.', show: ['mouth'],
         obj: { extract: 'mouth' }, limit: 420, fail: 'The valley closed behind you.',
@@ -2772,7 +2775,12 @@ const MISSIONS = {
       east: { team: 1, name: 'Banners from the east', army: ['samurai', 'archer'], at: [140, -40, -PI / 2], reserve: true },
       night: { team: 1, name: 'Daišan\'s banners', zh: '代善', army: ['shinsengumi', 'samurai', 'samurai', 'cavalry'], at: [140, -110, -PI / 2], reserve: true },
       cut: { team: 1, name: 'Jin horsemen', army: ['cavalry'], at: [-140, -96, PI / 2], reserve: true },
+      /* story2 · the White Poles who went into the river when the bridge end was lost, and the horse that comes for them */
+      swim: { team: 0, name: 'White Poles in the water', zh: '落水的白杆兵', army: ['ashigaru'], n: 5, at: [84, -10, 0], reserve: true, stay: true, dir: ['hold', 76, -22] },
+      river: { team: 1, name: 'Jin horse at the water', army: ['cavalry'], n: 6, at: [100, 10, PI], reserve: true },
     },
+    /* story2 · Bao Er's question at the bridge: 0 send him into the water for the drowning men, 1 keep him in the file */
+    choices: [[[['release', 'swim'], ['dir', 'swim', 'hold', 76, -22], ['release', 'river'], ['dir', 'river', 'attack'], ['calm', 'river', 60], ['place', '$k', 86, -6], ['count', 'swimSent']], [['flag', 'baoKept']]]],
     phases: [
       { title: '一 · 橋北 · North of the bridge', goal: 'Stand to in camp and watch the far bank', text: 'The White Poles have crossed to the north bank. Stand to in the Zhejiang camp with your file and watch the far bank.', show: ['camp'],
         obj: { survive: 66 }, at: [[1, ['promote']]], waves: [[22, 'bayara', ['hold', 74, 34]]],
@@ -2871,6 +2879,8 @@ const MISSIONS = {
       van: { team: 0, name: 'Liu Ting\'s vanguard', zh: '劉綎前鋒', army: ['yuanyang', 'rifle_imp'], at: [0, -96, 0], dir: ['hold', 0, -92], stay: true },
       rear: { team: 0, name: 'The baggage guard', zh: '輜重', army: ['rifle_imp', 'ashigaru'], at: [0, -144, 0], dir: ['hold', 0, -140], stay: true },
       scouts: { team: 1, name: 'Jin scouts', zh: '金哨騎', army: ['cavalry'], n: 4, at: [128, 76, -PI / 2], reserve: true, exit: [148, 90] },
+      /* story2 · the duck team doing what 紀效新書 says it is for: loose swordsmen in a narrow place, taken on a narrow front */
+      swords: { team: 1, name: 'Jin foragers', zh: '金兵', army: ['ronin'], n: 9, at: [-60, 58, PI / 2], reserve: true, exit: [-148, 70] },
     },
     phases: [
       { title: '一 · 行軍 · On the march', goal: 'March up the road with your file', text: 'The column climbs north through the snow. Keep your place in the file; the drum sets the pace.', show: ['village'],
@@ -2880,7 +2890,16 @@ const MISSIONS = {
       { title: '二 · 空村 · The empty village', goal: 'Fall out by the well and get your water boiled', text: 'The gong: halt. A Jin village beside the road, and not a soul in it. Fall out by the well; nobody drinks it raw.', show: ['village'],
         obj: { survive: 40 },
         say: [[1, 'chief', 'The gong — halt! Fall out where you stand.', '鳴金——停！就地歇息。']] },
-      { title: '三 · 哨騎 · Riders on the slope', goal: 'Plant the brushes and drive off the scouts', text: 'Horsemen on the east slope, a handful. Brushes up, spears behind them: let them ride onto the points.', hide: ['village'],
+      /* story2 · 狼筅 · the brushes: a loose band of swordsmen comes down the lane between the houses. The file closes the lane: shields low, brushes catch, spears finish (紀效新書·卷二 「狼筅…前拒後救」; 卷八 「狹路相逢…先以狼筅架住，長鎗戳之」) */
+      { title: '三 · 狼筅 · The brushes', goal: 'Hold the lane: brushes catch, spears finish', text: 'Swordsmen in the lane between the houses, no order to them. Hold the file across it and let the brushes work.', hide: ['village'],
+        start: [['release', 'swords'], ['dir', 'swords', 'attack'], ['calm', 'swords', 70], ['dir', 'zhe', 'hold', 0, 36], ['form', 'zhe', 0]],
+        obj: { defeat: ['swords'], frac: 0.7 }, limit: 150, fail: 'The swordsmen got in among the file.', x: { tally: 'catch' },
+        say: [[1, 'lookout', 'Men in the lane! Swords — a dozen, no order to them!', '巷子裡有人！刀手——十幾個，亂糟糟的！'],
+          [3, 'chief', 'Across the lane! Shields low. Brushes up. Spears: wait for the catch.', '橫住巷子！藤牌蹲低。狼筅豎起。長槍：等筅架住了再戳。'],
+          [8, 'chief', 'Nobody steps out. The lane is ours as long as it is narrow.', '誰也不許出列。巷子窄，巷子就是我們的。'],
+          [22, 'he', 'See that? He is held, he cannot swing, and Jin Atu has him. That is the whole drill.', '看見沒？架住了，刀掄不開，金阿土就戳上了。整套陣法就是這個。'],
+          [38, 'chief', 'Good. Hold the lane. Let them come to the points.', '好。守住巷子。讓他們自己撞到槍尖上。']] },
+      { title: '四 · 哨騎 · Riders on the slope', goal: 'Plant the brushes and drive off the scouts', text: 'Horsemen on the east slope, a handful. Brushes up, spears behind them: let them ride onto the points.',
         start: [['release', 'scouts'], ['dir', 'scouts', 'attack'], ['dir', 'zhe', 'hold', 6, 36]],
         obj: { defeat: ['scouts'], frac: 0.7 },
         say: [[1, 'lookout', 'Horsemen on the east slope!', '東邊山坡——馬兵！'], [3, 'chief', 'Brushes up! Spears behind them! Shields, get low!', '狼筅豎起來！長槍在後！藤牌，蹲下！']] },
@@ -2943,10 +2962,17 @@ const MISSIONS = {
       { title: '二 · 夜哨 · The picket', goal: 'Stand picket at the beacon post', text: 'Night. Rest under the beacon tower and keep watch toward the hills.', show: ['post'],
         obj: { survive: 46 },
         say: [[1, 'col', 'Rest under the beacon tower. Watches in turn — change every two hours.', '就在這烽墩下歇。輪流守夜，一個時辰一換。'], [14, 'lookout', 'There! Something is moving on the snow!', '那邊！雪地上有東西在動！'], [22, 'lookout', '...Deer. A herd of deer.', '……是鹿。一群鹿。']] },
-      { title: '三 · 哨探 · Men in the dark', goal: 'Drive off the Jin scouts', text: 'Not deer this time. A Jin patrol is feeling for the road in the dark.', show: ['post'],
-        start: [['release', 'scouts'], ['dir', 'scouts', 'attack']],
-        obj: { defeat: ['scouts'], frac: 0.7 },
-        say: [[1, 'lookout', 'Not deer this time! Men — Jin scouts!', '這回不是鹿！是人——金人的哨探！']] },
+      /* story2 · night: no marker, no sight. The men call bearings by voice (left of the tower, by the stones...). The beacon cresset on the tower is yours to light (E at its foot): lit, the garrison's muskets come out to the post and the scouts are seen; unlit, you fight them in the dark alone. 練兵實紀·卷六 (烽堠：有警舉火) */
+      { title: '三 · 哨探 · Men in the dark', goal: 'Listen for the calls. Light the beacon (E at the tower) or fight blind', text: 'Not deer this time. A Jin patrol is feeling for the road in the dark. The beacon on the tower is unlit.',
+        start: [['release', 'scouts'], ['dir', 'scouts', 'attack'], ['calm', 'scouts', 50], ['fire', 'col', 0]],
+        obj: { defeat: ['scouts'], frac: 0.7 }, limit: 170, fail: 'The scouts slipped past in the dark.',
+        x: { use: [{ key: 'beacon', x: -6, z: 9, r: 3.2, one: true, act: [['flag', 'lit'], ['fire', 'col', 1], ['dir', 'col', 'attack'], ['calm', 'scouts', 100], ['say', 'col', 'The beacon! Muskets out — on the light!', '烽火！銃手出來——朝亮處打！']] }] },
+        say: [[1, 'lookout', 'Not deer this time! Men — Jin scouts!', '這回不是鹿！是人——金人的哨探！'],
+          [3, 'he', 'Nobody can see a thing. Call it out: where you hear them.', '誰也看不見。喊出來：聽見在哪，就喊哪。'],
+          [5, 'fang', 'The cresset on the tower! Light it and the garrison will see them — and us.', '墩上的火盆！點起來，守兵就看得見他們——也看得見我們。'],
+          [12, 'luo', 'Left of the tower! Stones moving — left!', '墩子左邊！石頭在響——左邊！'],
+          [20, 'wang', 'Behind us! Something on the road behind us!', '後面！路上有東西，在後面！'],
+          [30, 'jin', 'Right — the right, by the wall!', '右邊——右邊，牆根！']] },
       { title: '四 · 寧遠 · Ningyuan', goal: 'Bring your file in to the gate of Ningyuan', text: 'The scouts have gone back to report. Bring your file in to Ningyuan before the light.', show: ['gate'], hide: ['post'],
         start: [['dir', 'col', 'hold', 0, 128]],
         obj: { reach: 'gate' } },
@@ -3358,7 +3384,7 @@ Sim.prototype.mBreak = function (gid) { // a beaten group gives up the field and
 Sim.prototype.mAct = function (a) {
   if (a[0] === 'release') this.mRelease(a[1]);
   else if (a[0] === 'dir') this.mDir(a[1], a.slice(2));
-  else if (a[0] === 'say') this.events.push({ t: 'msay', who: a[1], text: a[2] });
+  else if (a[0] === 'say') this.events.push({ t: 'msay', who: a[1], text: a[2], zh: a[3] || '' });
   else if (a[0] === 'show') { const z = this.missionZone(a[1]); if (z) z.hidden = false; }
   else if (a[0] === 'hide') { const z = this.missionZone(a[1]); if (z) z.hidden = true; }
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
@@ -3371,6 +3397,7 @@ Sim.prototype.mAct = function (a) {
   else if (a[0] === 'calm') { const g = this.mg[a[1]]; if (g) { g.calm = a[2]; const p = this.players[g.p]; if (g.released && !g.broken) p.aggr = a[2]; } }
   else if (a[0] === 'wound') this.zWound(a[1] | 0);
   else if (a[0] === 'sector') { this.sector = a[1] | 0; if (a[2] && this.sg) for (const f of TERR.sditch.fills) if (!f.done) { f.done = true; this.sgRewater(f); this.events.push({ t: 'sgfill', x: f.x, z: TERR.sditch.zc }); } if (this.sg) { this.navBoxes(); this.siegeDirs(); } }
+  else if (this.mActX) this.mActX(a); /* the story's own small actions (story2): form, fire, hurt, mark, ifflag */
 };
 // the section chief falls and the file is yours: his squad passes to the man who is left
 Sim.prototype.zPromote = function (keep) {
@@ -3791,6 +3818,7 @@ Sim.prototype.mObj = function (o, el) {
   if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; } if (a === 0) return -1; if (n < a) return 0; }
   if (o.survive) { if (el < o.survive && !this.mQuietDone(el)) return 0; } /* 'hold out' only while there is something to hold against */
   if (o.never) return 0;
+  if (o.x && this.mObjX) { const r = this.mObjX(o, el); if (r <= 0) return r; } /* the story's own objectives (story2): a count of events, a flag, a man carried */
   if (o.extract) { const z = this.missionZone(o.extract); let ok = false; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 1) ok = true; } if (!ok) return 0;
     // you are out: wait (up to 20 s) for the men of your file who are still on their feet and coming
     if (this.mv.exT === undefined) { this.mv.exT = this.tick; this.events.push({ t: 'zwait', s: 20 }); }
@@ -3828,6 +3856,7 @@ Sim.prototype.missionThink = function () {
   for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k] && el >= t) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }
   for (const [t, a] of P.at || []) { const k = mv.ph + ':at:' + t; if (!mv.ats[k] && el >= t) { mv.ats[k] = 1; this.mAct(a); } }
   for (const [t, who, text, zh] of P.say || []) { const k = mv.ph + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '' }); } }
+  if (P.x && this.mTickX) this.mTickX(P, el); /* the story's own per-phase rules (story2): the word before the volley, fire by rank, the ice, the beacon */
   if (this.tick % 60 === 0) this.mAggro();
   // broken groups melt away at the field's edge
   for (const gid in this.mg) { const g = this.mg[gid]; if (!g.broken) continue; const p = this.players[g.p];
@@ -4485,6 +4514,77 @@ Sim.prototype.hrTick = function (u) {
   if (u.hrF > 0) u.hrF -= DT;
   if (u.hrA < 5) u.hrA += DT;
 };
+// ===================== story2 · the story's own small rules, driven by mission data (deterministic: no rng, solo story only) =====================
+// A phase may carry `x`: { hold, rank, drum, stay, keep, close, moment, ice, use, tally } and the mission's actions may use
+// form / fire / flag / count / iff / ifn / ifc / ifd / word / rank / place / bleed / hurt / woundf / morale. Everything lives in
+// this.mv.x (flags and counts persist across phases; the per-phase scores reset). The client (story2.js) reads mv.x for the
+// goal line and turns the events (mword, mearly, mrank, mdrum, mbroke, mfar, mclosed, mmoment, mice, muse, mhurt) into captions.
+Sim.prototype.mX = function () { const mv = this.mv; if (!mv.x) mv.x = { n: {}, flag: {}, ph: -1, shots: 0, early: 0, word: 0, rank: -1, good: 0, waste: 0, beat: -1, far: 0, near: 0, chargeT: 0, wet: -1, iceId: -1 }; return mv.x; };
+Sim.prototype.mXSquads = function (gid) {
+  if (gid === 'me') { const out = []; for (const p of this.players) { if (p.ai) continue; const q = this.squads[p.soldierSq]; if (q) out.push(q); } return out; }
+  const g = this.mg[gid]; if (!g) return []; return this.players[g.p].squads.map(id => this.squads[id]);
+};
+Sim.prototype.mXHero = function () { for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead) return h; } return null; };
+Sim.prototype.mXMan = function (k) { for (const p of this.players) { if (p.ai) continue; const q = this.squads[p.soldierSq]; if (!q) continue; const u = this.units[q.unitIds[k | 0]]; if (u) return u; } return null; };
+Sim.prototype.mActX = function (a) {
+  const x = this.mX();
+  if (a[0] === 'form') { for (const q of this.mXSquads(a[1])) { q.formation = clamp(a[2] | 0, 0, 3); q.cols = 0; } this.events.push({ t: 'mform', gid: a[1], form: a[2] | 0 }); }
+  else if (a[0] === 'fire') { for (const q of this.mXSquads(a[1])) q.fire = !!a[2]; this.events.push({ t: 'mfire', gid: a[1], on: !!a[2] }); }
+  else if (a[0] === 'flag') x.flag[a[1]] = a[2] === undefined ? 1 : a[2];
+  else if (a[0] === 'count') x.n[a[1]] = (x.n[a[1]] || 0) + (a[2] === undefined ? 1 : a[2]);
+  else if (a[0] === 'iff') { if (x.flag[a[1]]) this.mAct(a[2]); }
+  else if (a[0] === 'ifn') { if (!x.flag[a[1]]) this.mAct(a[2]); }
+  else if (a[0] === 'ifc') { if ((x.n[a[1]] || 0) < (a[2] | 0)) this.mAct(a[3]); }
+  else if (a[0] === 'ifd') { if ((x.n[a[1]] || 0) >= (a[2] | 0)) this.mAct(a[3]); }
+  else if (a[0] === 'word') { x.word = this.tick; for (const q of this.mXSquads(a[1] || 'me')) q.fire = true; this.events.push({ t: 'mword', early: x.early }); }
+  else if (a[0] === 'rank') { x.rank = a[1] | 0; this.events.push({ t: 'mrank', r: x.rank }); }
+  else if (a[0] === 'place') { const u = this.mXMan(a[1]); if (u && !u.dead) { u.x = u.px = clamp(a[2], -HALF + 2, HALF - 2); u.z = u.pz = clamp(a[3], -HALF + 2, HALF - 2); u.y = u.py = terrainH(u.x, u.z); u.vx = u.vz = 0; } }
+  else if (a[0] === 'bleed') { const u = this.mXMan(a[1]); if (u && u.downed) u.bleed = 30 * a[2]; }
+  else if (a[0] === 'hurt') { const h = this.mXHero(); if (h) { h.hp = Math.max(1, Math.round(h.hp * a[2])); h.flinchT = Math.max(h.flinchT || 0, 0.6); h.st = ST_IDLE; h.stT = 0; h.aiming = false; this.events.push({ t: 'mhurt', id: h.id, x: h.x, y: h.y + 1.2, z: h.z }); } }
+  else if (a[0] === 'woundf') { const k = x.flag[a[1]]; if (k !== undefined && k >= 0) this.zWound(k | 0); }
+  else if (a[0] === 'morale') { for (const q of this.mXSquads(a[1])) if (!q.def.fearless) q.morale = clamp(q.morale + a[2], 0, q.moraleMax); }
+};
+Sim.prototype.mObjX = function (o, el) {
+  const x = this.mX(), X = o.x;
+  if (X === 'n') return (x.n[o.k] || 0) >= (o.n | 0) ? 1 : 0;
+  if (X === 'flag') return x.flag[o.k] ? 1 : 0;
+  if (X === 'guard') return this.mGroupFrac(o.gid) < o.frac ? -1 : 1;
+  return 1;
+};
+Sim.prototype.mTickX = function (P, el) {
+  const X = P.x, x = this.mX(), mv = this.mv, h = this.mXHero();
+  if (x.ph !== mv.ph) { x.ph = mv.ph; x.shots = 0; x.early = 0; x.word = 0; x.rank = -1; x.good = 0; x.waste = 0; x.beat = -1; x.far = 0; x.near = 0; x.chargeT = 0; x.wet = -1; x.iceT = 0; }
+  if (X.hold && !x.word && x.shots > 0 && !x.early) { x.early = 1; this.events.push({ t: 'mearly' }); for (const a of X.onEarly || []) this.mAct(a); }
+  if (X.rank) { const r = Math.floor(Math.max(0, el - (X.rank.t0 || 0)) / X.rank.period) % X.rank.n; if (r !== x.rank) { x.rank = r; this.events.push({ t: 'mrank', r, mine: r === (X.rank.my | 0) }); } }
+  if (X.drum && el >= X.drum.t0 && el < (X.drum.until || 1e9)) { const b = Math.floor((el - X.drum.t0) / X.drum.period); if (b !== x.beat) { x.beat = b; this.events.push({ t: 'mdrum', b }); } }
+  if (X.stay && h && !x.flag[X.stay.until] && !x.flag.broke && len(h.x - X.stay.x, h.z - X.stay.z) > X.stay.r) { x.flag.broke = 1; this.events.push({ t: 'mbroke', id: h.id }); for (const a of X.stay.on || []) this.mAct(a); }
+  if (X.keep && h) { const k = X.keep.kf !== undefined ? x.flag[X.keep.kf] : X.keep.k; const u = k !== undefined && k >= 0 ? this.mXMan(k) : null;
+    if (u && !u.dead && !u.downed) { if (len(u.x - h.x, u.z - h.z) > X.keep.r) { x.far += 0.5; if (x.far >= (X.keep.t || 8) && !x.flag.farSaid) { x.flag.farSaid = 1; this.events.push({ t: 'mfar', id: u.id }); } } else if (x.far > 0 && x.flag.farSaid && !x.flag.backSaid) { x.flag.backSaid = 1; this.events.push({ t: 'mback', id: u.id }); } } }
+  if (X.close && h && !x.flag.closed) { const u = this.mXMan(X.close.k | 0); const q = this.mXSquads('me')[0]; const d = u && !u.dead ? len(u.x - h.x, u.z - h.z) : 99;
+    if (d < X.close.r) x.near += 0.5; else x.near = 0; const inLine = q && q.formation !== FORM_LOOSE && (q.order === ORD_FOLLOW || q.order === ORD_HOLD || q.order === ORD_MOVE);
+    if (x.near >= (X.close.t || 3) || (inLine && el > 4)) { x.flag.closed = 1; this.events.push({ t: 'mclosed', how: inLine ? 'line' : 'near' }); for (const a of X.close.on || []) this.mAct(a); } }
+  if (X.moment && !x.chargeT) { const q = this.mXSquads('me')[0]; if (q && q.order === ORD_CHARGE) { x.chargeT = this.tick; let n = 0, w = 0; for (const sq of this.mXSquads(X.moment.gid)) for (const uid of sq.unitIds) { const u = this.units[uid]; if (u.dead || u.type === 'horse') continue; n++; if (this.inWater(u.x, u.z)) { w++; u.st = ST_STUN; u.stT = 0; u.stunDur = 1.6; u.blocking = false; this.applyDamage(u, Math.round(u.def.hp * 0.22), -1, 0, 0, 0, 'spear', u.x, u.y + 1, u.z); } }
+      x.wet = n ? w / n : 0; x.flag.moment = x.wet >= 0.45 ? 2 : x.wet >= 0.2 ? 1 : 0; this.events.push({ t: 'mmoment', wet: x.wet }); } }
+  if (X.ice && !x.flag.ice && el >= X.ice.at) { const k = X.ice.k | 0; this.zWound(k); const u = this.mXMan(k); if (u && u.downed) { u.x = u.px = X.ice.x; u.z = u.pz = X.ice.z; u.y = u.py = terrainH(u.x, u.z); u.bleed = 30 * X.ice.t; x.iceId = u.id; x.flag.ice = 1; this.events.push({ t: 'mice', id: u.id, x: u.x, z: u.z }); } }
+};
+Sim.prototype.mShotX = function (u) {
+  const M = this.mission, mv = this.mv; if (!M || !M.soldier || !mv || mv.ph < 0) return; const P = M.phases[mv.ph]; if (!P || !P.x) return; const x = this.mX(); x.shots++;
+  const el = (this.tick - mv.t0) / 30;
+  if (P.x.rank) { const mine = x.rank === (P.x.rank.my | 0); if (mine) x.good++; else x.waste++; this.events.push({ t: 'mshot', good: mine }); }
+  if (P.x.drum && el >= P.x.drum.t0 && el < (P.x.drum.until || 1e9)) { const ph = (el - P.x.drum.t0) % P.x.drum.period, on = ph < 0.45 || ph > P.x.drum.period - 0.45; if (on) x.good++; else x.waste++; this.events.push({ t: 'mshot', good: on }); }
+};
+Sim.prototype.mUseX = function (u) { // E at one of the phase's marked spots: the beacon, the cart chain, the gap in the line
+  const M = this.mission, mv = this.mv; if (!M || !M.soldier || !mv || mv.ph < 0 || u.ctrl < 0) return false; const P = M.phases[mv.ph]; if (!P || !P.x || !P.x.use) return false; const x = this.mX();
+  for (const s of P.x.use) { const fk = 'use:' + s.key + ':' + (s.id || ''); if (x.flag[fk]) continue; const dx = s.x - u.x, dz = s.z - u.z, d = len(dx, dz); if (d > s.r) continue;
+    if (s.look && d > 1.5 && Math.abs(wrap(atan2(dx, dz) - u.yaw)) > 0.3) continue;
+    x.flag[fk] = 1; x.n[s.key] = (x.n[s.key] || 0) + 1; this.events.push({ t: 'muse', key: s.key, id: s.id || '', n: x.n[s.key], x: s.x, z: s.z }); for (const a of s.act || []) this.mAct(a); if (s.one) for (const o of P.x.use) x.flag['use:' + o.key + ':' + (o.id || '')] = 1; return true; }
+  return false;
+};
+{ const _fhg = Sim.prototype.fireHeroGun, _bc = Sim.prototype.brushCatch, _zr = Sim.prototype.zRevive, _pk = Sim.prototype.pkTry;
+  Sim.prototype.fireHeroGun = function (u, g) { const r = _fhg.call(this, u, g); if (this.story && u.ctrl >= 0 && !this.players[u.ctrl].ai) this.mShotX(u); return r; };
+  Sim.prototype.brushCatch = function (v, b, nx, nz, blocked, hx, hy, hz) { const was = v.entT; _bc.call(this, v, b, nx, nz, blocked, hx, hy, hz); if (this.story && b.zfile && this.mv && v.entT > was) { const x = this.mX(); x.n.catch = (x.n.catch || 0) + 1; } };
+  Sim.prototype.zRevive = function (u, by) { const r = _zr.call(this, u, by); if (this.story && this.mv) { const x = this.mX(); const p = this.units[by]; if (p && p.ctrl >= 0) { x.n.rev = (x.n.rev || 0) + 1; if (u.id === x.iceId) { x.flag.iceOut = 1; this.events.push({ t: 'miceout', id: u.id }); } } } return r; };
+  Sim.prototype.pkTry = function (u) { if (this.story && this.mUseX(u)) return true; return _pk.call(this, u); }; }
 return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, YY_SLOT, FORM_COLUMN, WPN, spacingOf, gunOf,
   KEY_W, KEY_S, KEY_A, KEY_D, A_ATK, A_BLOCK, A_FIRE, A_AIM, A_KICK, A_MOUNT, A_JUMP, A_SWAP, A_RELOAD, A_CMD, A_RALLY, A_READY, A_THROW, A_DUEL, AIM_RAISE, A_AB1, A_AB2, A_AB3, A_ULT, A_DODGE, A_DASHL, A_DASHR, A_GRIP, KEY_SPRINT, ORD_SPAWN, ORD_CLASS, HCLASS, HAB, SCEN, BOMBS, FURY_MAX, SROLE, ARMS, RANGED, MISSIONS, OPS,
   DIR_UP, DIR_RIGHT, DIR_DOWN, DIR_LEFT, ST_IDLE, ST_WINDUP, ST_RELEASE, ST_RECOVER, ST_STUN, ST_RELOAD, ST_AIM, ST_SWAP, ST_KICK, ST_BURST,

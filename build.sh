@@ -5,7 +5,7 @@ exec 9>/tmp/ming-build.lock; flock -w 300 9
 cd "$(dirname "$0")"
 mkdir -p dist
 # career.js shares main.js's scope: splice it in before main's closing line
-python3 -c "m=open('src/main.js').read().rstrip(); assert m.endswith('})();'); open('src/_mainfull.js','w').write(m[:-5]+'\n'+open('src/career.js').read()+'\n'+open('src/zhe.js').read()+''.join('\n'+open(f).read() for f in ['src/jin.js','src/shenji.js','src/mode_beacon.js','src/deeds.js','src/debug.js','src/arsenal.js','src/choices.js','src/shenji2.js'] if __import__('os').path.exists(f))+'\n})();\n')"
+python3 -c "m=open('src/main.js').read().rstrip(); assert m.endswith('})();'); open('src/_mainfull.js','w').write(m[:-5]+'\n'+open('src/career.js').read()+'\n'+open('src/zhe.js').read()+''.join('\n'+open(f).read() for f in ['src/jin.js','src/shenji.js','src/mode_beacon.js','src/deeds.js','src/debug.js','src/arsenal.js','src/choices.js','src/shenji2.js','src/story2.js'] if __import__('os').path.exists(f))+'\n})();\n')"
 python3 - <<'PY'
 import base64, glob, os, json
 d={os.path.basename(f)[:-4]: base64.b64encode(open(f,'rb').read()).decode() for f in sorted(glob.glob('snd/*.mp3'))}
