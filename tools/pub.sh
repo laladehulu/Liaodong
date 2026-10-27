@@ -3,6 +3,8 @@
 set -e
 V=$1; MSG=$2
 cd /home/claude/ming && tools/snap.sh "$V: $MSG" >/dev/null || true
+# keep the source on GitHub in step (merge what other agents pushed to main first)
+(cd /home/claude/ming && git pull -q --rebase origin main 2>/dev/null; git push -q origin master:main 2>/dev/null) || echo "source push failed"
 cd /home/claude/laladehulu.github.io/Liaodong && git stash -q -u 2>/dev/null; git pull -q --rebase; git stash pop -q 2>/dev/null || true; python3 /home/claude/ming/publish.py $V | tail -1
 python3 - "$V" <<'PY'
 import re,sys
