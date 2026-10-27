@@ -13,7 +13,7 @@ const ROLES = ['shield', 'musket', 'spear', 'duck'];
 function run(mission) {
   const M = S.MISSIONS[mission]; const players = []; for (let i = 0; i < np; i++) players.push({ name: 'p' + i, team: M.side, role: ROLES[i % ROLES.length] });
   const sim = new S.Sim({ seed, mode: 'campaign', mission, diff, players });
-  const hum = sim.players.filter(p => !p.ai); const ph = [], says = [], blasts = []; let lastPh = -1, dead = 0;
+  const hum = sim.players.filter(p => !p.ai); const ph = [], says = [], blasts = []; let lastPh = -1, dead = 0; const stuck = hum.map(() => ({ x: 0, z: 0, n: 0, until: -1 }));
   const target = (p, i) => { // where this bot wants his general: a man of his down, the phase's place, else beside the enemy group it must break
     const P = M.phases[Math.max(0, sim.mv.ph)], o = P.obj || {}; const subs = [o].concat(o.all || []);
     for (const id of p.squads) for (const uid of sim.squads[id].unitIds) { const u = sim.units[uid]; if (u.mFell && u.downed && !u.dead) return [u.x, u.z, u]; }
@@ -27,7 +27,10 @@ function run(mission) {
         const tg = target(p, i); const far = tg ? Math.hypot(tg[0] - h.x, tg[1] - h.z) : 0;
         if (tg && tg[2] && far < 2.2) { if ((t & 7) === 0) acts |= S.A_KICK; }
         else if (enemy && ed < 3.2) { yaw = Math.atan2(enemy.x - h.x, enemy.z - h.z); if ((t % 14) < 7) acts |= S.A_ATK; if (ed > 2.2) keys |= S.KEY_W; }
-        else if (tg && far > 1.5) { keys |= S.KEY_W; yaw = Math.atan2(tg[0] - h.x, tg[1] - h.z); } }
+        else if (tg && far > 1.5) { keys |= S.KEY_W; yaw = Math.atan2(tg[0] - h.x, tg[1] - h.z);
+          // walked into a wall: for the next few seconds walk toward the field's axis instead (a man goes round)
+          const st = stuck[i]; if (t % 30 === 0) { if (Math.hypot(h.x - st.x, h.z - st.z) < 1 && !enemy) st.n++; else st.n = 0; st.x = h.x; st.z = h.z; if (st.n >= 3) { st.until = t + 90; st.n = 0; } }
+          if (t < st.until) yaw = Math.atan2(-h.x, 0.001 * Math.sign(tg[1] - h.z)); } }
       return [keys, yq(yaw), 0, acts, 0, 0, [], 0]; });
     sim.step(inputs);
     for (const e of sim.events) { if (e.t === 'mphase') { ph.push([e.ph, Math.round(sim.tick / 30)]); lastPh = e.ph; } if (e.t === 'msay') says.push([Math.round(sim.tick / 30), e.who, e.text]); if (e.t === 'mblast') blasts.push(Math.round(sim.tick / 30)); if (e.t === 'death' && hum.some(p => p.heroId === e.id)) dead++; }
