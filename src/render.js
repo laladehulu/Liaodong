@@ -1104,9 +1104,9 @@ class Renderer {
   inkInit() {
     const N = 700, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 0, 1, -0.5, 0, 1], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2)); g.setIndex([0, 2, 1, 0, 3, 2]);
     const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, fog: false,
-      uniforms: { ink: { value: new THREE.Color(0x14161c) }, op: { value: 0.42 } },
+      uniforms: { ink: { value: new THREE.Color(0x14161c) }, op: { value: 0.62 } },
       vertexShader: 'varying vec2 vU; varying float vD; void main(){ vU = uv; vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0); vD = -mv.z; gl_Position = projectionMatrix * mv; }',
-      fragmentShader: 'uniform vec3 ink; uniform float op; varying vec2 vU; varying float vD; void main(){ vec2 q = vec2((vU.x - 0.5) * 2.0, vU.y * 2.0 - 1.0); q.y = q.y < 0.0 ? q.y * 2.2 : q.y; float r = length(q); if (r > 1.0) discard;\n float body = smoothstep(1.0, 0.45, r), rim = smoothstep(0.62, 0.9, r) * smoothstep(1.0, 0.9, r), feet = 1.0 - vU.y * 0.45;\n float a = (body * 0.78 * feet + rim * 0.3) * op * clamp(1.0 - (vD - 50.0) / 40.0, 0.0, 1.0); gl_FragColor = vec4(ink, a); }' });
+      fragmentShader: 'uniform vec3 ink; uniform float op; varying vec2 vU; varying float vD; void main(){ vec2 q = vec2((vU.x - 0.5) * 2.0, vU.y * 2.0 - 1.0); float r = length(q); if (r > 1.0) discard;\n float body = smoothstep(1.0, 0.45, r), rim = smoothstep(0.62, 0.9, r) * smoothstep(1.0, 0.9, r), feet = 1.0 - vU.y * 0.45;\n float a = (body * 0.9 * feet + rim * 0.35) * op * clamp(1.0 - (vD - 50.0) / 40.0, 0.0, 1.0); gl_FragColor = vec4(ink, a); }' });
     const mesh = new THREE.InstancedMesh(g, m, N); mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.count = 0; this.scene.add(mesh);
     this.inkB = { mesh, N, n: 0, M: new THREE.Matrix4(), X: new THREE.Vector3(), Y: new THREE.Vector3(), Z: new THREE.Vector3() };
     for (const k in this.fig) this.fig[k].castShadow = false; if (this.horse) for (const k in this.horse) this.horse[k].castShadow = false;
@@ -1116,7 +1116,7 @@ class Renderer {
     const sd = this.sunDir; if (!sd || sd.y <= 0.05) return; const hl = Math.hypot(sd.x, sd.z) || 1, dx = -sd.x / hl, dz = -sd.z / hl, L = Math.min(9, h / (sd.y / hl)) + 0.4;
     const gy = terrainH(x, z), tx = x + dx * L, tz = z + dz * L, ty = terrainH(tx, tz);
     B.Z.set(dx * L, ty - gy, dz * L); B.X.set(dz * w * 2, 0, -dx * w * 2); B.Y.set(0, 1, 0);
-    B.M.makeBasis(B.X, B.Y, B.Z); B.M.setPosition(x - dx * 0.3, gy + 0.04, z - dz * 0.3); B.mesh.setMatrixAt(B.n++, B.M);
+    B.M.makeBasis(B.X, B.Y, B.Z); B.M.setPosition(x - dx * 0.35, gy + 0.04, z - dz * 0.35); B.mesh.setMatrixAt(B.n++, B.M);
   }
   inkEnd() { const B = this.inkB; B.mesh.count = B.n; B.mesh.instanceMatrix.needsUpdate = true; B.n = 0; }
   hideFigure(slot) { const z = this.tmp.zero; for (const k in this.fig) { const m = this.fig[k], n = m.userData.mult; for (let j = 0; j < n; j++) m.setMatrixAt(slot * n + j, z); } }
