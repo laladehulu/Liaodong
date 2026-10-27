@@ -4360,7 +4360,7 @@ Sim.prototype.pointWait = function (u, tgt, d, reach) {
 // then he feints the step without the cut and cuts on the second step. (紀效新書 on the dao: 進步 with the strike; the
 // 殺手 drill paces are the step-and-cut, not a stand-and-cut.)
 Sim.prototype.xcMeasure = function (u, tgt, d, reach) {
-  if (!this.xc || u.ctrl >= 0 || u.mounted || u.mount >= 0 || u.champ || u.weapon === 'yari' || u.def.brush || !tgt || tgt.dead || tgt.mounted || tgt.mount >= 0 || tgt.type === 'horse' || u.entT > 0 || u.rushT > 0 || u.wounded) return false;
+  if (!this.xc || (u.ctrl >= 0 && !(this.players[u.ctrl] && this.players[u.ctrl].ai)) || u.mounted || u.mount >= 0 || u.champ || u.weapon === 'yari' || u.def.brush || !tgt || tgt.dead || tgt.mounted || tgt.mount >= 0 || tgt.type === 'horse' || u.entT > 0 || u.rushT > 0 || u.wounded) return false;
   const nx = (tgt.x - u.x) / (d || 1), nz = (tgt.z - u.z) / (d || 1);
   if (u.st === ST_WINDUP || u.st === ST_RELEASE) { /* the step that carries the cut: easy in the wind-up, the last of it with the blade */
     if (!u.xcIn) return false; const want = reach * 0.74; const sp = d > want ? Math.min(u.st === ST_RELEASE ? u.def.speed * 1.1 : 2.4, (d - want) * (u.st === ST_RELEASE ? 9 : 3)) : 0;
