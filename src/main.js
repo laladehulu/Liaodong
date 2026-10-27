@@ -707,6 +707,7 @@ function combatLog(text, col) {
 }
 function handleEvents(events) {
   const sim = state.sim;
+  for (const ev of events) if (ev.t === 'deploy' && ev.p === state.localIdx && ev.rekit) toast(`No ${ev.rekit} left in the fight: you take up their arms in the nearest company`);
   { const me = sim.players[state.localIdx]; for (const ev of events) if (ev.t === 'hit' && me && ev.id === me.heroId && ev.att >= 0) { const a = sim.units[ev.att], h = sim.units[me.heroId]; if (!a || !h) continue;
       const d = Math.hypot(a.x - h.x, a.z - h.z); state.hitDir = { ang: Math.atan2(a.x - h.x, a.z - h.z), t: 2.2 };
       const what = ev.cause === 'melee' ? 'Cut by' : ev.cause === 'arrow' ? 'Arrow from' : ev.cause === 'explosion' ? 'Blast from' : 'Shot by';

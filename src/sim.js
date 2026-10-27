@@ -601,7 +601,13 @@ class Sim {
   // ---- assault deployment: pick a soldier type and a place to enter the fight; spawns move up with the front
   deployTypes(team, pidx) { const seen = {}, out = []; const own = this.mode === 'campaign' ? this.coopSquads(team, pidx) : null; for (const q of this.squads) { if (q.team !== team || !q.alive || q.inactive || q.def.ai === 'cannon' || q.type === 'horse') continue; if (own && !own.includes(q.id)) continue;
     if (q.def.yuanyang) { for (const id of q.unitIds) { const u = this.units[id]; if (u.dead || u.ctrl >= 0 || u.inactive || !YY_PLAY[u.role]) continue; const key = q.type + ':' + u.role; if (seen[key] === undefined) { seen[key] = out.length; out.push({ type: q.type, role: u.role, key, n: 0, def: YYDEF[u.role], name: YY_PLAY[u.role][0], jp: YY_PLAY[u.role][1] }); } out[seen[key]].n++; } continue; } // each man of a mandarin duck team is his own trade
-    let n = 0; for (const id of q.unitIds) { const u = this.units[id]; if (!u.dead && u.ctrl < 0 && !u.inactive) n++; } if (!n) continue; if (seen[q.type] === undefined) { seen[q.type] = out.length; out.push({ type: q.type, key: q.type, n: 0, def: q.def, name: q.def.name, jp: q.def.jp }); } out[seen[q.type]].n += n; } return out; }
+    let n = 0; for (const id of q.unitIds) { const u = this.units[id]; if (!u.dead && u.ctrl < 0 && !u.inactive) n++; } if (!n) continue; if (seen[q.type] === undefined) { seen[q.type] = out.length; out.push({ type: q.type, key: q.type, n: 0, def: q.def, name: q.def.name, jp: q.def.jp }); } out[seen[q.type]].n += n; }
+    // every kind of soldier your side fields is always on offer: the reserve companies not yet in the fight, and kinds already cut to
+    // pieces (you take up that kit in the nearest company still standing)
+    for (const q of this.squads) { if (q.team !== team || q.def.ai === 'cannon' || q.type === 'horse' || q.def.mounted && this.mode !== 'campaign' && !q.alive) continue; if (own && !own.includes(q.id) && q.owner !== pidx) continue;
+      if (q.def.yuanyang) { for (const role in YY_PLAY) { const key = q.type + ':' + role; if (seen[key] === undefined) { seen[key] = out.length; out.push({ type: q.type, role, key, n: 0, def: YYDEF[role], name: YY_PLAY[role][0], jp: YY_PLAY[role][1], spare: true }); } } continue; }
+      if (seen[q.type] === undefined) { seen[q.type] = out.length; out.push({ type: q.type, key: q.type, n: 0, def: q.def, name: q.def.name, jp: q.def.jp, spare: true, reserve: q.inactive && q.alive }); } }
+    return out; }
   coopSquads(team, pidx) { // co-op: you rejoin among your own companies, or your allies' once yours are gone
     const ok = (q) => q.team === team && q.alive && !q.inactive && !q.routing && q.def.ai !== 'cannon' && q.unitIds.some(id => { const u = this.units[id]; return !u.dead && u.ctrl < 0 && !u.inactive && u.type !== 'horse'; });
     const mine = this.squads.filter(q => q.owner === pidx && ok(q)).map(q => q.id); return mine.length ? mine : this.squads.filter(ok).map(q => q.id); }
@@ -632,17 +638,22 @@ class Sim {
   deploy(p, si, ti) {
     const sp = this.deploySpawns(p.team, p.idx)[si]; if (!sp || sp.blocked) return false;
     const old = this.units[p.heroId]; const alive = old && !old.dead && old.ctrl === p.idx;
-    let sq = null;
+    let sq = null; const T0 = this.deployTypes(p.team, p.idx)[ti]; let rekit = null;
     if (sp.kind === 'sq') sq = this.squads[sp.sq];
-    else { const T = this.deployTypes(p.team, p.idx)[ti]; if (!T) return false; let bd = 1e18; for (const q of this.squads) { if (q.team !== p.team || q.type !== T.type || !q.alive || q.inactive) continue; if (T.role && !q.unitIds.some(id => { const v = this.units[id]; return !v.dead && v.ctrl < 0 && v.role === T.role; })) continue; const d = len(q.cx - sp.x, q.cz - sp.z); if (d < bd) { bd = d; sq = q; } } }
+    else { const T = T0; if (!T) return false; let bd = 1e18; for (const q of this.squads) { if (q.team !== p.team || q.type !== T.type || !q.alive || q.inactive) continue; if (T.role && !q.unitIds.some(id => { const v = this.units[id]; return !v.dead && v.ctrl < 0 && v.role === T.role; })) continue; const d = len(q.cx - sp.x, q.cz - sp.z); if (d < bd) { bd = d; sq = q; } } }
+    if (!sq && T0 && T0.n === 0) { // none of that kind left in the fight: the nearest company on foot takes you in, and you carry that kind's arms
+      let bd = 1e18; for (const q of this.squads) { if (q.team !== p.team || !q.alive || q.inactive || q.routing || q.def.ai === 'cannon' || q.def.mounted || q.type === 'horse') continue; if (!q.unitIds.some(id => { const v = this.units[id]; return !v.dead && v.ctrl < 0 && !v.inactive; })) continue; const d = len(q.cx - sp.x, q.cz - sp.z); if (d < bd) { bd = d; sq = q; } }
+      rekit = T0; }
     if (!sq) return false;
     if (alive) { old.ctrl = -1; old.target = -1; } // hand your old body back to its company
-    const T2 = this.deployTypes(p.team, p.idx)[ti]; const role = T2 && T2.type === sq.type ? T2.role : undefined;
+    const T2 = T0; const role = T2 && T2.type === sq.type && !rekit ? T2.role : undefined;
     p.heroId = -1; if (!this.possess(p, sq, role)) { if (alive) { old.ctrl = p.idx; p.heroId = old.id; } return false; }
-    const u = this.units[p.heroId]; u.hp = u.def.hp; u.fat = 0; u.iframe = 1.2; p.soldierSq = u.squad; p.downAt = 0;
+    const u = this.units[p.heroId];
+    if (rekit) { const d = rekit.def; u.type = rekit.type; u.role = rekit.role; u.def = d; u.weapon = (d.weapons || ['katana'])[0]; u.club = false; u.loaded = true; const g = gunOf(d, u.weapon); u.ammo = g ? (g.mag || 1) : 1; if (d.revolver) u.ammoR = d.revolver.mag; u.st = ST_IDLE; u.stT = 0; u.rekit = 1; }
+    u.hp = u.def.hp; u.fat = 0; u.iframe = 1.2; p.soldierSq = u.squad; p.downAt = 0;
     if (sp.kind !== 'sq') { const k = p.idx % 5; const [x, z] = this.freeSpot(clamp(sp.x + (k - 2) * 2.2, -HALF + 3, HALF - 3), clamp(sp.z + ((k * 7) % 3 - 1) * 2.2, -HALF + 3, HALF - 3));
       u.x = u.px = x; u.z = u.pz = z; u.y = u.py = terrainH(x, z); u.vx = u.vz = u.vy = 0; u.mx = u.mz = 0; u.airborne = false; u.st = ST_IDLE; u.stT = 0; }
-    this.events.push({ t: 'deploy', p: p.idx, id: u.id, kind: sp.kind, name: sp.name });
+    this.events.push({ t: 'deploy', p: p.idx, id: u.id, kind: sp.kind, name: sp.name, rekit: rekit ? rekit.name : undefined });
     return true;
   }
   placeArmy(a, t, cx, cz, facing) {
