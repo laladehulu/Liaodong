@@ -37,7 +37,7 @@ const SPEECH = (() => {
     add(grp, G.torso, tc, 0, 0, 0, 0.5, 0.64, 0.3); add(head, G.head, skinC, 0, 0, 0, 0.28, 0.3, 0.28);
     for (const sx of [-1, 1]) add(grp, G.limb, tc, sx * 0.29, 0.08, 0, 0.13, 0.36, 0.14, [0, 0, sx * 0.12]);
     const FR = { c: [grp, 0, 0, 0], h: [head, 0, 0, 0], sl: [grp, 0.2, 0.22, 0], sr: [grp, -0.2, 0.22, 0] };
-    for (const p of RENDER.gearFor(u).parts) { const F = FR[p.f]; if (!F || !G[p.m]) continue; add(F[0], G[p.m], p.k, F[1] + p.o[0], F[2] + p.o[1], F[3] + p.o[2], p.s[0], p.s[1], p.s[2], p.r); }
+    for (const p of RENDER.gearFor(u).parts) { const F = FR[p.f]; if (!F || !G[p.m]) continue; add(F[0], G[p.m], p.k < 0 ? skinC.clone().multiplyScalar(p.k === -1 ? 1 : 0.9) : p.k, F[1] + p.o[0], F[2] + p.o[1], F[3] + p.o[2], p.s[0], p.s[1], p.s[2], p.r); }
     grp.visible = false; BUST.scene.add(grp);
     b = { grp, head, seed: u.id * 1.7 }; BUST.cache.set(key, b);
     if (BUST.cache.size > 40) { const k0 = BUST.cache.keys().next().value; const o = BUST.cache.get(k0); BUST.scene.remove(o.grp); BUST.cache.delete(k0); }
