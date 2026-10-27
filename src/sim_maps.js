@@ -133,5 +133,60 @@
       for (let i = 0; i < 8; i++) { const x = 100 + r.range(-6, 6), z = -110 + i * 30 + r.range(-8, 8); if (clear(x, z, 3)) sim.obstacles.push({ x, z, r: 1.6, kind: 1, rot: r.range(0, TAU) }); }
       trees(sim, r, clear, 20, -140, 100, -140, 140, 1); } };
 
+  // ---------- 大凌河 Dalinghe, the eighth to tenth months of 1631 ----------
+  // 《清太宗實錄》天聰五年八月初六 (the host arrived and in three days dug round the city: 掘壕四道, a trench ten feet across
+  // and deep, a wall behind it, the whole ring thirty li, a camp of each banner at its station), 九月 (the Jinzhou relief
+  // columns of 宋偉 and 吳襄 beaten at the Xiaoling river, Zhang Chun at 長山); 《明史》祖大壽傳, 孫承宗傳; 《崇禎長編》.
+  // The city of Dalinghe (today's Linghai) is a small square fort that Zu Dashou was rebuilding when the Jin came; the
+  // Daling river runs past its east side. Here the city's west wall stands at the Ming edge (-z, Zu Dashou's men inside
+  // it) and the Jin ring of trench and bank crosses the field in front; the river is the east edge. The Jin deploy
+  // behind their lines; the Ming inside the wall must sortie across the open ground into the trenches (as Zu did on the
+  // 9th and 20th of the eighth month) or hold the gate.
+  B.dalinghe = { name: 'Dalinghe', jp: '大凌河', when: 'September 1631', biome: 'autumn', fog: 0.12, terrain: 0.3, features: [], horizon: { lo: 0.5, nokarst: true },
+    desc: 'Zu Dashou\'s half-built fort and the Jin ring round it: a trench ten feet deep with an earth wall behind, banner camps at intervals, the Daling River to the east. The sortie must cross the open ground and the trench.' };
+  M.dalinghe = { trees: 40, rocks: 20, nomant: true,
+    terrain(L, r) { L.hills.push({ x: -120, z: 100, r: 60, h: 7 }); L.hills.push({ x: 60, z: 130, r: 50, h: 5 });
+      L.river = { axis: 'z', c0: 134, amp: 5, freq: 0.022, ph: 1.4, w: 10, depth: 3, bridges: [{ at: -60, hw: 9, ford: true }] }; /* the 大凌河, a ford on the Jinzhou road */
+      L.trenches = [{ x0: -150, z0: 24, x1: 118, z1: 30, w: 3.2, depth: 2.8, bank: 1.6, gaps: [-70, 40] }, { x0: -150, z0: 44, x1: 118, z1: 50, w: 2.4, depth: 1.6, bank: 0.9, gaps: [-20] }]; }, /* 壕 and the inner line: the bank is thrown up on the city side (toward -z) */
+    objectives: [{ x: 0, z: -92, r: 12, name: 'Under the west gate' }, { x: -70, z: 26, r: 11, name: 'The trench (west gap)' }, { x: 40, z: 28, r: 11, name: 'The trench (east gap)' }, { x: -131, z: 83, r: 13, name: 'The Bordered Yellow camp' }],
+    noTree(x, z) { return (z > 14 && z < 60) || z < -80; },
+    build(sim, r, keep, clear) {
+      /* the city's west wall at the Ming edge, its gate in the middle: a wall half built (《明史》祖大壽傳: 城工未竣), so its ends are low rammed earth without the brick facing (lower h) */
+      cityWall(sim, { axis: 'x', at: -163, from: -60, to: 60, h: 9, hd: 3.5, out: 1, gx: 0, gw: 3.2, name: '大凌河', nobast: true }); cityWall(sim, { axis: 'x', at: -163, from: -110, to: -64, h: 4.5, hd: 3, out: 1, notower: true, nobast: true }); cityWall(sim, { axis: 'x', at: -163, from: 64, to: 110, h: 4.5, hd: 3, out: 1, notower: true, nobast: true });
+      keep.push({ x: 0, z: -163, r: 20 }); keep.push({ x: -87, z: -163, r: 10 }); keep.push({ x: 87, z: -163, r: 10 }); /* the wall stands at the field edge: the Ming sortie forms up under it */
+      /* the Jin banner camps behind the inner line (《清太宗實錄》: 各旗營於所分汛地), with the shield carts (盾車) parked at the gaps */
+      stockade(sim, keep, -146, 70, -116, 96, 'e'); stockade(sim, keep, 116, 70, 146, 96, 'w'); /* the camps on the flanks: the deployment ground is between them */
+      for (const [x, z] of [[-74, 36], [-66, 36], [44, 38], [36, 38]]) sim.boxes.push({ x, z, hw: 1.6, hd: 0.5, h: 1.4, kind: 'mantlet' });
+      /* the burnt houses of the suburb between the wall and the ring (the Jin burned the outer settlement on arrival) */
+      for (const [x, z] of [[-40, -70], [34, -66], [-22, -52], [52, -48]]) house(sim, keep, x, z, 2.8, 2.4, true);
+      trees(sim, r, clear, 40, -140, 110, 60, 140, 0); } };
+
+  // ---------- 錦州 Jinzhou, the fifth month of 1627 (寧錦之戰) ----------
+  // 《清太宗實錄》天聰元年五月十一日 (the host before Jinzhou at dawn; the city 'walled in brick and moated, its walls lined
+  // with 紅夷砲'; thirteen days of assaults on the south and west faces with ladders and 盾車 broken by the guns; the
+  // 28th moved on to Ningyuan and came back); 《明史》趙率教傳 (Zhao Shuaijiao held the city with Ji Yongzhen; the
+  // Jin camps three li off; the Ming cavalry sortied on the 25th); 《明熹宗實錄》天啟七年五月, 《兩朝從信錄》. Jinzhou's wall
+  // (《遼東志》: 廣寧中屯衛, 周五里二百二十步, 四門) had been rebuilt by Yuan Chonghuan the winter before. Here the west wall
+  // and its gate fill the Ming edge, the moat in front, the Jin ladder parties and shield carts form up on the open
+  // ground; a ruined temple and the burnt suburb give the attackers cover on the way in.
+  B.jinzhou = { name: 'Jinzhou', jp: '錦州 (寧錦)', when: 'June 1627', biome: 'summer', fog: 0.05, terrain: 0.2, features: [], horizon: { lo: 0.45, nokarst: true },
+    desc: 'Zhao Shuaijiao holds Jinzhou\'s rebuilt walls, the moat in front and the guns above. The banners\' ladders and shield carts must come across a shot-swept plain and a burnt suburb; the Ming cavalry waits inside the gate to sortie.' };
+  M.jinzhou = { trees: 50, rocks: 16, nomant: true,
+    terrain(L, r) { L.hills.push({ x: 140, z: 60, r: 50, h: 6 }); L.hills.push({ x: -130, z: 120, r: 60, h: 7 });
+      L.trenches = [{ x0: -150, z0: -146, x1: 150, z1: -146, w: 4, depth: 2.6, wet: true, gaps: [0, -40, 40] }]; }, /* the moat along the wall (plank bridges for the sortie),, a causeway at the gate (《清太宗實錄》: 城外濬壕) */
+    objectives: [{ x: 0, z: -90, r: 11, name: 'Under the gate' }, { x: -60, z: -20, r: 13, name: 'The burnt suburb' }, { x: 56, z: 10, r: 12, name: 'The ruined temple' }, { x: 133, z: 110, r: 14, name: 'The Jin siege camp' }],
+    noTree(x, z) { return z < -60; },
+    build(sim, r, keep, clear) {
+      sim.deco.push({ kind: 'road', x: 0, w: 6 }); sim.roadX = 0;
+      cityWall(sim, { axis: 'x', at: -163, from: -150, to: 150, h: 11, hd: 4, out: 1, gx: 0, gw: 3.4, name: '錦州', notower: true, nobast: true }); keep.push({ x: 0, z: -163, r: 24 }); /* the wall at the field edge, the sortie forms up under it */
+      for (const sx of [-1, 1]) sim.boxes.push({ x: sx * 120, z: -152, hw: 4.5, hd: 3.5, h: 3.4, kind: 'rampart', tight: true }); /* Hongyipao platforms on the wall (《清太宗實錄》: 城上列紅夷砲) */
+      for (const [x, z] of [[-70, -30], [-52, -20], [-60, -8], [-78, -12], [-44, -34], [-32, -6]]) house(sim, keep, x, z, 2.8, 2.4, true);
+      /* a ruined temple compound (its walls stand, the hall is burnt): cover the Jin used to form up out of the guns' sight */
+      sim.boxes.push({ x: 56, z: 22, hw: 14, hd: 0.5, h: 2.2, kind: 'wall' }); sim.boxes.push({ x: 42, z: 8, hw: 0.5, hd: 14, h: 2.2, kind: 'wall' }); sim.boxes.push({ x: 70, z: 8, hw: 0.5, hd: 14, h: 2.2, kind: 'wall' }); sim.boxes.push({ x: 56, z: 12, hw: 5, hd: 3.5, h: 2.4, kind: 'house', burnt: true }); keep.push({ x: 56, z: 10, r: 20 });
+      /* the Jin camp (《明史》: 營於城外三里) and the shield carts (盾車) in a line, the ladder parties behind them */
+      stockade(sim, keep, -148, 96, -118, 124, 'e'); stockade(sim, keep, 118, 96, 148, 124, 'w');
+      for (let x = -40; x <= 40; x += 10) sim.boxes.push({ x, z: 60, hw: 1.6, hd: 0.5, h: 1.5, kind: 'mantlet' });
+      trees(sim, r, clear, 50, -140, 140, 30, 140, undefined); } };
+
   // the picker shows BATTLES in table order: keep the new ones after the old
 })();
