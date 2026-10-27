@@ -3916,9 +3916,9 @@ Sim.prototype.defKey = function (di) { const M = this.mission; let k = 0; for (c
 Sim.prototype.assaultThink = function () {
   const M = this.mission, A = M.attacker; const keys = M.sectors[this.sector];
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
-  let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
+  let act = 0, rngN = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') { act += u.def.ai === 'ranged' ? 0.35 : 1; if (u.def.ai === 'ranged') rngN++; } act = Math.round(act); /* archers and gunners stand back and seldom fall: counted at a third, so a standing archery company cannot fill the field and starve the assault of fresh men */
   const CAP = M.cap || 64;
-  if (act + Math.round(CAP / 3) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); this.assaultDirs(); } }
+  if (act + Math.round(CAP / 3) <= CAP && this.tickets > 0) { const next = Object.keys(this.mg).find(g => this.mg[g].G.team === A && !this.mg[g].released); if (next) { this.mRelease(next); if (rngN >= CAP * 0.4) { const p = this.players[this.mg[next].p]; for (const id of p.squads) { const q = this.squads[id]; if (q.def.ai !== 'ranged') continue; for (const uid of q.unitIds) { const u = this.units[uid]; if (u.dead) continue; u.dead = true; u.hp = 0; u.inactive = true; u.trimmed = true; this.total[u.team]--; } q.count = 0; q.aliveCount = 0; q.alive = false; } } /* enough bows on the field already: this wave comes as blades only */ this.assaultDirs(); } }
   // the manpower pool is bigger than the field: fallen attackers come back up the road as fresh men while tickets last
   let revivable = false;
   if (this.tickets > 0 && this.tick % 45 === 0) { let room = Math.min(CAP - act, this.tickets), k = 0;
