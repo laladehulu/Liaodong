@@ -240,5 +240,57 @@
       stockade(sim, keep, 110, 112, 146, 140, 'w'); for (const [x, z] of [[-100, 118], [-86, 126], [-112, 130]]) house(sim, keep, x, z, 2.6, 2.2, false);
       trees(sim, r, clear, 30, -140, 140, 110, 145, 0); } };
 
+  // ---------- 鐵嶺 Tieling, the seventh month of 1619 ----------
+  // 《滿文老檔》天命四年七月二十五日 (the host crossed the river below Tieling before dawn, the city fell by noon; the
+  // Yehe and the Khalkha Mongol 宰賽 (Jaisai), who had come to Tieling's relief with ten thousand horse, came up on the
+  // open ground east of the city and were charged and broken, Jaisai taken); 《明史》李如楨傳, 《明神宗實錄》萬曆四十七年
+  // 七月; 《遼東志》鐵嶺衛 (a walled city on the 柴河 above its meeting with the Liao; the Mongol horse market outside its
+  // east gate). A cavalry field: the Jin hold the taken city (its east wall the Jin edge, +z) and ride out against the
+  // Mongol relief on the plain; the Chai river bounds the field on the west with one ford, scattered elm copses and
+  // the horse-market pens give the only cover. The Ming side here is Jaisai's Mongols and the Yehe (a known liberty:
+  // the game has Ming and Jin rosters only).
+  B.tieling = { name: 'Tieling', jp: '鐵嶺', when: 'August 1619', biome: 'summer', fog: 0.05, terrain: 0.25, features: [], horizon: { lo: 0.45, nokarst: true },
+    desc: 'The plain east of fallen Tieling. Jaisai\'s Mongol horse and the Yehe have come too late to save the city; the banners ride out of the east gate at them across open grass with only the horse-market pens and the river for cover.' };
+  M.tieling = { trees: 40, rocks: 10,
+    terrain(L, r) { L.hills.push({ x: 150, z: -80, r: 60, h: 6 }); L.hills.push({ x: -40, z: -20, rx: 50, rz: 20, rot: 0.6, h: 3 });
+      L.river = { axis: 'z', c0: -128, amp: 6, freq: 0.02, ph: 2.8, w: 9, depth: 3, bridges: [{ at: -40, hw: 10, ford: true }] }; }, /* the 柴河 on the west, the ford of the 開原 road */
+    objectives: [{ x: 60, z: 90, r: 13, name: 'The horse market' }, { x: -40, z: -10, r: 13, name: 'The elm knoll' }, { x: -120, z: -40, r: 11, name: 'The Chai River ford' }],
+    noTree(x, z) { return z > 120 || (Math.abs(x - 60) < 24 && Math.abs(z - 90) < 20); },
+    build(sim, r, keep, clear) {
+      cityWall(sim, { axis: 'x', at: 163, from: -150, to: 150, h: 10, hd: 4, out: -1, gx: -20, gw: 3.4, name: '鐵嶺', notower: true, nobast: true }); keep.push({ x: -20, z: 163, r: 24 });
+      /* the Mongol horse market outside the east gate (《遼東志》: 馬市): pens of hurdles, a few stalls */
+      for (const [x, z, yaw] of [[40, 80, 0], [40, 100, 0], [40, 80, Math.PI / 2], [72, 80, Math.PI / 2]]) { const n = 12; const dx = Math.sin(yaw), dz = Math.cos(yaw); for (let i = 0; i <= n; i++) sim.obstacles.push({ x: x + dx * i * 1.6, z: z + dz * i * 1.6, r: 0.22, kind: 5 }); sim.deco.push({ kind: 'fence', x, z, yaw, len: n * 1.6 }); }
+      keep.push({ x: 56, z: 90, r: 22 }); for (const [x, z] of [[90, 96], [96, 82]]) house(sim, keep, x, z, 2.6, 2.2, false);
+      /* elm copse on the knoll in the middle of the plain, the one place a line can anchor (no source names it: the knoll is the terrain's) */
+      trees(sim, r, clear, 26, -70, -10, -36, 6, 1); trees(sim, r, clear, 14, 100, 145, -130, -60, 1); } };
+
+  // ---------- 喜峰口 Xifengkou, the Great Wall pass, the tenth month of 1629 ----------
+  // 《清太宗實錄》天聰三年十月二十六–二十七日 (the Khan's host, with the Khorchin and Kharachin Mongols as guides, came
+  // through the wall at 龍井關, 大安口 and 洪山口 — the passes east of Zunhua, Xifengkou among them — the garrisons too
+  // thin to hold the gaps; the Ming Jizhou commander 趙率教 rode to Zunhua and died under its walls); 《明史》趙率教傳,
+  // 《崇禎長編》二年十月; 《四鎮三關志》薊鎮 (the 1576 gazetteer of the Ji garrison: the wall at Xifengkou is of stone on the
+  // ridges with brick towers every one to two hundred paces, the pass gate a 關城 in the valley bottom with a water
+  // gate on the stream). Here the Great Wall runs across the field along the ridge crests with the pass gate in the
+  // valley; the Ming (south, -z) hold the gate and the towers either side, the Jin and their Mongol guides come up the
+  // valley from the north. Climbing the ridge to the wall is slow; the stream bed under the water gate is the one
+  // other way through.
+  B.xifengkou = { name: 'Xifengkou', jp: '喜峰口', when: 'November 1629', biome: 'autumn', fog: 0.2, terrain: 0.6, features: [], horizon: { lo: 1 },
+    desc: 'A Great Wall pass east of Zunhua. The wall runs along the ridge crests with its towers; the pass gate and the water gate stand in the valley bottom. The Jin host and its Mongol guides come up the valley at a garrison a few hundred strong.' };
+  M.xifengkou = { trees: 160, rocks: 40, nomant: true,
+    terrain(L, r) { L.pass = { r0: 22, r1: 70, h: 32 }; L.hills.push({ x: -60, z: -10, rx: 70, rz: 14, rot: 0.1, h: 10 }); L.hills.push({ x: 64, z: -8, rx: 70, rz: 14, rot: -0.1, h: 10 }); /* the ridge the wall rides, across the pass at z≈-10 */
+      L.river = { axis: 'z', c0: 12, amp: 3, freq: 0.04, ph: 0.3, w: 4, depth: 1.4, bridges: [{ at: 0, hw: 200, ford: true }] }; }, /* shallow its whole length: waded anywhere, slowly */ /* the mountain stream down the valley floor, shallow: the water gate lets it through the wall */
+    objectives: [{ x: -4, z: -14, r: 11, name: 'The pass gate' }, { x: -44, z: -12, r: 10, name: 'West tower' }, { x: 46, z: -12, r: 10, name: 'East tower' }, { x: 0, z: 70, r: 13, name: 'The valley mouth' }],
+    noTree(x, z) { return Math.abs(z + 10) < 12 || (Math.abs(x) < 16 && z > -40); },
+    build(sim, r, keep, clear) {
+      sim.deco.push({ kind: 'road', x: -4, w: 5 }); sim.roadX = -4;
+      /* the wall along the ridge: stone, lower than a city wall (《四鎮三關志》: 高一丈五尺至二丈), towers (敵臺) at intervals, the pass gate in the valley with its gate tower, a gap over the stream for the water gate (a grating: men cannot pass, the collider stays, the water does) */
+      cityWall(sim, { axis: 'x', at: -10, from: -150, to: -4 - 3.4 - 3, h: 6, hd: 2.2, out: 1, notower: true, nobast: true, follow: true }); cityWall(sim, { axis: 'x', at: -10, from: -4 + 3.4 + 3, to: 150, h: 6, hd: 2.2, out: 1, notower: true, nobast: true, follow: true });
+      cityWall(sim, { axis: 'x', at: -10, from: -14, to: 6, h: 8, hd: 3.2, out: 1, gx: -4, gw: 3.2, name: '喜峰口', notower: true, nobast: true, follow: true }); keep.push({ x: -4, z: -10, r: 14 });
+      for (const x of [-100, -44, 46, 100]) sim.boxes.push({ x, z: -10, hw: 4, hd: 4, h: 10, kind: 'cwall' }); /* 敵臺: hollow brick towers on the wall line, the garrison's posts */
+      /* the garrison's barrack yard behind the gate and the Mongol guides' camp at the valley mouth */
+      stockade(sim, keep, -30, -60, 0, -36, 'n'); house(sim, keep, -15, -48, 3, 2.4, false);
+      stockade(sim, keep, 20, 100, 56, 130, 's');
+      trees(sim, r, clear, 40, -150, 150, -140, -20, 0); } };
+
   // the picker shows BATTLES in table order: keep the new ones after the old
 })();
