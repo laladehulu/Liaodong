@@ -921,9 +921,10 @@ class Sim {
     /* (was swallowed by a comment long ago; left off so combat tuning is unchanged) if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } */
     if (this.xc && u.ctrl >= 0 && !u.champ) { // mashing: each swing in quick succession costs arm; past three in a breath the windups slow and telegraph
       u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + 1; u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
+    if (this.xc && u.ctrl < 0 && !u.champ) u.wMul *= 0.82 + this.rng.next() * 0.42; /* no two cuts come at the same beat: the wind-up runs a little short or a little long */
     u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
   footControl(u, keys, a, disabled) {
-    if (!u.champ && u.dodgeT > 0) { const k = u.dodgeT / 0.32, sp = (this.real ? 10.5 : 12.5) * (0.55 + 0.75 * k); u.mx = u.dodgeX * sp; u.mz = u.dodgeZ * sp; return; } // a low slide: fast off the mark, bleeding speed // mid-dash: the body is committed
+    if (!u.champ && u.dodgeT > 0) { const k = u.dodgeT / 0.32, sp = (this.real ? 4.6 : 5.4) * (0.55 + 0.75 * k); u.mx = u.dodgeX * sp; u.mz = u.dodgeZ * sp; return; } // a sidestep of a pace and a half (about 1.4 m), fast off the mark, bleeding speed; mid-step the body is committed
     if (disabled || u.airborne) { u.mx = 0; u.mz = 0; return; }
     const fx = sin(u.yaw), fz = cos(u.yaw), rx = -cos(u.yaw), rz = sin(u.yaw);
     let mx = 0, mz = 0;
@@ -944,8 +945,8 @@ class Sim {
     } else { u.mx = 0; u.mz = 0; u.sprint = false; }
     if ((a & (A_DASHL | A_DASHR)) && !u.airborne) { const sd = (a & A_DASHR) ? 1 : -1; mx = rx * sd; mz = rz * sd; a |= A_DODGE; keys = (keys & ~(KEY_W | KEY_S | KEY_A | KEY_D)) | (sd > 0 ? KEY_D : KEY_A); }
     const l2 = len(mx, mz);
-    if (!u.champ && (a & A_DODGE) && !u.airborne && (u.dodgeCd || 0) <= 0 && u.st !== ST_STUN && u.st !== ST_RELEASE) { // a quick sidestep or hop back
-      const ddx = l2 > 0 ? mx / l2 : -fx, ddz = l2 > 0 ? mz / l2 : -fz; u.dodgeCd = 0.85; u.dodgeT = 0.32; u.iframe = 0.3; u.dodgeX = ddx; u.dodgeZ = ddz; u.fat = Math.min(100, (u.fat || 0) + 6);
+    if (!u.champ && (a & A_DODGE) && (a & (A_DASHL | A_DASHR)) && l2 > 0 && !u.airborne && (u.dodgeCd || 0) <= 0 && u.st !== ST_STUN && u.st !== ST_RELEASE) { // a quick sidestep (there is no hop back: a man who gives ground walks)
+      const ddx = mx / l2, ddz = mz / l2; u.dodgeCd = 0.85; u.dodgeT = 0.32; u.iframe = 0.3; u.dodgeX = ddx; u.dodgeZ = ddz; u.fat = Math.min(100, (u.fat || 0) + 6);
       if (u.st === ST_WINDUP || u.st === ST_RECOVER) { u.st = ST_IDLE; u.stT = 0; } u.blocking = false;
       this.events.push({ t: 'dodge', id: u.id, x: u.x, y: u.y, z: u.z, side: (keys & KEY_A) ? -1 : (keys & KEY_D) ? 1 : 0, back: (keys & KEY_S) ? 1 : 0, fwd: 0 }); return; }
     if (u.champ && (a & A_DODGE) && !u.airborne && u.downT <= 0) { if (l2 > 0) this.champDodge(u, mx / l2, mz / l2, keys); else this.champDodge(u, -fx, -fz, KEY_S); return; }
@@ -1509,6 +1510,7 @@ class Sim {
           if (u.ctrl < 0) this.cavCharge(u, tgt, d); // shock cavalry: run up, ride through, wheel, come again
           else { const desired = d > 9 ? def.speed : (d > reach ? 4 : 2.5); this.cavSteer(u, tgt.x, tgt.z, desired); }
         } else if (this.pointWait(u, tgt, d, reach)) { }
+        else if (this.xcMeasure(u, tgt, d, reach)) { }
         else if (d > reach - 0.5) { const sp = def.speed * (u.st === ST_IDLE ? 1 : 0.6) * (u.rushT > 0 ? 1.3 : 1); let gx = tgt.x, gz = tgt.z;
           const eg = !tight && !u.mounted ? this.engaged()[tgt.id] - (u.target === tgt.id && Math.abs(tgt.x - u.x) + Math.abs(tgt.z - u.z) < 4.5 ? 1 : 0) : 0;
           if (eg >= 1 && d < reach + 6) { /* someone is already on him: come round his side instead of queueing behind your comrade */ const a0 = atan2(u.x - tgt.x, u.z - tgt.z), sd = (u.id & 1) ? 1 : -1, a = a0 + sd * Math.min(1.4, 0.55 * eg), r = reach * 0.85; gx = tgt.x + sin(a) * r; gz = tgt.z + cos(a) * r; }
@@ -1516,7 +1518,7 @@ class Sim {
         else if (!this.spearKeep(u, tgt, d, reach)) { u.mx = 0; u.mz = 0; }
         if (u.role && sq && !sq.routing && !xl && !yy) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
         const eager = u.mounted ? 0.35 : u.role === 'spear' && tgt.entT > 0 ? 0.35 : u.role === 'brush' ? 0.2 : u.role === 'shield' ? 0.05 : 0.09;
-        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && !yy && !(reach >= 3 && !u.mounted && d < reach * 0.45) /* too close for the point: back off first */ && this.rng.next() < eager && this.xcSpaceOk(u, tgt)) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
+        if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && !yy && !(reach >= 3 && !u.mounted && d < reach * 0.45) /* too close for the point: back off first */ && u.xcM !== this.tick && this.rng.next() < eager && this.xcSpaceOk(u, tgt)) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
         if (this.xc && u.circleT > 0 && !u.mounted && u.st === ST_IDLE && !xl && !yy) { u.circleT -= DT; const sd = (u.id & 1) ? 1 : -1, nx = dx / (d || 1), nz = dz / (d || 1), keep = reach + 1.1; const rad = (d - keep) * 1.6; u.mx = nx * rad + nz * sd * 1.4; u.mz = nz * rad - nx * sd * 1.4; if (!u.blocking && this.rng.next() < 0.02) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_UP; u.blockHold = 0.5; } }
         this.aiBlock(u, tgt);
       }
@@ -1529,7 +1531,7 @@ class Sim {
     if (u.blocking) { u.blockHold -= DT; if (u.blockHold <= 0) u.blocking = false; }
     if (u.blockPend >= 0) { u.blockPend -= DT; if (u.blockPend <= 0) { u.blockPend = -1; if ((u.st === ST_IDLE || u.st === ST_RECOVER) && u.flinchT <= 0) { u.st = ST_IDLE; u.stT = 0; u.blocking = true; u.blockT = 0; u.blockDir = u.blockPendDir; u.blockHold = 0.75; } } }
     if (!u.mounted) {
-      const sm = (u.st === ST_WINDUP || u.st === ST_RELEASE) ? 0.45 : (u.st === ST_AIM && !def.skirmish) || u.st === ST_STUN ? 0 : (u.st === ST_RELOAD) ? 0.6 : 1;
+      const sm = (u.st === ST_WINDUP || u.st === ST_RELEASE) ? (u.xcIn ? 1 : 0.45) : (u.st === ST_AIM && !def.skirmish) || u.st === ST_STUN ? 0 : (u.st === ST_RELOAD) ? 0.6 : 1;
       u.mx *= sm; u.mz *= sm;
     }
     if (!(u.faceLock > 0)) this.turnTo(u, wantYaw, (u.st === ST_AIM ? 2.4 : u.st === ST_WINDUP || u.st === ST_RELEASE ? 3.5 : 6) * DT);
@@ -1711,6 +1713,7 @@ class Sim {
     if (best.team === att.team) { att.st = ST_STUN; att.stT = 0; att.stunDur = 0.3; this.events.push({ t: 'obstruct', id: att.id, x: (att.x + best.x) / 2, y: att.y + 1.3, z: (att.z + best.z) / 2 }); return; }
     const f = brc / R; att.xcMul = dir === DIR_DOWN ? 0.6 + 0.5 * T : 0.45 + 0.75 * f;
     this.resolveMeleeHit(att, best); att.xcMul = 0;
+    if (att.xcIn && !best.dead && att.st === ST_RELEASE && this.rng.next() < 0.3) att.xcPress = this.tick + 24; /* the cut went home: he presses with a second instead of stepping out */
   }
   tryMeleeHit(att) {
     const dir = att.atkDir;
@@ -1777,7 +1780,7 @@ class Sim {
     }
     if ((def_.mounted || def_.type === 'horse' || def_.mount >= 0) && !(att.mounted || att.mount >= 0)) { const hs = def_.type === 'horse' ? def_ : def_.mounted ? def_ : this.units[def_.mount]; const fast = hs && Math.abs(hs.hspeed) > 5; dmg *= fast ? 0.95 : 1.4; if (hs) hs.hspeed *= fast ? 0.85 : 0.35; } // a galloping horseman is a glancing target; a halted one is cut down
     def_.lastAttacker = att.id;
-    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1);
+    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1) * (this.xc && att.ctrl >= 0 && !this.players[att.ctrl].ai && !def_.champ ? 1.3 : 1);
     if (att.def.brush && def_.type !== 'horse') this.brushCatch(def_, att, nx, nz, false, hx, hy, hz);
     this.posture(def_, dmg * (heavy ? 0.9 : 0.45) * (att.def.posture || 1), att);
     this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz); if (att.chg && !def_.dead && def_.type !== 'horse' && !def_.mounted && def_.mount < 0) { def_.downT = Math.max(def_.downT || 0, heavy ? 0.9 : 0.5); att.vx *= 0.3; att.vz *= 0.3; }
@@ -4351,6 +4354,43 @@ Sim.prototype.pointWait = function (u, tgt, d, reach) {
   const want = tr + 0.45, nx = (tgt.x - u.x) / (d || 1), nz = (tgt.z - u.z) / (d || 1), sd = (u.id & 1) ? 1 : -1, rad = clamp((d - want) * 2, -2, 2);
   u.mx = nx * rad + nz * sd * 0.9; u.mz = nz * rad - nx * sd * 0.9; if (!u.blocking && this.rng.next() < 0.03) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_DOWN; u.blockHold = 0.5; } return true;
 };
+// ---- measure (xc, AI blades only): a swordsman does not walk up into a man's face and stand there. He stops a pace
+// outside his own reach, shuffles, and when he goes he goes with the cut: the step in and the blow are one movement, the
+// blow lands a pace inside the reach, and in the recovery he gives the pace back. Each man has his own tempo, and now and
+// then he feints the step without the cut and cuts on the second step. (紀效新書 on the dao: 進步 with the strike; the
+// 殺手 drill paces are the step-and-cut, not a stand-and-cut.)
+Sim.prototype.xcMeasure = function (u, tgt, d, reach) {
+  if (!this.xc || u.ctrl >= 0 || u.mounted || u.mount >= 0 || u.champ || u.weapon === 'yari' || u.def.brush || !tgt || tgt.dead || tgt.mounted || tgt.mount >= 0 || tgt.type === 'horse' || u.entT > 0 || u.rushT > 0 || u.wounded) return false;
+  const nx = (tgt.x - u.x) / (d || 1), nz = (tgt.z - u.z) / (d || 1);
+  if (u.st === ST_WINDUP || u.st === ST_RELEASE) { /* the step that carries the cut: easy in the wind-up, the last of it with the blade */
+    if (!u.xcIn) return false; const want = reach * 0.74; const sp = d > want ? Math.min(u.st === ST_RELEASE ? u.def.speed * 1.1 : 2.4, (d - want) * (u.st === ST_RELEASE ? 9 : 3)) : 0;
+    u.mx = nx * sp; u.mz = nz * sp; return true; }
+  u.xcIn = 0;
+  if (u.st !== ST_IDLE && u.st !== ST_RECOVER) return false;
+  if (d > reach + 1.7) return false; /* still coming on: the approach code */
+  if (!(u.xcT > 0)) { u.xcT = 0.7 + this.rng.next() * 0.65; u.xcPh = this.rng.next() * 6.28; } const mt = u.xcT;
+  const meas = reach + 0.35 + (mt - 1) * 0.4, e = d - meas, sq = u.squad >= 0 ? this.squads[u.squad] : null, lined = sq && sq.front;
+  if (u.xcFe > this.tick) { const sp = Math.min(u.def.speed * 0.55, Math.max(0, d - reach * 0.9) * 4); u.mx = nx * sp; u.mz = nz * sp; return true; } /* the feint: a half step in, no blade */
+  const press = u.xcPress > this.tick;
+  if (u.st === ST_RECOVER) { const sp = press ? 0 : Math.min(u.def.speed * 0.7, Math.max(0, -e) * 2.5); u.mx = -nx * sp; u.mz = -nz * sp; return true; } /* the recovery gives the pace back, unless he is pressing */
+  if (press && u.st === ST_IDLE && u.flinchT <= 0 && !(u.hrT > 0) && d < reach + 0.2) { u.xcPress = 0; if (this.xcSpaceOk(u, tgt) && this.xcToken(u, tgt)) { this.startWindup(u, this.aiPickDir(u)); if (u.st === ST_WINDUP) u.xcIn = 1; } u.mx = 0; u.mz = 0; u.xcM = this.tick; return true; }
+  /* holding the measure: close or open to it, and drift a little off the line so he is not a post */
+  let sp = 0; const gave = u.xcGave || 0; /* he gives a pace, not the field: past a metre of ground given he stands, and a crowded man who cannot step back cuts */
+  if (e < -0.3) { if (gave < 1.0) { sp = -Math.min(u.def.speed * 0.6, -e * 2.2); u.xcGave = gave - sp * DT; } } else { if (e > 0.35) sp = Math.min(u.def.speed * 0.8, e * 2.5); u.xcGave = Math.max(0, gave - 0.6 * DT); }
+  const drift = (u.blocking ? 0.15 : 0.45) * (lined ? 0.3 : 1) * sin(this.tick * 0.07 * mt + u.xcPh);
+  u.mx = nx * sp - nz * drift; u.mz = nz * sp + nx * drift;
+  if (Math.abs(e) <= 0.5 && !u.blocking && u.st === ST_IDLE && this.rng.next() < 0.03) this.xcGuard(u); /* at measure the guard comes up now and then */
+  u.xcM = this.tick; /* this tick the measure code holds him: the stand-and-cut below is off */
+  if (Math.abs(e) <= 0.35) { if (!(u.xcAt > 0)) u.xcAt = this.tick + Math.round((5 + this.rng.next() * 20) * mt); }
+  else if (e < -0.5 && u.st === ST_IDLE && this.rng.next() < (gave >= 1.0 ? 0.16 : 0.07)) u.xcAt = this.tick; /* crowded inside his measure: he gives ground, or cuts from where he stands */
+  else if (!u.xcFeD && u.xcFe !== -1) u.xcAt = 0;
+  if (u.xcAt > 0 && this.tick >= u.xcAt && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && !(u.hrT > 0) && Math.abs(tgt.y - u.y) < 2.5) {
+    if (u.xcFe === -1) u.xcFe = 0; /* the cut that follows a feint goes without another look */
+    else if (this.rng.next() < 0.14 && !lined) { u.xcFe = this.tick + 8; u.xcAt = this.tick + 10 + this.rng.int(8); u.xcFeD = 1; return true; }
+    u.xcAt = 0; if (this.xcSpaceOk(u, tgt) && this.xcToken(u, tgt)) { this.startWindup(u, this.aiPickDir(u)); if (u.st === ST_WINDUP) u.xcIn = 1; } }
+  if (u.xcFeD && u.xcFe <= this.tick) { u.xcFeD = 0; u.xcFe = -1; }
+  return true;
+};
 Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
   const r = u.role; if (!r || r === 'cook' || !sq.def.yuanyang) return false;
   if (sq.aliveCount !== undefined && sq.count && sq.aliveCount < sq.count * 0.5) return false;
@@ -4420,6 +4460,7 @@ Sim.prototype.hitReact = function (u, a, kind, heavy, blocked) {
     else k = r < 0.6 ? 0 : r < 0.85 ? 1 : 2;
     d = k === 2 ? 0.34 : k === 1 ? 0.3 : 0.27; if (kind === 'shot') d *= 0.8; }
   if (u.ctrl >= 0 && !(this.players[u.ctrl] && this.players[u.ctrl].ai)) d *= 0.6;
+  else if (a && a.ctrl >= 0 && !(this.players[a.ctrl] && this.players[a.ctrl].ai) && !blocked) d *= 1.3; /* a player's blow is seen to land: the man he hits reels a little longer (still inside the 2 s budget) */
   // the 2-second budget: never reeling more than HR_CAP seconds out of any HR_WIN ticks
   const t = this.tick; let used = 0; for (const iv of u.hrL) used += Math.max(0, Math.min(iv[1], t) - Math.max(iv[0], t - HR_WIN));
   d = Math.min(d, HR_CAP - used * DT); if (d < 0.1) return flick();

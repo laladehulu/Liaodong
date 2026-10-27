@@ -210,6 +210,10 @@ const AUDIO = (() => {
     const o = ctx.createOscillator(); o.frequency.value = 3700 + Math.random() * 500; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05 * k, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 2 + k * 4);
     o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 6.5);
   }
+  function punch(k) { /* the beat after a blow of your own lands: the world drops away for a tenth of a second and comes back, so the hit stands out of the din */
+    if (!ctx || !master) return; const t = ctx.currentTime, g = master.gain, base = 0.6; k = Math.min(1, k || 0.6);
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(base * (1 - 0.6 * k), t + 0.035); g.setValueAtTime(base * (1 - 0.6 * k), t + 0.035 + 0.09 * k); g.linearRampToValueAtTime(base, t + 0.035 + 0.09 * k + 0.25);
+  }
   // ambient beds: wind always, distant battle noise that swells with the fighting
   let rainOn = false, fireLvl = 0; function setRain(v) { rainOn = !!v; } function setFire(v) { fireLvl = Math.max(0, Math.min(1, v)); }
   function ambient(level) {
@@ -229,6 +233,6 @@ const AUDIO = (() => {
     if (!amb.loops) amb.rain.g.gain.setTargetAtTime(rainOn ? 0.05 : 0, t, 2); amb.rumble.g.gain.setTargetAtTime(rainOn ? 0.03 : 0, t, 2);
     amb.roar.g.gain.setTargetAtTime(0.06 * Math.min(1, level), t, 1.2); amb.roar.fl.frequency.setTargetAtTime(500 + 250 * Math.sin(amb.t * 0.31), t, 0.6);
   }
-  return { init, play, setListener, ambient, setRain, setFire, shellshock, spatial: (x, y, z, v, m) => ctx ? spatial(x, y, z, v, m) : null, listener, get verbIn() { return verbIn; }, get ready() { return !!ctx; }, get ctx() { return ctx; }, get master() { return master; }, get noise() { return noiseBuf; } };
+  return { init, play, setListener, ambient, setRain, setFire, shellshock, punch, spatial: (x, y, z, v, m) => ctx ? spatial(x, y, z, v, m) : null, listener, get verbIn() { return verbIn; }, get ready() { return !!ctx; }, get ctx() { return ctx; }, get master() { return master; }, get noise() { return noiseBuf; } };
 })();
 
