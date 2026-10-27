@@ -72,6 +72,7 @@ P.amStart = function (u, k, t) {
   this.events.push(M.big ? { t: 'amtele', id: u.id, k, at: u.amTgt, x: u.x, y: u.y + 1.5, z: u.z } : { t: 'windup', id: u.id, dir: u.atkDir });
 };
 // a press during a move is remembered and becomes the next move of the chain (as in Dark Souls)
+P.noChargeAtk = true; /* the move set has its own running leap and lunge */
 const baseMC = P.meleeControl;
 P.meleeControl = function (u, a, ad, bd) {
   if (u.amK && usesMoves(u) && (a & S.A_ATK) && !u.atkHeld) { u.amQ = ad; u.amQt = this.tick; }

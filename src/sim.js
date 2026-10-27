@@ -886,6 +886,11 @@ class Sim {
     if (u.champ && atkPressed && u.airborne && !u.plunge && u.flinchT <= 0) { u.plunge = true; u.vy = Math.min(u.vy, -6); u.st = ST_WINDUP; u.stT = 0; u.atkDir = DIR_UP; this.events.push({ t: 'plunge', id: u.id }); u.atkHeld = atk; u.blockHeld = blk; return; }
     if (u.champ && atkPressed && u.dodgeT > 0 && u.dodgeFwd && u.sta >= 10) { u.sta -= 10; u.staT = 0; u.lunge = true; u.blocking = false; u.st = ST_WINDUP; u.stT = 0; u.atkDir = DIR_DOWN; u.windupId++; u.swingHit = false; this.release(u); u.dodgeT = Math.max(u.dodgeT, 0.18); this.events.push({ t: 'lunge', id: u.id, x: u.x, y: u.y, z: u.z }); u.atkHeld = atk; u.blockHeld = blk; return; }
     if (u.champ && atkPressed && u.sta < 8) { if (!u.tiredT || u.tiredT <= 0) { u.tiredT = 0.8; this.events.push({ t: 'tired', id: u.id }); } u.atkHeld = atk; u.blockHeld = blk; return; }
+    // a charging blow: press (and hold) attack while sprinting and you keep running into the swing; let go, or close on a man, and it
+    // lands with your whole weight behind it (a longer reach, a heavier blow, and he is thrown back off his feet)
+    if (this.xc && !this.noChargeAtk && !u.champ && u.ctrlActive && atkPressed && u.sprint && u.flinchT <= 0 && u.st === ST_IDLE && !u.mounted && u.mount < 0 && !u.airborne && !(u.weapon === 'rifle' && !u.club) && u.weapon !== 'bow' && u.weapon !== 'revolver') {
+      u.blocking = false; this.startWindup(u, u.weapon === 'yari' ? DIR_DOWN : DIR_UP); u.chg = 1; this.events.push({ t: 'chargeatk', id: u.id, x: u.x, y: u.y, z: u.z });
+      u.atkHeld = atk; u.blockHeld = blk; return; }
     if (atkPressed && u.flinchT <= 0 && (u.st === ST_IDLE || (u.st === ST_RECOVER && u.stT > u.def.recover * 0.6))) {
       u.blocking = false; if (u.champ) { const chain = this.tick - (u.lastSwing || -999) < 40; u.combo = chain ? (u.combo || 0) + 1 : 0; u.lastSwing = this.tick; u.sta -= 6 + u.combo * 3; u.staT = 0; } this.startWindup(u, u.weapon === 'rifle' && u.club ? ad : weaponDir(u.weapon, ad));
     } else if (blk && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_KICK && u.st !== ST_SWAP && (u.flinchT <= 0 || (u.ctrlActive && u.flinchT < 0.3)) && (u.st === ST_IDLE || u.st === ST_RECOVER || u.st === ST_RELOAD)) { /* a player can get his guard back up while still shaken from a blow */
@@ -913,12 +918,12 @@ class Sim {
     if (l > 0) {
       let sp = u.def.speed * this.zoneSpeed(u.x, u.z, mx, mz);
       if ((keys & KEY_S) && !(keys & KEY_W)) sp *= 0.65;
-      if (u.st === ST_WINDUP || u.st === ST_RELEASE) sp *= 0.7; else if (u.st === ST_STUN) sp = 0;
+      if ((u.st === ST_WINDUP || u.st === ST_RELEASE) && !u.chg) sp *= 0.7; else if (u.st === ST_STUN) sp = 0;
       if (u.drawT > 0) sp *= 0.55; // a drawn bow: you walk, you don't run
       if (u.blocking) sp *= 0.85; if (u.aiming) sp *= 0.5; if (u.st === ST_RELOAD) sp *= 0.8;
       // sprint: hold Shift while moving forward; burns stamina, and a winded man must get his breath back
       if (u.champ) { if (u.sta < 4) u.winded = true; else if (u.sta > 30) u.winded = false; } else { if ((u.fat || 0) >= 96) u.winded = true; else if ((u.fat || 0) < 55) u.winded = false; }
-      u.sprint = !!(keys & KEY_SPRINT) && !!(keys & KEY_W) && !(keys & KEY_S) && !u.winded && !u.blocking && !u.aiming && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_RELOAD && u.st !== ST_STUN;
+      u.sprint = !!(keys & KEY_SPRINT) && !!(keys & KEY_W) && !(keys & KEY_S) && !u.winded && !u.blocking && !u.aiming && ((u.st !== ST_WINDUP && u.st !== ST_RELEASE) || u.chg) && u.st !== ST_RELOAD && u.st !== ST_STUN;
       if (u.sprint) { sp *= 1.42; if (u.champ) { u.sta -= 14 * DT; u.staT = 0; } else u.fat = Math.min(100, (u.fat || 0) + 17 * DT); }
       u.mx = mx / l * sp; u.mz = mz / l * sp;
     } else { u.mx = 0; u.mz = 0; u.sprint = false; }
@@ -1564,11 +1569,15 @@ class Sim {
   }
   // ---------- combat state machine ----------
   updateCombatState(u) {
-    const def = u.def;
+    const def = u.def; if (u.chg && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_RECOVER) { u.chg = 0; u.lunge = false; }
     switch (u.st) {
       case ST_WINDUP: {
         u.stT += DT; if (!u.heavy && u.stT > 0.55 && u.weapon !== 'rifle') { u.heavy = true; this.events.push({ t: 'heavy', id: u.id }); }
-        if (u.ctrlActive) {
+        if (u.ctrlActive && u.chg) { /* the charge: release on letting go, on closing with a foe in front, or when the run runs out */
+          const R = u.def.reach + 1.2; let near = false; const fx = sin(u.yaw), fz = cos(u.yaw);
+          if (u.stT > 0.2) for (const v of this.units) { if (v.dead || v.team === u.team || v.type === 'horse') continue; const dx = v.x - u.x, dz = v.z - u.z; if (dx * dx + dz * dz < R * R && dx * fx + dz * fz > 0.5) { near = true; break; } }
+          if ((!u.atkHeld && u.stT >= 0.22) || near || u.stT > 1.4 || !u.sprint && u.stT > 0.3) { u.heavy = u.stT > 0.3 || near; u.lunge = true; u.vx += fx * 2.6; u.vz += fz * 2.6; this.release(u); }
+        } else if (u.ctrlActive) {
           const minW = (u.counterT > 0 ? 0.08 : 0.28) * (u.champ && u.sta < 15 ? 1.7 : 1);
           if (!u.atkHeld) u.relQ = true;
           if (u.relQ && u.stT >= minW) this.release(u);
@@ -1581,7 +1590,7 @@ class Sim {
         if (!u.swingHit && u.stT <= RELEASE_T) { if (this.xc && !u.champ && !u.mounted && u.mount < 0) this.sweepHit(u); else this.tryMeleeHit(u); }
         if (u.stT >= RELEASE_T) { u.st = ST_RECOVER; u.stT = 0; }
         break;
-      case ST_RECOVER: u.stT += DT; if (u.stT >= def.recover) { u.st = ST_IDLE; u.stT = 0; } break;
+      case ST_RECOVER: u.stT += DT; if (u.stT >= def.recover * (u.chg ? 1.35 : 1)) { u.st = ST_IDLE; u.stT = 0; } break;
       case ST_STUN: u.stT += DT; u.blocking = false; if (u.stT >= u.stunDur) { u.st = ST_IDLE; u.stT = 0; } break;
       case ST_RELOAD: {
         u.stT += DT;
@@ -1753,10 +1762,10 @@ class Sim {
     }
     if ((def_.mounted || def_.type === 'horse' || def_.mount >= 0) && !(att.mounted || att.mount >= 0)) { const hs = def_.type === 'horse' ? def_ : def_.mounted ? def_ : this.units[def_.mount]; const fast = hs && Math.abs(hs.hspeed) > 5; dmg *= fast ? 0.95 : 1.4; if (hs) hs.hspeed *= fast ? 0.85 : 0.35; } // a galloping horseman is a glancing target; a halted one is cut down
     def_.lastAttacker = att.id;
-    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1);
+    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1);
     if (att.def.brush && def_.type !== 'horse') this.brushCatch(def_, att, nx, nz, false, hx, hy, hz);
     this.posture(def_, dmg * (heavy ? 0.9 : 0.45) * (att.def.posture || 1), att);
-    this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz);
+    this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz); if (att.chg && !def_.dead && def_.type !== 'horse' && !def_.mounted && def_.mount < 0) { def_.downT = Math.max(def_.downT || 0, heavy ? 0.9 : 0.5); att.vx *= 0.3; att.vz *= 0.3; }
     if (!def_.dead && !att.def.brush && !(def_.entT > 0)) { if (this.xc) this.hitReact(def_, att, dir === DIR_DOWN || att.weapon === 'yari' ? 'thrust' : 'cut', heavy, false); else { def_.flinchT = heavy ? 0.6 : 0.35; if (def_.st === ST_WINDUP || def_.st === ST_AIM) { def_.st = ST_IDLE; def_.stT = 0; } } }
     if (att.ctrl >= 0 || def_.ctrl >= 0) this.events.push({ t: 'hitq', att: att.id, def: def_.id, q, heavy, x: hx, y: hy, z: hz });
     att.heavy = false;

@@ -1643,6 +1643,7 @@ class Renderer {
             this.hitQ = { text: (ev.heavy ? 'HEAVY · ' : '') + T[0], t: 0.9, c: T[1] }; this.hitstop = Math.max(this.hitstop, ev.heavy || ev.q === 'deathblow' ? 0.09 : ev.q === 'tip' ? 0.05 : 0.03); if (ev.heavy || ev.q === 'deathblow') this.shake = Math.max(this.shake, 0.45); }
           /* hit mist, dust and red sparks on the struck man removed (user: no green/red particles on fallen men) */ break; }
         case 'obstruct': { AUDIO.play('thud', ev.x, ev.y, ev.z, 0.8); if (ev.id === heroId) { this.hitQ = { text: 'BLADE CAUGHT on a comrade — stab (R) in formation', t: 1.4, c: '#e0b070' }; this.shake = Math.max(this.shake, 0.3); } break; }
+        case 'chargeatk': { const me3 = ev.id === heroId; AUDIO.play('kiai', ev.x, ev.y + 1.5, ev.z, me3 ? 1.1 : 0.7); this.dust(ev.x, ev.y + 0.1, ev.z, 6, 0, 1, 0, 1.2, 0.7, 0.3, 1.1); if (me3) { this.chgK = 1; this.shake = Math.max(this.shake, 0.25); } break; }
         case 'kickhit': { this.dust(ev.x, ev.y, ev.z, 4, 0, 1, 0, 1, 0.5, 0.2, 0.6); AUDIO.play('thud', ev.x, ev.y, ev.z, 1); break; }
         case 'trample': { this.dust(ev.x, ev.y + 0.2, ev.z, 10, 0, 2, 0, 2, 1, 0.4, 1.6); AUDIO.play('thud', ev.x, ev.y, ev.z, 1.2); break; }
         case 'land': { this.dust(ev.x, ev.y + 0.1, ev.z, 8, 0, 1.5, 0, 1.8, 0.9, 0.4, 1.4); AUDIO.play('thud', ev.x, ev.y, ev.z, 0.7); break; }
@@ -2545,7 +2546,8 @@ class Renderer {
         cam.position.x -= rx0 * S2.x; cam.position.z -= rz0 * S2.x; cam.position.y -= S2.d; T.v.x -= rx0 * S2.x; T.v.z -= rz0 * S2.x; T.v.y -= S2.d;
         const cy0 = Math.cos(S2.y), sy0 = Math.sin(S2.y), vx0 = T.v.x - cam.position.x, vz0 = T.v.z - cam.position.z; T.v.x = cam.position.x + vx0 * cy0 + vz0 * sy0; T.v.z = cam.position.z - vx0 * sy0 + vz0 * cy0; }
       cam.lookAt(T.v); this.dodgeRoll = (this.dodgeRoll || 0) * Math.exp(-dt * 7); cam.rotateZ(this.recoilRoll * 0.03 + (hero.downT > 0 ? 0.6 : 0) + this.camRoll + this.dodgeRoll + (this.slideRoll || 0) + IM.r + flin * 0.03); cam.rotateX(this.camPitch); cam.translateZ(-this.camPush);
-      this.fov += (this.fovTarget - this.fov) * (1 - Math.exp(-dt * 14));
+      this.chgK = Math.max(0, (this.chgK || 0) - dt * 1.4); if (hero.chg && hero.st === ST_WINDUP) this.chgK = Math.max(this.chgK, 0.8); /* the charge: the view stretches as you run into the blow */
+      this.fov += (this.fovTarget + this.chgK * 7 - this.fov) * (1 - Math.exp(-dt * 14));
       { const f = this.fov - IM.fov; if (Math.abs(cam.fov - f) > 0.05) { cam.fov = f; cam.updateProjectionMatrix(); } const vk = Math.min(1, Math.tan(cam.fov * PI / 360) / Math.tan(64 * PI / 360)); this.vmFov.scale.set(vk, vk, 1); }
       this._jolt = IM.jolt + flin * 0.5; this._joltR = IM.r;
       this.updateViewmodel(hero, alpha, dt, clamp(hero.speedNow / 3.5, 0, 1), mounted);
