@@ -114,9 +114,9 @@
     this.sun.shadow.radius = 2; this.sun.shadow.bias = -0.0005; this.sun.shadow.normalBias = 0.05;
     // performance: plain PCF shadows from a smaller map, redrawn every other frame; render scale set by the quality level (F7)
     // soft PCF: shadow edges on walls and boards blend instead of stair-stepping
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; const q = realQ(); this.sun.shadow.mapSize.set(q === 2 ? 2048 : 1536, q === 2 ? 2048 : 1536); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; const q = realQ(); { const ms = this.safari ? 1024 : q === 2 ? 2048 : 1536; this.sun.shadow.mapSize.set(ms, ms); } if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     this.renderer.shadowMap.enabled = q > 0; this.renderer.shadowMap.autoUpdate = q === 2; this.shadowTick = 0;
-    this.renderer.setPixelRatio([0.7, 0.85, 1][q] * Math.min(window.devicePixelRatio || 1, 1.25)); this.resize();
+    this.renderer.setPixelRatio([0.7, 0.85, 1][q] * (this.safari ? 1 : Math.min(window.devicePixelRatio || 1, 1.25))); this.resize();
     // the air itself: dust and smoke thicken with distance
     sc.fog = new THREE.FogExp2(new THREE.Color(L.haze), this.sim.rain ? 0.0105 : this.biome.snow ? 0.0085 : 0.0072); this.realFog = sc.fog; sc.background = new THREE.Color(L.hazeFar);
     // the ink-print set dressing goes: no dragon, no auspicious clouds; mountains become hazy silhouettes

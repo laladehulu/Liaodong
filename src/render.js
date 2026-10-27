@@ -593,7 +593,8 @@ class Renderer {
     this.biome = BIOMES[sim.bdef.biome] || BIOMES.autumn; if (sim.rain) this.biome = Object.assign({}, this.biome, STORM); const fogK = 1 - 0.55 * sim.bdef.fog;
     this.lowfx = !!(window.__boshin && window.__boshin.state && window.__boshin.state.lowfx);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !this.lowfx, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(this.lowfx ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+    this.safari = typeof navigator !== 'undefined' && /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent); /* Safari's WebGL is slower: native pixels, smaller shadow map */
+    this.renderer.setPixelRatio(this.lowfx || this.safari ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.shadowMap.enabled = !this.lowfx; this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.biome.fog);
@@ -632,7 +633,7 @@ class Renderer {
   buildLights() {
     this.hemi = new THREE.HemisphereLight(this.biome.hemi[0], this.biome.hemi[1], 0.65); this.scene.add(this.hemi); this.lightFlash = 0;
     const sun = new THREE.DirectionalLight(this.biome.sun[0], this.biome.sun[1]); this.sunDir = new THREE.Vector3(-70, 48, 85).normalize(); sun.position.copy(this.sunDir).multiplyScalar(150); sun.castShadow = true;
-    sun.shadow.mapSize.set(this.lowfx ? 512 : 2048, this.lowfx ? 512 : 2048); const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 10; sc.far = 400; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.09; sun.shadow.radius = 2;
+    sun.shadow.mapSize.set(this.lowfx ? 512 : this.safari ? 1024 : 2048, this.lowfx ? 512 : this.safari ? 1024 : 2048); const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 10; sc.far = 400; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.09; sun.shadow.radius = 2;
     this.sun = sun; this.scene.add(sun); this.scene.add(sun.target);
   }
   buildSky() {
@@ -1104,9 +1105,9 @@ class Renderer {
   inkInit() {
     const N = 700, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 0, 1, -0.5, 0, 1], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2)); g.setIndex([0, 2, 1, 0, 3, 2]);
     const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, fog: false,
-      uniforms: { ink: { value: new THREE.Color(0x14161c) }, op: { value: 0.62 } },
+      uniforms: { ink: { value: new THREE.Color(0x0e1014) }, op: { value: 0.78 } },
       vertexShader: 'varying vec2 vU; varying float vD; void main(){ vU = uv; vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0); vD = -mv.z; gl_Position = projectionMatrix * mv; }',
-      fragmentShader: 'uniform vec3 ink; uniform float op; varying vec2 vU; varying float vD; void main(){ vec2 q = vec2((vU.x - 0.5) * 2.0, vU.y * 2.0 - 1.0); float r = length(q); if (r > 1.0) discard;\n float body = smoothstep(1.0, 0.45, r), rim = smoothstep(0.62, 0.9, r) * smoothstep(1.0, 0.9, r), feet = 1.0 - vU.y * 0.45;\n float a = (body * 0.9 * feet + rim * 0.35) * op * clamp(1.0 - (vD - 50.0) / 40.0, 0.0, 1.0); gl_FragColor = vec4(ink, a); }' });
+      fragmentShader: 'uniform vec3 ink; uniform float op; varying vec2 vU; varying float vD; void main(){ vec2 q = vec2((vU.x - 0.5) * 2.0, vU.y * 2.0 - 1.0); float r = length(q); if (r > 1.0) discard;\n float body = 1.0 - smoothstep(0.45, 1.0, r), rim = smoothstep(0.62, 0.9, r) * (1.0 - smoothstep(0.9, 1.0, r)), feet = 1.0 - vU.y * 0.45;\n float a = min(1.0, body * feet + rim * 0.4) * op * clamp(1.0 - (vD - 50.0) / 40.0, 0.0, 1.0); gl_FragColor = vec4(ink, a); }' });
     const mesh = new THREE.InstancedMesh(g, m, N); mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.count = 0; this.scene.add(mesh);
     this.inkB = { mesh, N, n: 0, M: new THREE.Matrix4(), X: new THREE.Vector3(), Y: new THREE.Vector3(), Z: new THREE.Vector3() };
     for (const k in this.fig) this.fig[k].castShadow = false; if (this.horse) for (const k in this.horse) this.horse[k].castShadow = false;
