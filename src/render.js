@@ -1225,7 +1225,7 @@ class Renderer {
     if (this.flags.instanceColor) this.flags.instanceColor.needsUpdate = true;
   }
   buildFX() {
-    this.smoke = new Particles(this.scene, this.lowfx ? 5000 : 9000, false); if (this.off && this.off.has('smoke')) this.smoke.points.visible = false; this.smoke.wind = [0.55, 0.42, 0.25]; /* warm smoke rises as it drifts */ this.suppress = 0;
+    this.smoke = new Particles(this.scene, this.lowfx ? 5000 : 9000, false); if (this.off && this.off.has('smoke')) this.smoke.points.visible = false; this.smoke.wind = [0.55, 0.08, 0.25]; /* the bank hangs over the line and only slowly climbs */ this.suppress = 0;
     this.sparks = new Particles(this.scene, 2500, true);
     const TR = 260; this.tracerN = TR; this.tracers = []; this.tracerNext = 0;
     this.tracerMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), TR);
@@ -1529,8 +1529,16 @@ class Renderer {
           if (ev.weapon === 'gatling') { for (let k = 1; k <= 8; k++) { const s2 = k / 9; this.smoke.spawn(f[0] + (to[0] - f[0]) * s2 + rnd(-0.3, 0.3), f[1] + (to[1] - f[1]) * s2 + 0.3 + rnd(-0.2, 0.2), f[2] + (to[2] - f[2]) * s2 + rnd(-0.3, 0.3), 0, 0.3, 0, 2.5 + s2 * 2, 0.3, 1.6, 0.8, 0.78, 0.74, 0.45, 0.8, -0.05); } this.burstSparks(to[0], to[1], to[2], 10, 5, 1, 0.6, 0.2, 0.4, 0.1); AUDIO.play('rocket', f[0], f[1], f[2], 1); }
           this.flash(mx, my, mz, isMe ? 3.0 : 2.4, 0.09); this.flash(mx + d[0] * 0.35, my + d[1] * 0.35, mz + d[2] * 0.35, isMe ? 1.6 : 1.3, 0.06); /* a hot white core and a tongue of flame out of the bore */
           for (let k = 0; k < (isMe ? 14 : 9); k++) { const sp = rnd(5, 14); this.sparks.spawn(mx, my, mz, d[0] * sp + rnd(-1.2, 1.2), d[1] * sp + rnd(-0.8, 1.2), d[2] * sp + rnd(-1.2, 1.2), rnd(0.06, 0.16), rnd(0.12, 0.3), 0.04, 1, 0.8, 0.35, 1, 0.9, 2, 1, 0.35, 0.08); }
-          this.puffSmoke(mx, my, mz, (ev.weapon === 'gatling' ? 3 : ev.weapon === 'revolver' ? 5 : isMe ? 14 : 9) * (this.sim.real ? 2 : 1), d[0] * 4, d[1] * 4, d[2] * 4, 1.1, ev.weapon === 'gatling' ? 4 : 9, 0.6, 3.6, 0.86, 0.5);
-          if (ev.weapon !== 'gatling') this.puffSmoke(mx + d[0] * 2.5, my - 0.3, mz + d[2] * 2.5, 4, d[0] * 1.2, 0.2, d[2] * 1.2, 0.5, 14, 2.2, 5.5, 0.9, 0.32);
+          if (ev.weapon === 'gatling') this.puffSmoke(mx, my, mz, 3, d[0] * 4, d[1] * 4, d[2] * 4, 1.1, 4, 0.6, 3.6, 0.86, 0.5);
+          else { // black powder: a violent jet out of the bore that stops dead a few paces out and rolls into a bank, a spit from the pan by the lock, then the bank hangs, swells and climbs
+            const nJ = (isMe ? 16 : 11) * (this.sim.real ? 1.5 : 1) | 0, rx = -d[2], rz = d[0];
+            for (let k = 0; k < nJ; k++) { const sp = rnd(8, 24), sh = rnd(0.62, 0.82), cone = rnd(-1, 1) * 1.6;
+              this.smoke.spawn(mx, my, mz, d[0] * sp + rx * cone, d[1] * sp + rnd(-0.6, 0.5), d[2] * sp + rz * cone, rnd(4, 9), rnd(0.15, 0.3), rnd(1.1, 2.2), sh, sh * 0.97, sh * 0.88, 0.4, 0.86, -0.03, sh + 0.1, sh + 0.1, sh + 0.13); }
+            for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283, rr = rnd(2.5, 4.5), sh = rnd(0.7, 0.85); // the rolling ring where the jet stops
+              this.smoke.spawn(mx + d[0] * 0.6, my, mz + d[2] * 0.6, d[0] * 10 + rx * Math.cos(a) * rr, Math.sin(a) * rr * 0.35, d[2] * 10 + rz * Math.cos(a) * rr, rnd(5, 10), 0.4, rnd(1.6, 2.6), sh, sh * 0.97, sh * 0.88, 0.32, 0.88, -0.06, sh + 0.1, sh + 0.1, sh + 0.13); }
+            const px = mx - d[0] * 0.75, py = my + 0.05, pz = mz - d[2] * 0.75; // the priming pan, beside the lock: a quick upward spit
+            for (let k = 0; k < 4; k++) this.smoke.spawn(px, py, pz, rx * rnd(-1.5, 1.5), rnd(1.5, 3), rz * rnd(-1.5, 1.5), rnd(2, 4), 0.12, rnd(0.8, 1.4), 0.86, 0.84, 0.78, 0.5, 0.9, -0.1, 0.92, 0.92, 0.94);
+            this.puffSmoke(mx + d[0] * 2.8, my - 0.4, mz + d[2] * 2.8, 5, d[0] * 1.2, -0.3, d[2] * 1.2, 0.9, 14, 1.8, 4.2, 0.86, 0.17); } // and the slow bank that lingers over the line
           if (ev.weapon !== 'gatling') AUDIO.play('shot', f[0], f[1], f[2], isMe ? (ev.weapon === 'revolver' ? 1.1 : 1.4) : 1);
           if (isMe) { this.recoil = 1; this.recoilRoll = rnd(-1, 1); }
           const tx = to[0], ty = to[1], tz = to[2];
