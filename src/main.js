@@ -619,6 +619,28 @@ function updateMarks() {
       const html = mineSq ? `${idx + 1}<small>${sq.def.name} ${sq.aliveCount}</small>` : ally ? '▲' : '▼'; if (el._h !== html) { el.innerHTML = html; el._h = html; }
       el.style.transform = `translate(${pt.x.toFixed(0)}px, ${(pt.y - (mineSq ? 6 : 0)).toFixed(0)}px) translate(-50%, -100%)`; el.hidden = false; } }
   for (let i = n; i < markPool.length; i++) markPool[i].hidden = true;
+  allyMarks();
+}
+// fellow players on your side: a tag over each one's own man (name and health), one over each of his companies, and a flag where
+// he has sent them, so you can see what your friend is doing and what he has ordered
+const allyPool = []; const ORD_TXT = ['moving', 'charging', 'holding', 'following him', 'forming', 'firing', 'under his hand', 'fighting freely', 'ability', 'boats', 'on a directive'];
+function allyMarks() {
+  const sim = state.sim, R = state.renderer, box = $('fpmarks'); let n = 0; const pt = {}; const w = canvas.clientWidth, h = canvas.clientHeight; const me = sim.players[state.localIdx];
+  const put = (cls, html, x, y, z, edge) => { R.project(x, y, z, pt); if (!pt.visible) { if (!edge) return; } let px = pt.x, py = pt.y;
+    if (edge) { if (!pt.visible) { px = w - px; py = h - 30; } px = Math.max(40, Math.min(w - 40, px)); py = Math.max(24, Math.min(h - 30, py)); } else if (px < -40 || px > w + 40 || py < 0 || py > h) return;
+    let el = allyPool[n]; if (!el) { el = document.createElement('div'); box.appendChild(el); allyPool[n] = el; } n++;
+    if (el.className !== cls) el.className = cls; if (el._h !== html) { el.innerHTML = html; el._h = html; }
+    el.style.transform = `translate(${px.toFixed(0)}px, ${py.toFixed(0)}px) translate(-50%, -100%)`; el.hidden = false; };
+  if (me && state.net) for (let i = 0; i < sim.players.length; i++) { const p = sim.players[i]; if (i === state.localIdx || p.ai || p.team !== me.team) continue;
+    const nm = escapeHtml((state.peerNames && state.peerNames[i]) || ('Player ' + (i + 1)));
+    const hu = sim.units[p.heroId];
+    if (hu && !hu.dead) { const hp = Math.max(0, Math.min(1, hu.hp / (hu.def.hp || 100)));
+      put('mk friend', `${nm}<i style="display:block;height:3px;margin:2px auto 0;width:44px;background:#0008"><b style="display:block;height:3px;width:${(hp * 100).toFixed(0)}%;background:${hp > 0.5 ? '#7fe07a' : hp > 0.25 ? '#e8c25a' : '#e8584a'}"></b></i>▼`, (hu.px + (hu.x - hu.px) * (R.alpha || 1)), hu.y + 2.35, (hu.pz + (hu.z - hu.pz) * (R.alpha || 1)), true); }
+    for (const id of p.squads || []) { const sq = sim.squads[id]; if (!sq || !sq.alive || sq.inactive) continue; const ord = sq.routing ? 'routing' : (ORD_TXT[sq.order] || '');
+      const cam = R.camera.position; const far = Math.hypot(sq.cx - cam.x, sq.cz - cam.z); if (!Input.cmdMode && far > 140) continue;
+      put('mk friendsq', `${nm} · ${sq.def.name}<small>${sq.aliveCount} · ${ord}</small>`, sq.cx, S.terrainH(sq.cx, sq.cz) + 3.2, sq.cz, false);
+      if ((sq.order === 0 || sq.order === 1) && sq.tx !== undefined && Math.hypot(sq.tx - sq.cx, sq.tz - sq.cz) > 4) put('mk friendord', `⚑<small>${nm}: ${sq.order === 1 ? 'charge' : 'move'}</small>`, sq.tx, S.terrainH(sq.tx, sq.tz) + 0.4, sq.tz, false); } }
+  for (let i = n; i < allyPool.length; i++) allyPool[i].hidden = true;
 }
 function cmdCamUpdate(dt) {
   const r = state.renderer; if (!r || !Input.cmdMode) return; const c = r.cmdCam; const sp = c.h * 1.1 * dt;

@@ -148,7 +148,7 @@ class Lockstep {
   constructor(n, me, delay) {
     this.n = n; this.me = me; this.delay = delay; this.tick = 0; this.buf = new Map(); this.connected = new Array(n).fill(true);
     this.hashes = new Map(); this.desync = false; this.desyncTick = -1; this.stalledSince = 0;
-    for (let t = 0; t < delay; t++) { const a = this.get(t); for (let p = 0; p < n; p++) a[p] = 0; }
+    for (let t = 0; t < delay; t++) { const a = this.get(t); for (let p = 0; p < n; p++) a[p] = 0; } this.lastQ = delay - 1;
   }
   get(t) { let a = this.buf.get(t); if (!a) { a = new Array(this.n).fill(undefined); this.buf.set(t, a); } return a; }
   ready(t) { const a = this.get(t); for (let p = 0; p < this.n; p++) if (this.connected[p] && a[p] === undefined) return false; return true; }
