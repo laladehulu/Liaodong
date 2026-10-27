@@ -3323,7 +3323,7 @@ Sim.prototype.mDir = function (gid, dir) {
   else p.directive = { kind: DIR_ATTACK, x: 0, z: 0, by: -1 };
 };
 Sim.prototype.mRelease = function (gid) {
-  const g = this.mg[gid]; if (!g || g.released) return; g.released = true; const p = this.players[g.p]; p.inactive = false;
+  const g = this.mg[gid]; if (!g || g.released) return; g.released = true; g.relPh = this.mv ? this.mv.ph : 0; const p = this.players[g.p]; p.inactive = false;
   for (const id of p.squads) { const q = this.squads[id]; q.inactive = false; for (const uid of q.unitIds) this.units[uid].inactive = false; }
   for (const uid of [p.heroId, p.horseId]) if (uid >= 0) this.units[uid].inactive = false;
   if (!this.mission.groups || !this.mission.groups[gid] || !this.mission.groups[gid].dir) p.directive = { kind: DIR_ATTACK, x: 0, z: 0, by: -1 };
@@ -3773,12 +3773,12 @@ Sim.prototype.mObj = function (o, el) {
   if (o.all) { let ok = 1; for (const s of o.all) { const r = this.mObj(s, el); if (r < 0) return -1; if (r === 0) ok = 0; } if (ok && o.keep === undefined && !o.reach) return 1; if (!ok) return 0; }
   if (o.keep) { const z = this.missionZone(o.keep); if (z && z.owner === 1 - this.mission.side) return -1; }
   if (o.reach) { const z = this.missionZone(o.reach); if (!(z && this.humansIn(z))) return 0; }
-  if (o.hold) { const z = this.missionZone(o.hold); const k = 'hold:' + o.hold; if (z.n0 > 0 && z.n1 === 0) this.mv[k] = (this.mv[k] || 0) + 0.5; if ((this.mv[k] || 0) < o.t) return 0; }
+  if (o.hold) { const z = this.missionZone(o.hold); const k = 'hold:' + o.hold; if (z.n0 > 0 && z.n1 === 0) this.mv[k] = (this.mv[k] || 0) + 0.5; if ((this.mv[k] || 0) < Math.min(o.t, 12)) return 0; } /* take it and clear it: no long hold-outs */
   if (o.capture) { for (const k of o.capture) { const z = this.missionZone(k); if (z.owner !== this.mission.side) return 0; } }
   if (o.defeat) { for (const gid of o.defeat) { const g = this.mg[gid]; if (!g || (!g.released && !g.broken)) return 0; if (!g.broken && this.mGroupFrac(gid) > 1 - (o.frac || 0.8)) return 0; } for (const gid of o.defeat) this.mBreak(gid); }
   if (o.officer) { const g = this.mg[o.officer]; if (!g || !g.released) return 0; const h = this.units[this.players[g.p].heroId]; const wound = g.G.wound; if (h && !h.dead && !(wound && h.hp < h.def.hp * wound)) return 0; if (!g.broken) { this.events.push({ t: 'mofficer', name: g.G.name, zh: g.G.zh || '', gid: o.officer, wounded: !!(h && !h.dead) }); this.mBreak(o.officer); } }
   if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; } if (a === 0) return -1; if (n < a) return 0; }
-  if (o.survive) { if (el < o.survive) return 0; }
+  if (o.survive) { if (el < o.survive && !this.mQuietDone(el)) return 0; } /* 'hold out' only while there is something to hold against */
   if (o.never) return 0;
   if (o.extract) { const z = this.missionZone(o.extract); let ok = false; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 1) ok = true; } if (!ok) return 0;
     // you are out: wait (up to 20 s) for the men of your file who are still on their feet and coming
@@ -3786,12 +3786,33 @@ Sim.prototype.mObj = function (o, el) {
     if (this.tick - this.mv.exT < 30 * 20) { for (const u of this.units) { if (!u.zfile || u.dead || u.downed || u.ctrl >= 0) continue; if (u.wounded && u.helpedBy < 0) continue; if (len(u.x - z.x, u.z - z.z) > z.r + 10) return 0; } } }
   return 1;
 };
+// No waiting with nothing to fight: a phase that says 'hold on for N seconds' ends as soon as its fight is over. A threat is an
+// enemy group that is in the field and unbroken, not standing on a post of its own, with a fifth of its men or more, and either
+// sent in during this phase or with men within ninety paces of a player. While all is quiet, the phase's scripted beats (waves,
+// events) are brought forward instead of waited for; once none are left the phase is done.
+Sim.prototype.mThreat = function () {
+  const M = this.mission, mv = this.mv; const hs = []; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead) hs.push(h); }
+  for (const gid in this.mg) { const g = this.mg[gid]; if (g.G.team === M.side || !g.released || g.broken || g.G.stay) continue; if (this.mGroupFrac(gid) < 0.2) continue;
+    if (g.relPh === mv.ph) return true; const p = this.players[g.p];
+    for (const id of p.squads) for (const uid of this.squads[id].unitIds) { const u = this.units[uid]; if (u.dead || u.inactive) continue; for (const h of hs) if (len(u.x - h.x, u.z - h.z) < 90) return true; } }
+  return false;
+};
+Sim.prototype.mQuietDone = function (el) {
+  const mv = this.mv, P = this.mission.phases[mv.ph]; if (el < 5) return false;
+  for (const [t] of (P.waves || []).concat(P.at || [])) if (t > el) return false; /* beats still to come (brought forward in missionThink) */
+  return mv.quietPh === mv.ph && this.tick - mv.quietT >= 30 * 3;
+};
 Sim.prototype.missionThink = function () {
   const M = this.mission; if (this.mwin !== undefined) return; if (this.mode === 'assault') return this.assaultThink();
   if (M.beacon && this.beaconTick) { this.beaconTick(); if (this.mwin !== undefined) return; }
   const mv = this.mv;
   if (mv.ph < 0) { mv.ph = 0; mv.t0 = this.tick; this.mStart(); }
   if (M.soldier && this.tick % 15 === 0) this.aidPost();
+  const P0 = M.phases[mv.ph]; if (P0 && !M.camp && this.mode !== 'assault') { // quiet: bring the next scripted beat forward (never in a timed phase)
+    if (this.mThreat()) mv.quietPh = -1; else if (mv.quietPh !== mv.ph) { mv.quietPh = mv.ph; mv.quietT = this.tick; }
+    const el0 = (this.tick - mv.t0) / 30;
+    if (!P0.limit && mv.quietPh === mv.ph && this.tick - mv.quietT >= 30 * 3 && el0 >= 5 && P0.obj && JSON.stringify(P0.obj).indexOf('survive') >= 0) { let nx = 1e9; for (const [t] of (P0.waves || []).concat(P0.at || [])) if (t > el0 && t < nx) nx = t;
+      if (nx < 1e9) { mv.t0 -= Math.round((nx - el0) * 30); for (const sy of P0.say || []) if (sy[0] < nx - 0.5) mv.said[mv.ph + ':' + sy[0]] = 1; mv.quietT = this.tick; } } }
   const P = M.phases[mv.ph], el = (this.tick - mv.t0) / 30;
   for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k] && el >= t) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }
   for (const [t, a] of P.at || []) { const k = mv.ph + ':at:' + t; if (!mv.ats[k] && el >= t) { mv.ats[k] = 1; this.mAct(a); } }
