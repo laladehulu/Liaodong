@@ -3884,7 +3884,7 @@ const SG = { z0: 40, z1: 47, h: 6, gate: 4.6, ditchZ: 30, ditchW: 4, ladders: [-
 // the rampart and the ditch in the height field (called from terrainHExact / waterAt; TERR.swall / TERR.sditch set by planTerrain)
 function siegeWallH(w, x, z, h) {
   if (z < w.z0 - 0.7 || z > w.z1 + 14.5) return h;
-  let k = z >= w.z0 && z <= w.z1 ? 1 : z < w.z0 ? 1 - (w.z0 - z) / 0.7 : 1 - (z - w.z1) / 1.3;
+  let k = z >= w.z0 && z <= w.z1 ? 1 : z < w.z0 ? 1 - (w.z0 - z) / 0.7 : 1 - (z - w.z1) / 0.35; /* a brick-faced rampart: its inner face drops straight down, no bank of earth behind it */
   for (let i = 0; i < w.ramps.length; i++) { const r = w.ramps[i]; if ((x - r < 0 ? r - x : x - r) < 3 && z > w.z1 && z < w.z1 + 14) { const kr = 1 - (z - w.z1) / 14; if (kr > k) k = kr; } }
   if (k <= 0) return h; const ax = x < 0 ? -x : x; if (ax < w.gate) return h; if (ax < w.gate + 0.6) k *= (ax - w.gate) / 0.6;
   return h + w.h * k;
