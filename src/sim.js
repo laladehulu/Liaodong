@@ -256,6 +256,7 @@ class Sim {
     this.cfg = cfg; this.seed = cfg.seed | 0; this.rng = new RNG(this.seed);
     this.scen = cfg.mode === 'heroes' ? (SCEN[cfg.scen] || SCEN.ningyuan) : null; this.heroMode = !!this.scen;
     this.battle = cfg.mode === 'campaign' ? (MISSIONS[cfg.mission] || MISSIONS.taizhou).battle : cfg.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang).battle : this.scen ? this.scen.battle : cfg.mode === 'story' ? STORY[clamp(cfg.chapter | 0, 0, STORY.length - 1)].battle : BATTLES[cfg.battle] ? cfg.battle : 'field'; this.bdef = BATTLES[this.battle];
+    this.diff = clamp(cfg.diff === undefined ? 1 : cfg.diff | 0, 0, 3); /* 0 recruit · 1 soldier · 2 veteran · 3 lone banner */
     this.solo = (cfg.players || []).length === 1; this.xc = XCOMBAT || !!cfg.xcombat; this.noRout = true; // nobody routs: squads fight on (and beaten mission groups withdraw by script)
     this.mode = MODES[cfg.mode] ? cfg.mode : 'standard'; this.chaos = this.mode === 'chaos'; this.real = this.mode === 'soldier' || this.mode === 'assault'; this.lethal = this.mode === 'soldier';
     this.mission = this.mode === 'campaign' ? (MISSIONS[cfg.mission] || MISSIONS.taizhou) : this.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang) : null;
@@ -3277,7 +3278,12 @@ Sim.prototype.setupMission = function (teams, aiPl) {
     M.def.forEach((d, i) => mk('d' + i, { team: D, name: 'Garrison ' + (i + 1), army: d[0], at: [d[1], d[2], A === 1 ? PI : 0], reserve: i >= M.sectors[0].length + 0 && false }));
     (M.defRes || []).forEach((d, i) => mk('r' + i, { team: D, name: 'Reserve ' + (i + 1), army: d[0], at: [d[1], d[2], A === 1 ? PI : 0], reserve: true, sector: d[3] }));
     M.att.concat(M.att, M.att).forEach((a, i) => mk('a' + i, { team: A, name: AI_NAMES[A][i % 5], army: a, at: [M.attAt[0] + ((i % 3) - 1) * 40, M.attAt[1], M.attAt[2]], reserve: i >= 3 }));
-  } else for (const gid in M.groups) mk(gid, M.groups[gid]);
+  } else { // difficulty (co-op): 0 recruit, 1 soldier, 2 veteran, 3 lone banner — no AI companies on your side, only what the players bring
+    const D = this.diff, need = new Set(); for (const P of M.phases || []) { const walk = (o) => { if (!o) return; if (o.arrive) need.add(o.arrive); if (o.officer) need.add(o.officer); (o.all || []).forEach(walk); }; walk(P.obj); }
+    if (M.soldier) need.add(M.soldier.group);
+    for (const gid in M.groups) { const G = M.groups[gid];
+      if (D >= 3 && !M.soldier && G.team === M.side && !need.has(gid) && !G.escort) continue;
+      if (D >= 2 && G.team !== M.side && G.army.length >= 3 && !G.n) mk(gid, Object.assign({}, G, { army: G.army.concat([G.army[0]]) })); else mk(gid, G); } }
   for (const p of this.players) if (p.ai) { const g = this.mg[p.gid], G = g.G; this.placeArmy({ player: p, army: p.army }, G.team, G.at[0], G.at[1], G.at[2]);
     const lab = G.team === 1 && M.labels; if (lab) for (const id of p.squads) { const q = this.squads[id], L = lab[q.type]; if (!L) continue; const nd = Object.assign({}, q.def, { name: L[0], jp: L[1] }); q.def = nd; for (const uid of q.unitIds) { const u = this.units[uid]; u.def = Object.assign({}, u.def, { name: L[0], jp: L[1] }); } }
     const h = this.units[p.heroId]; if (h && G.officer) { h.def = Object.assign({}, h.def, { hp: h.def.hp * G.officer, name: G.name, dmg: h.def.dmg.map(x => x * 1.4) }); h.hp = h.def.hp; h.officer = true; }
@@ -3288,7 +3294,8 @@ Sim.prototype.setupMission = function (teams, aiPl) {
     for (const u of this.units) { if (u.type === 'horse' || u.def.ai === 'cannon' || u.team === M.side) continue; u.def = u.type === 'hero' ? tune(u.def, 0.75, 0.5) : tune(u.def, 0.85, 0.85); u.hp = u.def.hp; } }
   if (!ass && !M.soldier) { // campaign balance: the enemy rank and file are a little softer, your allies a little harder (officers excepted)
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
-    for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, 0.82, 0.82) : tune(u.def, 1.12, 1.05); u.hp = u.def.hp; } }
+    const FK = [0.68, 0.82, 0.95, 1.0][this.diff], AK = [1.25, 1.12, 1.0, 1.0][this.diff];
+    for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, FK, FK) : tune(u.def, AK, AK > 1.1 ? 1.05 : 1); u.hp = u.def.hp; } }
   if (!this.heroMode) for (const p of this.players) { if (!p.ai) continue; const h = this.units[p.heroId]; if (!h || h.type !== 'hero' || h.team === M.side || (p.gid !== undefined && this.mg[p.gid] && this.mg[p.gid].G.wound)) continue; /* (a general the story needs wounded, not dead, keeps his) an enemy general is a man: a tough one, not a boss (hero-sized health is for hero mode only) */
     const hp = h.officer ? 240 : 120; if (h.def.hp > hp) { h.def = Object.assign({}, h.def, { hp }); h.hp = hp; } }
   if (M.siege && (ass || M.soldier)) { if (!ass) this.sector = 0; this.siegeInit(); if (!ass) this.sg.emp = this.sg.emp.filter(e => e.team === this.sg.D); } // a story chapter on the walls uses the siege engines too (the Jin of 1626 had no field guns)
@@ -3303,7 +3310,7 @@ Sim.prototype.setupMission = function (teams, aiPl) {
       if (c.wkit && c.wkit.length && p.heroId >= 0) this.kitGive(this.units[p.heroId], c.wkit); });
     this.story = true; // your file: hardened Yiwu men, and the story's heart
   } else if (!ass) {
-    humans.forEach((p, i) => { const c = this.cfg.players[p.idx] || {}; const t = roleType(c.role, M.side); p.team = M.side; p.army = humans.length === 1 ? [t, M.soloExtra || 'ashigaru'] : [t];
+    humans.forEach((p, i) => { const c = this.cfg.players[p.idx] || {}; const t = roleType(c.role, M.side); p.team = M.side; p.army = humans.length === 1 || this.diff >= 3 ? [t, M.soloExtra || 'ashigaru'] : [t]; /* the lone banner: two companies each, and no one else */
       const s = M.start; const px = s[0] + (i - (humans.length - 1) / 2) * 26; this.placeArmy({ player: p, army: p.army }, M.side, px, s[1], s[2]); p.auto = false; p.ready = true;
       for (const id of p.squads) this.squads[id].order = ORD_FOLLOW;
       p.spareIds = []; for (let k = 0; k < 2; k++) { const q = this.createSquad(t, M.side, -1, clamp(px + (k - 0.5) * 16, -HALF + 6, HALF - 6), clamp(s[1] - sin(s[2] + PI / 2) * 0 - cos(s[2]) * 22, -HALF + 6, HALF - 6), s[2]); q.inactive = true; for (const uid of q.unitIds) this.units[uid].inactive = true; p.spareIds.push(q.id); } p.spare = 2;
