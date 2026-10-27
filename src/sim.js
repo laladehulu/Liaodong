@@ -1779,7 +1779,7 @@ class Sim {
     }
     if ((def_.mounted || def_.type === 'horse' || def_.mount >= 0) && !(att.mounted || att.mount >= 0)) { const hs = def_.type === 'horse' ? def_ : def_.mounted ? def_ : this.units[def_.mount]; const fast = hs && Math.abs(hs.hspeed) > 5; dmg *= fast ? 0.95 : 1.4; if (hs) hs.hspeed *= fast ? 0.85 : 0.35; } // a galloping horseman is a glancing target; a halted one is cut down
     def_.lastAttacker = att.id;
-    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1);
+    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1) * (this.xc && att.ctrl >= 0 && !this.players[att.ctrl].ai && !def_.champ ? 1.3 : 1);
     if (att.def.brush && def_.type !== 'horse') this.brushCatch(def_, att, nx, nz, false, hx, hy, hz);
     this.posture(def_, dmg * (heavy ? 0.9 : 0.45) * (att.def.posture || 1), att);
     this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz); if (att.chg && !def_.dead && def_.type !== 'horse' && !def_.mounted && def_.mount < 0) { def_.downT = Math.max(def_.downT || 0, heavy ? 0.9 : 0.5); att.vx *= 0.3; att.vz *= 0.3; }
@@ -4458,6 +4458,7 @@ Sim.prototype.hitReact = function (u, a, kind, heavy, blocked) {
     else k = r < 0.6 ? 0 : r < 0.85 ? 1 : 2;
     d = k === 2 ? 0.34 : k === 1 ? 0.3 : 0.27; if (kind === 'shot') d *= 0.8; }
   if (u.ctrl >= 0 && !(this.players[u.ctrl] && this.players[u.ctrl].ai)) d *= 0.6;
+  else if (a && a.ctrl >= 0 && !(this.players[a.ctrl] && this.players[a.ctrl].ai) && !blocked) d *= 1.3; /* a player's blow is seen to land: the man he hits reels a little longer (still inside the 2 s budget) */
   // the 2-second budget: never reeling more than HR_CAP seconds out of any HR_WIN ticks
   const t = this.tick; let used = 0; for (const iv of u.hrL) used += Math.max(0, Math.min(iv[1], t) - Math.max(iv[0], t - HR_WIN));
   d = Math.min(d, HR_CAP - used * DT); if (d < 0.1) return flick();
