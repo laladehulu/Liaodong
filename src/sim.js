@@ -1341,6 +1341,7 @@ class Sim {
   gunRange(def, w, u) { const g = gunOf(def, w); return g ? g.range * this.rangeMul * (u ? 1 + clamp(u.y * 0.02, 0, 0.3) : 1) : 0; }
   findTarget(u, sq) {
     if (this.phase === 0) return -1;
+    if (this.tick < (u.losLock || 0) && u.target >= 0) { const t = this.units[u.target]; if (t && !t.dead && !t.inactive) return t.id; } /* he found a man he can see: keep him for a couple of seconds rather than flicking back to one behind the wall */
     if (u.mounted && u.ctrl < 0 && u.target >= 0 && (u.cv === 1 || u.cv === 2 || u.cv === 3)) { const t = this.units[u.target]; if (t && !t.dead && !t.inactive && !(t.downed && this.story) && len(t.x - u.x, t.z - u.z) < 70) return t.id; } /* mid-pass a horseman keeps his man: riding on beyond him and wheeling back is part of the charge, not losing him */
     const order = sq ? sq.order : ORD_HOLD, def = u.def;
     const ranged = isGun(def, u.weapon) && !this.dry(u); const gr = ranged ? this.gunRange(def, u.weapon, u) : 0;
@@ -1444,11 +1445,11 @@ class Sim {
         wantYaw = ang;
         const range = this.gunRange(def, u.weapon, u);
         if (d <= range && (sq ? sq.fire : true)) {
-          let inPlace = true; if (!def.skirmish) { if (u.mounted) this.cavSteer(u, u.x, u.z, 0); else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z, sd = len(sdx, sdz); if (sq && order !== ORD_CHARGE && sd > 1.3 && u.st === ST_IDLE) { this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.8); inPlace = false; } else { u.mx = 0; u.mz = 0; } } }
+          let inPlace = true; if (this.tick < (u.rampT || 0) && u.st === ST_IDLE && this.sg && TERR.swall && !this.overParapet(u)) { this.toRampart(u); inPlace = false; } else if (!def.skirmish) { if (u.mounted) this.cavSteer(u, u.x, u.z, 0); else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z, sd = len(sdx, sdz); if (sq && order !== ORD_CHARGE && sd > 1.3 && u.st === ST_IDLE) { this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.8); inPlace = false; } else { u.mx = 0; u.mz = 0; } } }
           else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z; if (len(sdx, sdz) > 0.6) this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.7); else { u.mx = 0; u.mz = 0; } }
           if (!u.mounted && (u.mx !== 0 || u.mz !== 0)) { const my = atan2(u.mx, u.mz), off = Math.abs(wrap(my - ang)), turner = (u.id * 37) % 10 < 7; if (off > 1.9 && len(u.slotX - u.x, u.slotZ - u.z) > (turner ? 1.2 : 4)) wantYaw = my; else if (off > 1.6) { u.mx *= 0.5; u.mz *= 0.5; } } // a long way back to his place: turn and walk it, don't skate backward; a step or two back is a slow backpedal
           if (inPlace && u.st === ST_IDLE && u.ammo > 0 && !this.losClear(u, tgt)) { /* a wall or a house in the way: shoot at someone he CAN see (any enemy in range, not only his company's mark); only a man on open ground with nobody in sight walks to find a shot */
-            const alt = this.losTarget(u, range); if (alt) { u.target = alt.id; } else if (this.sg && TERR.swall && u.team === this.sg.D && u.z > TERR.swall.z0 - 0.5) { this.toRampart(u); inPlace = false; } /* a defender with nothing to shoot at goes up on the rampart, whatever his company's place */ else if (!this.onWallTop(u)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } else inPlace = false; }
+            const alt = this.losTarget(u, range); if (alt) { u.target = alt.id; u.losLock = this.tick + 60; } else if (this.sg && TERR.swall && u.team === this.sg.D && u.z > TERR.swall.z0 - 0.5) { u.rampT = this.tick + 120; this.toRampart(u); inPlace = false; } /* a defender with nothing to shoot at goes up on the rampart, whatever his company's place */ else if (!this.onWallTop(u)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } else inPlace = false; }
           if (inPlace && u.st === ST_IDLE && u.ammo > 0 && u.flinchT <= 0 && Math.abs(wrap(ang - u.yaw)) < 0.7) {
             u.st = ST_AIM; u.stT = 0; u.aimTarget = tgt.id; u.blocking = false;
             const g0 = gunOf(def, u.weapon); const aimT = Math.round((g0 ? g0.aim : 0.8) * 30);

@@ -880,17 +880,19 @@ const SG_LINES = {
   engine: [['車毀了！', "We've lost an engine!"], ['砸爛了！', 'Smashed it!']],
   slip: [['冰上滑！抓緊！', 'The ice — hold on!'], null],
 };
-function sgShout(key, att) { if (typeof SPEECH === 'undefined') return; const L = SG_LINES[key]; const line = L && L[att ? 0 : 1]; if (!line) return; const sim = state.sim, me = sim.players[state.localIdx], h = localHero(); if (!h) return;
-  let best = -1, bd = 30; for (const u of sim.teamAlive[me.team]) { if (u.id === h.id || u.type === 'horse' || u.def.ai === 'cannon') continue; const d = Math.hypot(u.x - h.x, u.z - h.z); if (d < bd) { bd = d; best = u.id; } }
+function sgShout(key, att, ev) { if (typeof SPEECH === 'undefined') return; const L = SG_LINES[key]; const line = L && L[att ? 0 : 1]; if (!line) return; const sim = state.sim, me = sim.players[state.localIdx], h = localHero(); if (!h) return;
+  /* the shout comes from a man who is THERE, where it is happening, and only if you are near enough to hear it: nobody calls "drop the stones" while no stones fall near him */
+  const ex = ev && ev.x !== undefined ? ev.x : h.x, ez = ev && ev.z !== undefined ? ev.z : h.z; if (Math.hypot(ex - h.x, ez - h.z) > 45) return;
+  let best = -1, bd = 14; for (const u of sim.teamAlive[me.team]) { if (u.id === h.id || u.type === 'horse' || u.def.ai === 'cannon') continue; const d = Math.hypot(u.x - ex, u.z - ez); if (d < bd) { bd = d; best = u.id; } }
   if (best >= 0) SPEECH.say(best, line[0], line[1], { prio: 2, loud: true, shout: true, cool: 3 }); }
 function siegeEvent(ev) {
   const sim = state.sim, sg = sim.sg; if (!sg) return; const me = sim.players[state.localIdx]; const att = me.team === sg.A;
-  if (ev.t === 'sgladder') { sgShout(ev.up ? 'ladderUp' : 'ladderDown', att); if (ev.up && !att) toast('A ladder is up! Get to the top of it and press E to throw it down'); }
-  else if (ev.t === 'sgoil') sgShout('oil', att); else if (ev.t === 'sgstone') sgShout('stone', att); else if (ev.t === 'sgdock') { sgShout('dock', att); toast(att ? 'The siege tower is against the wall — its bridge is down' : 'A siege tower has reached the wall!'); }
-  else if (ev.t === 'sgbreach') { sgShout('breach', att); toast(att ? 'THE GATE IS BROKEN!' : 'The gate has fallen!'); MUSIC.accent('breach'); }
-  else if (ev.t === 'sghole') { sgShout('hole', att); toast(att ? 'The sappers are through the wall!' : 'They have chiselled through the wall!'); }
-  else if (ev.t === 'sgsaltpeter') sgShout('saltpeter', att); else if (ev.t === 'sgfill') sgShout('fill', att); else if (ev.t === 'sgengine') { sgShout('engine', att); feed(`${{ ram: 'The covered ram', tower: 'A siege tower', cart: 'A shield cart' }[ev.kind] || 'An engine'} is destroyed`, !att); }
-  else if (ev.t === 'sgslip') sgShout('slip', att);
+  if (ev.t === 'sgladder') { sgShout(ev.up ? 'ladderUp' : 'ladderDown', att, ev); if (ev.up && !att) toast('A ladder is up! Get to the top of it and press E to throw it down'); }
+  else if (ev.t === 'sgoil') sgShout('oil', att, ev); else if (ev.t === 'sgstone') sgShout('stone', att, ev); else if (ev.t === 'sgdock') { sgShout('dock', att, ev); toast(att ? 'The siege tower is against the wall — its bridge is down' : 'A siege tower has reached the wall!'); }
+  else if (ev.t === 'sgbreach') { sgShout('breach', att, ev); toast(att ? 'THE GATE IS BROKEN!' : 'The gate has fallen!'); MUSIC.accent('breach'); }
+  else if (ev.t === 'sghole') { sgShout('hole', att, ev); toast(att ? 'The sappers are through the wall!' : 'They have chiselled through the wall!'); }
+  else if (ev.t === 'sgsaltpeter') sgShout('saltpeter', att, ev); else if (ev.t === 'sgfill') sgShout('fill', att, ev); else if (ev.t === 'sgengine') { sgShout('engine', att, ev); feed(`${{ ram: 'The covered ram', tower: 'A siege tower', cart: 'A shield cart' }[ev.kind] || 'An engine'} is destroyed`, !att); }
+  else if (ev.t === 'sgslip') sgShout('slip', att, ev);
   else if (ev.t === 'sgman') { const h = localHero(); if (h && ev.id === h.id) toast(ev.on ? `Manning the ${ev.kind === 'gun' ? 'gun' : 'bed crossbow'}: aim with the mouse, left click to fire, E to leave it` : 'You leave the emplacement'); }
 }
 function siegeHUD(dt) {
