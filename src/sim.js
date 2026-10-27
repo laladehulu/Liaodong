@@ -427,10 +427,10 @@ class Sim {
     }
     if (has('paddies')) {
       let made = 0, guard = 0;
-      while (made < 14 && guard++ < 400) {
-        const x = r.range(-80, 150), z = r.range(-90, 90); const hw = r.range(12, 20), hd = r.range(8, 13);
+      while (made < 18 && guard++ < 400) { /* small flooded plots between dikes: a few paces of mud to wade, not a swamp */
+        const x = r.range(-80, 150), z = r.range(-90, 90); const hw = r.range(6, 10), hd = r.range(4, 7);
         if (!clear(x, z, Math.max(hw, hd) + 3)) continue;
-        this.zones.push({ x, z, hw, hd, speed: 0.45 }); keep.push({ x, z, r: Math.max(hw, hd) + 3 }); made++;
+        this.zones.push({ x, z, hw, hd, speed: 0.62 }); keep.push({ x, z, r: Math.max(hw, hd) + 3 }); made++;
       }
     }
     // cover: wooden mantlets (pavises) around objectives and across the middle of the field
@@ -3218,6 +3218,8 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   if (!ass && !M.soldier) { // campaign balance: the enemy rank and file are a little softer, your allies a little harder (officers excepted)
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
     for (const u of this.units) { if (u.type === 'horse' || u.officer || u.def.ai === 'cannon') continue; const foe = u.team !== M.side; u.def = foe ? tune(u.def, 0.82, 0.82) : tune(u.def, 1.12, 1.05); u.hp = u.def.hp; } }
+  if (!this.heroMode) for (const p of this.players) { if (!p.ai) continue; const h = this.units[p.heroId]; if (!h || h.type !== 'hero' || h.team === M.side || (p.gid !== undefined && this.mg[p.gid] && this.mg[p.gid].G.wound)) continue; /* (a general the story needs wounded, not dead, keeps his) an enemy general is a man: a tough one, not a boss (hero-sized health is for hero mode only) */
+    const hp = h.officer ? 240 : 120; if (h.def.hp > hp) { h.def = Object.assign({}, h.def, { hp }); h.hp = hp; } }
   if (M.siege && (ass || M.soldier)) { if (!ass) this.sector = 0; this.siegeInit(); if (!ass) this.sg.emp = this.sg.emp.filter(e => e.team === this.sg.D); } // a story chapter on the walls uses the siege engines too (the Jin of 1626 had no field guns)
   if (ass) { let n = 0; for (const u of this.units) if (u.team === M.attacker && u.type !== 'horse' && u.type !== 'hero') n++; this.tickets = M.tickets || Math.round(n * 0.8);
     this.assaultCap();  for (const o of this.objectives) o.rate *= 0.6; this.sector = 0; M.sectors[0].forEach(k => this.missionZone(k).hidden = false); this.assaultDirs(); this.mv.ph = 0; }
