@@ -3357,7 +3357,8 @@ Sim.prototype.mBreak = function (gid) { // a beaten group gives up the field and
 Sim.prototype.mAct = function (a) {
   if (a[0] === 'release') this.mRelease(a[1]);
   else if (a[0] === 'dir') this.mDir(a[1], a.slice(2));
-  else if (a[0] === 'say') this.events.push({ t: 'msay', who: a[1], text: a[2] });
+  else if (a[0] === 'say') this.events.push({ t: 'msay', who: a[1], text: a[2], zh: a[3] || '', ord: a[4] });
+  else if (a[0] === 'fell') this.mFell(a[1] | 0, a[2]);
   else if (a[0] === 'show') { const z = this.missionZone(a[1]); if (z) z.hidden = false; }
   else if (a[0] === 'hide') { const z = this.missionZone(a[1]); if (z) z.hidden = true; }
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
@@ -3391,6 +3392,18 @@ Sim.prototype.zWound = function (k) {
     u.hp = 1; u.wounded = true; u.downed = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * (this.mission && this.mission.soft ? 240 : 60); u.medic = -1; u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.downT = Math.max(u.downT, 1.2); u.mx = 0; u.mz = 0;
     this.events.push({ t: 'zwound', p: p.idx, id: u.id, x: u.x, z: u.z }); }
 };
+// co-op missions: a man of each player's own company is hit and goes down where he stands (an arrow off a roof, a
+// grapeshot). He bleeds for a minute; a player beside him with E gets him up (helpWounded), as in the story chapters.
+// Objective { rescue: true } waits while any such man still lies there alive. n men per player (default one).
+Sim.prototype.mFell = function (n, why) {
+  for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; const cand = [];
+    for (const id of p.squads) { const q = this.squads[id]; if (!q.alive || q.inactive || q.def.ai === 'cannon' || q.def.mounted) continue; for (const uid of q.unitIds) { const u = this.units[uid]; if (!u.dead && !u.wounded && !u.inactive && u.ctrl < 0 && u.type !== 'horse' && !u.mounted) cand.push(u); } }
+    if (!cand.length) continue; const hx = h ? h.x : 0, hz = h ? h.z : 0; cand.sort((a, b) => (len(a.x - hx, a.z - hz) - len(b.x - hx, b.z - hz)) || (a.id - b.id));
+    for (let k = 0; k < Math.max(1, n | 0) && k < cand.length; k++) { const u = cand[k];
+      u.hp = 1; u.wounded = true; u.downed = true; u.mFell = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * 60; u.medic = -1; u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.downT = Math.max(u.downT, 1.2); u.mx = 0; u.mz = 0;
+      this.events.push({ t: 'zwound', p: p.idx, id: u.id, x: u.x, z: u.z, why: why || '' }); } }
+};
+Sim.prototype.mFallen = function () { let n = 0; for (const u of this.units) if (u.mFell && u.downed && !u.dead) n++; return n; };
 Sim.prototype.helpWounded = function (u) { // E beside a downed or wounded comrade: haul him up, or get his arm over your shoulder
   if (u.dead || u.mounted) return false; let best = null, bd = 2.6;
   for (const v of this.teamAlive[u.team]) { if (!v.downed || v.aided || v === u) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } }
@@ -3790,6 +3803,7 @@ Sim.prototype.mObj = function (o, el) {
   if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; } if (a === 0) return -1; if (n < a) return 0; }
   if (o.survive) { if (el < o.survive && !this.mQuietDone(el)) return 0; } /* 'hold out' only while there is something to hold against */
   if (o.never) return 0;
+  if (o.rescue && this.mFallen() > 0) return 0; /* a man of yours is still down: get him up (he dies of it in a minute, and then the phase goes on without him) */
   if (o.extract) { const z = this.missionZone(o.extract); let ok = false; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 1) ok = true; } if (!ok) return 0;
     // you are out: wait (up to 20 s) for the men of your file who are still on their feet and coming
     if (this.mv.exT === undefined) { this.mv.exT = this.tick; this.events.push({ t: 'zwait', s: 20 }); }
@@ -3826,7 +3840,7 @@ Sim.prototype.missionThink = function () {
   const P = M.phases[mv.ph], el = (this.tick - mv.t0) / 30;
   for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k] && el >= t) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }
   for (const [t, a] of P.at || []) { const k = mv.ph + ':at:' + t; if (!mv.ats[k] && el >= t) { mv.ats[k] = 1; this.mAct(a); } }
-  for (const [t, who, text, zh] of P.say || []) { const k = mv.ph + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '' }); } }
+  for (const [t, who, text, zh, ord] of P.say || []) { const k = mv.ph + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '', ord }); } }
   if (this.tick % 60 === 0) this.mAggro();
   // broken groups melt away at the field's edge
   for (const gid in this.mg) { const g = this.mg[gid]; if (!g.broken) continue; const p = this.players[g.p];

@@ -1,7 +1,13 @@
 // ===================== co-op missions: raids, ambushes, the front line, a sortie by night =====================
 // Every phase is something to do — get there, break them, burn it, kill him, get out — never a clock to sit out.
-// Sources: 《明史》毛文龍傳 (鎮江, 1621), 東江塘報 on the raids against Jin grain trains, 《明史》袁崇煥傳 and 《崇禎長編》 on
-// 寧錦 (1627), 《清太宗實錄》天聰五年 on the siege of 大凌河 (1631: Zu Dashou's sorties against the siege lines and guns).
+// Each mission is five or six phases with a turn in the middle: a man down, a fire, horse on the flank, a gate to hold.
+// The exposition is talk: a cast of named men (cast[key] = [zh, en, group]) speak short bilingual lines where they
+// stand, spaced out over the phase (say: [t, who, en, zh, order]); an officer's line that carries a squad order names
+// the order so the HUD can show the key. No cards, no walls of text: the brief is only the menu blurb.
+// Sources: 《明史》毛文龍傳 (鎮江, 1621: 陳良策 the inside man, 佟養真 taken alive), 東江塘報 on the raids against Jin grain
+// trains, 《明史》袁崇煥傳 on 寧錦 (1627: 滿桂、祖大壽 sent to relieve 錦州), 《清太宗實錄》天聰五年 on the siege of 大凌河
+// (1631: Zu Dashou's sorties, 佟養性's red cannon, 何可綱 his deputy). Unnamed sergeants, scouts and gunners are
+// invented where the sources give no name; each such man is marked (no source) where he is defined.
 (function () { if (typeof SIM === 'undefined') return; const PI = Math.PI;
   const house = (x, z, hw, hd) => [x, z, hw, hd, 3.4, 'house'], pal = (x0, x1, z) => { const o = []; for (let x = x0; x < x1; x += 3) o.push([x + 1.5, z, 1.5, 0.5, 1.6, 'palisade']); return o; };
   Object.assign(SIM.MISSIONS, {
@@ -9,8 +15,10 @@
   zhenjiang: {
     title: '鎮江夜襲 · The night raid on Zhenjiang', year: 'Summer 1621', battle: 'toba', side: 0, soloExtra: 'samurai',
     bdef: { name: 'Zhenjiang', jp: '鎮江', when: 'Summer 1621', biome: 'night', fog: 0.35 },
-    brief: 'Liaodong has fallen. Mao Wenlong slips across the Yalu by night with a few hundred men to Zhenjiang, where the townsmen have promised to rise. Take the bridge quietly, get the gate open, seize the Jin commander Tong Yangzhen, fire the granary, and be gone before the banners ride in.',
+    brief: 'Two hundred men over the Yalu by night: take Zhenjiang, seize Tong Yangzhen, burn the granary, and be gone by dawn.',
     start: [-78, -118, 0],
+    // the cast: Mao and Chen Liangce are in 《明史》; Han the scout and Sergeant Du are invented (no source)
+    cast: { mao: ['毛文龍', 'Mao Wenlong', 'mao'], chen: ['陳良策', 'Chen Liangce', 'rising'], han: ['韓老五', 'Han the scout', 'me'], du: ['杜把總', 'Sergeant Du', 'me'], town: ['', 'A townsman', 'rising'] },
     zones: [{ key: 'bridge', x: -78, z: -14, r: 10, name: 'The west bridge' }, { key: 'gate', x: 0, z: 52, r: 8, name: 'The town gate' }, { key: 'yamen', x: 0, z: 86, r: 9, name: 'The yamen' }, { key: 'granary', x: 34, z: 92, r: 8, name: 'The granary' }, { key: 'boats', x: -78, z: -88, r: 14, name: 'The boats' }],
     forts: [house(-22, 64, 4, 3), house(22, 64, 4, 3), house(-24, 82, 3.5, 3), house(-6, 100, 3, 3), house(34, 104, 4, 3), house(48, 86, 3, 3.5), [0, 92, 5, 3.5, 4, 'hall'], [34, 92, 3, 3, 3, 'house']].concat(pal(-44, -4, 48), pal(4, 44, 48)),
     groups: {
@@ -23,21 +31,30 @@
       relief2: { team: 1, name: 'More horse', army: ['cavalry', 'byakkotai'], at: [138, -40, -PI / 2], reserve: true },
     },
     phases: [
-      { title: 'I · 夜渡 · The bridge', text: 'Across the river in the dark. The bridge sentries are half asleep: take them before they can raise the town.', show: ['bridge'],
+      { title: 'I · 夜渡 · The bridge', goal: 'Take the bridge sentries quietly', text: 'Across the river in the dark. Take the sentries before they raise the town.', show: ['bridge'],
         start: [['calm', 'watch', 6]], obj: { all: [{ reach: 'bridge' }, { defeat: ['watch'], frac: 0.7 }] },
-        say: [[2, 'Mao Wenlong', 'No match lit until they see us. Knives and spears first.'], [14, 'Scout', 'Two fires on the bridge. Six, maybe eight men.']] },
-      { title: 'II · 開門 · The gate', text: 'The townsmen are rising inside. Get to the gate and in before the garrison is awake.', show: ['gate'], hide: ['bridge'],
-        start: [['release', 'rising'], ['dir', 'mao', 'hold', 0, 40]], obj: { reach: 'gate' }, at: [[20, ['release', 'garrison']], [21, ['dir', 'garrison', 'hold', 0, 58]]],
-        say: [[3, 'Scout', 'Torches in the streets — the townsmen are up! The gate is opening!'], [22, 'Townsman', 'The bannermen are coming out of the barracks!']] },
-      { title: 'III · 佟養真 · Tong Yangzhen', text: 'The Jin commander is in the yamen. Take him.', show: ['yamen'], hide: ['gate'],
+        say: [[3, 'mao', 'No match lit until they see us. Knives first.', '見了人才點火繩。先用刀。'], [9, 'han', 'Two fires on the bridge. Eight men, half asleep.', '橋上兩堆火。八個人，睡了一半。'],
+          [26, 'du', 'Muskets, hold your fire. Not till they shout.', '銃手，不許放。等他們喊了再說。', 'holdfire'], [48, 'mao', 'Shields up the bridge. Go.', '刀牌上橋。走。', 'charge']] },
+      { title: 'II · 開門 · The gate', goal: 'Get in through the town gate', text: 'The townsmen are rising inside. In through the gate before the garrison wakes.', show: ['gate'], hide: ['bridge'],
+        start: [['release', 'rising'], ['dir', 'mao', 'hold', 0, 40]], obj: { reach: 'gate' }, at: [[22, ['release', 'garrison']], [23, ['dir', 'garrison', 'hold', 0, 58]]],
+        say: [[4, 'chen', 'Torches in the streets. Chen Liangce keeps his word: the gate is open.', '街上有火把。陳良策說話算話，門開了。'], [25, 'town', 'The bannermen are out of the barracks!', '旗兵出營了！'],
+          [31, 'mao', 'Muskets, fire at will. Shields to the gate.', '銃手自由放。刀牌上門。', 'fire']] },
+      { title: 'III · 巷戰 · The streets', goal: 'Get your man up, break the garrison', text: 'An arrow off a roof. A man is down in the street and the garrison is on you.', hide: ['gate'],
+        start: [['fell', 1, 'an arrow off a roof'], ['dir', 'mao', 'hold', 0, 60]], obj: { all: [{ rescue: true }, { defeat: ['garrison'], frac: 0.6 }] },
+        say: [[2, 'du', 'Archer on the roof! Man down!', '房上有弓手！有人倒了！'], [12, 'mao', 'Nobody leaves him. Get him up and hold the street.', '誰也不許丟下他。拉起來，守住街口。', 'hold'],
+          [40, 'han', 'The yamen is lit. He is in there.', '衙門亮著燈。他在裡頭。']] },
+      { title: 'IV · 佟養真 · Tong Yangzhen', goal: 'Take Tong Yangzhen in the yamen', text: 'The Jin commander is in the yamen. Take him.', show: ['yamen'],
         start: [['release', 'tong'], ['dir', 'mao', 'hold', 0, 80]], obj: { officer: 'tong' },
-        say: [[2, 'Mao Wenlong', 'Tong Yangzhen, the Liaodong Han who opened Fushun to them. The court wants him. Alive or not.']] },
-      { title: 'IV · 焚倉 · The granary', text: 'Fire the granary, so the banners have nothing to eat when they come back.', show: ['granary'], hide: ['yamen'],
-        obj: { reach: 'granary' }, done: [['explode', 34, 92, 4, 30, 0], ['say', 'Scout', 'It burns! The whole granary!']] },
-      { title: 'V · 回船 · The boats', text: 'Jin horse are coming down from Kuandian. Back over the bridge to the boats.', show: ['boats'], hide: ['granary'],
+        say: [[3, 'mao', 'Tong Yangzhen. He opened Fushun to them. Alive if you can.', '佟養真。撫順是他開的門。能活捉就活捉。'], [20, 'han', 'He has barred the hall doors. His guard is at the steps.', '他把堂門閂上了。親兵在台階上。']] },
+      { title: 'V · 焚倉 · The granary', goal: 'Fire the granary before the horse come', text: 'Horse are coming down from Kuandian. Fire the granary first.', show: ['granary'], hide: ['yamen'],
+        start: [['dir', 'mao', 'hold', 20, 80]], obj: { reach: 'granary' }, limit: 150, fail: 'The Kuandian horse caught you in the town.', done: [['explode', 34, 92, 4, 30, 0], ['say', 'han', 'It burns! The whole granary!', '燒起來了！整個倉！']],
+        at: [[28, ['release', 'relief']], [29, ['dir', 'relief', 'hold', 40, 60]]],
+        say: [[3, 'mao', 'The granary. Torches to every roof.', '糧倉。每個屋頂都點上。'], [30, 'han', 'Horse on the north road! Hundreds!', '北路有馬！好幾百！'], [36, 'du', 'Muskets, a volley down the road. Then we run.', '銃手，朝路上放一排。然後跑。', 'fire']] },
+      { title: 'VI · 回船 · The boats', goal: 'Back over the bridge to the boats', text: 'Back over the bridge to the boats before they cut you off.', show: ['boats'], hide: ['granary'],
         start: [['dir', 'mao', 'hold', -78, -80], ['dir', 'rising', 'hold', -70, -84]], obj: { extract: 'boats' }, limit: 330, fail: 'The Jin horse caught you before the river.',
-        waves: [[6, 'relief', ['hold', -40, 20]], [40, 'relief2', ['hold', -60, -60]]],
-        say: [[7, 'Scout', 'Horsemen on the north road! Hundreds!'], [42, 'Scout', 'More of them along the south bank — they want to cut us off from the boats!']] },
+        waves: [[30, 'relief2', ['hold', -60, -60]]],
+        say: [[4, 'mao', 'Walk, do not run. Wounded in the middle. Follow me.', '走，別跑。傷的在中間。跟我來。', 'follow'], [32, 'han', 'More along the south bank. They want the boats!', '南岸又來一隊。他們要截船！'],
+          [60, 'chen', 'The boatmen are waiting. Zhenjiang will pay for this night.', '船家等著呢。鎮江要為今夜付代價。']] },
     ],
     win: 'Zhenjiang was taken in a night. The Jin answered by killing the people of the towns along the Yalu, and Mao Wenlong went out to the islands to begin twenty years of raids.',
   },

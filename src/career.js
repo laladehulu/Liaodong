@@ -355,9 +355,28 @@ function missionStart() {
 }
 function radio(who, text) { if (typeof SPEECH !== 'undefined' && SPEECH.note) { SPEECH.note(who, text); return; } const r = $('radio'); r.firstChild.textContent = who; r.lastChild.textContent = text; r.hidden = false; MIS.radioT = Math.min(11, 4 + text.length / 22); AUDIO.play('ui', undefined, 0, 0, 0.6); }
 function banner(big, small, t) { const b = $('banner'); b.innerHTML = `${big}${small ? `<small>${small}</small>` : ''}`; b.hidden = false; MIS.bannerT = t || 3.5; }
+// co-op missions (M.cast): the exposition is talk between named men, captioned over the speaker (SPEECH), not cards.
+// cast[key] = [zh, en, of]: 'of' names an AI group (its general speaks), 'me' a man of your own company, or nothing
+// when the key is itself a group id. An officer's line can carry an order (say[4]): shown as the key to give it.
+const COOP_ORD = { fire: ['放 · Fire at will', 'N'], holdfire: ['止 · Hold your fire', 'N'], follow: ['跟 · Follow me', 'F'], hold: ['守 · Hold here', 'H'], line: ['列 · Form a line', 'Z'], charge: ['衝 · Charge', 'C'], column: ['縱 · Column', 'X'] };
+function coopWho(key) {
+  const sim = state.sim, M = sim.mission, c = (M.cast || {})[key]; const of = c ? c[2] : key; const h = localHero();
+  if (of && sim.mg[of]) { const g = sim.mg[of], p = sim.players[g.p]; const gh = sim.units[p.heroId]; if (gh && !gh.dead && !gh.inactive) return gh.id; for (const id of p.squads) { const q = sim.squads[id]; if (!q.alive || q.inactive) continue; const u = q.unitIds.map(i => sim.units[i]).find(v => !v.dead && !v.wounded); if (u) return u.id; } }
+  if (h) { const me = sim.players[state.localIdx]; let n = 0; for (const id of me.squads) { const q = sim.squads[id]; if (!q.alive) continue; for (const uid of q.unitIds) { const u = sim.units[uid]; if (u.dead || u.wounded || u.ctrl >= 0 || u.type === 'horse') continue; if ((n++ % 5) === (key.length % 5)) return u.id; } } }
+  return -1;
+}
+function coopSay(ev) {
+  const sim = state.sim, M = sim.mission, c = (M.cast || {})[ev.who]; const nm = c ? `${c[0]} ${c[1]}` : sim.mg[ev.who] ? `${sim.mg[ev.who].G.zh || ''} ${sim.mg[ev.who].G.name}`.trim() : ev.who;
+  const id = coopWho(ev.who); const ok = id >= 0 && typeof SPEECH !== 'undefined' && SPEECH.say(id, ev.zh || '', ev.text, { prio: 3, loud: true, radio: true, who: nm, dur: Math.min(7, 2.5 + ev.text.length / 20) });
+  if (!ok) radio(nm, `${ev.zh ? ev.zh + '  ' : ''}${ev.text}`);
+  const o = ev.ord && COOP_ORD[ev.ord]; if (o) banner(o[0], `Give the order: ${o[1]} (pick a squad with 1–9 first)`, 3.5);
+}
 function missionEvent(ev) {
   if (!MIS) return; const sim = state.sim, M = sim.mission, me = sim.players[state.localIdx];
   if (ev.t === 'mphase' && M.camp) return;
+  if (M.cast && ev.t === 'mphase') { const P = M.phases[ev.ph] || {}; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, P.goal || '', 5); if (ev.ph) MUSIC.accent('phase'); return; }
+  if (M.cast && ev.t === 'msay') { coopSay(ev); return; }
+  if (M.cast && ev.t === 'zwound' && ev.p === state.localIdx) { const u = sim.units[ev.id]; if (u && typeof SPEECH !== 'undefined') SPEECH.say(ev.id, '我倒了……拉我一把！', 'I\'m down... get me up!', { prio: 3, dur: 4, loud: true, who: 'One of your men' }); toast(`One of your men is down${ev.why ? ' (' + ev.why + ')' : ''}. Get to him and press E to get him up`); return; }
   if (ev.t === 'mphase' && M.soldier) { const P = M.phases[ev.ph] || {}; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, P.goal || (ev.text || '').split(/(?<=[.!?])\s/)[0], 5); if (ev.ph) MUSIC.accent('phase'); return; }
   if (ev.t === 'msay' && M.soldier && typeof zheSay === 'function' && zheSay(ev)) return;
   if (ev.t === 'mphase') { const first = ev.ph === 0; storyCard(first ? `${M.brief}<br><br><b>${ev.title}.</b> ${ev.text}` : ev.text, first ? `${M.title} · ${M.year}` : ev.title); if (!first) { banner(ev.title.split(' · ')[1] || ev.title, 'New orders', 3); MUSIC.accent('phase'); } }
