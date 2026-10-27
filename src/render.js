@@ -1603,6 +1603,8 @@ class Renderer {
         case 'swing': { const u = units[ev.id]; if (u) AUDIO.play(u.weapon === 'yari' ? 'thrust' : 'swish', ev.x, ev.y + 1.3, ev.z, ev.id === heroId ? 1.3 : 0.9); break; }
         case 'windup': { const u = units[ev.id]; if (u && ev.id !== heroId && u.team !== this.localTeam) { const dc = Math.hypot(u.x - this.camera.position.x, u.z - this.camera.position.z); if (dc < 14) { const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw); this.sparks.spawn(u.x + fx * 0.5 - Math.cos(u.yaw) * 0.3, u.y + 1.9, u.z + fz * 0.5 + Math.sin(u.yaw) * 0.3, 0, 0.3, 0, 0.18, 0.9, 0.2, 1, 0.45, 0.35, 1, 1, 0, 1, 0.2, 0.1); } } break; }
         case 'hit': {
+          if (ev.att === heroId && ev.id !== heroId && heroId >= 0 && (ev.cause === 'arrow' || ev.cause === 'solid' || ev.cause === 'explosion') && !(this.hitMark > 0.3)) { /* bows, crossbows, guns and bombs of your own: a marker and a tick you can hear at any range */
+            this.hitMark = 0.35; this.hitMarkHead = false; const cp = this.camera.position; AUDIO.play('hitmark', cp.x, cp.y, cp.z, 1); if (ev.killed) AUDIO.play('killcue', cp.x, cp.y, cp.z, 0.9); }
           { // a blow that lands has weight: the struck man is shoved and bends away, the blade bites with a thud, a little blood and grit fly
             const vic = units[ev.id], att = ev.att >= 0 ? units[ev.att] : null, mine = ev.att === heroId && ev.id !== heroId;
             let dx = vic && att ? vic.x - att.x : 0, dz = vic && att ? vic.z - att.z : 1; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
