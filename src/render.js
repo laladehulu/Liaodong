@@ -673,6 +673,14 @@ class Renderer {
     const size = HALF * 2 + 60, seg = this.lowfx ? 130 : 200;
     const geo = new THREE.PlaneGeometry(size, size, seg, seg); geo.rotateX(-HPI);
     const pos = geo.attributes.position; const cols = new Float32Array(pos.count * 3);
+    // the siege rampart and its stairways have sheer brick faces, but a 1.8 m terrain grid turns each drop into an earth wedge that
+    // pokes out past the brick. Grid rows and columns are slid onto both lips of every drop so the step in the ground is sheer too
+    { const W = SIM.TERR && SIM.TERR.swall; if (W) { const N = seg + 1, st = size / seg;
+      const snap = (edges, get, set) => { const used = new Set(); for (const [a, b] of edges) { for (const [e, side] of [[a, -1], [b, 1]]) { let best = -1, bd = st * 0.95; for (let c = 0; c < N; c++) { if (used.has(c)) continue; const v = -size / 2 + c * st, d = (v - e) * side; if (d >= -st * 0.5 && Math.abs(v - e) < bd) { bd = Math.abs(v - e); best = c; } } if (best >= 0) { used.add(best); set(best, e + side * 0.01); } } } };
+      const xE = [[W.gate - 0.02, W.gate + 0.6], [-W.gate - 0.6, -W.gate + 0.02]]; for (const r of W.ramps) { xE.push([r - 3.02, r - 2.98]); xE.push([r + 2.98, r + 3.02]); }
+      const colX = [], rowZ = []; for (let c = 0; c < N; c++) { colX[c] = -size / 2 + c * st; rowZ[c] = -size / 2 + c * st; }
+      snap(xE, null, (c, v) => { colX[c] = v; }); snap([[W.z0 - 0.71, W.z0], [W.z1, W.z1 + 0.36]], null, (c, v) => { rowZ[c] = v; });
+      for (let i = 0; i < pos.count; i++) { const c = i % N, r = (i / N) | 0; pos.setX(i, colX[c]); pos.setZ(i, rowZ[r]); } } }
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i); const y = terrainH(x, z); pos.setY(i, y);
       const n = Math.sin(x * 0.13 + 1) * Math.cos(z * 0.11) + Math.sin(x * 0.031) * Math.sin(z * 0.037 + 2) * 1.3 + Math.sin(x * 0.52) * Math.cos(z * 0.47) * 0.4;
@@ -992,7 +1000,7 @@ class Renderer {
       this.gateMeshes.length = 1 + 5; // the doors and studs go when breached; the towers stay
     }
     for (const b of boxes.filter(q => q.kind === 'keep')) {
-      const y = terrainH(b.x, b.z); const w = b.hw * 2; const tileC = snow ? 0xe8ebee : 0x2f3a3a;
+      const y = terrainH(b.x, b.z); const w = b.hw * 2 / 1.9; const tileC = snow ? 0xe8ebee : 0x2f3a3a;
       add(box, 0x8d8a82, b.x, y + 3, b.z, w * 1.9, 6, w * 1.4); add(box, 0x6a6660, b.x, y + 6.15, b.z, w * 1.95, 0.3, w * 1.45);
       add(box, 0x1a1816, b.x, y + 1.6, b.z - w * 0.7, 2.6, 3.2, 0.3);
       add(box, 0x9a2a22, b.x, y + 7.8, b.z, w * 1.3, 3.0, w * 0.9); add(pyr, tileC, b.x, y + 9.9, b.z, w * 2.4, 1.4, w * 1.7, PI / 4);

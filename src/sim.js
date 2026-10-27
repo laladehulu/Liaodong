@@ -292,6 +292,8 @@ class Sim {
     this.head = new Int32Array(this.gridN); this.next = new Int32Array(this.units.length);
     this.obsHead = new Int32Array(this.gridN).fill(-1); this.obsNext = new Int32Array(this.obstacles.length);
     for (let i = 0; i < this.obstacles.length; i++) { const o = this.obstacles[i]; const c = this.cellOf(o.x, o.z); this.obsNext[i] = this.obsHead[c]; this.obsHead[c] = i; }
+    // a keep is drawn as a broad brick platform (1.9 by 1.4 of its nominal width): its collider is made that size too
+    for (const b of this.boxes) if (b.kind === 'keep' && !b.fit) { b.fit = true; b.hd = b.hw * 1.4; b.hw *= 1.9; }
     // boxes (houses, walls) are registered in every cell they touch, with a one-cell margin
     this.boxCells = new Array(this.gridN).fill(null);
     for (let i = 0; i < this.boxes.length; i++) {
@@ -377,7 +379,7 @@ class Sim {
       keep.push({ x: sx, z: sz, r: 12 });
     }
     if (B === 'bjgate') { // the Guangqu Gate suburb: a road out of the gate, low courtyard houses in loose blocks either side, open ground before the gate
-      this.deco.push({ kind: 'road', x: 6, w: 8 }); this.roadX = 6; keep.push({ x: 6, z: 50, r: 26 });
+      this.deco.push({ kind: 'road', x: 6, w: 8 }); this.roadX = 6; keep.push({ x: 6, z: 50, r: 26 }); this.boxes.push({ x: 6, z: 149, hw: 22, hd: 2.6, h: 17, kind: 'bjwall' }); /* the barbican's front wall (drawn by the renderer's Beijing set) */
       for (let bx = -5; bx <= 5; bx++) for (let bz = -4; bz <= 1; bz++) { const x = 6 + bx * 21 + r.range(-2, 2), z = bz * 24 + 8 + r.range(-3, 3); if (Math.abs(x - 6) < 11 || r.next() < 0.3 || !clear(x, z, 6)) continue;
         const two = r.next() < 0.45; this.boxes.push({ x: x - (two ? 3.6 : 0), z, hw: two ? 3 : 5, hd: 3.2, h: r.range(3, 3.6), kind: 'house' }); if (two) this.boxes.push({ x: x + 4, z: z + r.range(-1, 1), hw: 3, hd: 3, h: r.range(2.8, 3.4), kind: 'house' }); keep.push({ x, z, r: 8 }); }
     }
@@ -1894,7 +1896,7 @@ class Sim {
   losClear(u, t) {
     if (u.losTk !== undefined && this.tick - u.losTk < 12 && u.losTo === t.id) return u.losOk;
     const ox = u.x, oy = u.y + 1.5, oz = u.z, dx = t.x - ox, dy = t.y + 1.2 - oy, dz = t.z - oz; let ok = true;
-    for (let i = 0; i < this.boxes.length && ok; i++) { const b = this.boxes[i]; if (b.kind === 'sface' && this.overParapet(u)) continue; const k = this.rayBox(ox, oy, oz, dx, dy, dz, b, 1); if (k > 0.02 && k < 0.98) ok = false; }
+    for (let i = 0; i < this.boxes.length && ok; i++) { const b = this.boxes[i]; if (b.kind === 'sinner' || (b.kind === 'sface' && this.overParapet(u))) continue; const k = this.rayBox(ox, oy, oz, dx, dy, dz, b, 1); if (k > 0.02 && k < 0.98) ok = false; }
     const hd = len(dx, dz);
     if (ok && hd > 1e-6) { const ux = dx / hd, uz = dz / hd, obs = this.obstacles;
       for (let i = 0; i < obs.length; i++) { const o = obs[i]; if (o.kind === 0) continue; const lx = ox - o.x, lz = oz - o.z, b = lx * ux + lz * uz, c = lx * lx + lz * lz - o.r * o.r, disc = b * b - c; if (disc < 0) continue;
@@ -1951,7 +1953,7 @@ class Sim {
         bestT = t3; kind = o.kind === 1 ? 'rock' : o.kind === 0 ? 'tree' : 'wood'; victim = null;
       }
     }
-    for (let i = 0; i < this.boxes.length; i++) { if (this.boxes[i].kind === 'sface' && this.overParapet(u)) continue; const t = this.rayBox(ox, oy, oz, dx, dy, dz, this.boxes[i], bestT); if (t > 0 && t < bestT) { bestT = t; kind = this.boxes[i].kind === 'wall' ? 'rock' : 'wood'; victim = null; } }
+    for (let i = 0; i < this.boxes.length; i++) { if (this.boxes[i].kind === 'sinner' || (this.boxes[i].kind === 'sface' && this.overParapet(u))) continue; const t = this.rayBox(ox, oy, oz, dx, dy, dz, this.boxes[i], bestT); if (t > 0 && t < bestT) { bestT = t; kind = this.boxes[i].kind === 'wall' ? 'rock' : 'wood'; victim = null; } }
     if (lost && kind === 'unit') { kind = 'none'; victim = null; }
     if (victim && victim.def.shield && victim.st !== ST_RELEASE && victim.downT <= 0 && Math.abs(wrap(atan2(u.x - victim.x, u.z - victim.z) - victim.yaw)) < 1.0 && this.rng.next() < 0.45) { kind = 'wood'; victim = null; }
     const hx = ox + dx * bestT, hy = oy + dy * bestT, hz = oz + dz * bestT;
@@ -2009,7 +2011,7 @@ class Sim {
         const dt = DT / 3; p.vy -= GRAV * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.life += dt;
         const g = terrainH(p.x, p.z);
         // boxes stop everything
-        for (let b = 0; b < this.boxes.length && !done; b++) { const bx = this.boxes[b]; if (p.over && bx.kind === 'sface') continue; if (p.x > bx.x - bx.hw && p.x < bx.x + bx.hw && p.z > bx.z - bx.hd && p.z < bx.z + bx.hd && p.y < terrainH(bx.x, bx.z) + bx.h) { if (p.kind === 'shell') this.explode(p.x, p.y, p.z, p.team, p.owner, 7.5, 170); else if (p.kind === 'arrow') this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); else this.events.push({ t: 'bounce', x: p.x, y: p.y, z: p.z, big: true }); done = true; } }
+        for (let b = 0; b < this.boxes.length && !done; b++) { const bx = this.boxes[b]; if (bx.kind === 'sinner' || (p.over && bx.kind === 'sface')) continue; if (p.x > bx.x - bx.hw && p.x < bx.x + bx.hw && p.z > bx.z - bx.hd && p.z < bx.z + bx.hd && p.y < terrainH(bx.x, bx.z) + bx.h) { if (p.kind === 'shell') this.explode(p.x, p.y, p.z, p.team, p.owner, 7.5, 170); else if (p.kind === 'arrow') this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); else this.events.push({ t: 'bounce', x: p.x, y: p.y, z: p.z, big: true }); done = true; } }
         if (done) break;
         if (p.y <= g) {
           if (p.kind === 'shell') { this.explode(p.x, g + 0.1, p.z, p.team, p.owner, 7.5, 170); done = true; break; }
@@ -3942,6 +3944,12 @@ Sim.prototype.siegeInit = function () {
   let x0 = -HALF; const gaps = lanes.map(L => [L.x - L.w, L.x + L.w]).concat([[-W.gate - 0.01, W.gate + 0.01]]).sort((a, b) => a[0] - b[0]);
   for (const g of gaps) { if (g[0] > x0 + 0.05) this.boxes.push({ x: (x0 + g[0]) / 2, z: W.z0, hw: (g[0] - x0) / 2, hd: 0.5, h: 1.3, kind: 'sface' }); x0 = g[1]; }
   if (x0 < HALF) this.boxes.push({ x: (x0 + HALF) / 2, z: W.z0, hw: (HALF - x0) / 2, hd: 0.5, h: 1.3, kind: 'sface' });
+  // the inner face is sheer brick: nobody walks up it from the town or steps off it from the wall top except by the stairways (馬道),
+  // whose open sides carry a parapet over a solid brick flank
+  { let a = -HALF; const gaps2 = W.ramps.map(r => [r - 3, r + 3]).concat([[-W.gate - 0.6, W.gate + 0.6]]).sort((p, q) => p[0] - q[0]);
+    for (const g of gaps2) { if (g[0] > a + 0.05) this.boxes.push({ x: (a + g[0]) / 2, z: W.z1 + 0.2, hw: (g[0] - a) / 2, hd: 0.22, h: 1.0, kind: 'sinner', pass: true }); a = g[1]; }
+    if (a < HALF) this.boxes.push({ x: (a + HALF) / 2, z: W.z1 + 0.2, hw: (HALF - a) / 2, hd: 0.22, h: 1.0, kind: 'sinner', pass: true });
+    for (const r of W.ramps) for (const sd of [-1, 1]) this.boxes.push({ x: r + sd * 3.0, z: W.z1 + 7.2, hw: 0.18, hd: 6.6, h: 1.0, kind: 'sinner', pass: true }); }
   // bed crossbows (床弩) and red-barbarian guns on the wall; the besiegers' field guns before it
   for (const e of SG.bows) sg.emp.push({ id: sg.emp.length, kind: 'bow', team: D, x: e[0], z: e[1], yaw: PI, pitch: 0, cd: 30 * 3 + sg.emp.length * 17, man: -1 });
   for (const e of SG.guns) sg.emp.push({ id: sg.emp.length, kind: 'gun', team: D, x: e[0], z: e[1], yaw: PI, pitch: 0, cd: 30 * 5 + sg.emp.length * 23, man: -1 });
@@ -4001,7 +4009,7 @@ Sim.prototype.sgPredict = function (e, yaw, pitch) {
   const bow = e.kind === 'bow', v = bow ? 62 : 78, cp = cos(pitch); let x = e.x + sin(yaw) * 1.6, z = e.z + cos(yaw) * 1.6, y = e.y + (bow ? 1.4 : 1.2), vx = sin(yaw) * cp * v, vy = sin(pitch) * v, vz = cos(yaw) * cp * v; const over = e.team === this.sg.D, pts = [];
   for (let t = 0; t < 30 * 8; t++) { for (let s = 0; s < 3; s++) { const dt = DT / 3; vy -= GRAV * dt; x += vx * dt; y += vy * dt; z += vz * dt;
       if (Math.abs(x) > HALF || Math.abs(z) > HALF) return { x, y, z, pts, out: true };
-      for (const bx of this.boxes) { if (over && bx.kind === 'sface') continue; if (x > bx.x - bx.hw && x < bx.x + bx.hw && z > bx.z - bx.hd && z < bx.z + bx.hd && y < terrainH(bx.x, bx.z) + bx.h) return { x, y, z, pts, box: true }; }
+      for (const bx of this.boxes) { if (bx.kind === 'sinner' || (over && bx.kind === 'sface')) continue; if (x > bx.x - bx.hw && x < bx.x + bx.hw && z > bx.z - bx.hd && z < bx.z + bx.hd && y < terrainH(bx.x, bx.z) + bx.h) return { x, y, z, pts, box: true }; }
       const g = terrainH(x, z); if (y <= g) return { x, y: g, z, pts }; }
     if (t % 3 === 0) pts.push(x, y, z); }
   return { x, y, z, pts, out: true };
