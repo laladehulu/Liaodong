@@ -351,7 +351,7 @@ let MIS = null;
 function missionStart() {
   const sim = state.sim, M = sim.mission; MIS = { radioT: 0, bannerT: 0, said: [] };
   MUSIC.play(sim.mode === 'assault' ? 'siege' : 'battle'); MUSIC.setIntensity(0.5);
-  if (sim.mode === 'assault') { const me = sim.players[state.localIdx], att = me.team === M.attacker; setTimeout(() => storyCard(`${M.brief} ${att ? `You attack. Your side has ${M.tickets} men to spend: every one who falls is gone for good. Take every point of a sector to push the line forward.` : `You defend. Hold each line as long as you can; when a sector falls, fall back to the next.`}`, `${M.title} · ${M.year}`), 400); }
+  if (sim.mode === 'assault') { const me = sim.players[state.localIdx], att = me.team === M.attacker; setTimeout(() => storyCard(M.talk ? `${M.brief} ${att ? `You attack, with ${M.tickets} men to spend.` : 'You defend.'}` : `${M.brief} ${att ? `You attack. Your side has ${M.tickets} men to spend: every one who falls is gone for good. Take every point of a sector to push the line forward.` : `You defend. Hold each line as long as you can; when a sector falls, fall back to the next.`}`, `${M.title} · ${M.year}`), 400); }
 }
 function radio(who, text) { if (typeof SPEECH !== 'undefined' && SPEECH.note) { SPEECH.note(who, text); return; } const r = $('radio'); r.firstChild.textContent = who; r.lastChild.textContent = text; r.hidden = false; MIS.radioT = Math.min(11, 4 + text.length / 22); AUDIO.play('ui', undefined, 0, 0, 0.6); }
 function banner(big, small, t) { const b = $('banner'); b.innerHTML = `${big}${small ? `<small>${small}</small>` : ''}`; b.hidden = false; MIS.bannerT = t || 3.5; }
@@ -376,6 +376,9 @@ function missionEvent(ev) {
   if (ev.t === 'mphase' && M.camp) return;
   if (M.cast && ev.t === 'mphase') { const P = M.phases[ev.ph] || {}; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, P.goal || '', 5); if (ev.ph) MUSIC.accent('phase'); return; }
   if (M.cast && ev.t === 'msay') { coopSay(ev); return; }
+  if (ev.t === 'msay' && ev.team !== undefined) { if (ev.team !== me.team) return; const h = localHero(); let id = -1; /* an op's briefing line: a man of your own side near you says it */
+    if (h && typeof SPEECH !== 'undefined') { const c = sim.teamAlive[me.team].filter(u => u.id !== h.id && !u.dead && !u.wounded && u.type !== 'horse' && Math.hypot(u.x - h.x, u.z - h.z) < 14); if (c.length) id = c[(ev.text.length + c.length) % c.length].id; }
+    if (!(id >= 0 && SPEECH.say(id, ev.zh || '', ev.text, { prio: 3, loud: true, radio: true, who: ev.who, dur: Math.min(7, 2.5 + ev.text.length / 20) }))) radio(ev.who, `${ev.zh ? ev.zh + '  ' : ''}${ev.text}`); return; }
   if (M.cast && ev.t === 'zwound' && ev.p === state.localIdx) { const u = sim.units[ev.id]; if (u && typeof SPEECH !== 'undefined') SPEECH.say(ev.id, '我倒了……拉我一把！', 'I\'m down... get me up!', { prio: 3, dur: 4, loud: true, who: 'One of your men' }); toast(`One of your men is down${ev.why ? ' (' + ev.why + ')' : ''}. Get to him and press E to get him up`); return; }
   if (ev.t === 'mphase' && M.soldier) { const P = M.phases[ev.ph] || {}; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, P.goal || (ev.text || '').split(/(?<=[.!?])\s/)[0], 5); if (ev.ph) MUSIC.accent('phase'); return; }
   if (ev.t === 'msay' && M.soldier && typeof zheSay === 'function' && zheSay(ev)) return;

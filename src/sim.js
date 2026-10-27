@@ -3225,7 +3225,12 @@ const MISSIONS = {
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
   ningyuan_siege: {
     siege: true, title: '寧遠攻守 · The Siege of Ningyuan', year: 'February 1626', battle: 'siegecity', attacker: 1, tickets: 640,
-    brief: 'Nurhaci brings the Eight Banners against Ningyuan in the depth of winter. Yuan Chonghuan has burned the suburbs, brought the people inside and mounted Western cannon on the walls. The Jin must fill the ditch, climb or break the walls, take the gatehouse and fight through the streets to the yamen.',
+    brief: 'Nurhaci\'s banners against Yuan Chonghuan\'s walls and Western cannon, in the depth of winter.',
+    // the briefing is talk, spaced through the first minutes and heard by one side only (talk[team]): [t, who, en, zh]
+    talk: { 1: [[4, 'A bannerman', 'The suburbs are ash. He burned them himself.', '城外燒成灰了。他自己燒的。'], [16, 'Your banner chief', 'Fill the ditch first. Nobody climbs till the ditch is full.', '先填壕。壕不滿誰也不許爬。'],
+        [40, 'A bannerman', 'Those are Western guns on the wall. Big ones.', '牆上是西洋砲。大傢伙。'], [70, 'Your banner chief', 'The gatehouse, then the streets. The yamen is at the end.', '先門樓，再街巷。衙門在最裡頭。']],
+      0: [[4, 'Yuan Chonghuan', 'I burned the suburbs myself. They get nothing out there.', '城外是我自己燒的。他們什麼也撈不著。'], [16, 'A gunner', 'Red cannon loaded. Wait till they are in the ditch.', '紅衣砲裝好了。等他們進壕。'],
+        [40, 'A sergeant', 'They fall back from the ditch, we fall back to the wall. Then the gate.', '壕丟了退上牆。牆丟了退到門。'], [70, 'Yuan Chonghuan', 'The yamen is the last line. There is nothing behind it.', '衙門是最後一道。後頭什麼都沒有。']] },
     zones: [{ key: 'ditchW', x: -28, z: 22, r: 13, name: 'A · West ditch', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 13, name: 'B · East ditch', rate: 0.5 },
       { key: 'wallW', x: -25, z: 43.5, r: 7, name: 'A · West wall', owner: 0, rate: 0.6 }, { key: 'wallE', x: 25, z: 43.5, r: 7, name: 'B · East wall', owner: 0, rate: 0.6 },
       { key: 'gatehouse', x: 0, z: 55, r: 8, name: 'A · The gatehouse', owner: 0, rate: 0.5 },
@@ -3239,7 +3244,11 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
   },
   liaoyang: {
     title: '遼陽之戰 · Assault on Liaoyang', year: 'April 1621', battle: 'aizu', attacker: 1, tickets: 520,
-    brief: 'The Jin storm Liaoyang, capital of Liaodong. Three lines stand between the banners and the keep: the outer trenches, the market quarter and the city gate.',
+    brief: 'The Jin storm Liaoyang, the capital of Liaodong.',
+    talk: { 1: [[4, 'Your banner chief', 'Liaoyang. Take this and Liaodong is ours.', '遼陽。拿下它，遼東就是咱們的。'], [18, 'A bannerman', 'Trenches first, west and east. They have muskets in them.', '先是壕，東西兩道。裡頭有銃。'],
+        [45, 'Your banner chief', 'Behind the trenches, the market. Then the gate. Then the keep.', '壕後頭是市集。再是城門。再是內城。']],
+      0: [[4, 'Yuan Yingtai', 'They are coming for the capital. Hold the trenches.', '他們衝著省城來。守住壕。'], [18, 'A sergeant', 'Muskets in the trench. Fire when they reach the stakes.', '銃手在壕裡。到了木樁再放。'],
+        [45, 'A sergeant', 'If the trench goes, the market. If the market goes, the gate.', '壕丟了守市集。市集丟了守城門。']] },
     zones: [{ key: 'a1', x: -40, z: -62, r: 12, name: 'A · West trench', owner: 0, rate: 0.55 }, { key: 'b1', x: 40, z: -62, r: 12, name: 'B · East trench', owner: 0, rate: 0.55 },
       { key: 'a2', x: 0, z: 6, r: 14, name: 'A · Market quarter', owner: 0, rate: 0.5 }, { key: 'b2', x: -60, z: 20, r: 12, name: 'B · Drum tower', owner: 0, rate: 0.55 },
       { key: 'a3', x: 0, z: 63, r: 10, name: 'A · City gate', owner: 0, rate: 0.45 }, { key: 'b3', x: 0, z: 96, r: 13, name: 'B · The keep', owner: 0, rate: 0.4 }],
@@ -3253,7 +3262,11 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
   },
   shanhai: {
     title: '山海關 · The First Pass Under Heaven', year: 'May 1644', battle: 'bonari', attacker: 1, tickets: 480,
-    brief: 'Li Zicheng\'s rebels hold Beijing; the Qing banners come down on Shanhai Pass. The pass is narrow: an outer trench line, the earthwork, and the great gate itself.',
+    brief: 'The Qing banners come down on Shanhai Pass, the First Pass Under Heaven.',
+    talk: { 1: [[4, 'Your banner chief', 'Beijing has fallen to the rebels. This pass is the way in.', '北京落到流賊手裡了。這道關是進去的路。'], [18, 'A bannerman', 'Narrow. A trench line, then an earthwork, then the gate.', '窄。一道壕，一道土牆，再是關門。'],
+        [45, 'Your banner chief', 'No way round the slopes. Straight up the middle, point by point.', '兩邊坡繞不過去。從中間一處一處打。']],
+      0: [[4, 'Wu Sangui', 'Beijing is gone. This pass is all that is left of the Ming.', '北京沒了。大明就剩這道關。'], [18, 'A sergeant', 'Trench line first. When it goes, the earthwork. Then the gate.', '先守壕。壕丟了守土牆。再守關門。'],
+        [45, 'A gunner', 'They must come up the middle. Every gun on the road.', '他們只能從中間上來。所有砲對著路。']] },
     zones: [{ key: 'a1', x: -14, z: -40, r: 11, name: 'A · Trench line', owner: 0, rate: 0.55 }, { key: 'b1', x: 16, z: -34, r: 11, name: 'B · Signal tower', owner: 0, rate: 0.55 },
       { key: 'a2', x: 0, z: 32, r: 11, name: 'A · Outer earthwork', owner: 0, rate: 0.5 },
       { key: 'a3', x: -10, z: 92, r: 11, name: 'A · Pass gate', owner: 0, rate: 0.45 }, { key: 'b3', x: 14, z: 104, r: 10, name: 'B · Gate tower', owner: 0, rate: 0.45 }],
@@ -3928,6 +3941,8 @@ Sim.prototype.reviveUnit = function (u, x, z) {
 Sim.prototype.defKey = function (di) { const M = this.mission; let k = 0; for (const s of M.sectors) for (const key of s) { if (k === di) return key; k++; } return null; };
 Sim.prototype.assaultThink = function () {
   const M = this.mission, A = M.attacker; const keys = M.sectors[this.sector];
+  // the briefing as talk: each side's lines, spaced through the opening (both sides' events go out; the HUD keeps its own)
+  if (M.talk) { const mv = this.mv, el = this.tick / 30; for (const tm in M.talk) for (const [t, who, text, zh] of M.talk[tm]) { const k = 'op:' + tm + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '', team: tm | 0 }); } } }
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') act++;
   const CAP = M.cap || 64;
