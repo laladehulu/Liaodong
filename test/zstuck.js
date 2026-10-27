@@ -1,0 +1,14 @@
+// Stuck men: how many AI men want to move but hardly do, for seconds at a time, on a map with walls. node test/zstuck.js <battle> [seed] [sec]   SIMSRC= to compare
+const fs = require('fs'), vm = require('vm'), path = require('path');
+const src = ['dmath.js', 'sim.js', 'sim_maps.js'].map(f => fs.readFileSync(f === 'sim.js' && process.env.SIMSRC ? process.env.SIMSRC : path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
+const ctx = { console, Math, Int32Array, Float64Array, Float32Array, Int16Array, Uint8Array }; vm.createContext(ctx); vm.runInContext(src + '\nthis.SIM = SIM;', ctx);
+const S = ctx.SIM, battle = process.argv[2] || 'aizu', seed = +process.argv[3] || 1, maxT = (+process.argv[4] || 90) * 30;
+const sim = new S.Sim({ seed, mode: 'standard', battle, players: [{ name: 'a', team: 0, army: ['samurai', 'ashigaru', 'rifle_imp'] }, { name: 'b', team: 1, army: ['samurai', 'byakkotai', 'archer'] }] });
+sim.phase = 1; sim.battleTick = sim.tick; for (const p of sim.players) { p.ready = true; p.auto = true; }
+const still = {}, stuckSec = {}, where = {}; let samples = 0, stuckN = 0, flowNull = 0, nullCalls = 0;
+const origFlow = sim.flowTo.bind(sim); sim.flowTo = function (gx, gz) { const f = origFlow(gx, gz); nullCalls++; if (!f) flowNull++; return f; };
+for (let t = 0; t < maxT; t++) { sim.step([0, 0]);
+  for (const u of sim.units) { if (u.dead || u.ctrl >= 0 || u.type === 'horse' || u.mounted) continue; const want = Math.hypot(u.mx, u.mz), moved = Math.hypot(u.x - u.px, u.z - u.pz) * 30;
+    if (want > 1.0 && moved < want * 0.35 && u.st === S.ST_IDLE && !u.blocking && !(u.target >= 0 && Math.hypot(sim.units[u.target].x - u.x, sim.units[u.target].z - u.z) < u.def.reach + 1)) { still[u.id] = (still[u.id] || 0) + 1; if (still[u.id] === 30) { stuckSec[u.id] = (stuckSec[u.id] || 0) + 1; const b = sim.boxes.reduce((best, bx) => { const d = Math.max(Math.abs(bx.x - u.x) - bx.hw, Math.abs(bx.z - u.z) - bx.hd); return d < best[0] ? [d, bx.kind] : best; }, [1e9, '-']); const k = (b[0] < 2.5 ? 'near ' + b[1] : 'open') + ' tgt' + (u.target >= 0 ? (Math.hypot(sim.units[u.target].x - u.x, sim.units[u.target].z - u.z) > 12 ? 'far' : 'near') : 'none') + ' slot' + (u.slotX !== undefined ? Math.hypot(u.slotX - u.x, u.slotZ - u.z).toFixed(0) : '-') + ' wp' + (u.navWp ? 'Y' : 'N') + ' blk' + (sim.navBlk[sim.navCell(u.x + u.mx * 0.5, u.z + u.mz * 0.5)] ? 'Y' : 'N') + ' st' + (u.stuckT ? 'Y' : 'N'); where[k] = (where[k] || 0) + 1; still[u.id] = 0; } } else still[u.id] = 0; }
+  if (t % 30 === 0) { samples++; } }
+const men = Object.values(stuckSec); console.log(JSON.stringify({ battle, seed, secs: maxT / 30, stuckEpisodes1s: men.reduce((a, b) => a + b, 0), menStuck: men.length, where, flowNull: flowNull + '/' + nullCalls, alive: sim.teamAlive.map(a => a.length), hash: sim.hash() }));

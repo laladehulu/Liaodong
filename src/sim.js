@@ -1379,8 +1379,19 @@ class Sim {
     u.navT = 8; u.navGx = gx; u.navGz = gz; u.navWp = null;
     if (len(gx - u.x, gz - u.z) < 2 || !this.navBlockedLine(u.x, u.z, gx, gz)) return null;
     const f = this.flowTo(gx, gz); if (!f) return null; const W = this.navW, C = this.navC; let c = this.navCell(u.x, u.z);
-    if (f[c] < 0) { // standing in a blocked cell: step to any reachable neighbour
-      let best = -1, bd = 1e9; for (const o of [1, -1, W, -W, W + 1, W - 1, -W + 1, -W - 1]) { const n = c + o; if (n >= 0 && n < f.length && f[n] >= 0 && f[n] < bd) { bd = f[n]; best = n; } } if (best < 0) return null; c = best; }
+    if (f[c] < 0) { // standing against a wall (inside the blocked margin): walk out to the nearest open ground the field reaches,
+      // searching rings outward rather than only the eight cells touching him - a man in a corner has no open neighbour at all,
+      // and used to get no way at all and walk straight into the stone
+      // he is in the margin along a wall, where the field has no value: come off the face and slide along it the way that
+      // takes him toward his goal, until he is on open ground again and the field can steer him
+      let bb = null, bp = 1e9;
+      for (const b of this.boxes) { if (b.hw < 0.1 || b.pass || b.kind === 'mantlet' || b.kind === 'gone') continue;
+        const px = b.hw + 1.4 - Math.abs(u.x - b.x), pz = b.hd + 1.4 - Math.abs(u.z - b.z); if (px <= 0 || pz <= 0) continue; const p = Math.min(px, pz); if (p < bp) { bp = p; bb = [b, px, pz]; } }
+      if (!bb) return null;
+      const b = bb[0], outX = bb[1] <= bb[2] ? (u.x >= b.x ? 1 : -1) : 0, outZ = bb[1] <= bb[2] ? 0 : (u.z >= b.z ? 1 : -1);
+      const tgX = -outZ, tgZ = outX, sd = ((gx - u.x) * tgX + (gz - u.z) * tgZ) >= 0 ? 1 : -1; /* along the face, toward his goal */
+      const off = Math.min(bb[1] <= bb[2] ? bb[1] : bb[2], 2.2) + 0.6;
+      u.navWp = [u.x + outX * off + tgX * sd * 3.5, u.z + outZ * off + tgZ * sd * 3.5]; return u.navWp; }
     // walk down the field a few cells and aim at the farthest one we can see directly
     const NB = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]], bl = this.navBlk; let cur = c, aim = c;
     for (let step = 0; step < 6; step++) { const ci = cur % W, cj = (cur / W) | 0; let best = cur, bd = f[cur];
