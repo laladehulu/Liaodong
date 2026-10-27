@@ -21,7 +21,9 @@ Local test pages (no CDN): `dist/test.html`, `test-real.html`, `test-style.html`
 
 ## 2. Source map (`src/`)
 - `dmath.js` — deterministic math (DM trig) used by the sim. **The sim must never use Math.sin/cos/random.**
-- `sim.js` (~4.3k lines) — the whole simulation: units, squads, AI (`unitAI`, `findTarget`, `cavCharge`, `yyAI` duck team,
+- `sim_coop.js` — data only: the newer co-op missions (Zhenjiang night raid, grain road, Jinzhou lines, Dalinghe sortie),
+  added to `SIM.MISSIONS`. Loaded right after `sim.js` in every edition.
+- `sim.js` (~4.4k lines) — the whole simulation: units, squads, AI (`unitAI`, `findTarget`, `cavCharge`, `yyAI` duck team,
   `spearKeep`/`pointWait`, `losClear`), combat (`startWindup`, `updateCombatState`, `sweepHit`, `resolveMeleeHit`,
   `applyDamage`, `fireRifle`), story/campaign missions (`MISSIONS`, `mg` groups, `zDown`/`zRevive` wounded), siege (`sg*`).
   Exported at the bottom (`return { Sim, DEFS, ... }`) as the global `SIM`.
@@ -33,7 +35,8 @@ Local test pages (no CDN): `dist/test.html`, `test-real.html`, `test-style.html`
 - `action.js` — Action-combat edition: 13 committed moves (`MV` table), wraps `startWindup` / `updateCombatState` /
   `unitAI` / `meleeControl` on `SIM.Sim.prototype`; returns early unless `MING_ACTION`.
 - `main.js` (+ `career.js`, `zhe.js` story 浙, `jin.js` Jin campaign, `shenji.js` 神機營 campaign, `choices.js` branching
-  decisions, `deeds.js`, `debug.js`) — UI, HUD, input, menus. `build.sh` splices these into `src/_mainfull.js` (generated).
+  decisions, `shenji2.js` the 神機營 expansion (Zunhua road, Yongding Gate, Luanzhou, Lengkou + five choices), `deeds.js`,
+  `debug.js`) — UI, HUD, input, menus. `build.sh` splices these into `src/_mainfull.js` (generated).
 - `audio.js`, `voice.js`, `music.js`, `snd/` + `voice/` (CC0 clips; `snd_data.js`/`voice_data.js` are generated).
 - `net.js` — PeerJS lockstep networking. `beacon.js`/`mode_beacon.js` — the 烽火 Hold-the-Beacon mode.
 - `01_head.html` — page shell, CSS, menus.
@@ -47,7 +50,11 @@ tools/snap.sh "<you>: what changed" # git commit of the working tree (locked); d
 Headless browser for screenshots: playwright-core at `/opt/npm-tools/node_modules/playwright-core`, chromium at
 `/opt/pw-browsers/chromium_headless_shell-1243/...` with `--use-angle=swiftshader`. Software rendering: frame timings are
 NOT representative of a real GPU, and heavy scenes can crash the tab — keep scenes small.
-Story battles can be started headless by writing localStorage `mingZhe` / `mingZheGo` (see any test script).
+Story battles can be started headless by writing localStorage `mingZhe` / `mingZheGo` (神機營: `mingShenji` / `mingShenjiGo`).
+Since a container restart, `page.screenshot` hangs on WebGL pages: call `renderer.render(...)` inside `page.evaluate` and read
+`renderer.renderer.domElement.toDataURL()` instead (one readback per browser; a second one can crash the tab).
+`node test/colliders.js test.html grand:field,...` lists drawn building geometry a man could walk into (no sim collider under it).
+Publishing (main session only): `tools/pub.sh vN "message"` snapshots, builds every edition into the Pages repo and pushes.
 
 ## 4. Hard rules (each of these has broken the game before)
 1. **Determinism.** Sim code uses `this.rng` only (never `Math.random`), DM trig, and must give identical results on every
@@ -71,18 +78,29 @@ Story battles can be started headless by writing localStorage `mingZhe` / `mingZ
 - Don't lower resolution to fix performance — find the expensive thing.
 - First-person immersion in tight formation is the core of the game; duels are secondary.
 
-## 6. Current state (v89, 27 Oct 2026)
-Recent work: smoke shader (rising, sulphur-grey black-powder smoke), Bannerlord-style hit feel (blade drag, blood on blade,
-Delivered/Received log), faces with eyes, grimy uniforms, robe flaps on the thighs, spear point-keeping AI, cavalry
-charge fixes, LOS for gunners and siege defenders climbing to the rampart, melee spreading/wrap-around, campaign choices
-(浙 story: the Jurchen boy, the ravine, Hun River, letter home, ledger), Action-combat edition with 13 moves.
+## 6. Current state (v106, 27 Oct 2026)
+Recent work, newest first:
+- **No hold-outs**: a `survive` objective now ends ~3 s after the phase's fight is over (`mThreat`, `mQuietDone`); while
+  quiet, the phase's waves/`at` beats are brought forward. `hold` needs at most 12 s. Phases can branch (`next`, action `goto`);
+  action `explode [x, z, r, dmg]`.
+- **Difficulty** `cfg.diff` 0–3 (Recruit / Soldier / Veteran / Lone banner). Carried in the start message; stored per browser
+  (`localStorage.mingDiff`, `diffPref()`, `diffUI()` in career.js). Lone banner drops AI ally groups in co-op unless the
+  mission needs them (`arrive`/`officer` targets, `escort: true`).
+- 神機營 expansion (shenji2.js), four co-op missions (sim_coop.js), **Duel mode** (`mode: 'duel'`, `duelSetup/duelThink2`).
+- Online: adaptive input delay (`netTune`), unordered redundant input channel (net.js `fast`), clock sync (`netAhead`),
+  local camera prediction (`predictHero` → `renderer.pred`), TURN relays (Open Relay static auth + PeerJS). Ally player tags,
+  order flags and blue lozenges over a friend's men.
+- First-person death view (`state.dying`, render mode `'death'`), sprint charging blow (`u.chg`, xcombat editions),
+  heavier hit thump (`bodythump`), crossbow/gun emplacement feedback (`empHit`), deploy picker lists every kind (rekit).
+- Colliders: keeps sized to their drawn platform, siege inner face/stairs solid (`sinner` boxes), terrain grid snapped to
+  the siege wall's drops, houses untangled (`untangleHouses`).
 
 Open items you could take (check with the user/main first):
-- **Safari lag**: not yet located. The user can test `?off=feet,rig,smoke,gear,shadows`. Software profiling points at the
-  gear instancing (`GEAR_K` slots × every unit, rounded-box geometry, drawn in two passes).
-- **Campaign choices** for the Jin campaign (half done in `choices.js`) and the 神機營 campaign (none yet).
-- Siege: many defender gunners still stay inside the town; `toRampart` only runs when they have a target out of sight.
-- Action combat: player-side tuning, a move list / tutorial card in the HUD, render poses for leap/sweep/bash.
+- Balance the new co-op missions on Veteran / Lone banner (only tested by a passive bot).
+- Safari lag: still not located (`?off=feet,rig,smoke,gear,shadows` switches exist).
+- Jin campaign choices (half done in `choices.js`).
+- Night biome always snows (the Zhenjiang raid is in summer).
+- Action combat: move list card, poses for leap/sweep/bash.
 
 ## 7. Getting the source / sending changes back
 The source lives only in the main session's workspace. You will be given `liaodong.bundle` (the whole git repo in one
