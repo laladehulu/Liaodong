@@ -2450,6 +2450,15 @@ class Renderer {
     if (hero.st === ST_SWAP) { target = P(target.px, target.py - 0.6, target.pz, target.rx + 0.8, target.ry, target.rz); speed = 12; }
     if (hero.st === ST_KICK) { target = P(target.px + 0.1, target.py - 0.15, target.pz, target.rx + 0.3, target.ry, target.rz); camPitch = -0.03; }
     { const he = hrEnv(hero, this.alpha === undefined ? 1 : this.alpha); if (he > 0.01) { const hs = hero.hrS || 1, jb = hero.hrK === 5; target = P(target.px + 0.05 * hs * he, target.py - (jb ? 0.05 : 0.12) * he, target.pz + (jb ? 0.14 : 0.08) * he, target.rx + (jb ? 0.15 : 0.35) * he, target.ry, target.rz + 0.15 * hs * he); speed = Math.max(speed, 34); camPitch += (jb ? 0.012 : 0.035) * he; camRoll += -0.035 * hs * he; } }
+    if (this.gesture && hero.st === ST_IDLE && !hero.aiming && !hero.blocking && !mounted) { /* the gesture that goes with an order, in your own hands: the blade up and pointed for a charge, held out flat for a halt, a beckon for follow me, a chop down for fire, a sweep across for a formation */
+      const G = this.gesture; G.t += this.fdt || 0.016; const T = G.t, kind = G.kind, L = kind === 'charge' ? 1.3 : kind === 'follow' ? 1.1 : 0.9; if (T >= L) this.gesture = null;
+      else { const e = (a, b) => Math.min(1, Math.max(0, (T - a) / (b - a))), sm = (x) => x * x * (3 - 2 * x); let gp = null;
+        if (kind === 'charge') { const up = sm(e(0, 0.3)), out = sm(e(0.35, 0.65)), down = sm(e(1.0, 1.3)); gp = P(0.2 - out * 0.08, -0.1 + up * 0.28 - out * 0.3 - down * 0.05, -0.55 - out * 0.3, -1.35 * up + 1.55 * out, 0.15 * up, 0.08); }
+        else if (kind === 'hold') { const o = sm(e(0, 0.25)) * (1 - sm(e(0.65, 0.9))); gp = P(0.12 + 0.3 * o, -0.05 + 0.05 * o, -0.6, 0.1, -0.5 * o, 1.3 * o); }
+        else if (kind === 'follow') { const o = sm(e(0, 0.2)) * (1 - sm(e(0.85, 1.1))), w = Math.sin(T * 14) * 0.08; gp = P(0.12 + w, -0.1 + 0.2 * o, -0.6 - 0.1 * o, -1.0 * o, 0.3 * o, 0); }
+        else if (kind === 'fire') { const up = sm(e(0, 0.25)), drop = sm(e(0.3, 0.45)); gp = P(0.18, -0.1 + 0.3 * up - 0.35 * drop, -0.6, -1.1 * up + 1.5 * drop, 0, 0); }
+        else { const o = sm(e(0, 0.25)) * (1 - sm(e(0.6, 0.9))), sw = Math.sin(e(0.1, 0.7) * Math.PI) * 0.4; gp = P(0.0 + sw, -0.05 + 0.1 * o, -0.6, -0.4 * o, 0.9 * o - sw, 0.2 * o); }
+        if (gp) { target = gp; speed = Math.max(speed || 8, 16); } } }
     const k = 1 - Math.exp(-speed * dt), kh = 1 - Math.exp(-16 * dt);
     st.pos.x += (target.px - st.pos.x) * k; st.pos.y += (target.py - st.pos.y) * k; st.pos.z += (target.pz - st.pos.z) * k;
     st.rot.x += (target.rx - st.rot.x) * k; st.rot.y += (target.ry - st.rot.y) * k; st.rot.z += (target.rz - st.rot.z) * k;

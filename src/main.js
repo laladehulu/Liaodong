@@ -386,7 +386,7 @@ function renderAllies() {
   if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; } box.hidden = false;
 }
 $('allies').addEventListener('click', (e) => { const bt = e.target.closest('button'); if (!bt) return; directive(+bt.dataset.p, +bt.dataset.k); });
-function shout(text) { feed(text, true); AUDIO.play('ui'); }
+function shout(text, kind) { feed(text, true); AUDIO.play('ui'); if (state.renderer) state.renderer.gesture = { kind: kind || (/charge/i.test(text) ? 'charge' : /follow/i.test(text) ? 'follow' : /hold|halt/i.test(text) ? 'hold' : /fire/i.test(text) ? 'fire' : 'form'), t: 0 }; } /* every shouted order comes with its gesture in your own hands */
 function names() { const sim = state.sim; const own = fpSquads(); return state.fpSel.length === own.length ? 'Everyone' : state.fpSel.map(id => sim.squads[id].def.name).join(', '); }
 function fpMove() { const lay = fpLayout(); if (!lay) { toast('Look at the ground to give a position'); return; } for (const o of lay.out) { if (!o.sq.def.skirmish && o.sq.formation !== S.FORM_LINE) Input.cmds.push([o.sq.id, S.ORD_FORM, 0, 0, 0, S.FORM_LINE]); } for (const o of lay.out) Input.cmds.push([o.sq.id, S.ORD_MOVE, +o.cx.toFixed(2), +o.cz.toFixed(2), Math.round(lay.facing * 1000), o.cols]); shout(`${names()}: form up there!`); if (typeof SPEECH !== 'undefined') SPEECH.orderChain(S.ORD_FORM, state.fpSel.slice()); }
 function fpCharge() {
