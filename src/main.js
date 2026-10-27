@@ -83,6 +83,13 @@ function dangerHUD(hero, sim) {
       const ang = (-(Math.atan2(dx, dz) - Input.yaw)) * 180 / Math.PI, r = 150 - 85 * prog; el.style.transform = `rotate(${ang}deg) translateY(${-r}px)`; el.style.opacity = Math.min(1, 0.35 + prog * 0.9); } }
   for (let i = k; i < DG.pool.length; i++) DG.pool[i].style.opacity = 0;
 }
+// blood on the lens: a few drops from a cut at arm's length, sliding a little and fading over a couple of seconds (never more than a dozen)
+const LENS = { drops: [] };
+function lensHUD(r, dt) {
+  const box = $('lens'); if (!box) return;
+  if (r && r.lensBlood > 0) { const n = Math.min(r.lensBlood, 12 - LENS.drops.length); r.lensBlood = 0; for (let i = 0; i < n; i++) { const el = document.createElement('i'); const s = 6 + Math.random() * 16; el.style.width = s + 'px'; el.style.height = s * (0.8 + Math.random() * 0.6) + 'px'; const d = { el, x: 20 + Math.random() * 60, y: 15 + Math.random() * 65, t: 2 + Math.random() * 1.6, v: 2 + Math.random() * 6, s }; box.appendChild(el); LENS.drops.push(d); } }
+  for (let i = LENS.drops.length - 1; i >= 0; i--) { const d = LENS.drops[i]; d.t -= dt; d.y += d.v * dt * 0.4; d.el.style.left = d.x + '%'; d.el.style.top = d.y + '%'; d.el.style.opacity = Math.min(1, d.t * 0.8); if (d.t <= 0) { d.el.remove(); LENS.drops.splice(i, 1); } }
+}
 function storyCard(text, title) { const el = $('storycard'); el.innerHTML = (title ? `<b>${title}</b>` : '') + `<span>${text}</span>`; el.classList.add('show'); clearTimeout(state.storyT); state.storyT = setTimeout(() => el.classList.remove('show'), Math.min(14000, 3500 + text.length * 55)); }
 function heroHUD() {
   const sim = state.sim; if (!sim || !sim.heroMode) return; state.hhT = (state.hhT || 0) - 1; if (state.hhT > 0) return; state.hhT = 6;
@@ -974,7 +981,7 @@ function updateHUD(dt) {
   if (hero && !hero.dead && !Input.cmdMode && sim.phase === 1) { // a horseman bearing down on you: warn in time to dodge or brace
     state.cavT = (state.cavT || 0) - dt; if (state.cavT <= 0) { for (const v of sim.teamAlive[1 - hero.team]) { if (!v.mounted || Math.abs(v.hspeed || 0) < 5.5) continue; const dx = hero.x - v.x, dz = hero.z - v.z, d = Math.hypot(dx, dz); if (d > 28 || d < 3) continue; if ((dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw)) / d < 0.9) continue;
         state.cavT = 5; state.hitDir = { ang: Math.atan2(v.x - hero.x, v.z - hero.z), t: 2 }; state.renderer.hitQ = { text: hero.weapon === 'yari' ? '騎! Horse charging — brace your spear (hold RMB)' : '騎! Horse charging — slide aside (double-tap A or D)', t: 2.2, c: '#ffcf7a' }; AUDIO.play('neigh', v.x, v.y, v.z, 1.2); break; } } }
-  dangerHUD(hero, sim);
+  dangerHUD(hero, sim); lensHUD(r, dt);
   { const hd = state.hitDir; if (hd && hd.t > 0 && hero) { hd.t -= dt; $('hitdir').style.opacity = Math.min(1, hd.t); $('hitdir').style.transform = `rotate(${(-(hd.ang - Input.yaw)) * 180 / Math.PI}deg)`; } else $('hitdir').style.opacity = 0;
     const hb = state.hitBy; if (hb && hb.t > 0) { hb.t -= dt; $('hitby').textContent = hb.text; $('hitby').style.opacity = Math.min(1, hb.t); } else $('hitby').style.opacity = 0; }
   if (sim.real && typeof soldierHUD === 'function') soldierHUD(dt); else { $('fallen').hidden = true; }
