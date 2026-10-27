@@ -16,7 +16,7 @@ const path = require('path'); const out = process.argv[2], build = process.argv[
     ['approach', 0, (sim) => { const sg = sim.sg; for (const e of sg.engines) e.z = Math.min(e.z + 40, e.tz); }, [22, 6, -20], [0, 3, 30]],
     ['walls', 1, (sim) => { const sg = sim.sg; for (const f of SIM.TERR.sditch.fills) f.done = true; sg.lads[1].up = true; sg.lads[2].up = true; sg.lads[1].hp = 600; sg.lads[2].hp = 600; for (const e of sg.engines) { e.z = e.tz; if (e.kind === 'tower') { e.docked = true; e.lad.up = true; } if (e.kind === 'ram') e.atGate = true; } sg.engines[0].burn = 8; sim.navBoxes(); }, [-30, 9, 16], [-8, 5, 42]],
     ['gate', 2, (sim) => { sim.sgGate(1e6); }, [9, 4, 22], [0, 3, 46]],
-    ['inside', 0, (sim) => {}, [-24, 3.5, 72], [-12, 3, 47]],
+    ['inside', 0, (sim) => {}, [-34, 2.2, 60], [-22, 3.5, 47]],
     ['streets', 3, (sim) => {}, [-30, 16, 50], [0, 2, 100]],
   ];
   const only = process.argv[4] ? process.argv[4].split(',') : null;
