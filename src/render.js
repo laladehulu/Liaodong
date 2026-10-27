@@ -1711,6 +1711,15 @@ class Renderer {
           if (ev.id === heroId) { this.shake = Math.max(this.shake, 0.9); this.hitQ = { text: 'GUARD BROKEN', t: 1.2, c: '#ff5a4a' }; } break; }
         case 'guardcrush': { this.burstSparks(ev.x, ev.y, ev.z, 20, 7, 1, 0.6, 0.3, 0.5, 0.1); AUDIO.play('clang', ev.x, ev.y, ev.z, 1.5); AUDIO.play('thud', ev.x, ev.y, ev.z, 1);
           if (ev.att === heroId) { this.hitstop = Math.max(this.hitstop, 0.07); this.shake = Math.max(this.shake, 0.45); this.hitQ = { text: 'GUARD CRUSHED', t: 1, c: '#ffb04a' }; } if (ev.by === heroId) { this.shake = Math.max(this.shake, 0.8); this.hitQ = { text: 'Heavy blow — parry it, don\'t block', t: 1.6, c: '#ff5a4a' }; } break; }
+        case 'shove': { AUDIO.play('shield', ev.x, ev.y, ev.z, 1.3); AUDIO.play('thud', ev.x, ev.y, ev.z, 1.1); this.dust(ev.x, ev.y - 0.6, ev.z, 8, 0, 0.8, 0, 1.4, 0.8, 0.3, 1.2);
+          if (ev.by === heroId) { this.hitQ = { text: '牌 SHIELD SHOVE — he is open', t: 1.1, c: '#ffd36a' }; this.shake = Math.max(this.shake, 0.3); if (this.imp) this.imp.vx -= 2.2; }
+          else if (ev.id === heroId) { this.shake = Math.max(this.shake, 0.6); this.hitQ = { text: 'SHOVED BACK', t: 0.9, c: '#ff9a7a' }; } break; }
+        case 'brushsweep': { const u = units[ev.id]; AUDIO.play('swish', ev.x, ev.y, ev.z, 1.5); AUDIO.play('entangle', ev.x, ev.y, ev.z, 1); if (u) for (let i = 0; i < 14; i++) { const a2 = u.yaw - 1.1 + i / 13 * 2.2; this.dust(u.x + Math.sin(a2) * 3.2, u.y + 0.4, u.z + Math.cos(a2) * 3.2, 1, Math.sin(a2) * 2, 0.5, Math.cos(a2) * 2, 0.8, 0.5, 0.2, 0.9); }
+          if (ev.id === heroId) this.hitQ = { text: `狼筅 SWEPT THE FRONT — ${ev.n} driven back`, t: 1.2, c: '#9fe07a' }; break; }
+        case 'trap': { AUDIO.play('clang', ev.x, ev.y, ev.z, 1.4); this.burstSparks(ev.x, ev.y, ev.z, 14, 5, 1, 0.9, 0.6, 0.35, 0.09);
+          if (ev.by === heroId) this.hitQ = { text: '鎲鈀 CAUGHT HIS BLADE — strike', t: 1.2, c: '#ffd36a' }; else if (ev.id === heroId) this.hitQ = { text: 'YOUR BLADE IS CAUGHT', t: 1, c: '#ff5a4a' }; break; }
+        case 'horsedown': { AUDIO.play('horsedie', ev.x, ev.y + 1, ev.z, 1.1); AUDIO.play('bodythump', ev.x, ev.y, ev.z, 1.4); this.dust(ev.x, ev.y + 0.2, ev.z, 16, 0, 1.2, 0, 2.2, 1.2, 0.4, 1.6);
+          if (ev.by === heroId) { this.hitQ = { text: '斬馬 THE HORSE GOES DOWN', t: 1.4, c: '#ffd36a' }; this.shake = Math.max(this.shake, 0.5); } break; }
         case 'entangle': { this.dust(ev.x, ev.y, ev.z, 5, 0, 0.6, 0, 0.6, 0.4, 0.1, 0.5); if (ev.id === heroId) this.hitQ = { text: 'SNARED by wolf-brush — dodge out', t: 1.2, c: '#9fe07a' }; break; }
         case 'combo': { if (ev.id === heroId && (!this.hitQ || this.hitQ.t < 0.3)) this.hitQ = { text: `${ev.zh} ${ev.n}/${ev.of}${ev.heavy ? ' · 重' : ''}`, t: 0.55, c: ev.heavy ? '#ffd36a' : '#e8d8a8' }; break; }
         case 'hitq': { if (ev.att === heroId) { const T = { clean: ['CLEAN', '#fff'], tip: ['TIP — perfect measure', '#9fe0ff'], jammed: ['JAMMED — too close for a spear', '#ff9a7a'], graze: ['GRAZE — step in', '#ccc'], pinned: ['PINNED', '#9fe07a'], deathblow: ['致命 DEATHBLOW', '#ffd36a'] }[ev.q] || ['HIT', '#fff'];
