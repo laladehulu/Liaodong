@@ -1352,7 +1352,7 @@ class Renderer {
     this.VM = {
       katana: {
         idle: P(0.3, -0.33, -0.55, -1.0, 0.3, 0.2),
-        windup: [P(0.25, 0.22, -0.35, 0.75, 0.15, 0.2), P(0.7, -0.1, -0.4, -0.5, 0.2, -1.5), P(0.32, -0.3, -0.18, -1.5, 0.1, 0), P(-0.5, -0.05, -0.4, -0.5, -0.2, 1.5)],
+        windup: [P(0.44, 0.1, -0.24, 0.75, 0.15, 0.55), P(0.78, -0.12, -0.36, -0.5, 0.2, -1.5), /* the overhead cut is raised over the right shoulder, not in front of the face */ P(0.32, -0.3, -0.18, -1.5, 0.1, 0), P(-0.5, -0.05, -0.4, -0.5, -0.2, 1.5)],
         mid: [P(0.15, 0.12, -0.72, -0.7, 0.12, 0.15), P(0.12, -0.2, -0.82, -1.35, 0.1, -0.1), P(0.22, -0.28, -0.7, -1.55, 0.05, 0), P(0.05, -0.2, -0.82, -1.35, -0.1, 0.1)],
         release: [P(0.05, -0.55, -0.85, -2.2, 0.1, 0.1), P(-0.55, -0.35, -0.7, -1.3, 0, 1.3), P(0.15, -0.26, -1.15, -1.57, 0, 0), P(0.7, -0.35, -0.7, -1.3, 0, -1.3)],
         block: [P(0.0, 0.1, -0.68, -0.2, 0, 1.45), P(0.38, -0.22, -0.6, -0.3, 0, -0.15), P(0.1, -0.44, -0.62, 0.2, 0, 1.5), P(-0.3, -0.22, -0.6, -0.3, 0, 0.15)],
@@ -1374,8 +1374,8 @@ class Renderer {
       /* the side swings turn the shaft flat (rz = ±90°) and sweep it round with ry, so the head travels across the view, never straight out */
       idle: P(0.28, -0.36, -0.5, -1.05, 0.25, -0.25),
       /* the overhead smash is carried by the arms and body: the fists go up and back over the head, then the whole shaft comes down and forward through a long arc, the wrists stay locked */
-      windup: [P(0.18, 0.32, -0.08, 0.95, 0.05, 0.1), P(0.4, -0.14, -0.26, 0.35, -0.6, -1.57), null, P(-0.32, -0.14, -0.26, 0.35, 0.6, 1.57)],
-      mid: [P(0.12, 0.16, -0.5, -0.2, 0.04, 0.05), P(0.12, -0.24, -0.42, 0.15, 1.4, -1.57), null, P(0.0, -0.24, -0.42, 0.15, -1.4, 1.57)],
+      windup: [P(0.42, 0.14, -0.1, 0.95, 0.05, 0.5), P(0.4, -0.14, -0.26, 0.35, -0.6, -1.57), null, P(-0.32, -0.14, -0.26, 0.35, 0.6, 1.57)],
+      mid: [P(0.24, 0.1, -0.5, -0.2, 0.04, 0.2), P(0.12, -0.24, -0.42, 0.15, 1.4, -1.57), null, P(0.0, -0.24, -0.42, 0.15, -1.4, 1.57)],
       release: [P(0.06, -0.42, -0.72, -1.15, 0.02, 0.02), P(-0.32, -0.3, -0.3, 0.05, 3.4, -1.57), null, P(0.42, -0.3, -0.3, 0.05, -3.4, 1.57)],
       block: this.VM.katana.block, stun: this.VM.katana.stun,
       R: L(0, 0, 0), Lh: L(0, -0.14, 0),
@@ -2390,12 +2390,13 @@ class Renderer {
       rhT.copy(K.R); lhT.copy(K.Lh);
       const d = hero.atkDir; const W = K.windup[d] || K.windup[2] || K.idle, M = K.mid[d] || K.mid[2] || W, R = K.release[d] || K.release[2] || K.idle;
       const side = d === DIR_RIGHT ? 1 : d === DIR_LEFT ? -1 : 0;
-      if (hero.st === ST_WINDUP) { target = W; speed = 13; camRoll = side * 0.025; camPitch = d === DIR_UP ? 0.025 : 0; }
+      if (hero.st === ST_WINDUP) { target = W; speed = 13; camRoll = side * 0.06; camPitch = d === DIR_UP ? 0.08 : 0; this._swYaw = side * 0.1; this._swShift = side * 0.07; this._swDrop = 0; } /* the body winds up with the weapon: the view turns and leans into the side it comes from */
       else if (hero.st === ST_RELEASE) {
         const t = clamp(stT / RELEASE_T, 0, 1), e = t * t * (3 - 2 * t), u = 1 - e;
         const q = (k) => u * u * W[k] + 2 * u * e * M[k] + e * e * R[k];
         target = P(q('px'), q('py'), q('pz'), q('rx'), q('ry'), q('rz')); speed = 60;
-        camRoll = side * lerp(0.025, -0.04, e); camPitch = d === DIR_UP ? lerp(0.025, -0.05, e) : d === DIR_DOWN ? -0.01 : 0; camPush = (d === DIR_DOWN ? 0.16 : 0.07) * Math.sin(t * PI);
+        camRoll = side * lerp(0.06, -0.08, e); camPitch = d === DIR_UP ? lerp(0.08, -0.13, e) : d === DIR_DOWN ? -0.02 : 0; camPush = (d === DIR_DOWN ? 0.3 : d === DIR_UP ? 0.16 : 0.12) * Math.sin(t * PI);
+        this._swYaw = side * lerp(0.1, -0.15, e); this._swShift = side * lerp(0.07, -0.1, e); this._swDrop = (d === DIR_UP ? 0.12 : 0.05) * Math.sin(t * PI); /* and the whole body follows the cut through: shoulders turn, weight drops onto the front foot */
       }
       else if (hero.st === ST_RECOVER) {
         const t = clamp(stT / Math.max(0.1, hero.def.recover), 0, 1);
@@ -2518,6 +2519,11 @@ class Renderer {
         if (this.tp > 0.01) { const k = this.tp * this.tp * (3 - 2 * this.tp); const back = 4.6 * k, up = 1.1 * k, side = 0.9 * k; const fx = Math.sin(yaw), fz = Math.cos(yaw);
           cam.position.set(cam.position.x - fx * back - fz * side, cam.position.y + up, cam.position.z - fz * back + fx * side); T.v.y -= 0.4 * k; T.v.x = lerp(T.v.x, hx + fx * 3, k); T.v.z = lerp(T.v.z, hz + fz * 3, k); T.v.y = lerp(T.v.y, hy + 1.4, k); } }
       this.empCam(hero, yaw, pitch, dt, T.v);
+      { const meleeSw = hero.st === ST_WINDUP || hero.st === ST_RELEASE; const k = 1 - Math.exp(-dt * (hero.st === ST_RELEASE ? 22 : 9)); const S2 = this._sw || (this._sw = { y: 0, x: 0, d: 0 });
+        S2.y += ((meleeSw ? this._swYaw || 0 : 0) - S2.y) * k; S2.x += ((meleeSw ? this._swShift || 0 : 0) - S2.x) * k; S2.d += ((meleeSw ? this._swDrop || 0 : 0) - S2.d) * k;
+        if (!meleeSw) { this._swYaw = 0; this._swShift = 0; this._swDrop = 0; } const rx0 = Math.cos(view.yaw), rz0 = -Math.sin(view.yaw);
+        cam.position.x -= rx0 * S2.x; cam.position.z -= rz0 * S2.x; cam.position.y -= S2.d; T.v.x -= rx0 * S2.x; T.v.z -= rz0 * S2.x; T.v.y -= S2.d;
+        const cy0 = Math.cos(S2.y), sy0 = Math.sin(S2.y), vx0 = T.v.x - cam.position.x, vz0 = T.v.z - cam.position.z; T.v.x = cam.position.x + vx0 * cy0 + vz0 * sy0; T.v.z = cam.position.z - vx0 * sy0 + vz0 * cy0; }
       cam.lookAt(T.v); this.dodgeRoll = (this.dodgeRoll || 0) * Math.exp(-dt * 7); cam.rotateZ(this.recoilRoll * 0.03 + (hero.downT > 0 ? 0.6 : 0) + this.camRoll + this.dodgeRoll + (this.slideRoll || 0) + IM.r + flin * 0.03); cam.rotateX(this.camPitch); cam.translateZ(-this.camPush);
       this.fov += (this.fovTarget - this.fov) * (1 - Math.exp(-dt * 14));
       { const f = this.fov - IM.fov; if (Math.abs(cam.fov - f) > 0.05) { cam.fov = f; cam.updateProjectionMatrix(); } const vk = Math.min(1, Math.tan(cam.fov * PI / 360) / Math.tan(64 * PI / 360)); this.vmFov.scale.set(vk, vk, 1); }
