@@ -1586,14 +1586,16 @@ class Sim {
           const sqv = u.squad >= 0 ? this.squads[u.squad] : null;
           if (sqv && sqv.volleyAt === u.volleyOf && sqv.volleyShout !== sqv.volleyAt) { sqv.volleyShout = sqv.volleyAt; let n = 0; for (const id of sqv.unitIds) { const m = this.units[id]; if (!m.dead && m.st === ST_AIM) n++; } this.events.push({ t: 'volley', sq: sqv.id, x: sqv.cx, y: terrainH(sqv.cx, sqv.cz) + 1.5, z: sqv.cz, n, bow: u.weapon === 'bow' }); }
           const tgt = this.units[u.aimTarget];
-          if (tgt && !tgt.dead) {
+          if (tgt && !tgt.dead && u.ctrl < 0 && u.weapon !== 'bow' && !this.losClear(u, tgt)) { /* at the moment of firing his man is hidden: switch to one in sight and fire next, or hold the shot */
+            const alt = this.losTarget(u, this.gunRange(u.def, u.weapon, u)); if (alt) { u.aimTarget = alt.id; u.target = alt.id; u.yaw = atan2(alt.x - u.x, alt.z - u.z); } else { u.st = ST_IDLE; u.stT = 0; } }
+          else if (tgt && !tgt.dead) {
             if (u.weapon === 'bow') this.fireArrow(u, tgt);
             else {
               const dx = tgt.x - u.x, dz = tgt.z - u.z, d = len(dx, dz);
               const th = tgt.downT > 0 ? 0.35 : tgt.mounted || tgt.mount >= 0 ? 1.9 : 1.05;
               const sh = u.mounted ? 2.3 : 1.55;
               const dy = (tgt.y + th) - (u.y + sh);
-              const yaw = u.yaw + clamp(wrap(atan2(dx, dz) - u.yaw), -0.05, 0.05), pitch = atan2(dy, d);
+              const yaw = atan2(dx, dz), pitch = atan2(dy, d); u.yaw = yaw; /* he has had the whole aim to lay the gun on his man: the ball goes where he pointed it (plus the scatter below), not where his feet happened to face */
               // smoothbores scatter: the farther the target, the wider the cone (and nobody aims well at a man who is running)
               let spread = (g.spread + (tgt.speedNow > 1 ? 0.008 : 0)) * (1.35 + d / 55) * (tgt.ctrl >= 0 ? 1.2 : 1); if (tgt.def.skirmish) spread += 0.02; if (u.squad >= 0) spread *= 1 - (this.squads[u.squad].stars || 0) * 0.08;
               const aimed = this.abActive(u, 'aimed'); if (aimed) spread *= 0.5;
