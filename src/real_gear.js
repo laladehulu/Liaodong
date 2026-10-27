@@ -144,7 +144,7 @@ function realGear(u) {
   if (u.look) R.lookGear(u.look, b, c, y, hatOn, 'face');
   else if (u.type !== 'horse' && !u.def.cannon && !u.def.gun) {
     const ink = 0x1a1410, hair = 0x201a16, fz = 0.146;
-    b('h', [0.058, 0.0, fz], [0.045, 0.02, 0.012], ink); b('h', [-0.058, 0.0, fz], [0.045, 0.02, 0.012], ink);
+    R.faceEyes(b, fz, { tilt: [0.06, 0.1, 0.02, 0.12, -0.04, 0.08][vr] });
     const bt = vr === 5 ? 0.12 : 0; b('h', [0.06, 0.035, fz], [0.065, 0.016, 0.014], hair, [0, 0, -0.12 - bt]); b('h', [-0.06, 0.035, fz], [0.065, 0.016, 0.014], hair, [0, 0, 0.12 + bt]);
     b('h', [0, -0.045, fz + 0.006], [0.03, 0.05, 0.02], 0xd2aa84); // nose
     b('h', [0, -0.085, fz], [0.06, 0.012, 0.012], 0x6a3a30);

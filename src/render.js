@@ -60,6 +60,15 @@ const HR_POSE = [
   [-0.1, 0.12, 0, 0.03, 0.3, -0.06, -0.08, 0.1, -0.2] // 5 guard driven back
 ];
 const GEAR_HOOK = { fn: null }; // an edition may supply its own uniforms (the realism edition does)
+// eyes that read as eyes without staring: a small warm off-white almond, a large soft dark-brown iris (no glint, no ring), and the
+// heavy upper lid line of an East Asian eye drawn over its top; the outer corner lifts or droops a little with the man's temper
+function faceEyes(b, fz, o) {
+  o = o || {}; const ew = o.young ? 0.052 : 0.048, eh = o.young ? 0.03 : 0.025, tilt = o.tilt || 0.06, ink = 0x1a1410, sc = 0xe2d6c2, iris = o.iris || 0x2a1a12;
+  for (const sx of [1, -1]) { if (o.patch && sx < 0) continue;
+    b('h', [0.058 * sx, 0.0, fz - 0.002], [ew, eh, 0.01], sc, [0, 0, -tilt * sx]);
+    b('h', [0.058 * sx - 0.003 * sx, -0.002, fz + 0.002], [0.024, o.young ? 0.026 : 0.022, 0.01], iris);
+    b('h', [0.058 * sx, eh * 0.5, fz + 0.004], [ew + 0.008, o.lid || 0.011, 0.012], ink, [0, 0, -tilt * sx]); }
+}
 // ---- the named men of the story file: each his own face and headgear (u.look is set by the story module; render-only) ----
 function lookGear(L, b, c, y, hatOn, part) {
   const ink = 0x1a1410, hair = L.hair || 0x201a16, bh = L.grey ? 0x8a8680 : hair, fz = 0.146, red = 0xc8281e, gold = 0xd8b03c;
@@ -74,8 +83,8 @@ function lookGear(L, b, c, y, hatOn, part) {
     default: { const tall = L.hat === 'rattanTall' ? 1.35 : 1; c('h', [0, 0.17 * tall, 0], [0.4, 0.2 * tall, 0.4], 0xb8964e); y('h', [0, 0.07, 0], [0.4, 0.045, 0.4], 0x8a6a30); b('h', [0, 0.27 * tall + 0.03, 0], [0.07, L.plume ? 0.12 : 0.05, 0.07], L.plume || red); if (L.band) y('h', [0, 0.11, 0], [0.37, 0.035, 0.37], L.band); }
   } });
   if (part === 'face') {
-    const ew = L.young ? 0.04 : 0.045, eh = L.young ? 0.028 : 0.02;
-    b('h', [0.058, 0.0, fz], [ew, eh, 0.012], ink); if (L.patch) { b('h', [-0.058, 0.004, fz + 0.004], [0.075, 0.065, 0.016], 0x111111); b('h', [0, 0.03, fz - 0.004], [0.3, 0.016, 0.012], 0x111111, [0, 0, -0.32]); } else b('h', [-0.058, 0.0, fz], [ew, eh, 0.012], ink);
+    faceEyes(b, fz, { young: L.young, patch: L.patch, tilt: L.brows === 'sad' ? -0.08 : L.brows === 'knit' || L.brows === 'thick' ? 0.12 : 0.06, lid: L.grey ? 0.014 : 0.011 });
+    if (L.patch) { b('h', [-0.058, 0.004, fz + 0.004], [0.075, 0.065, 0.016], 0x111111); b('h', [0, 0.03, fz - 0.004], [0.3, 0.016, 0.012], 0x111111, [0, 0, -0.32]); }
     const BR = { thick: [0.08, 0.028, 0.06, 0.035], thin: [0.06, 0.012, 0.1, 0.04], knit: [0.075, 0.022, 0.32, 0.03], high: [0.065, 0.016, -0.18, 0.055], sad: [0.065, 0.018, -0.3, 0.035] }[L.brows || 'thin'] || [0.065, 0.016, 0.12, 0.035];
     b('h', [0.06, BR[3], fz], [BR[0], BR[1], 0.014], bh, [0, 0, -BR[2]]); b('h', [-0.06, BR[3], fz], [BR[0], BR[1], 0.014], bh, [0, 0, BR[2]]);
     b('h', [0, -0.045, fz + 0.006], [L.bigNose ? 0.045 : 0.03, L.bigNose ? 0.06 : 0.05, 0.022], 0xd2aa84);
@@ -200,7 +209,7 @@ function gearFor(u) {
   if (u.look) lookGear(u.look, b, c, y, hatOn, 'face');
   else if (u.type !== 'horse' && !u.def.cannon && !u.def.gun) {
     const ink = 0x1a1410, hair = 0x201a16, fz = 0.146;
-    b('h', [0.058, 0.0, fz], [0.045, 0.02, 0.012], ink); b('h', [-0.058, 0.0, fz], [0.045, 0.02, 0.012], ink);
+    faceEyes(b, fz, { tilt: [0.06, 0.1, 0.02, 0.12, -0.04, 0.08][vr] });
     const bt = vr === 5 ? 0.12 : 0; b('h', [0.06, 0.035, fz], [0.065, 0.016, 0.014], hair, [0, 0, -0.12 - bt]); b('h', [-0.06, 0.035, fz], [0.065, 0.016, 0.014], hair, [0, 0, 0.12 + bt]);
     b('h', [0, -0.045, fz + 0.006], [0.03, 0.05, 0.02], 0xd2aa84); // nose
     b('h', [0, -0.085, fz], [0.06, 0.012, 0.012], 0x6a3a30);
@@ -1068,7 +1077,7 @@ class Renderer {
   }
   colorFigure(slot, u) {
     { const f = this.fig, z = this.tmp.zero, g = gearFor(u); const cnt = { b: 0, c: 0, y: 0 }; for (const k of ['b', 'c', 'y']) for (let i = 0; i < GEAR_K[k]; i++) f['g' + k].setMatrixAt(slot * GEAR_K[k] + i, z);
-      for (const p of g.parts) { const i = cnt[p.m]++; if (i >= GEAR_K[p.m]) continue; p.idx = i; f['g' + p.m].setColorAt(slot * GEAR_K[p.m] + i, this.grime(this.tmp.c.set(p.k), u, i % 5, 0)); }
+      for (const p of g.parts) { const i = cnt[p.m]++; if (i >= GEAR_K[p.m]) continue; p.idx = i; f['g' + p.m].setColorAt(slot * GEAR_K[p.m] + i, p.f === 'h' && !p.hat ? this.tmp.c.set(p.k) : this.grime(this.tmp.c.set(p.k), u, i % 5, 0)); }
       for (const k of ['b', 'c', 'y']) if (f['g' + k].instanceColor) f['g' + k].instanceColor.needsUpdate = true; }
     const c = this.tmp.c; const f = this.fig; const tc = (GEAR_HOOK.torso && GEAR_HOOK.torso(u)) || torsoColor(u), lc = (GEAR_HOOK.legs && GEAR_HOOK.legs(u)) || legColor(u); // an edition may recolour the body under the gear
     for (const k of ['torso', 'uarmL', 'uarmR']) f[k].setColorAt(slot, this.grime(c.set(tc), u, 0, 0));
@@ -2953,5 +2962,5 @@ Renderer.prototype.pkFrame = function (sim) {
     if (!g) { g = make(p.k); const y = terrainH(p.x, p.z); g.position.set(p.x, y + 0.01, p.z); g.rotation.y = (p.id * 2.399) % 6.283; g.rotation.z = ((p.id * 0.37) % 0.3) - 0.15; this.scene.add(g); M.set(p.id, g); } }
   for (const [id, g] of M) if (!seen.has(id)) { this.scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); M.delete(id); }
 };
-return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, roundBox, uhash };
+return { Renderer, TEAM_COL, gearFor, GEAR_K, GEAR_HOOK, BANNER, torsoColor, legColor, lookGear, faceEyes, roundBox, uhash };
 })();
