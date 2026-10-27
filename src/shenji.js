@@ -542,7 +542,7 @@ function sjFinish(winner) {
   if (ZB.cur && ZB.cur !== ZS.me && ZB.cur !== 'stranger' && fate[ZS.me] === 'dead') { const nk = ZB.cur; ZS.oldName = ZS.name; sjName(); ZS.me = nk; ZS.name = { zh: sRow(nk).zh, en: sRow(nk).en }; fate[nk] = 'out'; }
   ZS.lastDead = [];
   for (const k in fate) { ZS.fate[k] = fate[k]; ZS.alive[k] = fate[k] === 'out'; if (fate[k] !== 'out') ZS.lastDead.push(k); }
-  const B = { drill: ['camp0', null], battle1: ['amb', 'back from Shunyi'], battleA: ['ch2', 'back in Beijing'], battle2: ['ch3', 'before the gate'], battle3: ['end', 'across the river'] }[scene];
+  const B = { drill: ['camp0', null], battle1: ['amb', 'back from Shunyi'], battleA: ['ch2', 'back in Beijing'], battle2: ['yongc', 'before the gate'], battle3: ['end', 'across the river'] }[scene];
   ZS.stage = B[0]; zSave();
   if (scene === 'drill') { zCards([{ title: '出征 · Marching out', year: 'The eleventh month of 1629', p: ['The Jin army is through the Great Wall. Zunhua falls; the old general Zhao Shuaijiao, riding to its relief from Shanhai Pass, is killed outside it.', 'The capital camps are sent out to meet the raiders before they reach the walls. Your company goes with Man Gui\'s horsemen from Datong, north-east to Shunyi.'], btn: 'Make camp →' }], () => sjGo('camp0')); return; }
   const outN = ZS.team.filter(k => ZS.alive[k]).length, names = ZS.lastDead.map(k => sRow(k)).filter(Boolean);
@@ -574,7 +574,7 @@ function sjStart(scene) {
   sjActivate(); ZS = zLoad(); if (!ZS || !ZS.sj) ZS = sjFresh(); sjName();
   $('menu').hidden = true; state.lowfx = $('lowfxIn').checked; state.fog = false;
   if (scene === 'ch2' || scene === 'ch3') { const ch = scene === 'ch2' ? 1 : 2; if (ZS.refilled !== scene) { sjRefill(ch); ZS.refilled = scene; zSave(); }
-    const nc = sjNewMenCard(); const C = scene === 'ch2' ? [{ title: '京城 · The capital', year: 'The eleventh month of 1629', p: ['The gates of the inner city are shut. Your company is quartered in the outer city, under the Guangqu Gate, where the road comes in from the east.'] }] : [{ title: '大凌河 · Dalinghe', year: 'Autumn 1631', p: ['Two years on. The team marches north-east up the coast road, past Shanhai Pass and Ningyuan, with Zhang Chun\'s relief army.'] }];
+    const nc = sjNewMenCard(); const C = scene === 'ch2' ? [{ title: '京城 · The capital', year: 'The eleventh month of 1629', p: ['The gates of the inner city are shut. Your company is quartered in the outer city, under the Guangqu Gate, where the road comes in from the east.'] }] : [{ title: '大凌河 · Dalinghe', year: 'Autumn 1631', p: ['A year after Luanzhou. The team marches north-east up the coast road, past Shanhai Pass and Ningyuan, with Zhang Chun\'s relief army.'] }];
     zCards(C.concat(nc ? [nc] : []), () => { ZS.stage = scene === 'ch2' ? 'camp1' : 'camp2'; zSave(); sjStart(ZS.stage); }); return; }
   if (scene === 'amb') return zCards([{ title: '採糧 · Forage', year: 'Three days after Shunyi', p: ['The army falls back on Beijing with nothing to eat. The quartermasters send gun teams out with the forage parties.', 'Your team is told to bring back millet from a village east of Tongzhou. Smoke stands over half the villages on the plain.'], btn: 'Into the village →' }], () => { ZS.stage = 'battleA'; zSave(); sjGo('battleA'); });
   if (/^camp[012]$/.test(scene)) return sjCamp(+scene[4]);
