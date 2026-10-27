@@ -44,7 +44,7 @@ function legColor(u) {
 // part: m = mesh kind ('b' box, 'c' cone, 'y' cylinder); f = frame (c chest, h head, p pelvis, sl/sr shoulders, or seg:[jointA, jointB, t0, t1]);
 // o = offset in the frame's axes, s = size, r = local euler, k = colour
 const GJ = { hipL: 0, kneeL: 3, footL: 6, hipR: 9, kneeR: 12, footR: 15, shL: 18, elL: 21, haL: 24, shR: 27, elR: 30, haR: 33 };
-const GEAR_K = { b: 40, c: 4, y: 5 };
+const GEAR_K = { b: 50, c: 4, y: 5 }; /* raised from 40 for faces: eyes with lids, ears, face shapes */
 const uhash = (id, k) => (((id + 1) * 2654435761 + (k || 0) * 40503) >>> 0) % 1000 / 1000;
 const GEAR_CACHE = new Map();
 // hit reaction envelope: snaps in over 70 ms (ease-out), holds while he reels, eases back out over 0.25 s after the stun ends
