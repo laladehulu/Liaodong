@@ -85,6 +85,11 @@ Recent work, newest first:
 - **No hold-outs**: a `survive` objective now ends ~3 s after the phase's fight is over (`mThreat`, `mQuietDone`); while
   quiet, the phase's waves/`at` beats are brought forward. `hold` needs at most 12 s. Phases can branch (`next`, action `goto`);
   action `explode [x, z, r, dmg]`.
+- **Co-op missions** (sim_coop.js) are 5–6 phases each with a `cast` of named men: `say` lines are `[t, who, en, zh, order]`
+  (career.js `coopSay` puts them on a man of the group, or of your own company, through SPEECH; `order` shows the key).
+  Mission action `['fell', n, why]` drops n men of each player's company (E gets them up); objective `{ rescue: true }`
+  waits for them. Assault ops carry `talk[team]` lines fired from `assaultThink` instead of a long brief. `test/zcoop.js`
+  runs every co-op mission headless with a bot player (`node test/zcoop.js all <seed> <diff> <players>`).
 - **Difficulty** `cfg.diff` 0–3 (Recruit / Soldier / Veteran / Lone banner). Carried in the start message; stored per browser
   (`localStorage.mingDiff`, `diffPref()`, `diffUI()` in career.js). Lone banner drops AI ally groups in co-op unless the
   mission needs them (`arrive`/`officer` targets, `escort: true`).

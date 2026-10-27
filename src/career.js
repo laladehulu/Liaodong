@@ -418,6 +418,7 @@ function missionHUD(dt) {
       if (o.survive) { s += M.soldier ? `<div class="ob"><i>◆</i><span>${P.text}</span></div>` : `<div class="ob${el >= o.survive ? ' done' : ''}"><i>◆</i><span>Hold out · ${Math.max(0, Math.ceil(o.survive - el))} s</span></div>${pct(el / o.survive)}`; }
       if (o.extract) { const z = Z(o.extract), h0 = sim.units[me.heroId]; s += `<div class="ob"><i>◆</i><span>Reach ${z.name}${h0 && !h0.dead ? ` · ${Math.round(Math.hypot(h0.x - z.x, h0.z - z.z))} m` : ''}</span></div>`; }
       if (o.keep) s += `<div class="ob"><i>!</i><span>Do not lose ${Z(o.keep).name}</span></div>`;
+      if (o.rescue) { const n = typeof sim.mFallen === 'function' ? sim.mFallen() : 0; s += `<div class="ob${n ? '' : ' done'}"><i>傷</i><span>${n ? `${n} of your men down · get to him, press E` : 'Your men are up'}</span></div>`; }
       return s; };
     h += line(P.obj); if (M.soldier && typeof zheObjLines === 'function') h += zheObjLines();
     if (P.limit) h += `<div class="ob"><i>⏳</i><span>${Math.max(0, Math.ceil(P.limit - el))} s left</span></div>`;
