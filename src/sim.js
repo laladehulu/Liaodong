@@ -1470,8 +1470,9 @@ class Sim {
         else if (u.mounted) {
           if (u.ctrl < 0) this.cavCharge(u, tgt, d); // shock cavalry: run up, ride through, wheel, come again
           else { const desired = d > 9 ? def.speed : (d > reach ? 4 : 2.5); this.cavSteer(u, tgt.x, tgt.z, desired); }
-        } else if (d > reach - 0.5) { const sp = def.speed * (u.st === ST_IDLE ? 1 : 0.6); this.steerFoot(u, tgt.x, tgt.z, sp); }
-        else { u.mx = 0; u.mz = 0; }
+        } else if (this.pointWait(u, tgt, d, reach)) { }
+        else if (d > reach - 0.5) { const sp = def.speed * (u.st === ST_IDLE ? 1 : 0.6) * (u.rushT > 0 ? 1.3 : 1); this.steerFoot(u, tgt.x, tgt.z, sp); }
+        else if (!this.spearKeep(u, tgt, d, reach)) { u.mx = 0; u.mz = 0; }
         if (u.role && sq && !sq.routing && !xl && !yy) { const sd = len(u.slotX - u.x, u.slotZ - u.z); if (sd > 2.2 && d > reach) this.steerFoot(u, u.slotX, u.slotZ, def.speed); else if (d > reach && sd < 2.2) { u.mx *= 0.3; u.mz *= 0.3; } }
         const eager = u.mounted ? 0.35 : u.role === 'spear' && tgt.entT > 0 ? 0.35 : u.role === 'brush' ? 0.2 : u.role === 'shield' ? 0.05 : 0.09;
         if (d <= (u.mounted ? reach + Math.abs(u.hspeed) * 0.4 : reach + 0.3) && Math.abs(tgt.y - u.y) < 2.5 && u.st === ST_IDLE && u.flinchT <= 0 && !u.blocking && u.entT <= 0 && xl !== 1 && !yy && this.rng.next() < eager && this.xcSpaceOk(u, tgt)) { if (this.xcToken(u, tgt)) this.startWindup(u, this.aiPickDir(u)); }
@@ -4195,6 +4196,23 @@ Sim.prototype.yyAnchor = function (sq, n) {
   const mx = ax - sq.yax, mz = az - sq.yaz, ml = len(mx, mz), step = 1.3 * 15 * DT; // squadThink runs every 15 ticks: the body moves at about a walking pace
   if (ml > step) { sq.yax += mx / ml * step; sq.yaz += mz / ml * step; } else { sq.yax = ax; sq.yaz = az; }
 };
+// a long weapon fights at its point: a spearman who lets a man inside his reach gives ground to put him back on the point
+Sim.prototype.spearKeep = function (u, tgt, d, reach) {
+  if (reach < 3 || !tgt || tgt.dead || d > reach * 0.62 || u.st === ST_WINDUP || u.st === ST_RELEASE || u.st === ST_STUN) return false;
+  const nx = (u.x - tgt.x) / (d || 1), nz = (u.z - tgt.z) / (d || 1), sp = Math.min(u.def.speed * 0.8, 3.4) * (d < reach * 0.4 ? 1.15 : 1);
+  if (d < 1.8 && u.st === ST_IDLE && u.flinchT <= 0 && !u.mounted && this.rng.next() < 0.07) { u.st = ST_KICK; u.stT = 0; u.kickHit = false; u.blocking = false; this.events.push({ t: 'kick', id: u.id }); } /* shove him off with the shaft and boot to make room for the point */
+  u.mx = nx * sp; u.mz = nz * sp; return true;
+};
+// and a man with a short weapon facing a ready point does not walk onto it: he waits just outside, then rushes in when it is spent
+Sim.prototype.pointWait = function (u, tgt, d, reach) {
+  if (u.rushT > 0) { u.rushT -= DT; return false; }
+  const tr = tgt.def && tgt.weapon === 'yari' ? tgt.def.reach : 0; if (tr < 3 || reach >= tr || u.mounted || tgt.mounted || d > tr + 0.9 || d < reach) { u.ptW = 0; return false; }
+  const facing = Math.abs(wrap(atan2(u.x - tgt.x, u.z - tgt.z) - tgt.yaw)) < 0.7, ready = tgt.st === ST_IDLE || tgt.st === ST_WINDUP || tgt.blocking;
+  if (!facing || !ready || tgt.entT > 0) { u.rushT = 0.9; u.ptW = 0; return false; } /* the point is spent or turned away: in, fast */
+  u.ptW = (u.ptW || 0) + DT; if (u.ptW > 2.2 + (u.id % 5) * 0.3) { u.ptW = 0; u.rushT = 1.2; return false; } /* waited long enough: beat the point aside and go */
+  const want = tr + 0.45, nx = (tgt.x - u.x) / (d || 1), nz = (tgt.z - u.z) / (d || 1), sd = (u.id & 1) ? 1 : -1, rad = clamp((d - want) * 2, -2, 2);
+  u.mx = nx * rad + nz * sd * 0.9; u.mz = nz * rad - nx * sd * 0.9; if (!u.blocking && this.rng.next() < 0.03) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_DOWN; u.blockHold = 0.5; } return true;
+};
 Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
   const r = u.role; if (!r || r === 'cook' || !sq.def.yuanyang) return false;
   if (sq.aliveCount !== undefined && sq.count && sq.aliveCount < sq.count * 0.5) return false;
@@ -4213,7 +4231,7 @@ Sim.prototype.yyAI = function (u, sq, tgt, d, reach) {
       if (best) { u.yyL = 1; u.yyT = best.id; u.yyS = this.tick; u.target = best.id; this.startWindup(u, DIR_DOWN); u.heavy = !!this.xc; u.aiHeavy = false; u.lunge = true;
         const dx = best.x - u.x, dz = best.z - u.z, l = len(dx, dz) || 1; u.vx += dx / l * 5; u.vz += dz / l * 5; this.turnTo(u, atan2(dx, dz), 1);
         this.events.push({ t: 'yylunge', id: u.id, at: best.id }); return true; } }
-    home(1.0); if (tgt && idle && d <= reach + 0.2 && this.rng.next() < 0.08) this.startWindup(u, DIR_DOWN); return true;
+    if (!(tgt && len(u.x - sx, u.z - sz) < 2.6 && this.spearKeep(u, tgt, d, reach))) home(1.0); if (tgt && idle && d <= reach + 0.2 && this.rng.next() < 0.08) this.startWindup(u, DIR_DOWN); return true;
   }
   if (r === 'brush') { home(1.0);
     if (idle) { let c = null, cd = reach + 1.6, near = 99; const n = this.gatherNear(u.x, u.z, reach + 2);
