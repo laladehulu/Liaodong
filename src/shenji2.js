@@ -176,7 +176,7 @@ const SJ2_MISSIONS = (() => { const PI = Math.PI; const cartRow = (z, xs) => xs.
       col: { team: 1, name: 'Amin\'s baggage column', zh: '阿敏輜重', army: ['samurai', 'archer', 'samurai'], at: [0, -138, 0], reserve: true },
       guard: { team: 1, name: 'The captives\' guards', zh: '押解', army: ['samurai', 'archer'], at: [-4, -126, 0], reserve: true, n: 10 },
       caps: { team: 0, name: 'Captives from Yongping', zh: '永平百姓', army: ['ashigaru'], at: [4, -128, 0], reserve: true, n: 10, stay: true },
-      banner: { team: 1, name: 'Amin\'s rearguard banner', zh: '阿敏後隊', army: ['samurai', 'cavalry', 'samurai'], at: [0, -134, 0], reserve: true, officer: 2 },
+      banner: { team: 1, name: 'Amin\'s rearguard banner', zh: '阿敏後隊', army: ['samurai', 'cavalry', 'samurai'], at: [0, -134, 0], reserve: true, officer: 4 },
       chase: { team: 1, name: 'Jin horse coming back', army: ['cavalry', 'cavalry'], at: [0, 138, PI], reserve: true },
     },
     phases: [
