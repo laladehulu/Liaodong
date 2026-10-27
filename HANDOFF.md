@@ -5,7 +5,7 @@ three.js r128. It is a **deterministic lockstep** game (30 Hz) so the same build
 The owner is a single user who plays the published builds and sends short feedback; another Claude session ("main") is
 also working on the code. Read this whole file before you change anything.
 
-Live site: https://laladehulu.github.io/Liaodong/ (built HTML only; the source is NOT on GitHub — see "Getting the source").
+Live site: https://laladehulu.github.io/Liaodong/ · source: https://github.com/laladehulu/Liaodong (see sections 7 and 8).
 
 ## 1. Editions (all built from the same source by `build.sh`)
 | Folder on the site | Flags set in the page | What it is |
