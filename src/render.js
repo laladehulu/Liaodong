@@ -576,13 +576,13 @@ const ARM_U = 0.345, ARM_F = 0.335, ARM_REACH = 1.12;
 			float dist = ( sc.z - bs / bn ) * 390.0, inkK = smoothstep( 3.5, 10.0, dist );
 			vec2 w = sc.xy + inkShift;
 			vec2 warp = inkK * ( vec2( inkF( w * 40.0 ), inkF( w * 40.0 + 19.3 ) ) - 0.5 ) * ( 1.3 / 140.0 );
-			float rad = ( 0.4 + min( dist, 30.0 ) * 0.05 ) / 140.0, s = 0.0;
+			float rad = ( 0.2 + min( dist, 30.0 ) * 0.05 ) / 140.0, s = 0.0;
 			for ( int i = 0; i < 16; i ++ ) { float fi = float( i ); float a = fi * 2.39996; vec2 o = vec2( cos( a ), sin( a ) ) * sqrt( ( fi + 0.5 ) / 16.0 ) * rad;
 				s += step( sc.z + shadowBias, unpackRGBAToDepth( texture2D( shadowMap, sc.xy + warp + o ) ) ); }
 			s /= 16.0;
 			s = smoothstep( 0.04, 0.96, s + inkK * ( inkF( w * 90.0 ) - 0.5 ) * 0.3 );
 			float rim = s * ( 1.0 - s ) * 4.0; s -= rim * ( 0.1 + 0.06 * inkK );
-			s += ( 1.0 - s ) * ( mix( 0.28, 0.04, inkK ) + inkK * inkF( w * 120.0 ) * 0.1 ); /* a man's shade is a paler, diluted wash */
+			s += ( 1.0 - s ) * ( mix( 0.1, 0.04, inkK ) + inkK * inkF( w * 120.0 ) * 0.1 ); /* a man's shade is a paler, diluted wash */
 			return mix( clamp( s, 0.0, 1.0 ), 1.0, graze );
 		}
 		vec2 w = shadowCoord.xy / shadowCoord.w + inkShift;
