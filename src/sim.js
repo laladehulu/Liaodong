@@ -155,7 +155,7 @@ const FACTION = [{ name: 'Ming Army', jp: '大明', short: 'Ming' }, { name: 'La
 const BATTLES = {
   field:    { name: 'Jiefan Hill', jp: '界凡 (薩爾滸)', when: 'April 1619', biome: 'autumn', fog: 0, terrain: 0.7, features: ['hill'], desc: 'Jiefan hill above the Hun River ford, the Jin\'s half-built stockade on the crest. Whoever holds the height shoots farther and cuts downhill.' },
   toba:     { name: 'Hun River', jp: '渾河', when: 'March 1621', biome: 'winter', fog: 0.35, terrain: 0.6, horizon: { lo: 0.45, nokarst: true }, features: ['river', 'village'], desc: 'A half-frozen river splits the field outside Shenyang. Two bridges and a shallow ford are the only quick crossings; mist shortens every musket.' },
-  ueno:     { name: 'Songshan', jp: '松山', when: 'Summer 1641', biome: 'summer', fog: 0.1, terrain: 0.7, horizon: { lo: 0.6, nokarst: true, open: [0.9, 2.3] }, features: ['temple', 'houses'], desc: 'Hong Chengchou\'s men hold a walled temple compound on a raised plateau. Storm the gate or shell it with heavy guns.' },
+  ueno:     { name: 'Songshan temple', jp: '松山 · 寺', when: 'Summer 1641', biome: 'summer', fog: 0.1, terrain: 0.7, horizon: { lo: 0.6, nokarst: true, open: [0.9, 2.3] }, features: ['temple', 'houses'], desc: 'Hong Chengchou\'s men hold a walled temple compound on a raised plateau. Storm the gate or shell it with heavy guns.' },
   nagaoka:  { name: 'Yangzhou', jp: '揚州', when: 'May 1645', biome: 'summer', weather: 'storm', fog: 0.3, terrain: 0.3, horizon: { lo: 0.3, nokarst: true }, features: ['paddies', 'flankriver'], desc: 'Jiangnan rice paddies under a spring thunderstorm. Rain fouls matchlocks, lightning seeks the banners, and one bridge guards the western flank.' },
   aizu:     { name: 'Liaoyang', jp: '遼陽', when: 'April 1621', biome: 'autumn', fog: 0.15, terrain: 0.6, horizon: { lo: 0.5, nokarst: true }, features: ['castle', 'streets'], desc: 'The Liaodong capital: a gate tower on its stone base, ringed by a moat. Fight through the city streets to reach the gate.' },
   hakodate: { name: 'Ningyuan', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.05, terrain: 0.4, horizon: { lo: 0.6, nokarst: true, open: [0.7, 2.5] }, features: ['starfort', 'sea'], desc: 'Yuan Chonghuan\'s fortress by the Bohai Sea, its walls bristling with Portuguese-pattern cannon. The sea lies to the east.' },
@@ -167,6 +167,8 @@ const BATTLES = {
   siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, horizon: { lo: 0.6, nokarst: true, open: [0.7, 2.5] }, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
   bonari:   { name: 'Shanhai Pass', jp: '山海關', when: 'May 1644', biome: 'spring', fog: 0.25, terrain: 0.5, features: ['pass'], desc: 'The First Pass Under Heaven: a narrow gap between steep ridges, blocked by two lines of earthworks. Flanking over the slopes is slow and costly.' },
 };
+// the newer battlefields live in sim_maps.js, which fills BATTLES and this table: MAPS[key] = { terrain(L, rng, sim), build(sim, rng, keep, clear), objectives, trees, rocks, noTree(x, z), nomant }
+const MAPS = {};
 // terrain features (deterministic: only + - * / sqrt and DM trig)
 const TERR = { scale: 1, hills: [], plateaus: [], river: null, moat: null, pass: null, sea: null };
 function sstep(a, b, x) { let t = (x - a) / (b - a); t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); }
@@ -198,7 +200,7 @@ function waterAt(x, z) {
   if (m) { const dx = x - m.x, dz = z - m.z; const r = Math.sqrt(dx * dx + dz * dz); const ad = r > m.R ? r - m.R : m.R - r; if (ad < m.w * 0.8) { for (let i = 0; i < m.gates.length; i++) { const g = m.gates[i]; if ((x - g[0]) * (x - g[0]) + (z - g[1]) * (z - g[1]) < 36) return -1; } return 1; } }
   if (TERR.sditch) { const r = siegeDitchWater(TERR.sditch, x, z); if (r) return r; }
   const tr = TERR.trenches; for (let i = 0; i < tr.length; i++) { const t = tr[i]; if (!t.wet) continue; const d = segDist(t, x, z); if (d < t.w * 0.8) { const al = t.x1 - t.x0 !== 0 ? x : z; for (let k = 0; t.gaps && k < t.gaps.length; k++) if (al > t.gaps[k] - 4 && al < t.gaps[k] + 4) return -1; return t.ice ? 2 : 1; } } /* a wet moat line: a causeway at each gap */
-  if (TERR.sea && x > TERR.sea.x0 + 10) return TERR.sea.ice ? 2 : 1; /* the Bohai frozen (1626): slow going, but going */
+  if (TERR.sea && x > TERR.sea.x0 + 10) { if (TERR.sea.islands) { for (let i = 0; i < TERR.sea.islands.length; i++) { const q = TERR.sea.islands[i]; const dx = x - q.x, dz = z - q.z; if (dx * dx + dz * dz < q.r * q.r) return 0; } } return TERR.sea.ice ? 2 : 1; } /* the Bohai frozen (1626): slow going, but going; an island (or a spit) is dry ground */
   return 0;
 }
 // a Chinese city wall or the Great Wall as a backdrop along one edge of the field: a solid collider box per run, a gap at
@@ -239,7 +241,7 @@ function terrainHExact(x, z) {
   if (TERR.swall) h = siegeWallH(TERR.swall, x, z, h);
   if (TERR.sditch) h = siegeDitchH(TERR.sditch, x, z, h);
   const sea = TERR.sea;
-  if (sea && x > sea.x0) h -= sea.depth * sstep(sea.x0, sea.x0 + 22, x);
+  if (sea && x > sea.x0) { let k = 1; if (sea.islands) for (let i = 0; i < sea.islands.length; i++) { const q = sea.islands[i]; const dx = x - q.x, dz = z - q.z; const d = Math.sqrt(dx * dx + dz * dz); if (d < q.r + 8) { const u = d < q.r ? 0 : (d - q.r) / 8; const kk = u * u * (3 - 2 * u); if (kk < k) k = kk; } } h -= sea.depth * sstep(sea.x0, sea.x0 + 22, x) * k; }
   return h;
 }
 const ABILITY = {
@@ -348,7 +350,7 @@ class Sim {
       L.river = { axis: 'z', c0: 132, amp: 4, freq: 0.03, ph: r.range(0, 6), w: 9, depth: 3.4, bridges: [{ at: 60, hw: 4 }] }; }
     if (b === 'hakodate') { L.plateaus.push({ x: 0, z: 74, r0: 34, r1: 38, h: 1.6 }); L.rmoat = { x: 0, z: 74, hw: 40, hd: 40, w: 5, depth: 2.6, gates: [[0, 30], [0, 118], [-44, 74], [44, 74]], ice: true }; /* a square moat, frozen, round a square city of four gates (《遼東志》寧遠衛: 城周六里八步, 四門; the circle it had was a Japanese castle's) */
       /* 寧遠 1626: the first month of the year, the Bohai frozen (《清太祖實錄》天命十一年正月: the banners crossed to 覺華島 over the ice and burned the Ming grain depot and ships there); Juehua is the low island on the ice to the east */
-      L.sea = { x0: 128, depth: 7, ice: true }; L.hills.push({ x: 146, z: -36, r: 18, h: 9 }); }
+      L.sea = { x0: 128, depth: 7, ice: true, islands: [{ x: 148, z: -36, r: 16 }] }; L.hills.push({ x: 148, z: -36, r: 20, h: 6 }); }
     if (b === 'bonari') L.pass = { r0: 24, r1: 56, h: 30 };
     if (b === 'siegecity') { L.swall = { z0: SG.z0, z1: SG.z1, h: SG.h, gate: SG.gate, ramps: [-60, -12, 12, 60] }; L.sditch = { zc: SG.ditchZ, w: SG.ditchW, depth: 2.6, bridge: SG.gate, fills: SG.fills.map((f, i) => ({ x: f[0], hw: f[1], done: false, key: i ? 'ditchE' : 'ditchW' })) }; }
     if (b === 'abudali') { L.pass = { r0: 15, r1: 46, h: 24 }; L.hills.push({ x: -34, z: 6, r: 30, h: 6 }); L.hills.push({ x: 30, z: -48, r: 26, h: 5 }); }
@@ -360,7 +362,8 @@ class Sim {
     if (b === 'zcamp') { L.hills.push({ x: -90, z: 60, r: 70, h: 14 }); L.hills.push({ x: 100, z: -40, r: 80, h: 16 }); L.hills.push({ x: 0, z: 130, r: 70, h: 12 }); }
     // objectives worth holding
     const O = [];
-    if (b === 'field') { O.push({ x: 0, z: 4, r: 12, name: 'Jiefan crest' }); if (L.river) O.push({ x: 0, z: -128, r: 12, name: 'The Hun River ford' }); }
+    if (MAPS[b]) { MAPS[b].terrain(L, r, this); for (const o of MAPS[b].objectives || []) O.push(o); } /* the newer battlefields (sim_maps.js) */
+    if (b === 'field') O.push({ x: 0, z: 4, r: 12, name: 'Jiefan crest' });
     if (b === 'toba') { const rv = L.river; for (const br of rv.bridges) O.push({ x: br.at, z: rv.c0 + rv.amp * sin(br.at * rv.freq + rv.ph), r: 11, name: br.ford ? 'The ford' : (br.at < 0 ? 'West bridge' : 'East bridge') }); }
     if (b === 'ueno') { O.push({ x: this.templeX, z: 50, r: 10, name: 'Mountain gate' }); O.push({ x: this.templeX, z: 80, r: 11, name: 'Main hall' }); }
     if (b === 'nagaoka') { const rv = L.river, br = rv.bridges[0]; O.push({ x: rv.c0 + rv.amp * sin(br.at * rv.freq + rv.ph), z: br.at, r: 11, name: 'Flank bridge' }); O.push({ x: 40, z: 0, r: 13, name: 'Crossroads' }); }
@@ -444,6 +447,7 @@ class Sim {
       const pal = (x0, x1, z) => { for (let x = x0; x < x1; x += 3) this.boxes.push({ x: x + 1.5, z, hw: 1.5, hd: 0.5, h: 1.6, kind: 'palisade' }); }; const palZ = (x, z0, z1) => { for (let z = z0; z < z1; z += 3) this.boxes.push({ x, z: z + 1.5, hw: 0.5, hd: 1.5, h: 1.6, kind: 'palisade' }); };
       if (!this.mission) { pal(-16, -4, -112); pal(4, 16, -112); pal(-16, 16, -136); palZ(-16, -136, -112); palZ(16, -136, -112); keep.push({ x: 0, z: -124, r: 20 }); } /* the story missions place their own rearguard where the camp stands */
       for (const [x, z] of [[-9, 92], [8, 104]]) { this.boxes.push({ x, z, hw: 2.6, hd: 2.2, h: 1.8, kind: 'house', burnt: true }); keep.push({ x, z, r: 5 }); } }
+    if (MAPS[B]) MAPS[B].build(this, r, keep, clear); /* the newer battlefields (sim_maps.js): structures, colliders, zones */
     if (B === 'zroad') { this.deco.push({ kind: 'road', x: 0, w: 6 }); this.roadX = 0;
       for (const [x, z, hw, hd] of [[-13, 22, 3.2, 2.6], [-14, 36, 2.8, 2.4], [-24, 30, 3, 2.6], [12.5, 26, 3, 2.5], [13.5, 41, 3.3, 2.7], [23, 33, 2.6, 2.4], [-12.5, 50, 2.6, 2.2]]) { this.boxes.push({ x, z, hw, hd, h: 3.3, kind: 'house' }); keep.push({ x, z, r: 6 }); }
       keep.push({ x: 0, z: 34, r: 16 }); }
@@ -493,17 +497,17 @@ class Sim {
     // cover: wooden mantlets (pavises) around objectives and across the middle of the field
     const mant = (x, z) => { if (waterAt(x, z) !== 0) return; for (const q of this.boxes) if (Math.abs(q.x - x) < q.hw + 2 && Math.abs(q.z - z) < q.hd + 1.5) return; this.boxes.push({ x, z, hw: 1.15, hd: 0.2, h: 1.35, kind: 'mantlet' }); keep.push({ x, z, r: 2 }); };
     if (this.scen) { for (const c of this.scen.cover) mant(c[0], c[1]); }
-    else if (B !== 'abudali' && B !== 'zcamp' && B !== 'siegecity' && B !== 'sjvil') { for (const o of this.layout.objectives || []) for (const sd of [-1, 1]) for (const dx of [-5, 0, 5]) mant(o.x + dx + r.range(-1, 1), o.z + sd * (o.r + 2)); for (let i = 0; i < 14; i++) { const x = r.range(-90, 90), z = r.range(-45, 45); if (clear(x, z, 3)) { mant(x, z); mant(x + 2.6, z + r.range(-0.4, 0.4)); } } }
+    else if (B !== 'abudali' && B !== 'zcamp' && B !== 'siegecity' && B !== 'sjvil' && !(MAPS[B] && MAPS[B].nomant)) { for (const o of this.layout.objectives || []) for (const sd of [-1, 1]) for (const dx of [-5, 0, 5]) mant(o.x + dx + r.range(-1, 1), o.z + sd * (o.r + 2)); for (let i = 0; i < 14; i++) { const x = r.range(-90, 90), z = r.range(-45, 45); if (clear(x, z, 3)) { mant(x, z); mant(x + 2.6, z + r.range(-0.4, 0.4)); } } }
     if (this.scen) for (const L of this.scen.ladders) this.ladders.push({ x: L[0], z: L[1], hd: L[2], up: false, prog: 0, hp: 0 });
-    const treeN = B === 'bonari' ? 30 : B === 'abudali' ? 190 : B === 'zcamp' ? 120 : B === 'nagaoka' ? 70 : this.bdef.biome === 'winter' ? 110 : 150;
+    const MP = MAPS[B]; const treeN = MP && MP.trees !== undefined ? MP.trees : B === 'bonari' ? 30 : B === 'abudali' ? 190 : B === 'zcamp' ? 120 : B === 'nagaoka' ? 70 : this.bdef.biome === 'winter' ? 110 : 150;
     for (let i = 0; i < treeN; i++) {
       const x = r.range(-HALF + 8, HALF - 8), z = r.range(-98, 98);
-      if (!clear(x, z, 3)) continue; if (this.roadX !== undefined && Math.abs(x - this.roadX) < 6) continue; if (B === 'bonari' && Math.abs(x) < 26) continue; if (B === 'abudali' && Math.abs(x) < 19) continue; if (B === 'siegecity' && z > -14) continue; if (B === 'zcamp' && len(x, z) < 38) continue; if (B !== 'abudali' && Math.abs(z) > 112 && Math.abs(x) < 70) continue;
+      if (!clear(x, z, 3)) continue; if (this.roadX !== undefined && Math.abs(x - this.roadX) < 6) continue; if (B === 'bonari' && Math.abs(x) < 26) continue; if (B === 'abudali' && Math.abs(x) < 19) continue; if (B === 'siegecity' && z > -14) continue; if (B === 'zcamp' && len(x, z) < 38) continue; if (B !== 'abudali' && Math.abs(z) > 112 && Math.abs(x) < 70) continue; if (MP && MP.noTree && MP.noTree(x, z)) continue;
       this.obstacles.push({ x, z, r: 0.45, kind: 0, variant: r.next() < 0.45 ? 1 : 0, scale: r.range(0.8, 1.5), rot: r.range(0, TAU) });
     }
-    for (let i = 0; i < 38; i++) {
+    for (let i = 0; i < (MP && MP.rocks !== undefined ? MP.rocks : 38); i++) {
       const x = r.range(-HALF + 8, HALF - 8), z = r.range(-105, 105);
-      if (!clear(x, z, 4)) continue; if (B === 'siegecity' && z > -14) continue;
+      if (!clear(x, z, 4)) continue; if (B === 'siegecity' && z > -14) continue; if (MP && MP.noTree && MP.noTree(x, z)) continue;
       this.obstacles.push({ x, z, r: r.range(0.7, 2.3), kind: 1, rot: r.range(0, TAU) });
     }
   }
@@ -4537,7 +4541,7 @@ Sim.prototype.hrTick = function (u) {
   if (u.hrF > 0) u.hrF -= DT;
   if (u.hrA < 5) u.hrA += DT;
 };
-return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, YY_SLOT, FORM_COLUMN, WPN, spacingOf, gunOf,
+return { Sim, defFor, STORY, DEFS, ROSTER, FACTION, BATTLES, MAPS, cityWall, BUDGET, TICK, DT, HALF, DEPLOY_TICKS, RALLY_CD, terrainH, setTerrainScale, TERR, waterAt, slotOffset, YY_SLOT, FORM_COLUMN, WPN, spacingOf, gunOf,
   KEY_W, KEY_S, KEY_A, KEY_D, A_ATK, A_BLOCK, A_FIRE, A_AIM, A_KICK, A_MOUNT, A_JUMP, A_SWAP, A_RELOAD, A_CMD, A_RALLY, A_READY, A_THROW, A_DUEL, AIM_RAISE, A_AB1, A_AB2, A_AB3, A_ULT, A_DODGE, A_DASHL, A_DASHR, A_GRIP, KEY_SPRINT, ORD_SPAWN, ORD_CLASS, HCLASS, HAB, SCEN, BOMBS, FURY_MAX, SROLE, ARMS, RANGED, MISSIONS, OPS,
   DIR_UP, DIR_RIGHT, DIR_DOWN, DIR_LEFT, ST_IDLE, ST_WINDUP, ST_RELEASE, ST_RECOVER, ST_STUN, ST_RELOAD, ST_AIM, ST_SWAP, ST_KICK, ST_BURST,
   ORD_WAVE, ORD_MOVE, ORD_CHARGE, ORD_HOLD, ORD_FOLLOW, ORD_FORM, ORD_FIRE, ORD_CONTROL, ORD_AUTO, ORD_ABILITY, ORD_NAVAL, ORD_DIRECTIVE, DIR_ATTACK, DIR_HOLD, DIR_SUPPORT, DIR_FLANK, AI_NAMES, MODES, SCORE_WIN, FIRE_CS, abilityOf, ABILITY, FORM_LINE, FORM_COLUMN, FORM_WEDGE, FORM_LOOSE, RELEASE_T, KICK_T, SWAP_T };
