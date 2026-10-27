@@ -60,13 +60,15 @@ function realGear(u) {
     b('sl', [0.07, -0.12, 0], [0.1, 0.23, 0.28], col); b('sr', [-0.07, -0.12, 0], [0.1, 0.23, 0.28], col); b('sl', [0.08, -0.17, 0], [0.102, 0.02, 0.282], stud || gold); b('sr', [-0.08, -0.17, 0], [0.102, 0.02, 0.282], stud || gold);
     b('p', [0.12, -0.3, 0.03], [0.22, 0.44, 0.32], col); b('p', [-0.12, -0.3, 0.03], [0.22, 0.44, 0.32], col); b('p', [0, -0.22, 0.172], [0.4, 0.02, 0.01], stud || gold); b('p', [0, -0.36, 0.172], [0.4, 0.02, 0.01], stud || gold); };
   const hoof = (col) => { seg('elL', 'haL', 0.78, 1.0, 0.13, 0.15, col); seg('elR', 'haR', 0.78, 1.0, 0.13, 0.15, col); }; // 馬蹄袖
-  const robe = (col, sash) => { b('p', [0, -0.25, 0.01], [0.44, 0.4, 0.3], col); if (sash) b('p', [0, -0.07, 0], [0.47, 0.07, 0.32], sash); };
+  /* robe and coat skirts: a short band at the hips, then a flap that hangs on each thigh and swings with it, so a striding leg never comes out through the cloth */
+  const flaps = (col, L) => { seg('hipL', 'kneeL', 0.0, L, 0.26, 0.27, col); seg('hipR', 'kneeR', 0.0, L, 0.26, 0.27, col); };
+  const robe = (col, sash) => { b('p', [0, -0.13, 0.01], [0.44, 0.18, 0.3], col); flaps(col, 0.95); if (sash) b('p', [0, -0.07, 0], [0.47, 0.07, 0.32], sash); };
   const backflag = (col, edge) => { b('c', [0.1, 0.5, -0.25], [0.03, 1.15, 0.03], 0x3a2a1a); b('c', [0.25, 0.82, -0.25], [0.28, 0.5, 0.016], col); if (edge) b('c', [0.25, 0.82, -0.252], [0.32, 0.54, 0.012], edge); }; // pole behind the shoulder, clear of the helmet
   const quiver = () => { y('c', [0.14, 0.05, -0.17], [0.13, 0.6, 0.13], 0x4a2e18, [0, 0, -0.35]); b('c', [0.25, 0.36, -0.17], [0.16, 0.12, 0.08], 0xe8e0cc, [0, 0, -0.35]); };
   const sadai = () => { b('p', [0.27, -0.16, 0.02], [0.06, 0.48, 0.24], 0x5a3a22, [0, 0, 0.22]); b('p', [0.29, -0.06, 0.02], [0.065, 0.12, 0.25], brass, [0, 0, 0.22]); // bow case (left hip)
     b('p', [-0.26, -0.08, -0.03], [0.08, 0.34, 0.17], 0x4a2e18, [0, 0, -0.18]); b('p', [-0.29, 0.13, -0.03], [0.06, 0.12, 0.16], 0xe8e0cc, [0, 0, -0.18]); }; // quiver with white fletching
   const verm = 0xc4381e, mirror = () => { y('c', [0, 0.06, 0.162], [0.17, 0.02, 0.17], 0xd6dadc, [HPI, 0, 0]); y('c', [0, 0.06, 0.165], [0.1, 0.015, 0.1], 0x9aa2a6, [HPI, 0, 0]); };
-  const coat = (col, sash, collar) => { b('p', [0, -0.3, 0.01], [0.47, 0.52, 0.32], col); b('p', [0, -0.07, 0], [0.48, 0.07, 0.33], sash || 0x2a2622); b('c', [0, 0.2, 0.06], [0.3, 0.06, 0.24], collar || 0xe8e2d0); };
+  const coat = (col, sash, collar) => { b('p', [0, -0.14, 0.01], [0.47, 0.2, 0.32], col); flaps(col, 1.1); b('p', [0, -0.07, 0], [0.48, 0.07, 0.33], sash || 0x2a2622); b('c', [0, 0.2, 0.06], [0.3, 0.06, 0.24], collar || 0xe8e2d0); };
   const tassel = (yy) => { b('h', [0, yy, 0], [0.12, 0.07, 0.12], red); b('h', [0, yy - 0.06, 0], [0.16, 0.05, 0.16], red); };
   // Qi Jiguang's men: a low rattan helmet woven in bands, red knob, cloth neck guard
   const rattanHelm = () => hatOn(() => { c('h', [0, 0.17, 0], [0.4, 0.2, 0.4], 0xb8964e); y('h', [0, 0.07, 0], [0.4, 0.045, 0.4], 0x8a6a30); y('h', [0, 0.14, 0], [0.33, 0.02, 0.33], 0x8a6a30); b('h', [0, 0.28, 0], [0.07, 0.06, 0.07], red); b('h', [0, -0.08, -0.15], [0.3, 0.16, 0.03], verm, [0.15, 0, 0]); });
