@@ -1446,6 +1446,7 @@ class Sim {
           let inPlace = true; if (!def.skirmish) { if (u.mounted) this.cavSteer(u, u.x, u.z, 0); else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z, sd = len(sdx, sdz); if (sq && order !== ORD_CHARGE && sd > 1.3 && u.st === ST_IDLE) { this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.8); inPlace = false; } else { u.mx = 0; u.mz = 0; } } }
           else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z; if (len(sdx, sdz) > 0.6) this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.7); else { u.mx = 0; u.mz = 0; } }
           if (!u.mounted && (u.mx !== 0 || u.mz !== 0)) { const my = atan2(u.mx, u.mz), off = Math.abs(wrap(my - ang)), turner = (u.id * 37) % 10 < 7; if (off > 1.9 && len(u.slotX - u.x, u.slotZ - u.z) > (turner ? 1.2 : 4)) wantYaw = my; else if (off > 1.6) { u.mx *= 0.5; u.mz *= 0.5; } } // a long way back to his place: turn and walk it, don't skate backward; a step or two back is a slow backpedal
+          if (inPlace && u.st === ST_IDLE && u.ammo > 0 && !this.losClear(u, tgt)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } /* a wall or a house in the way: no shot; go round and find one */
           if (inPlace && u.st === ST_IDLE && u.ammo > 0 && u.flinchT <= 0 && Math.abs(wrap(ang - u.yaw)) < 0.7) {
             u.st = ST_AIM; u.stT = 0; u.aimTarget = tgt.id; u.blocking = false;
             const g0 = gunOf(def, u.weapon); const aimT = Math.round((g0 ? g0.aim : 0.8) * 30);
@@ -1854,6 +1855,17 @@ class Sim {
       prev = t;
     }
     return -1;
+  }
+  // can he see (and shoot) his man? walls, houses, rocks and stockades block it; trees only partly hide, so they don't
+  losClear(u, t) {
+    if (u.losTk !== undefined && this.tick - u.losTk < 12 && u.losTo === t.id) return u.losOk;
+    const ox = u.x, oy = u.y + 1.5, oz = u.z, dx = t.x - ox, dy = t.y + 1.2 - oy, dz = t.z - oz; let ok = true;
+    for (let i = 0; i < this.boxes.length && ok; i++) { const b = this.boxes[i]; if (b.kind === 'sface' && this.overParapet(u)) continue; const k = this.rayBox(ox, oy, oz, dx, dy, dz, b, 1); if (k > 0.02 && k < 0.98) ok = false; }
+    const hd = len(dx, dz);
+    if (ok && hd > 1e-6) { const ux = dx / hd, uz = dz / hd, obs = this.obstacles;
+      for (let i = 0; i < obs.length; i++) { const o = obs[i]; if (o.kind === 0) continue; const lx = ox - o.x, lz = oz - o.z, b = lx * ux + lz * uz, c = lx * lx + lz * lz - o.r * o.r, disc = b * b - c; if (disc < 0) continue;
+        const t2 = -b - Math.sqrt(disc); if (t2 < 0.5 || t2 > hd - 0.5) continue; const y = oy + dy * (t2 / hd), gh = terrainH(o.x, o.z), top = o.kind === 1 ? gh + o.r * 0.9 : o.kind === 2 ? gh + 5 : o.kind === 5 ? gh + 1.2 : gh + 4; if (y < top && y > gh - 1) { ok = false; break; } } }
+    u.losTk = this.tick; u.losTo = t.id; u.losOk = ok; return ok;
   }
   rayBox(ox, oy, oz, dx, dy, dz, b, maxT) {
     const gh = terrainH(b.x, b.z); const minY = gh - 0.5, maxY = gh + b.h;
