@@ -154,7 +154,7 @@ function realGear(u) {
     if (vr === 2) b('h', [0, -0.125, fz - 0.005], [0.05, 0.05, 0.02], hair);
     if (vr === 3) { b('h', [0, -0.12, fz - 0.01], [0.24, 0.06, 0.03], hair); b('h', [0.12, -0.07, 0.06], [0.03, 0.1, 0.12], hair); b('h', [-0.12, -0.07, 0.06], [0.03, 0.1, 0.12], hair); }
   }
-  const hp = P.find(q => q.hat);
+  const hp = P.find(q => q.hat); if (R.tagFace) R.tagFace(P);
   g = { parts: P, hat: hp ? { m: hp.m, s: hp.s, k: hp.k } : null }; RG_CACHE.set(key, g); return g;
 }
 R.GEAR_HOOK.fn = realGear;

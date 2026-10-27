@@ -3,3 +3,4 @@
 # (Cleared 27 Oct 2026: every earlier claim was a finished fork.)
 - melee-feel (agent, branch agent/melee-feel): sim.js melee AI engagement range/approach (unitAI melee branch, new Sim.prototype.xc* fns at end), footControl dodge, resolveMeleeHit/hitReact hit feel; render.js/realism.js hit effects (camera, hitstop); main.js dodge input line
 - publishing v112 (melee-feel agent)
+- anim (agent, branch agent/anim): render.js KF/POSES/HR_POSE/drawFigure/viewmodel/locomotion, anim.js
