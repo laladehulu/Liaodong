@@ -1446,7 +1446,8 @@ class Sim {
           let inPlace = true; if (!def.skirmish) { if (u.mounted) this.cavSteer(u, u.x, u.z, 0); else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z, sd = len(sdx, sdz); if (sq && order !== ORD_CHARGE && sd > 1.3 && u.st === ST_IDLE) { this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.8); inPlace = false; } else { u.mx = 0; u.mz = 0; } } }
           else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z; if (len(sdx, sdz) > 0.6) this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.7); else { u.mx = 0; u.mz = 0; } }
           if (!u.mounted && (u.mx !== 0 || u.mz !== 0)) { const my = atan2(u.mx, u.mz), off = Math.abs(wrap(my - ang)), turner = (u.id * 37) % 10 < 7; if (off > 1.9 && len(u.slotX - u.x, u.slotZ - u.z) > (turner ? 1.2 : 4)) wantYaw = my; else if (off > 1.6) { u.mx *= 0.5; u.mz *= 0.5; } } // a long way back to his place: turn and walk it, don't skate backward; a step or two back is a slow backpedal
-          if (inPlace && u.st === ST_IDLE && u.ammo > 0 && !this.losClear(u, tgt)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } /* a wall or a house in the way: no shot; go round and find one */
+          if (inPlace && u.st === ST_IDLE && u.ammo > 0 && !this.losClear(u, tgt)) { /* a wall or a house in the way: shoot at someone he CAN see (any enemy in range, not only his company's mark); only a man on open ground with nobody in sight walks to find a shot */
+            const alt = this.losTarget(u, range); if (alt) { u.target = alt.id; } else if (!this.onWallTop(u)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } else inPlace = false; }
           if (inPlace && u.st === ST_IDLE && u.ammo > 0 && u.flinchT <= 0 && Math.abs(wrap(ang - u.yaw)) < 0.7) {
             u.st = ST_AIM; u.stT = 0; u.aimTarget = tgt.id; u.blocking = false;
             const g0 = gunOf(def, u.weapon); const aimT = Math.round((g0 ? g0.aim : 0.8) * 30);
@@ -1855,6 +1856,12 @@ class Sim {
       prev = t;
     }
     return -1;
+  }
+  onWallTop(u) { return u.y - terrainH(u.x, u.z) > 2.2 || (this.overParapet && this.overParapet(u)); }
+  losTarget(u, range) { // the nearest enemies in range, checked in order for a clear line (a few each time, to keep it cheap)
+    const n = this.gatherNear(u.x, u.z, range); const cand = [];
+    for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v.dead || v.inactive || v.team === u.team || v.type === 'horse' || (v.downed && this.story)) continue; const d = len(v.x - u.x, v.z - u.z); if (d > range) continue; cand.push([d, v]); }
+    cand.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id); for (let i = 0; i < Math.min(6, cand.length); i++) if (this.losClear(u, cand[i][1])) return cand[i][1]; return null;
   }
   // can he see (and shoot) his man? walls, houses, rocks and stockades block it; trees only partly hide, so they don't
   losClear(u, t) {

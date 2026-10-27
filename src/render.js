@@ -1225,7 +1225,7 @@ class Renderer {
     if (this.flags.instanceColor) this.flags.instanceColor.needsUpdate = true;
   }
   buildFX() {
-    this.smoke = new Particles(this.scene, this.lowfx ? 5000 : 9000, false); if (this.off && this.off.has('smoke')) this.smoke.points.visible = false; this.smoke.wind = [0.55, 0.04, 0.25]; this.suppress = 0;
+    this.smoke = new Particles(this.scene, this.lowfx ? 5000 : 9000, false); if (this.off && this.off.has('smoke')) this.smoke.points.visible = false; this.smoke.wind = [0.55, 0.42, 0.25]; /* warm smoke rises as it drifts */ this.suppress = 0;
     this.sparks = new Particles(this.scene, 2500, true);
     const TR = 260; this.tracerN = TR; this.tracers = []; this.tracerNext = 0;
     this.tracerMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), TR);
@@ -1393,8 +1393,9 @@ class Renderer {
   }
   puffSmoke(x, y, z, n, vx, vy, vz, spread, life, s0, s1, shade, alpha) {
     for (let i = 0; i < n; i++) {
-      const sh = shade + rnd(-0.08, 0.08);
-      this.smoke.spawn(x + rnd(-0.2, 0.2), y + rnd(-0.2, 0.2), z + rnd(-0.2, 0.2), vx + rnd(-spread, spread), vy + rnd(-spread, spread) * 0.6 + 0.4, vz + rnd(-spread, spread), life * rnd(0.7, 1.3), s0, s1 * rnd(0.8, 1.4), sh, sh, sh * 1.02, alpha, 0.9, -0.08, sh + 0.1, sh + 0.1, sh + 0.12);
+      /* black-powder smoke: a dense off-white-to-grey cloud with a faint sulphur-yellow cast, darker in the thick core, thinning to a pale blue-grey haze */
+      const sh = Math.min(0.9, shade) - rnd(0, 0.16);
+      this.smoke.spawn(x + rnd(-0.2, 0.2), y + rnd(-0.2, 0.2), z + rnd(-0.2, 0.2), vx + rnd(-spread, spread), vy + rnd(-spread, spread) * 0.6 + 0.5, vz + rnd(-spread, spread), life * rnd(0.7, 1.3), s0, s1 * rnd(0.8, 1.4), sh, sh * 0.97, sh * 0.88, alpha, 0.9, -0.08, sh + 0.08, sh + 0.09, sh + 0.12);
     }
   }
   burstSparks(x, y, z, n, speed, r, g, b, life, size) {
