@@ -494,6 +494,48 @@ function chRollCard(o) {
 { const _k = zheKeyE; zheKeyE = function () { if (ZC && state.sim && state.sim.mission && state.sim.mission.camp && !state.zheDlg) { const t = chNearRoll(); if (t) { chRollCard(t); return true; } } return _k(); }; }
 // ================= 八旗 · the Plain White niru =================
 const chJA = (C, k) => !!(JS && JS.alive[k] && k !== JS.me);
+// 〇 · the night after Sarhu (c1): a Ming scout from Liu Ting's column, caught at the horse lines
+// Sources: the Jin took Du Song's command arrow and sent men in Ming dress to hurry Liu Ting on (明史·劉綎傳 「得杜松令箭
+// 誘綎」; 清太祖實錄 天命四年三月), and what captured Ming men told them went straight to the Khan. Captives were commonly
+// given as aha (阿哈, bondservants) to the men who took them (滿文老檔, passim). Killing a prisoner out of hand in camp has no
+// particular source: it is what a tired file might do.
+CHD.j1scout = {
+  build: (C) => ({ id: 'j1scout', title: '哨 · The scout', ltitle: 'The Ming scout at the horse lines', year: 'The night after Sarhu, April 1619', who: ['達布遜 Dabsun', 'and Sose, with a man between them'],
+    lines: [chL('（他們從馬樁那邊拖過來一個人。明軍的號衣，沒有刀，腳上的草鞋凍硬了。索色的箭還在他腿上。）', '(They drag a man up from the horse lines. A Ming tabard, no sword, straw sandals frozen stiff. Sose\'s arrow is still in his leg.)'),
+      chL('索色：劉綎的探子。他在數我們的火。', 'Sose: One of Liu Ting\'s scouts. He was counting our fires.'),
+      chL('達布遜：是我先看見的！他歸我——我娘正缺個挑水的。', 'Dabsun: I saw him first! He\'s mine — my mother needs a water-carrier.'),
+      chL('莽古：挑水的？他數了我們的火。砍了，省一張嘴。', 'Manggu: A water-carrier? He counted our fires. Cut him down and save a mouth.'),
+      chJA(C, 'lier') ? chL('（李二站在火光外面。那人看見他的辮子，不再掙扎了。）', '(Li Er stands outside the firelight. The man sees his queue and stops struggling.)') : chL('（那人不說話。他在看你的刀。）', '(The man says nothing. He is looking at your sword.)')],
+    opts: [
+      { q: 'Let Manggu finish it.', led: 'Let Manggu kill the Ming scout at the horse lines.', a: [chL('（莽古沒有多說。雪地上多了一個人。）', '(Manggu doesn\'t say anything more. One more man in the snow.)'), chL('達布遜：「那是我抓的……」他沒有說完。', 'Dabsun: "I caught him..." He doesn\'t finish.')],
+        fx: (C) => { chBond(C, 'manggu', 1); chBond(C, 'dabsun', -1); chBond(C, 'lier', -1); chRep(C, 'cruel', 2); C.S.flags.scoutDead = 1; } },
+      { q: 'He is Dabsun\'s. The file keeps him.', led: 'Gave the Ming scout to Dabsun as the file\'s aha.', a: [chL('達布遜把箭拔了，用自己的綁腿給他包上。「挑水的。」', 'Dabsun pulls the arrow out and binds the leg with his own puttee. "Water-carrier."'), chJA(C, 'lier') ? chL('（李二看了那人很久，走開了。他沒有說「又一個」，可是你聽見了。）', '(Li Er looks at the man a long while and walks off. He doesn\'t say "another one", but you hear it anyway.)') : chL('（那人整夜沒有睡。）', '(The man doesn\'t sleep all night.)')],
+        fx: (C) => { chBond(C, 'dabsun', 2); chBond(C, 'lier', -1); C.S.flags.aha = 1; } },
+      { q: 'Take him to Tobohui. Li Er will ask him.', led: 'Took the Ming scout to Tobohui to be questioned.', a: [chL(chJA(C, 'lier') ? '李二蹲下來用撫順話問。那人說：南兵走在隊尾，十二個人一隊，朝鮮的銃手在他們前頭。' : '穆克譚用漢話問。那人說：南兵走在隊尾，十二個人一隊，朝鮮的銃手在他們前頭。', `${chJA(C, 'lier') ? 'Li Er' : 'Muktan'} squats and asks him in Chinese. The man says: the southerners walk at the tail, in twelves; the Korean musketeers are ahead of them.`), chL('托博輝把話帶到四貝勒帳前。回來只說了一句：「明天打隊尾的時候，阿敏的旗會早點下來。」', 'Tobohui takes it to the Fourth Beile\'s tent. When he comes back he says only: "Tomorrow, when we hit the tail, Amin\'s banners will come down early."'), chL('（天亮前那人被帶到大營去了。沒人問他叫什麼。）', '(Before dawn the man is taken to the great camp. Nobody asks his name.)')],
+        fx: (C) => { chBond(C, 'tobohui', 1); chBond(C, 'lier', 1); chRep(C, 'disc', 1); C.S.flags.scoutTold = 1; } },
+    ] }),
+  dream: (C, o) => o === 0 ? ['The night after', ['A man in a Ming tabard counting fires. One, two, three. He never reaches the end, and every fire he counts is yours.']] : null,
+  murmur: (C, o) => o === 0 ? ['dabsun', '他是我抓的。', 'I caught him. He was mine.'] : o === 1 && C.S.flags.aha ? ['manggu', '挑水的。多一張嘴。', 'A water-carrier. One more mouth.'] : null,
+  end: (C, o) => o === 0 ? 'The scout died at the horse lines. Liu Ting walked into the valley the next morning without him.' : o === 1 ? (C.S.flags.ahaRan ? 'The scout carried water for the file for two years, and walked out the night Liaoyang fell.' : 'The scout carried water for the file. Dabsun\'s mother got her water-carrier.') : 'What the scout said went up to the Fourth Beile. Amin\'s banners came down the ridge early. Nobody wrote his name.',
+  talk: (C, k, o) => ({
+    dabsun: o === 0 ? { q: 'About the scout...', a: [chL('……舅舅說，打仗跟打獵一樣。獵物不會先求饒。', '...Uncle says war is like a hunt. Game doesn\'t beg first.')] } : o === 1 ? { q: 'How is your water-carrier?', bond: 1, a: [chL('腿好了。他叫老周。他說他家也有個像我這麼大的。', 'The leg\'s healed. His name is Old Zhou. He says he has one my age at home.')] } : null,
+    lier: o === 2 ? { q: 'You asked him well.', bond: 1, a: [chL('我問他的時候，他一直看我的辮子。', 'The whole time I was asking, he kept looking at my queue.'), chL('他說的是真話。真話也救不了他。', 'He told the truth. The truth didn\'t save him either.')] } : o === 1 ? { q: 'Another one, you were going to say.', a: [chL('我沒說。', 'I didn\'t say it.'), chL('撫順那年，我也是這麼被人拉進火光裡的。', 'The year Fushun fell, that is how I was dragged into the firelight too.')] } : null,
+    manggu: o === 0 ? { q: 'You did it quickly.', a: [chL('快就是仁慈。你不懂，以後會懂。', 'Quick is mercy. You don\'t understand yet. You will.')] } : null,
+  })[k] || null,
+};
+// the Abdali variant the scout's word earns: Tobohui has asked for Amin's banners, and they come down the ridge early
+function chJinVariants() {
+  const M = SIM.MISSIONS, A = M.jin1; if (!A || M.jin1_w) return;
+  const W = JSON.parse(JSON.stringify(A)); W.variantOf = 'jin1';
+  W.phases[0].say = W.phases[0].say.concat([[54, 'niru', 'The scout said twelves at the tail. When we reach them, Amin\'s banners come down behind us. I asked for it.', '那探子說隊尾是十二個人一隊的。打到他們的時候，阿敏的旗從後面下來。我討來的。']]);
+  W.phases[3].waves = [[16, 'amin', ['attack']]];
+  W.phases[3].say = W.phases[3].say.filter(s => s[1] !== 'lookout' || s[0] !== 31).concat([[17, 'lookout', 'Amin\'s banners on the ridge already! Tobohui\'s word held!', '二貝勒的旗已經下嶺了！托博輝說的話算數！']]);
+  M.jin1_w = W;
+}
+{ const _sg = startGame;
+  startGame = function (msg, me, net, delay) {
+    try { chJinVariants(); if (msg && msg.mode === 'campaign' && msg.mission === 'jin1' && typeof JS !== 'undefined' && JS && JS.ch && JS.ch.j1scout && JS.ch.j1scout.o === 2) msg = Object.assign({}, msg, { mission: 'jin1_w' }); } catch (e) { console.warn('choices jin', e); }
+    return _sg(msg, me, net, delay); }; }
 // 一 · Shenyang, the night after it fell (c2): the Ming gunner who will not serve the guns
 CHD.j2gun = {
   build: (C) => ({ id: 'j2gun', title: '砲手 · The gunner', ltitle: 'The Ming gunner at Shenyang', year: 'Shenyang, the night it fell, 1621', who: ['托博輝 Tobohui', 'captain of the niru'],
@@ -511,8 +553,11 @@ CHD.j2gun = {
     ] }),
   dream: (C, o) => o === 0 ? ['After Shenyang', ['A man in a Ming coat who will not lower his head, in a gate passage that goes on and on. Every time you reach him, he is still looking at you.']] : null,
   end: (C, o) => o === 0 ? (C.S.flags.lierGone ? 'You killed the gunner as you were told. Li Er ran south across the Liao River before Ningyuan.' : 'You killed the gunner as you were told.') : o === 1 ? 'The gunner lived and served the Khan\'s cannon at the Hun River. Years later he was among the Han gunners of the Ujen Cooha.' : 'The gunner got away. You took the whip for it, and Tobohui never trusted you again.',
-  talk: (C, k, o) => k === 'lier' ? (o === 2 ? { q: 'About the gunner...', bond: 1, a: [chL('……我知道是你。我什麼都沒說。', '...I know it was you. I said nothing.'), chL('撫順那年，要是也有人轉過身去……', 'The year Fushun fell, if someone had turned his back for me...')] } : o === 1 ? { q: 'You saved his life.', a: [chL('我救了他，讓他打自己人。', 'I saved him so he could shoot his own people.'), chL('我們都是這麼活下來的。', 'That is how all of us stay alive.')] } : null) : null,
-  murmur: (C, o) => o === 0 && chJA(C, 'lier') ? ['lier', '……', '...'] : null,
+  talk: (C, k, o) => k === 'lier' ? (o === 2 ? { q: 'About the gunner...', bond: 1, a: [chL('……我知道是你。我什麼都沒說。', '...I know it was you. I said nothing.'), chL('撫順那年，要是也有人轉過身去……', 'The year Fushun fell, if someone had turned his back for me...')] } : o === 1 ? { q: 'You saved his life.', a: [chL('我救了他，讓他打自己人。', 'I saved him so he could shoot his own people.'), chL('我們都是這麼活下來的。', 'That is how all of us stay alive.')] } : null)
+    : k === 'tobohui' && o === 2 ? { q: 'The whip. Does it still stand between us?', a: [chL('鞭子是給牛錄看的。看守放跑了人，牛錄額真不打，汗就打牛錄額真。', 'The whip was for the niru to see. A guard lets a man go and the captain doesn\'t whip him, then the Khan whips the captain.'), chL('你的背好了。我的帳上還沒好。', 'Your back has healed. My tally hasn\'t.')] }
+    : k === 'sabu' && o === 1 ? { q: 'There was a Shenyang gunner, in 1621...', a: [chL('烏真超哈裡有個瀋陽來的老砲手，不說話。大家說他是渾河那回開的第一砲。', 'There\'s an old gunner from Shenyang in the Ujen Cooha who never talks. They say he fired the first gun at the Hun River.'), chL('是你們牛錄的人勸的？他沒說過。', 'Your niru talked him into it? He\'s never said so.')] }
+    : k === 'muktan' && o === 0 && C.S.flags.lierGone ? { q: 'Did you write Li Er in the tally?', a: [chL('寫了「逃」。托博輝讓我寫的。', 'I wrote "fled". Tobohui told me to.'), chL('我本想寫「回家」。', 'I wanted to write "went home".')] } : null,
+  murmur: (C, o) => o === 0 && chJA(C, 'lier') ? ['lier', '……', '...'] : o === 2 && chJA(C, 'ilan') ? ['ilan', '二十鞭。我數了。他一聲沒出。', 'Twenty strokes. I counted. He never made a sound.'] : null,
 };
 // 二 · before Ningyuan (c3): Wunage takes horsemen over the sea ice to the island where the Ming keep their grain
 CHD.j3ice = {
@@ -524,7 +569,9 @@ CHD.j3ice = {
       opts: barred ? [{ q: 'The walls, then.', led: 'Was not trusted to ride to Juehua Island; went to the walls.', a: [chL('（你的人什麼也沒說。他們都看見城上的砲了。）', '(Your men say nothing. They have all seen the guns on the walls.)')], fx: () => { } }]
         : [{ q: 'We go to the walls with the banner.', led: 'Went to the walls of Ningyuan with the banner.', a: [chL('好。盾車明天第一批。', 'Good. The shield carts go in the first wave tomorrow.')], fx: () => { } },
           { q: 'We ride over the ice with Wunage.', led: 'Rode over the sea ice to Juehua Island with Wunage.', a: [chL('好。冰上冷，可冰上沒有大砲。', 'Good. It\'s cold on the ice. But there are no cannon on the ice.')], fx: () => { } }] }; },
-  end: (C, o) => o === 1 ? (chGot(C, 'j3jetty') === 0 ? 'You went over the ice to Juehua Island and burned the grain. At the jetty you followed the order.' : 'You went over the ice to Juehua Island and burned the grain. At the jetty you let the boatmen run onto the ice.') : 'You went to the walls of Ningyuan, where the guns were.',
+  end: (C, o) => o === 1 ? (chGot(C, 'j3jetty') === 0 ? 'You went over the ice to Juehua Island and burned the grain. At the jetty you followed the order.' : 'You went over the ice to Juehua Island and burned the grain. At the jetty you let the boatmen run onto the ice.') : (C.S.flags.whipped ? 'You were not trusted on the ice. You went to the walls of Ningyuan, where the guns were.' : 'You went to the walls of Ningyuan, where the guns were.'),
+  murmur: (C, o) => o === 1 ? null : C.S.flags.whipped ? ['manggu', '武訥格的人走冰上回來的，一個沒少。我們呢。', 'Wunage\'s men came back over the ice without losing one. And us.'] : null,
+  talk: (C, k, o) => o === 0 && (k === 'manggu' || k === 'anju') ? { q: 'I chose the walls.', a: [k === 'anju' ? chL('我哥也在牆底下。你沒選錯，是砲選錯了。', 'My brother was under that wall too. You didn\'t choose wrong. The guns did.') : chL('牆底下。我早說過，繞過去。', 'Under the wall. I said it: go round.')] } : null,
 };
 CHD.j3jetty = {
   build: (C) => ({ id: 'j3jetty', urgent: true, timer: 12, def: 0, title: 'The jetty', ltitle: 'The jetty on Juehua Island', kick: '抉擇 · NOW', who: ['武訥格 Wunage'],
@@ -550,6 +597,51 @@ CHD.j4leave = {
       ] }; },
   end: (C, o) => { const k = (C.S.ch.j4leave || {}).k, n = k ? chNm(C, k, true) : 'He'; if (o === 0) return `${n} reached home before his mother died.`; return C.S.alive[k] ? `${n} fought at Dalinghe and lived. His mother died before he got home.` : `${n}'s mother died without him. Then he died too, at Dalinghe.`; },
 };
+// 四 · the siege ditch at Dalinghe (c4): a starving Ming soldier crawls out of the town to your watch-fire
+// Sources: Hong Taiji shot letters into Dalinghe and ordered that any who came out should be spared and fed (清太宗實錄
+// 天聰五年八月至十月 「來降者勿殺」; 滿文老檔 同年); the town ate its horses, then its dead (明史·祖大壽傳 「人相食」); men
+// who slipped out at night were, by the Ming side's own account, killed as deserters if caught going back. That a file
+// on watch might keep such a man, or cut him down as a spy, is the game's own invention.
+CHD.j4ditch = {
+  build: (C) => { const ws = chJA(C, 'wangsi'), mg = chJA(C, 'manggu'), bh = chJA(C, 'bahai');
+    return { id: 'j4ditch', title: '壕 · The ditch', ltitle: 'The man who crawled out of Dalinghe', year: 'The siege lines at Dalinghe, the ninth month of 1631', who: ws ? ['王四 Wang Si', 'on watch at the ditch, calling you over'] : ['巴海 Bahai', 'on watch at the ditch, calling you over'],
+      lines: [chL('（壕對面的黑地裡有東西在動。不是狗。一個人，用肘爬，爬了半夜。）', '(Something moves in the dark beyond the ditch. Not a dog. A man, on his elbows; he has been crawling half the night.)'),
+        chL('（他掉進壕裡，爬不上來。明軍的號衣鬆鬆地掛在骨頭上。他喊的那個字，你聽得懂：「糧。」）', '(He falls into the ditch and cannot climb out. A Ming tabard hangs loose on his bones. The one word he says, you understand: "grain.")'),
+        ws ? chL('王四：遼陽人。我聽得出。他說城裡馬吃完了，開始吃……他沒說完。', 'Wang Si: A Liaoyang man. I can hear it. He says the horses in there are gone, and they\'ve started on... he doesn\'t finish.') : chL('（他說城裡馬吃完了，開始吃……他沒說完。）', '(He says the horses in there are gone, and they\'ve started on... he doesn\'t finish.)'),
+        chL('汗的令是：出城來降的，不殺，給飯，天亮送大營。', 'The Khan\'s order is this: a man who comes out to surrender is not killed. Feed him; at dawn send him to the great camp.'),
+        mg ? chL('莽古：他是來數壕的。祖大壽夜夜派人出來。餵飽了送回去，咱們的壕就在他肚子裡。', 'Manggu: He\'s here to count the ditch. Zu Dashou sends men out every night. Feed him and send him back, and our lines go back inside his belly.') : chL('（有人說：祖大壽夜夜派人出來數壕。）', '(Someone says: Zu Dashou sends men out every night to count the ditch.)'),
+        bh ? chL('巴海已經把炒米拿出來了。他看著你。', 'Bahai has already taken out the parched millet. He is looking at you.') : chL('（你的人在等你的話。）', '(Your men are waiting for your word.)')],
+      opts: [
+        { q: 'The Khan\'s order. Feed him. The great camp at dawn.', led: 'Fed the man from Dalinghe and sent him to the great camp at dawn.', a: [chL('（他吃得太快，吐了，又吃。巴海把水囊遞給他，沒說話。）', '(He eats too fast, brings it up, and eats again. Bahai hands him the water-skin without a word.)'), chL('（天亮時兩個巴牙喇把他帶走了。他回頭看了壕一眼，不是看你們。）', '(At dawn two Bayara take him away. He looks back once at the ditch, not at you.)')],
+          fx: (C) => { chBond(C, 'bahai', 2); chBond(C, 'wangsi', 1); chBond(C, 'manggu', -1); chRep(C, 'care', 1); C.S.flags.ditchFed = 1; } },
+        { q: 'Feed him, and send him back over the ditch with the Khan\'s letter.', led: 'Sent the man back into Dalinghe with the Khan\'s letter of surrender.', a: [chL('穆克譚把汗射進城的那封信抄了一份，縫在他的號衣裡。「告訴他們：出來的，不殺。」', 'Muktan copies the letter the Khan shoots into the town and sews it into his tabard. "Tell them: those who come out are not killed."'), chL('（他爬回黑地裡去了。你們聽了一夜，沒聽見什麼。）', '(He crawls back into the dark. You listen all night and hear nothing.)'), chL('（第二天天亮，城牆上吊著一個人，胸前釘著一張紙。遠得看不清是不是他。）', '(The next dawn a man hangs from the wall with a paper nailed to his chest. Too far to tell if it is him.)')],
+          fx: (C) => { chBond(C, 'muktan', 1); chBond(C, 'wangsi', -1); chRep(C, 'disc', 1); C.S.flags.ditchLetter = 1; } },
+        { q: 'A spy. Manggu is right. Finish it.', led: 'Had the man from Dalinghe killed in the ditch as a spy.', a: [chL('（莽古下壕去了。很快。）', '(Manggu goes down into the ditch. It is quick.)'), chL('托博輝天亮時來看壕。他看見了。「汗的令是不殺。」', 'Tobohui comes to see the ditch at dawn. He sees. "The Khan\'s order was: not killed."'), chL('「明天長山的功，你的名字不上冊。」他沒有再說第二句。', '"Tomorrow at Changshan, whatever your file does, your name does not go in the tally." He says nothing else.')],
+          fx: (C) => { chBond(C, 'manggu', 2); chBond(C, 'bahai', -2); chBond(C, 'wangsi', -2); chBond(C, 'tobohui', -2); chRep(C, 'cruel', 2); C.S.flags.noMerit = 1; } },
+      ] }; },
+  dream: (C, o) => o === 2 ? ['After Changshan', ['A ditch, and a man at the bottom of it saying one word. In the dream you have grain in both hands and the ditch keeps getting deeper.']] : o === 1 ? ['After Changshan', ['A paper nailed to a chest, too far to read. You walk toward the wall all night and it never gets nearer.']] : null,
+  murmur: (C, o) => o === 0 ? ['bahai', '他吃得太快。我以前也那樣。', 'He ate too fast. I used to eat like that.'] : o === 2 ? ['manggu', '數壕的。我說過。', 'Counting the ditch. I said so.'] : null,
+  end: (C, o) => o === 0 ? 'The man from the ditch was fed and sent to the great camp. When Zu Dashou surrendered, he was one of the Han who had already shaved their heads.' : o === 1 ? 'The man went back into Dalinghe with the Khan\'s letter. A month later the town surrendered; nobody could say whether the letter had anything to do with it.' : `A starving man was killed in the ditch as a spy. Your name was struck from the tally for Changshan${chGot(C, 'j4heads') === 1 ? ', and your file took heads there anyway' : ''}.`,
+  talk: (C, k, o) => ({
+    bahai: o === 0 ? { q: 'You gave him your millet.', bond: 1, a: [chL('松花江上餓過。餓過的人，看見餓的人，手自己就伸出去了。', 'I\'ve been hungry on the Sungari. A man who\'s been hungry sees a hungry man and his hand goes out by itself.')] } : o === 2 ? { q: 'Bahai. About the ditch.', a: [chL('……我把炒米收起來了。', '...I put the millet away.'), chL('（他沒有再說話。）', '(He says nothing more.)')] } : null,
+    wangsi: o === 1 ? { q: 'You didn\'t want him sent back.', a: [chL('遼陽破的時候，回城的人都是那麼吊的。胸口釘一張紙。', 'When Liaoyang fell, the men who went back in were hung like that. A paper nailed to the chest.'), chL('我知道，汗的信總得有人送。', 'I know. Somebody had to carry the Khan\'s letter.')] } : o === 2 ? { q: 'Wang Si.', a: [chL('……他是遼陽人。跟我一個口音。', '...He was from Liaoyang. Same accent as me.'), chL('（他轉過身去擦刀。）', '(He turns away and wipes his sword.)')] } : null,
+    manggu: o === 2 ? { q: 'Tobohui struck my name.', a: [chL('名字。冊子上的字。你的人還活著，這才算數。', 'A name. Ink in a book. Your men are alive, that\'s what counts.'), chL('……我欠你的。', '...I owe you for it.')] } : o === 0 ? { q: 'You still think he was counting the ditch?', a: [chL('我想什麼不要緊。汗的令是汗的令。', 'What I think doesn\'t matter. The Khan\'s order is the Khan\'s order.')] } : null,
+    tobohui: o === 2 ? { q: 'My name, Tobohui.', a: [chL('汗的令是不殺。我要是不劃，劃的就是我。', 'The Khan\'s order was: not killed. If I hadn\'t struck it, mine would have been struck instead.'), chL('帶你的人活著回來。冊子以後再說。', 'Bring your men back alive. The tally can wait.')] } : null,
+  })[k] || null,
+};
+// in the burning wagon camp at Changshan: the Ming throw down their guns, and the file wants heads
+// Source: Hong Taiji ordered Zhang Chun taken alive (清太宗實錄 天聰五年九月); the banners' merit was counted in heads and
+// captives, and the file's eagerness for them is the game's own invention.
+CHD.j4heads = {
+  build: (C) => ({ id: 'j4heads', urgent: true, timer: 11, def: 0, title: 'The wagon camp', ltitle: 'Changshan: the men who threw down their guns', kick: '抉擇 · NOW', who: ['莽古 Manggu'],
+    lines: [chL('他們扔下火器了！汗要的是張春——這些兵，首級算我們的！', 'They\'ve thrown down their guns! The Khan wants Zhang Chun — these men, their heads count for us!')],
+    opts: [{ q: 'Hold. Prisoners, as the Khan said.', led: 'Held the file back at Changshan; the Ming who gave up were taken prisoner.', a: [chL('住手！降的不殺！捆起來！', 'Hold! Not the ones who give up! Bind them!')], fx: (C) => { chBond(C, 'manggu', -1); chRep(C, 'disc', 1); C.S.flags.prisoners = 1; } },
+      { q: 'Let the file take heads.', led: 'Let the file take heads at Changshan among the men who had given up.', a: [chL('（你沒有喊住手。）', '(You don\'t shout hold.)')], fx: (C) => { chBond(C, 'manggu', 2); chRep(C, 'cruel', 2); C.S.flags.heads = 1; } }] }),
+  murmur: (C, o) => o === 1 ? ['muktan', '長山，斬級若干。我沒有寫「降」。', 'Changshan: so many heads. I did not write the word "surrendered".'] : null,
+  end: (C, o) => o === 1 ? 'The file took heads at Changshan among men who had thrown down their guns. Muktan wrote the number and not the word.' : (C.S.flags.noMerit ? 'The file took its prisoners at Changshan; the tally did not carry your name for it.' : 'The file took its prisoners at Changshan. Some of them were serving the Khan\'s guns within the year.'),
+  talk: (C, k, o) => k === 'muktan' && o === 1 ? { q: 'What did you write for Changshan?', a: [chL('斬級。數目。', 'Heads. A number.'), chL('汗要活的。帳上寫了數目，沒寫他們是扔了銃的。帳也會撒謊，我今天才知道。', 'The Khan wanted them alive. I wrote the number and not that they had thrown their guns down. A tally can lie; I learned that today.')] } : null,
+};
+CHBT.jin4 = [{ ph: 3, t: 31, id: 'j4heads', cid: 0, k: () => 0, when: () => chGot(chCtx(), 'j4heads') < 0 }];
 // the Juehua mission: over the sea ice, the trench the Ming cut, the grain, the jetty
 CH.missions3 = () => {
   const M = SIM.MISSIONS, PI = Math.PI; if (M.jjue) return;
@@ -614,18 +706,19 @@ function chJFinish(winner) {
 }
 { const _js = jStart; jStart = function (scene) {
     if (scene === 'b3j') return chJStart(scene);
-    if (scene === 'c3') { const s = jLoad(); if (s && !(s.seen && s.seen.i3) && s.ch && s.ch.j2gun && s.ch.j2gun.o === 0 && s.alive.lier && s.me !== 'lier' && !s.flags.lierGone) {
+    if (scene === 'c3') { const s = jLoad(); if (s && !(s.seen && s.seen.i3) && s.flags && s.flags.aha && !s.flags.ahaRan) { s.flags.ahaRan = 1; JS = s; jSave(); } /* the file's water-carrier walked out the night Liaoyang fell */
+      if (s && !(s.seen && s.seen.i3) && s.ch && s.ch.j2gun && s.ch.j2gun.o === 0 && s.alive.lier && s.me !== 'lier' && !s.flags.lierGone) {
       JS = s; chData(JS); const C = { c: 'jin', S: JS, save: () => jSave(), R: JR }; chLose(C, 'lier', 'gone', 'j2gun'); JS.flags.lierGone = 1; jSave();
       return zCards([{ title: '李二 · Li Er', year: 'The winter of 1621', p: ['A month after the Hun River, Li Er is gone. His horse is in the lines; his armour is folded on his bedroll. The guards at the Liao River say a man in a Han coat walked out across the ice toward the Ming side one night, and nobody stopped him.', 'Tobohui strikes his name from the roll and says nothing more about it.'], btn: 'On →' }], () => _js(scene)); } }
     return _js(scene); }; }
 { const _jf = jFinish; jFinish = function (w) { if (ZB && ZB.jue) { try { if (typeof ddFinish === 'function') ddFinish(w); } catch (e) { } return chJFinish(w); } return _jf(w); }; }
 { const _jk = jKeyE; jKeyE = function () {
     if (state.zheDlg) return true; const t = jLook(); if (!t || !t.bed) return _jk(); const C = chCtx(); if (!C) return _jk(); chData(C.S); const n = ZC.night;
-    const id = n === 2 ? 'j2gun' : n === 3 ? 'j3ice' : n === 4 && chJLeave(C) ? 'j4leave' : null;
-    if (id && chGot(C, id) < 0) { chDecide(CHD[id].build(C), (o) => {
+    const ids = (n === 1 ? ['j1scout'] : n === 2 ? ['j2gun'] : n === 3 ? ['j3ice'] : n === 4 ? ['j4ditch'].concat(chJLeave(C) ? ['j4leave'] : []) : []).filter(id => chGot(C, id) < 0);
+    const run = () => { const id = ids.shift(); if (!id) return chDream(() => _jk()); chDecide(CHD[id].build(C), (o) => {
       if (id === 'j3ice' && o === 1 && !C.S.flags.whipped) { JS.stage = 'b3j'; jSave(); return zCards([{ title: '冰 · The ice', year: 'Before dawn', p: ['Long before light the horsemen go down onto the frozen sea. The ice booms under the hooves like a drum somewhere far below.', 'Behind you, by torchlight, the banners are dragging the shield carts toward the walls of Ningyuan.'], btn: 'Onto the ice →' }], () => jGo('b3j')); }
-      chDream(() => _jk()); }); return true; }
-    chDream(() => _jk()); return true; }; }
+      run(); }); };
+    run(); return true; }; }
 { const _je = jEnd; jEnd = function () { const C = { c: 'jin', S: chData(JS), save: () => jSave(), R: JR }; chLetter(C, () => { const L = chLedgerCard(C); if (L) zCards([L], () => _je()); else _je(); }); }; }
 // the Jin talk lives in each chapter's table: give it the same memory
 function chJinTalkWrap() { if (!ZC || !ZC.jin || CH.talkWrapped.has(ZC.night)) return; const C = JCH[ZC.night]; if (!C || !C.talk) return; CH.talkWrapped.add(ZC.night); const _t = C.talk; C.talk = (k) => chTalkAdd(_t(k), k); }

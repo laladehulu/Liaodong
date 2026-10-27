@@ -3193,6 +3193,7 @@ const MISSIONS = {
       zhang: { team: 0, name: 'Zhang Chun', zh: '張春', officer: 2.5, wound: 0.35, army: ['rifle_imp', 'samurai', 'rifle_spencer'], at: [0, 4, PI], dir: ['hold', 0, 4], stay: true },
       wagons: { team: 0, name: 'The wagon camp', zh: '車營', army: ['rifle_imp', 'armstrong', 'rifle_imp', 'ashigaru', 'rifle_spencer'], at: [0, -6, PI], dir: ['hold', 0, -8], stay: true },
     },
+    choices: [[[['calm', 'niru', 40], ['dir', 'niru', 'hold', 0, -12]], []]], /* choices.js j4heads: hold the file off the men who gave up, or let it go on */
     phases: [
       { title: '一 · 小凌河 · The Xiaoling River', goal: 'Ride out with the banners to the ford', text: 'The Ming relief army has crossed the Xiaoling River and halted on the long hill beyond. Their cavalry comes out to meet you at the ford.', show: ['ford'],
         obj: { all: [{ reach: 'ford' }, { survive: 40 }] }, at: [[1, ['lead']], [2, ['dir', 'niru', 'hold', -4, -60]], [2, ['dir', 'hong', 'hold', 12, -64]], [2, ['dir', 'white', 'hold', -24, -62]], [32, ['break', 'wu']]],
