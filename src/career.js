@@ -442,7 +442,7 @@ function depBuild() {
   document.body.appendChild(d); DEP.el = d;
   d.addEventListener('mousedown', (e) => e.stopPropagation());
   $('depGo').onclick = () => depGo();
-  $('depMap').onclick = (e) => { const r = e.target.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width * 300 - 150, z = 150 - (e.clientY - r.top) / r.height * 300; const sps = state.sim.deploySpawns(state.sim.players[state.localIdx].team, state.localIdx); let b = -1, bd = 14; sps.forEach((s, i) => { const dd = Math.hypot(s.x - x, s.z - z); if (dd < bd && !s.blocked) { bd = dd; b = i; } }); if (b >= 0) { DEP.si = b; DEP.key = ''; } };
+  $('depMap').onclick = (e) => { const r = e.target.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width * 300 - 150, z = 150 - (e.clientY - r.top) / r.height * 300; const sps = state.sim.deploySpawns(state.sim.players[state.localIdx].team, state.localIdx); let b = -1, bd = 14; sps.forEach((s, i) => { const dd = Math.hypot(s.x - x, s.z - z); if (dd < bd && !s.blocked) { bd = dd; b = i; } }); if (b >= 0) { DEP.si = b; DEP.key = ''; depRender(); } }; /* every change redraws at once: the picker used to wait for the next 0.4 s tick, which read as a dead click */
 }
 function depOpen(on) {
   if (!DEP.el) depBuild(); DEP.open = on; DEP.el.hidden = !on; DEP.key = ''; document.body.classList.toggle('deploying', on); if (state.renderer) state.renderer.omHide = on;
@@ -468,10 +468,10 @@ function depRender() {
     $('depSub').textContent = alive ? 'Change your soldier or where you fight. Your current man goes back to his company.' : 'You have fallen. Choose a soldier and where to rejoin the fight.';
     $('depGrid').innerHTML = types.map((t, i) => { const off = lockType && t.type !== lockType; const on = lockType ? t.type === lockType : i === DEP.ti;
       return `<div class="card${on ? ' on' : ''}${off ? ' off' : ''}" data-i="${i}"><div class="por" data-t="${t.key}"><b>${i + 1}</b><i>${t.n ? t.n + ' men' : t.reserve ? 'in reserve · join nearest' : 'none left · join nearest'}</i></div><div class="nm">${t.name}<small>${t.jp || ''}</small></div><div class="eq">${depEquip(t.def).map(x => `<span>${x}</span>`).join('')}</div></div>`; }).join('');
-    for (const el of $('depGrid').querySelectorAll('.card')) el.onclick = () => { const i = +el.dataset.i; if (lockType) { const j = sim.mode === 'campaign' ? sps.findIndex(s => s.type === types[i].type && !s.blocked) : -1; DEP.si = j >= 0 ? j : 0; } DEP.ti = i; DEP.key = ''; };
+    for (const el of $('depGrid').querySelectorAll('.card')) el.onclick = () => { const i = +el.dataset.i; if (lockType) { const j = sim.mode === 'campaign' ? sps.findIndex(s => s.type === types[i].type && !s.blocked) : -1; DEP.si = j >= 0 ? j : 0; } DEP.ti = i; DEP.key = ''; depRender(); };
     for (const el of $('depGrid').querySelectorAll('.por')) { const url = depPortrait(el.dataset.t); if (url) el.style.backgroundImage = `url(${url})`; }
     $('depSp').innerHTML = sps.map((s, i) => `<button class="${i === DEP.si ? 'on' : ''}${s.blocked ? ' bl' : ''}" data-i="${i}"><span>${s.kind === 'hq' ? '⛺ ' : s.kind === 'zone' ? '⚑ ' : '◆ '}${s.name}</span><em>${s.blocked ? 'contested' : s.kind === 'sq' ? 'join company' : s.kind === 'hq' ? 'camp' : 'objective'}</em></button>`).join('');
-    for (const el of $('depSp').querySelectorAll('button')) el.onclick = () => { const i = +el.dataset.i; if (!sps[i].blocked) { DEP.si = i; DEP.key = ''; } };
+    for (const el of $('depSp').querySelectorAll('button')) el.onclick = () => { const i = +el.dataset.i; if (!sps[i].blocked) { DEP.si = i; DEP.key = ''; depRender(); } };
   }
   if (sim.mode === 'campaign') $('depTk').textContent = 'Co-op · rejoin the fight in one of your companies'; else { const A = sim.mission.attacker; $('depTk').textContent = `${me.team === A ? 'Attacking' : 'Defending'} · Sector ${Math.min(sim.sector + 1, sim.mission.sectors.length)}/${sim.mission.sectors.length} · Manpower ${Math.max(0, sim.tickets | 0)}`; }
   // map
@@ -488,7 +488,7 @@ function depGo() {
 }
 function depKey(c, e) {
   if (c === 'Space' || c === 'Enter') { e.preventDefault(); depGo(); return true; }
-  if (/^Digit[1-9]$/.test(c)) { DEP.ti = +c.slice(5) - 1; DEP.key = ''; const sps = state.sim.deploySpawns(state.sim.players[state.localIdx].team, state.localIdx), sp = sps[DEP.si], ty = state.sim.deployTypes(state.sim.players[state.localIdx].team, state.localIdx)[DEP.ti]; if (sp && sp.kind === 'sq' && ty && sp.type !== ty.type) { const j = state.sim.mode === 'campaign' ? sps.findIndex(s => s.type === ty.type && !s.blocked) : -1; DEP.si = j >= 0 ? j : 0; } return true; }
+  if (/^Digit[1-9]$/.test(c)) { DEP.ti = +c.slice(5) - 1; DEP.key = ''; const sps = state.sim.deploySpawns(state.sim.players[state.localIdx].team, state.localIdx), sp = sps[DEP.si], ty = state.sim.deployTypes(state.sim.players[state.localIdx].team, state.localIdx)[DEP.ti]; if (sp && sp.kind === 'sq' && ty && sp.type !== ty.type) { const j = state.sim.mode === 'campaign' ? sps.findIndex(s => s.type === ty.type && !s.blocked) : -1; DEP.si = j >= 0 ? j : 0; } depRender(); return true; }
   if (c === 'Escape' || c === 'KeyP') { const h = localHero(); if (h && !h.dead) { depOpen(false); requestLock(); } else if (state.sim.mode === 'campaign') { DEP.dismissed = true; depOpen(false); } return true; }
   return true;
 }
