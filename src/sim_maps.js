@@ -79,5 +79,59 @@
       for (const [x, z] of [[118, 92], [124, 100], [116, 104]]) sim.boxes.push({ x, z, hw: 2.4, hd: 1.6, h: 1.8, kind: 'house' }); palZ(sim, 108, 86, 110); keep.push({ x: 120, z: 98, r: 14 });
       trees(sim, r, clear, 50, -140, -60, -120, 130, 0); rocks(sim, r, clear, 14, -140, -90, -100, 100); } };
 
+  // ---------- 撫順 Fushun, the fourth month of 1618 ----------
+  // 《滿文老檔》天命三年四月十三–十五日 (the Seven Grievances read, the host at Fushun by dawn of the 15th; Li Yongfang
+  // surrendered the city; the Guangning relief under 張承廕 came up the next day and was destroyed in the open);
+  // 《明史》張承廕傳, 《明神宗實錄》萬曆四十六年四月; 《遼東志》撫順千戶所 (a square brick-faced wall of one li and a
+  // half, a market gate on the east where the Jurchen horse fair was held). The city stands on the north bank of the
+  // Hun River under the hills; the relief column from Shenyang came along the south bank road and crossed below the
+  // town. Here the city is at the north edge (Jin-held, +z), the Hun River crosses the field with the stone bridge of
+  // the Shenyang road and a ford east of it, and the Ming relief deploys on the south bank. No plan of the 1618 wall
+  // survives; the wall here follows the 《遼東志》 dimensions.
+  B.fushun = { name: 'Fushun', jp: '撫順', when: 'April 1618', biome: 'spring', fog: 0.15, terrain: 0.55, features: [], horizon: { lo: 0.8, nokarst: true },
+    desc: 'The first Ming city to fall. Fushun\'s walls on the north bank of the Hun, the horse-fair gate open; the relief column from Shenyang must cross by the stone bridge or the ford under the banners\' eyes.' };
+  M.fushun = { trees: 90, rocks: 20,
+    terrain(L, r) { L.hills.push({ x: -40, z: 200, rx: 110, rz: 40, rot: 0.1, h: 16 }); L.hills.push({ x: 140, z: 120, r: 36, h: 7 }); L.hills.push({ x: -150, z: -60, r: 50, h: 8 });
+      L.river = { axis: 'x', c0: 10, amp: 6, freq: 0.02, ph: 2.1, w: 9, depth: 3.4, bridges: [{ at: -30, hw: 4 }, { at: 70, hw: 10, ford: true }] };
+      }, /* the moat along the south wall (《遼東志》: 池深一丈) lies beyond the field edge with the wall */
+    objectives: [{ x: -30, z: 10, r: 11, name: 'The stone bridge' }, { x: 70, z: 12, r: 12, name: 'The ford' }, { x: 0, z: 132, r: 11, name: 'The south gate' }],
+    noTree(x, z) { return z > 112; },
+    build(sim, r, keep, clear) {
+      sim.deco.push({ kind: 'road', x: -30, w: 6 }); sim.roadX = -30;
+      cityWall(sim, { axis: 'x', at: 157, from: -70, to: 70, h: 9, hd: 3, out: -1, gx: 0, gw: 3.2, name: '撫順', nobast: true }); /* the south wall and gate at the field's north edge; the city itself lies beyond */
+      keep.push({ x: 0, z: 157, r: 70 });
+      /* the horse-fair suburb (馬市) outside the east wall: stalls and a few houses, the Jin's first foothold (《滿文老檔》: the host came in as traders) */
+      for (const [x, z, bt] of [[108, 130, 0], [120, 124, 0], [132, 132, 1], [114, 140, 0]]) house(sim, keep, x, z, 2.8, 2.4, bt);
+      for (let i = 0; i < 4; i++) sim.boxes.push({ x: 124 + i * 6, z: 112, hw: 1.9, hd: 1.1, h: 1.8, kind: 'wagon' }); keep.push({ x: 133, z: 112, r: 12 });
+      /* the village of the south bank where Zhang Chengyin's column halted (《明史》: 至撫順城南) */
+      for (const [x, z] of [[-70, -40], [-58, -52], [-82, -56], [-66, -70]]) house(sim, keep, x, z, 3, 2.6, false);
+      trees(sim, r, clear, 60, -140, 140, -120, -20, undefined); trees(sim, r, clear, 30, 100, 145, 20, 100, undefined); } };
+
+  // ---------- 廣寧 Guangning: 平陽橋 and 沙嶺, the first month of 1622 ----------
+  // 《滿文老檔》天命七年正月二十日–二十四日 (the Khan crossed the frozen Liao at 西平堡, the Ming relief under 劉渠 and
+  // 祁秉忠 met the banners at 平陽橋 (Pingyang bridge) and were broken; 孫得功 fled, the army was cut up at 沙嶺;
+  // Guangning opened its gates); 《明史》王化貞傳, 熊廷弼傳; 《明熹宗實錄》天啟二年正月. The country west of the Liao is a
+  // flat snow plain cut by frozen streams and reed marsh; the only rise is the sand ridge of Shaling. Here the Liao's
+  // marsh lies to the east (+x) as frozen reed beds (slow going), the Pingyang bridge carries the road over a frozen
+  // stream in the middle, and the Shaling sand ridge runs across the Ming side where the rout was caught.
+  B.shaling = { name: 'Pingyang Bridge', jp: '平陽橋 · 沙嶺', when: 'January 1622', biome: 'winter', fog: 0.3, terrain: 0.25, features: [], horizon: { lo: 0.25, nokarst: true, open: [0.4, 2.7] },
+    desc: 'The snow plain west of the Liao. The Guangning relief army holds the sand ridge of Shaling; the banners come over the frozen stream at Pingyang bridge. Everything else is reed marsh and ice.' };
+  M.shaling = { trees: 24, rocks: 6,
+    terrain(L, r) { L.hills.push({ x: 10, z: -62, rx: 120, rz: 16, rot: 0.08, h: 5 }); /* 沙嶺: a long low sand ridge */ L.hills.push({ x: -150, z: 80, r: 50, h: 4 });
+      L.river = { axis: 'x', c0: 20, amp: 8, freq: 0.018, ph: 0.8, w: 8, depth: 2.6, ice: true, bridges: [{ at: 0, hw: 4 }] }; /* the frozen stream, the bridge the only dry crossing: the ice is walked slowly */
+      L.rivers = [{ id: 1, axis: 'z', c0: 128, amp: 5, freq: 0.025, ph: 2.5, w: 14, depth: 2.2, ice: true, bridges: [] }]; }, /* the Liao's flood channel and reed marsh on the east, frozen */
+    objectives: [{ x: 0, z: 18, r: 12, name: 'Pingyang bridge' }, { x: 10, z: -62, r: 14, name: 'The Shaling ridge' }, { x: -70, z: 70, r: 12, name: 'Xiping post road' }],
+    noTree(x, z) { return x > 110 || Math.abs(z - 20) < 14; },
+    build(sim, r, keep, clear) {
+      sim.deco.push({ kind: 'road', x: 0, w: 6 }); sim.roadX = 0;
+      /* the relief army's wagon line along the ridge crest (《明史》: 列車營 on the ridge, the men behind the carts) */
+      wagons(sim, keep, -54, -60, 7, 7, 0); wagons(sim, keep, 14, -62, 7, 7, 0);
+      for (const [x, z] of [[-48, -58], [-20, -58], [22, -60], [50, -60]]) sim.boxes.push({ x, z, hw: 1.15, hd: 0.2, h: 1.35, kind: 'mantlet' });
+      /* 西平堡 post road: a beacon tower and the post station's walled yard on the Jin side; reed stacks on the marsh edge */
+      sim.boxes.push({ x: -70, z: 76, hw: 3, hd: 3, h: 7, kind: 'keep' }); keep.push({ x: -70, z: 76, r: 10 });
+      stockade(sim, keep, -100, 60, -78, 82, 's'); for (const [x, z] of [[-92, 66], [-86, 74]]) sim.boxes.push({ x, z, hw: 2.4, hd: 2, h: 3, kind: 'house' });
+      for (let i = 0; i < 8; i++) { const x = 100 + r.range(-6, 6), z = -110 + i * 30 + r.range(-8, 8); if (clear(x, z, 3)) sim.obstacles.push({ x, z, r: 1.6, kind: 1, rot: r.range(0, TAU) }); }
+      trees(sim, r, clear, 20, -140, 100, -140, 140, 1); } };
+
   // the picker shows BATTLES in table order: keep the new ones after the old
 })();
