@@ -103,14 +103,12 @@ Open items you could take (check with the user/main first):
 - Action combat: move list card, poses for leap/sweep/bash.
 
 ## 7. Getting the source / sending changes back
-The source lives only in the main session's workspace. You will be given `liaodong.bundle` (the whole git repo in one
-file). To work:
+The source is on GitHub: https://github.com/laladehulu/Liaodong (branch `main`). The built game is published separately
+to https://laladehulu.github.io/Liaodong/ by the main session (`tools/pub.sh`).
 ```
-git clone liaodong.bundle ming && cd ming && bash build.sh && node test/test_lockstep.js
+git clone https://github.com/laladehulu/Liaodong ming && cd ming && bash build.sh && node test/test_lockstep.js
 ```
-Generated files (`src/_mainfull.js`, `src/snd_data.js`, `src/voice_data.js`, `dist/`) are rebuilt by `build.sh`.
-When done, send your work back as patches the user relays to the main session:
-```
-git format-patch <the commit you started from>..HEAD -o patches/   # one .patch per commit, then zip patches/
-```
-Keep each commit small and described ("sim: …", "render: …"); the main session applies them with `git am` and publishes.
+Generated files (`src/_mainfull.js`, `src/snd_data.js`, `src/voice_data.js`, `dist/`) are rebuilt by `build.sh` and not committed.
+Work on a branch of your own (`agent/<topic>`), keep each commit small and described ("sim: …", "render: …"), push it and
+open a pull request against `main`. The main session merges, rebuilds and publishes. Before you start, and before you push,
+`git pull --rebase origin main`: the main session pushes to `main` often.
