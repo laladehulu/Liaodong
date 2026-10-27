@@ -627,6 +627,7 @@ class Sim {
       out.push({ kind: 'hq', name: 'Citadel', x: c[0], z: clamp(c[1] + back * 20, -HALF + 8, HALF - 8) });
       for (let s = this.sector; s < Math.min(M.sectors.length, this.sector + 2); s++) for (const k of M.sectors[s]) { const o = zs(k); if (o.owner === team) out.push({ kind: 'zone', name: o.name, x: o.x, z: o.z, blocked: foeIn(o) > 0 }); }
     }
+    if (this.mode === 'assault') return out; /* in an assault or siege the companies are not yours: you come on at the camp or a held line as any kind of soldier, never dropped into a company's ranks */
     for (const q of this.squads) { if (q.team !== team || !q.alive || q.inactive || q.def.ai === 'cannon' || q.aliveCount < 2) continue; let free = false; for (const id of q.unitIds) { const u = this.units[id]; if (!u.dead && u.ctrl < 0 && !u.inactive) { free = true; break; } } if (free) out.push({ kind: 'sq', sq: q.id, name: q.def.name, type: q.type, x: q.cx, z: q.cz }); }
     return out;
   }
