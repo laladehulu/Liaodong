@@ -101,7 +101,7 @@ const VOICE = (() => {
   const VP = new Map(); const sh = (s, k) => { let h = 2166136261 ^ k; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 10007) / 10007; };
   function vp(u) { const key = u.look && u.look.id ? 'L' + u.look.id : 'U' + u.id; let v = VP.get(key); if (v) return v;
     const H = (k) => sh(key, k), tall = u.look && u.look.h ? u.look.h : 1;
-    v = { rate: (0.84 + H(1) * 0.32) / Math.pow(tall, 0.6) * (u.team === 1 ? 0.95 : 1), rasp: H(2) * 0.55 + (u.team === 1 ? 0.12 : 0), eqF: 700 + H(3) * 2000, eqG: -5 + H(4) * 10, gain: 0.75 + H(5) * 0.35, fav: Math.floor(H(6) * 997), next: 0 };
+    v = { rate: Math.min(0.98, (0.78 + H(1) * 0.2) / Math.pow(tall, 0.6) * (u.team === 1 ? 0.95 : 1)), /* men's voices: never sped up into a high, thin yelp */ rasp: H(2) * 0.55 + (u.team === 1 ? 0.12 : 0), eqF: 700 + H(3) * 2000, eqG: -5 + H(4) * 10, gain: 0.75 + H(5) * 0.35, fav: Math.floor(H(6) * 997), next: 0 };
     if (VP.size > 600) VP.clear(); VP.set(key, v); return v; }
   const curves = {}; function curve(a) { const k = Math.round(a * 10); if (curves[k]) return curves[k]; const n = 256, c = new Float32Array(n), d = 1 + k * 0.8; for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * d) / Math.tanh(d); } return (curves[k] = c); }
   // ---- the mix: a handful of voices at a time, nearest and most important first ----
@@ -111,7 +111,7 @@ const VOICE = (() => {
   function say(cat, u, prio, x, y, z, volMul) {
     if (!KEEP[cat]) return false;
     if (!on || !build()) return false; const now = ctx.currentTime; x = x === undefined ? u.x : x; z = z === undefined ? u.z : z; y = y === undefined ? (u.y || 0) + 1.5 : y;
-    const v = u ? vp(u) : { rate: 0.9 + Math.random() * 0.25, rasp: 0.3, eqF: 1500, eqG: 0, gain: 0.9, fav: (Math.random() * 99) | 0, next: 0 };
+    const v = u ? vp(u) : { rate: 0.82 + Math.random() * 0.14, rasp: 0.3, eqF: 1500, eqG: 0, gain: 0.9, fav: (Math.random() * 99) | 0, next: 0 };
     if (u && now < v.next && prio < 4) return false;
     const sp = AUDIO.spatial ? AUDIO.spatial(x, y, z, vol * v.gain * (volMul || 1), cat === 'death' || cat === 'help' ? 45 : 32) : { gain: vol, pan: 0, dist: 0, wet: 0.1 }; if (!sp) return false;
     for (let i = active.length - 1; i >= 0; i--) if (active[i].end <= now) active.splice(i, 1);
