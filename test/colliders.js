@@ -22,7 +22,7 @@ const CASES = (process.argv[3] || 'grand:field,grand:toba,grand:ueno,grand:nagao
         if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
         for (let i = 0; i < n; i++) { if (o.isInstancedMesh) { o.getMatrixAt(i, m4); m4.premultiply(o.matrixWorld); } else m4.copy(o.matrixWorld);
           bb.copy(o.geometry.boundingBox).applyMatrix4(m4); const sx = bb.max.x - bb.min.x, sz = bb.max.z - bb.min.z; if (sx < 0.3 || sz < 0.3 || sx > 45 || sz > 45) continue;
-          const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2, g = TH(cx, cz); if (bb.max.y < g + 1.3 || bb.min.y > g + 1.0) continue;
+          const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2, g = TH(cx, cz); if (bb.max.y < g + 1.3 || bb.min.y > g + 1.0 || Math.abs(cx) > 160 || Math.abs(cz) > 160 || Math.max(sx, sz) < 1.2) continue;
           tmp.geometry = o.geometry; tmp.material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }); tmp.matrixWorld.copy(m4); tmp.matrixAutoUpdate = false;
           let tot = 0, bad = 0, bx = 0, bz = 0; const st = Math.max(0.35, Math.max(sx, sz) / 40);
           for (let x = bb.min.x + st / 2; x < bb.max.x; x += st) for (let z = bb.min.z + st / 2; z < bb.max.z; z += st) { const y = TH(x, z) + 1.0; if (y < bb.min.y || y > bb.max.y) continue;
