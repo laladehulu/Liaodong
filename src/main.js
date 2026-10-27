@@ -253,7 +253,7 @@ document.addEventListener('keydown', (e) => {
   if (c === 'Tab') e.preventDefault();
   if (state.sim && state.sim.mode === 'campaign' && !storyLock()) { if (DEP.open) { depKey(c, e); return; } if (c === 'KeyP' && state.sim.phase === 1) { depOpen(true); DEP.t = 0; return; } }
   if (state.sim && state.sim.mode === 'assault') { if (DEP.open) { depKey(c, e); return; } if (c === 'KeyP') { depOpen(true); DEP.t = 0; return; } if (c === 'KeyO' || c === 'Backquote') { toast('In an assault you are a soldier: press P to change soldier or spawn point'); return; } }
-  if (!e.repeat && (c === 'KeyA' || c === 'KeyD' || c === 'KeyS') && state.sim && !Input.cmdMode) { const now = performance.now(); const T = Input.tapT || (Input.tapT = {}); if (now - (T[c] || 0) < 260) { const h = localHero(); if (h && !h.dead && !(h.mount >= 0 || h.mounted)) Input.pressed |= c === 'KeyA' ? S.A_DASHL : c === 'KeyD' ? S.A_DASHR : S.A_DODGE; T[c] = 0; } else T[c] = now; }
+  if (!e.repeat && (c === 'KeyA' || c === 'KeyD' || (c === 'KeyS' && state.sim.heroMode)) && state.sim && !Input.cmdMode) { const now = performance.now(); const T = Input.tapT || (Input.tapT = {}); if (now - (T[c] || 0) < 260) { const h = localHero(); if (h && !h.dead && !(h.mount >= 0 || h.mounted)) Input.pressed |= c === 'KeyA' ? S.A_DASHL : c === 'KeyD' ? S.A_DASHR : S.A_DODGE; T[c] = 0; } else T[c] = now; } /* the back-hop is only for the heroes' acrobatics */
   if (KEYMAP[c]) { Input.keys |= KEYMAP[c]; e.preventDefault(); }
   if (e.repeat) return;
   Input.shift = e.shiftKey;
