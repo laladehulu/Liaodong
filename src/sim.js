@@ -1447,7 +1447,7 @@ class Sim {
           else { const sdx = u.slotX - u.x, sdz = u.slotZ - u.z; if (len(sdx, sdz) > 0.6) this.steerFoot(u, u.slotX, u.slotZ, def.speed * 0.7); else { u.mx = 0; u.mz = 0; } }
           if (!u.mounted && (u.mx !== 0 || u.mz !== 0)) { const my = atan2(u.mx, u.mz), off = Math.abs(wrap(my - ang)), turner = (u.id * 37) % 10 < 7; if (off > 1.9 && len(u.slotX - u.x, u.slotZ - u.z) > (turner ? 1.2 : 4)) wantYaw = my; else if (off > 1.6) { u.mx *= 0.5; u.mz *= 0.5; } } // a long way back to his place: turn and walk it, don't skate backward; a step or two back is a slow backpedal
           if (inPlace && u.st === ST_IDLE && u.ammo > 0 && !this.losClear(u, tgt)) { /* a wall or a house in the way: shoot at someone he CAN see (any enemy in range, not only his company's mark); only a man on open ground with nobody in sight walks to find a shot */
-            const alt = this.losTarget(u, range); if (alt) { u.target = alt.id; } else if (!this.onWallTop(u)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } else inPlace = false; }
+            const alt = this.losTarget(u, range); if (alt) { u.target = alt.id; } else if (this.sg && TERR.swall && u.team === this.sg.D && u.z > TERR.swall.z0 - 0.5) { this.toRampart(u); inPlace = false; } /* a defender with nothing to shoot at goes up on the rampart, whatever his company's place */ else if (!this.onWallTop(u)) { this.steerFoot(u, tgt.x, tgt.z, def.speed * 0.75); inPlace = false; } else inPlace = false; }
           if (inPlace && u.st === ST_IDLE && u.ammo > 0 && u.flinchT <= 0 && Math.abs(wrap(ang - u.yaw)) < 0.7) {
             u.st = ST_AIM; u.stT = 0; u.aimTarget = tgt.id; u.blocking = false;
             const g0 = gunOf(def, u.weapon); const aimT = Math.round((g0 ? g0.aim : 0.8) * 30);
@@ -1858,6 +1858,14 @@ class Sim {
       prev = t;
     }
     return -1;
+  }
+  // a defender inside the walls with nothing in sight goes up the nearest ramp and takes a place along the rampart
+  toRampart(u) {
+    const W = TERR.swall, sp = u.def.speed; let rx = W.ramps[0], bd = 1e9; for (const r of W.ramps) { const d = Math.abs(r - u.x); if (d < bd) { bd = d; rx = r; } }
+    const onTop = u.z <= W.z1 + 0.6 && u.y > terrainH(u.x, u.z) - 0.5 && u.y > W.h - 1.5 + (TERR.base || 0) * 0;
+    if (onTop) { const post = clamp(rx + ((u.id % 9) - 4) * 2.6, -HALF + 6, HALF - 6), px = Math.abs(post) < W.gate + 1.5 ? (post < 0 ? -W.gate - 1.5 : W.gate + 1.5) : post; this.steerFoot(u, px, (W.z0 + W.z1) / 2 + 0.6, sp * 0.8); return; }
+    if (Math.abs(u.x - rx) > 2.2 && u.z > W.z1 + 0.5) { this.steerFoot(u, rx, W.z1 + 15.5, sp); return; } // to the foot of the ramp
+    this.steerFoot(u, rx, W.z1 - 1.5, sp); // up it
   }
   onWallTop(u) { return u.y - terrainH(u.x, u.z) > 2.2 || (this.overParapet && this.overParapet(u)); }
   losTarget(u, range) { // the nearest enemies in range, checked in order for a clear line (a few each time, to keep it cheap)
