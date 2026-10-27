@@ -114,3 +114,19 @@ Generated files (`src/_mainfull.js`, `src/snd_data.js`, `src/voice_data.js`, `di
 Work on a branch of your own (`agent/<topic>`), keep each commit small and described ("sim: …", "render: …"), push it and
 open a pull request against `main`. The main session merges, rebuilds and publishes. Before you start, and before you push,
 `git pull --rebase origin main`: the main session pushes to `main` often.
+
+## 8. Publishing (whoever the owner says is publishing; by default the main session)
+The site is the `Liaodong/` folder of a separate repo, https://github.com/laladehulu/laladehulu.github.io (GitHub Pages).
+```
+git clone https://github.com/laladehulu/laladehulu.github.io      # once, next to your Liaodong clone
+cd Liaodong && tools/pub.sh v107 "what changed, in a line"          # the next number after the seal on the landing page
+```
+`tools/pub.sh` pulls `main` (rebase), builds, refuses to publish if the lockstep test is not IN SYNC, pushes the source to
+`main`, then writes all five editions (`regular/`, `realism/`, `stylized/`, `battle-experiment/`, `action-combat/`), the
+version seal on the landing page and `speech-layouts/` into the Pages checkout, commits and pushes it. Pages goes live in
+one to two minutes. If the Pages checkout is elsewhere, set `PAGES=/path/to/laladehulu.github.io/Liaodong`.
+Version numbers: one per publish, never reused; check the seal on https://laladehulu.github.io/Liaodong/ (or
+`grep -o 'seal">v[0-9]*' ../laladehulu.github.io/Liaodong/index.html`) and use the next one. Only one agent publishes at a
+time: say so in `.collab/claims.md` (`publishing vN`) and remove the line afterwards.
+A new edition needs three things: a block in `build.sh` that writes its `dist/*-index.html`, a line in the list in
+`publish.py`, and a card on the landing page (`Liaodong/index.html` in the Pages repo).
