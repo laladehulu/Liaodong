@@ -934,7 +934,7 @@ class Sim {
     if (l > 0) {
       let sp = u.def.speed * this.zoneSpeed(u.x, u.z, mx, mz);
       if ((keys & KEY_S) && !(keys & KEY_W)) sp *= 0.65;
-      if ((u.st === ST_WINDUP || u.st === ST_RELEASE) && !u.chg) sp *= 0.7; else if (u.st === ST_STUN) sp = 0;
+      if ((u.st === ST_WINDUP || u.st === ST_RELEASE) && !u.chg) sp *= this.xc && u.st === ST_RELEASE && (keys & KEY_W) ? 1 : 0.7; else if (u.st === ST_STUN) sp = 0; /* xc: a cut thrown while stepping forward keeps the step - the step and the cut are one movement, as for the AI */
       if (u.drawT > 0) sp *= 0.55; // a drawn bow: you walk, you don't run
       if (u.blocking) sp *= 0.85; if (u.aiming) sp *= 0.5; if (u.st === ST_RELOAD) sp *= 0.8;
       // sprint: hold Shift while moving forward; burns stamina, and a winded man must get his breath back

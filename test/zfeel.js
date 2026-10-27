@@ -16,7 +16,7 @@ const old = sim.units[me.heroId]; if (old) { old.dead = true; old.inactive = tru
 const heroId = mySq.unitIds[2]; const h = sim.units[heroId]; h.ctrl = 0; me.heroId = heroId; me.soldierSq = mySq.id;
 if (scen === 'solo') { for (const id of mySq.unitIds) if (id !== heroId) { const u = sim.units[id]; u.dead = true; u.inactive = true; } }
 const yq = (y) => ((Math.round(y / (Math.PI * 2) * 65536) % 65536) + 65536) % 65536;
-const wd = [], hd = [], loiter = []; let face = 0, faceAny = 0, inReach = 0, ticks = 0, myHits = 0, myBlocks = 0, hitsOnMe = 0, blockedByMe = 0, myDeath = -1, firstContact = -1;
+const wd = [], hd = [], loiter = []; let face = 0, faceAny = 0, engT = 0, inReach = 0, ticks = 0, myHits = 0, myBlocks = 0, hitsOnMe = 0, blockedByMe = 0, myDeath = -1, firstContact = -1;
 const wTick = {}, reachSince = {}; let lastAtk = -99, blockUntil = -1;
 for (let t = 0; t < maxT && sim.winner < 0; t++) {
   if (t === 30) { for (const c of foes) { c.order = S.ORD_CHARGE; c.tx = mySq.cx; c.tz = mySq.cz; } mySq.order = S.ORD_CHARGE; mySq.tx = foes[0].cx; mySq.tz = foes[0].cz; }
@@ -38,12 +38,12 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
     if (ev.t === 'block' && ev.att === heroId) myBlocks++;
     if (ev.t === 'death' && ev.id === heroId) myDeath = t / 30;
   }
-  if (!hero.dead) { let near = false, reach = false, anyNear = false; for (const v of sim.teamAlive[1]) { const d = Math.hypot(v.x - hero.x, v.z - hero.z); const swinging = v.st === S.ST_WINDUP || v.st === S.ST_RELEASE;
+  if (!hero.dead) { let near = false, reach = false, anyNear = false, eng = false; for (const v of sim.teamAlive[1]) { const d = Math.hypot(v.x - hero.x, v.z - hero.z); const swinging = v.st === S.ST_WINDUP || v.st === S.ST_RELEASE;
       if (d < v.def.reach + 0.3 && !v.breathE) { reach = true; if (!(reachSince[v.id] >= 0)) reachSince[v.id] = t; } else reachSince[v.id] = -1; if (swinging) reachSince[v.id] = -1;
-      if (d < 1.3 && !swinging && v.target === heroId) near = true; if (d < 1.3 && !swinging) anyNear = true; if (d < 3 && firstContact < 0) firstContact = t; }
-    if (firstContact >= 0) { ticks++; if (near) face++; if (anyNear) faceAny++; if (reach) inReach++; } }
+      if (d < 1.3 && !swinging && v.target === heroId) near = true; if (d < v.def.reach + 1.0 && v.target === heroId) eng = true; if (d < 1.3 && !swinging) anyNear = true; if (d < 3 && firstContact < 0) firstContact = t; }
+    if (firstContact >= 0) { ticks++; if (near) face++; if (anyNear) faceAny++; if (eng) engT++; if (reach) inReach++; } }
 }
 const q = (a) => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); return [s[Math.floor(s.length * 0.1)], s[Math.floor(s.length * 0.5)], s[Math.floor(s.length * 0.9)]].map(v => +v.toFixed(2)); };
 const mean = (a) => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : null;
 console.log(JSON.stringify({ seed, scen, contactS: +(firstContact / 30).toFixed(1), fightTicks: ticks, windupDist_p10_50_90: q(wd), windupDistMean: mean(wd), hitDist_p10_50_90: q(hd), loiterS_p10_50_90: q(loiter), loiterMean: mean(loiter),
-  faceTime: +(face / Math.max(1, ticks)).toFixed(2), faceAny: +(faceAny / Math.max(1, ticks)).toFixed(2), inReachTime: +(inReach / Math.max(1, ticks)).toFixed(2), enemySwingsAtMe: wd.length, hitsOnMe, blockedByMe, myHits, myBlocked: myBlocks, myDeathS: myDeath >= 0 ? +myDeath.toFixed(1) : null, hash: sim.hash() }));
+  faceTime: +(face / Math.max(1, ticks)).toFixed(2), faceAny: +(faceAny / Math.max(1, ticks)).toFixed(2), engaged: +(engT / Math.max(1, ticks)).toFixed(2), inReachTime: +(inReach / Math.max(1, ticks)).toFixed(2), enemySwingsAtMe: wd.length, hitsOnMe, blockedByMe, myHits, myBlocked: myBlocks, myDeathS: myDeath >= 0 ? +myDeath.toFixed(1) : null, hash: sim.hash() }));
