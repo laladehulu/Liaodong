@@ -90,7 +90,8 @@ const AUDIO = (() => {
       // a landed blow: the cut (flesh sample, pitched down) with a short low body thump under it; heavier blows go lower and longer;
       // on armour a dull metal knock rides on top
       case 'strike': case 'strikeheavy': case 'strikearmor': { if (!P('flesh')) return false; const hv = name === 'strikeheavy'; if (!at(vol * (hv ? 1.15 : 0.95), 70)) return true;
-        samp(sp, t, P('flesh'), rr(0.72, 0.86) * (hv ? 0.85 : 1), sp.gain * 1.15); samp(sp, t + 0.012, P('flesh'), rr(1.15, 1.3), sp.gain * 0.35);
+        samp(sp, t, P('flesh'), rr(0.72, 0.86) * (hv ? 0.85 : 1), sp.gain * 1.5); samp(sp, t + 0.012, P('flesh'), rr(1.15, 1.3), sp.gain * 0.5);
+        noise({ ...sp, wet: 0.02 }, t, 0.035, 'bandpass', 2600, 1.2, sp.gain * 0.7, 0.001); /* the bite of the edge: a short bright crack on top, so a landed blow always reads, even in the din */
         tone(sp, t, hv ? 0.2 : 0.12, 'sine', hv ? 95 : 120, hv ? 34 : 48, sp.gain * (hv ? 1.1 : 0.8)); noise({ ...sp, wet: 0.05 }, t, hv ? 0.1 : 0.06, 'lowpass', hv ? 700 : 1100, 0.8, sp.gain * 0.5, 0.002);
         if (name === 'strikearmor') { if (P('ametal')) samp(sp, t + 0.004, P('ametal'), rr(0.6, 0.72), sp.gain * 0.55); if (P('clash')) samp(sp, t, P('clash'), rr(0.55, 0.65), sp.gain * 0.3); }
         return true; }
