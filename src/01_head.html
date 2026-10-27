@@ -311,6 +311,10 @@ h3.sect { font-family: var(--font-display); font-weight: 700; font-size: 15px; l
 .shop { display: grid; gap: 6px; } .shop button { text-align: left; } .shop button small { display: block; color: var(--ink2); font-weight: 400; }
 #armsRow select { font: inherit; padding: 6px 8px; background: var(--paper2, #dcd2bc); border: 1px solid #b9ab88; color: var(--ink); max-width: 100%; }
 #hitdir { position: fixed; left: 50%; top: 50%; width: 240px; height: 240px; margin: -120px 0 0 -120px; pointer-events: none; opacity: 0; z-index: 22; transition: opacity .2s; }
+#dangers { position: fixed; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 22; }
+#dangers i { position: absolute; left: -45px; top: -12px; width: 90px; height: 24px; border-top: 4px solid rgba(255,196,90,.9); border-radius: 50% 50% 0 0; filter: drop-shadow(0 0 3px rgba(0,0,0,.8)); opacity: 0; transform-origin: 50% 50%; }
+#dangers i.th { width: 26px; left: -13px; border-radius: 0; border-top: none; border-left: 13px solid transparent; border-right: 13px solid transparent; border-bottom: 16px solid rgba(255,196,90,.9); height: 0; top: -8px; }
+#dangers i.now { border-top-color: #fff; border-bottom-color: #fff; filter: drop-shadow(0 0 6px rgba(255,220,160,.9)); }
 #hitdir i { position: absolute; left: 50%; top: 0; width: 90px; height: 24px; margin-left: -45px; border-top: 5px solid rgba(225,40,28,.95); border-radius: 50% 50% 0 0; filter: drop-shadow(0 0 4px rgba(0,0,0,.8)); }
 #hitby { position: fixed; left: 50%; top: 62%; transform: translateX(-50%); font: 600 13px sans-serif; color: #f0c6b8; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 22; opacity: 0; transition: opacity .3s; white-space: nowrap; }
 #mobj { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); top: 120px; width: min(300px, 70vw); background: rgba(16,13,10,.72); border-left: 3px solid #c23a44; color: #efe6d0; padding: 10px 12px; font-size: 13px; line-height: 1.4; z-index: 18; pointer-events: none; }
@@ -552,7 +556,7 @@ body.zgrid #comms { top: 158px; }
     </div>
   </div>
   <div id="hud" hidden>
-    <div id="speedlines"></div><div id="suppress"></div><div id="fpmarks"></div><div id="hitdir"><i></i></div><div id="mobj" hidden></div><div id="radio" hidden><b></b><span></span></div><div id="banner" hidden></div><div id="hitby"></div><div id="vignette"></div><div id="parry"></div>
+    <div id="speedlines"></div><div id="suppress"></div><div id="fpmarks"></div><div id="hitdir"><i></i></div><div id="dangers"></div><div id="mobj" hidden></div><div id="radio" hidden><b></b><span></span></div><div id="banner" hidden></div><div id="hitby"></div><div id="vignette"></div><div id="parry"></div>
     <div id="crosshair"><div class="dot"></div><div class="arr up"></div><div class="arr down"></div><div class="arr left"></div><div class="arr right"></div></div>
     <div id="hitmark"></div>
     <div class="hudbox" id="netbox"></div>

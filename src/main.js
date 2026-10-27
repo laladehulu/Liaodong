@@ -68,6 +68,21 @@ function renderStory() { setTimeout(renderChest, 0);
   box.innerHTML = STORY_TEXT.map((c, i) => { const ch = S.STORY[i]; const me = (side === 0 ? ch.ming : ch.jin)[0][0]; const lock = i > open;
     return `<button type="button" class="chapter${state.chapter === i ? ' on' : ''}${lock ? ' locked' : ''}" data-c="${i}" ${lock ? 'disabled' : ''}><span class="cn">${i + 1}. ${c.title}<small>${c.year}</small></span><span class="cw">You are ${me}</span><span class="cd">${lock ? 'Win the previous chapter to unlock.' : c.intro[side]}</span></button>`; }).join('');
 }
+// the strike cue (no text): for every man winding up a blow on you within reach, a mark at his bearing closes on the
+// crosshair as his wind-up runs - an arc for a cut, a point for a thrust - and turns white at the moment to parry.
+// The mark's distance from the centre is the time left: it reaches the inner ring as the blade comes.
+const DG = { pool: [], n: 0 };
+function dangerHUD(hero, sim) {
+  const box = $('dangers'); if (!box) return; let k = 0;
+  if (hero && !hero.dead && !Input.cmdMode && sim.phase === 1) {
+    for (const v of sim.teamAlive[1 - hero.team]) { if (v.st !== S.ST_WINDUP || v.mounted || v.type === 'horse') continue; const dx = v.x - hero.x, dz = v.z - hero.z, d = Math.hypot(dx, dz); if (d > v.def.reach + 1.6) continue;
+      const rel = ((Math.atan2(dx, dz) - v.yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI; if (Math.abs(rel) > 1.3 && v.target !== hero.id) continue; /* he must be facing you, or on you */
+      const W = (v.ctrl >= 0 && !(sim.players[v.ctrl] && sim.players[v.ctrl].ai) ? 0.3 : v.def.windup * (v.aiHeavy ? 1.9 : 1) * (v.wMul || 1)); const prog = Math.min(1, v.stT / Math.max(0.1, W));
+      let el = DG.pool[k]; if (!el) { el = document.createElement('i'); box.appendChild(el); DG.pool[k] = el; } k++;
+      const thrust = v.atkDir === S.DIR_DOWN || v.weapon === 'yari'; el.className = (thrust ? 'th' : '') + (prog > 0.72 ? ' now' : '');
+      const ang = (-(Math.atan2(dx, dz) - Input.yaw)) * 180 / Math.PI, r = 150 - 85 * prog; el.style.transform = `rotate(${ang}deg) translateY(${-r}px)`; el.style.opacity = Math.min(1, 0.35 + prog * 0.9); } }
+  for (let i = k; i < DG.pool.length; i++) DG.pool[i].style.opacity = 0;
+}
 function storyCard(text, title) { const el = $('storycard'); el.innerHTML = (title ? `<b>${title}</b>` : '') + `<span>${text}</span>`; el.classList.add('show'); clearTimeout(state.storyT); state.storyT = setTimeout(() => el.classList.remove('show'), Math.min(14000, 3500 + text.length * 55)); }
 function heroHUD() {
   const sim = state.sim; if (!sim || !sim.heroMode) return; state.hhT = (state.hhT || 0) - 1; if (state.hhT > 0) return; state.hhT = 6;
@@ -959,6 +974,7 @@ function updateHUD(dt) {
   if (hero && !hero.dead && !Input.cmdMode && sim.phase === 1) { // a horseman bearing down on you: warn in time to dodge or brace
     state.cavT = (state.cavT || 0) - dt; if (state.cavT <= 0) { for (const v of sim.teamAlive[1 - hero.team]) { if (!v.mounted || Math.abs(v.hspeed || 0) < 5.5) continue; const dx = hero.x - v.x, dz = hero.z - v.z, d = Math.hypot(dx, dz); if (d > 28 || d < 3) continue; if ((dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw)) / d < 0.9) continue;
         state.cavT = 5; state.hitDir = { ang: Math.atan2(v.x - hero.x, v.z - hero.z), t: 2 }; state.renderer.hitQ = { text: hero.weapon === 'yari' ? '騎! Horse charging — brace your spear (hold RMB)' : '騎! Horse charging — slide aside (double-tap A or D)', t: 2.2, c: '#ffcf7a' }; AUDIO.play('neigh', v.x, v.y, v.z, 1.2); break; } } }
+  dangerHUD(hero, sim);
   { const hd = state.hitDir; if (hd && hd.t > 0 && hero) { hd.t -= dt; $('hitdir').style.opacity = Math.min(1, hd.t); $('hitdir').style.transform = `rotate(${(-(hd.ang - Input.yaw)) * 180 / Math.PI}deg)`; } else $('hitdir').style.opacity = 0;
     const hb = state.hitBy; if (hb && hb.t > 0) { hb.t -= dt; $('hitby').textContent = hb.text; $('hitby').style.opacity = Math.min(1, hb.t); } else $('hitby').style.opacity = 0; }
   if (sim.real && typeof soldierHUD === 'function') soldierHUD(dt); else { $('fallen').hidden = true; }
