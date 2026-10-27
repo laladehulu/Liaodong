@@ -1,6 +1,25 @@
 // ===== P2P networking (PeerJS mesh) + deterministic lockstep =====
 const PREFIX = 'mingwar1619-';
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// Players on different networks (home routers, phone hotspots, campus or carrier NAT) usually cannot reach each other directly,
+// so WebRTC needs relay (TURN) servers: several STUN servers to find the public address, then the Open Relay project's free TURN
+// (static-auth: a short-lived username signed with its published shared secret) on UDP/TCP 80 and 443 and TLS 443, plus PeerJS's own.
+// A custom relay can be given in the address: ?turn=turn:host:port,user,password
+const ICE_BASE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+  { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }];
+async function iceServers() {
+  const out = ICE_BASE.slice();
+  try { const q = new URLSearchParams(location.search).get('turn'); if (q) { const [u, n, c] = q.split(','); out.unshift({ urls: u, username: n, credential: c }); } } catch (e) { }
+  try {
+    const user = (Math.floor(Date.now() / 1000) + 24 * 3600) + ':liaodong', enc = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', enc.encode('openrelayprojectsecret'), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(user))); let b = ''; for (const x of sig) b += String.fromCharCode(x);
+    const H = 'staticauth.openrelay.metered.ca';
+    out.push({ urls: ['turn:' + H + ':80', 'turn:' + H + ':80?transport=tcp', 'turn:' + H + ':443', 'turns:' + H + ':443?transport=tcp'], username: user, credential: btoa(b) });
+  } catch (e) { console.warn('relay credentials', e); }
+  return out;
+}
+function peerOpts(ice) { return { debug: 0, config: { iceServers: ice, sdpSemantics: 'unified-plan' } }; }
 function genCode() { let s = ''; for (let i = 0; i < 5; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return s; }
 
 class Net {
@@ -13,7 +32,8 @@ class Net {
     const code = genCode(); this.code = code; this.isHost = true; this.myIdx = 0; this.myCfg = cfg;
     this.players = [{ id: 'self', idx: 0, cfg, connected: true }];
     let peer;
-    try { peer = new Peer(PREFIX + code, { debug: 0 }); } catch (e) { cb(e); return; }
+    if (!this.ice) { iceServers().then(ice => { this.ice = ice; this.host(cfg, cb); }); return; }
+    try { peer = new Peer(PREFIX + code, peerOpts(this.ice)); } catch (e) { cb(e); return; }
     this.peer = peer;
     peer.on('open', (id) => { this.players[0].id = id; cb(null, code); this.pingTimer = setInterval(() => { if (this.started) { clearInterval(this.pingTimer); return; } this.broadcast({ t: 'ping', ts: performance.now() }); }, 2000); });
     peer.on('error', (e) => { if (e.type === 'unavailable-id') { try { peer.destroy(); } catch (_) { } this.host(cfg, cb); } else cb(e); });
@@ -22,17 +42,22 @@ class Net {
   }
   join(code, cfg, cb) {
     this.code = code; this.isHost = false; this.myCfg = cfg;
-    let peer; try { peer = new Peer({ debug: 0 }); } catch (e) { cb(e); return; }
+    if (!this.ice) { iceServers().then(ice => { this.ice = ice; this.join(code, cfg, cb); }); return; }
+    let peer; try { peer = new Peer(peerOpts(this.ice)); } catch (e) { cb(e); return; }
     this.peer = peer; let done = false;
     peer.on('open', () => {
       const conn = peer.connect(PREFIX + code, { reliable: true, serialization: 'json' });
-      const timer = setTimeout(() => { if (!done) { done = true; cb(new Error('No answer from that room code. Check the code and that the host is still in the lobby.')); } }, 12000);
+      const timer = setTimeout(() => { if (!done) { done = true; cb(new Error(this.iceFail ? 'Found the room, but your networks could not connect (blocked by a firewall or carrier NAT). Try again, or both join from a different network.' : 'No answer from that room code. Check the code and that the host is still in the lobby.')); } }, 25000);
+      this.watchIce(conn);
       this.wire(conn, () => { if (!done) { done = true; clearTimeout(timer); cb(null); } });
     });
     peer.on('error', (e) => { if (!done) { done = true; cb(new Error(e.type === 'peer-unavailable' ? 'Room not found. Check the code.' : (e.message || String(e)))); } });
     peer.on('connection', (conn) => this.acceptConn(conn));
   }
-  acceptConn(conn) {
+  // report why a connection failed instead of hanging: WebRTC tells us when no network path (direct or relayed) works
+  watchIce(conn) { const t = setInterval(() => { const pc = conn.peerConnection; if (!pc) return; clearInterval(t);
+    pc.addEventListener('iceconnectionstatechange', () => { const st = pc.iceConnectionState; if (st === 'failed') { this.iceFail = true; console.warn('ICE failed for', conn.peer); try { pc.restartIce && pc.restartIce(); } catch (e) { } } }); }, 100); setTimeout(() => clearInterval(t), 10000); }
+  acceptConn(conn) { this.watchIce(conn);
     if (this.started && this.isHost) { conn.on('open', () => { try { conn.send({ t: 'reject' }); } catch (_) { } setTimeout(() => conn.close(), 800); }); return; }
     this.wire(conn, null);
   }
