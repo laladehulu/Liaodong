@@ -1,6 +1,6 @@
 // story-chapter gating + markers: node test/zgate.js <outdir>
 const { chromium } = require('/opt/npm-tools/node_modules/playwright-core');
-const path = require('path'); const out = process.argv[2];
+const path = require('path'); const out = process.argv[2] || path.join(__dirname, 'out');
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 1100, height: 620 } });

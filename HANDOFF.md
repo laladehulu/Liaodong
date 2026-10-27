@@ -31,6 +31,8 @@ Local test pages (no CDN): `dist/test.html`, `test-real.html`, `test-style.html`
   gear/uniforms (`gearFor`, `lookGear`, `faceEyes`; part budget `GEAR_K`), particles (`Particles` class: smoke shader),
   events → effects (`processEvents`), ink shadows (`inkShadows`, `inkInit`).
 - `anim.js` — render-only spring rig (`ANIM.rig`) and foot planting (`ANIM.feet`).
+- `arsenal.js` — story campaigns: weapons you carry off a field are kept in the save; in camp, I opens the arsenal to pick
+  up to three for the next battle (sent as `cfg.players[].wkit`, so it is the same on every machine).
 - `realism.js`, `stylized.js`, `real_gear.js` — edition-specific renderer patches and uniforms.
 - `action.js` — Action-combat edition: 13 committed moves (`MV` table), wraps `startWindup` / `updateCombatState` /
   `unitAI` / `meleeControl` on `SIM.Sim.prototype`; returns early unless `MING_ACTION`.
@@ -45,7 +47,7 @@ Local test pages (no CDN): `dist/test.html`, `test-real.html`, `test-style.html`
 ```
 tools/check.sh                     # node --check every src file, then build.sh (locked); prints the last build size line
 node test/test_lockstep.js         # MUST print "3 peers IN SYNC" after any sim change
-tools/snap.sh "<you>: what changed" # git commit of the working tree (locked); do it after every change that passes check
+tools/snap.sh "<you>: what changed" # main session only (its shared tree); on your own clone use plain git commit on agent/<topic>
 ```
 Headless browser for screenshots: playwright-core at `/opt/npm-tools/node_modules/playwright-core`, chromium at
 `/opt/pw-browsers/chromium_headless_shell-1243/...` with `--use-angle=swiftshader`. Software rendering: frame timings are
