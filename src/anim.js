@@ -86,7 +86,7 @@ const ANIM = (function () {
   // whatever foot is down, so the bob, the drop on a long stride and the lower hips on a slope come from the feet.
   // In a fighting stance the ideal spots are the stance's own feet, so a lunge steps into the blow and a turn on the
   // spot is a few small pivot steps. Render-only; near figures only (far ones keep the cycle).
-  const FP = { on: true, near: 40 }, LT = 0.46, LS = 0.46;
+  const FP = { on: true, near: 24 }, LT = 0.46, LS = 0.46;
   const FT = new Float64Array(6), IL = new Float64Array(9);
   function legIK(out, o, side, tx, ty, tz) { // hip at (side*0.1, 0, 0) root-local; out gets hip, knee, foot
     const hx = side * 0.1; let dx = tx - hx, dy = ty, dz = tz; let d = Math.hypot(dx, dy, dz) || 1e-4;

@@ -1807,6 +1807,7 @@ class Sim {
     if (u.squad >= 0) { const sq = this.squads[u.squad]; if (sq.unitIds[0] === u.id && sq.aliveCount > 1) { if (!sq.def.fearless) sq.morale = Math.max(0, sq.morale - 25); this.events.push({ t: 'captain', sq: sq.id }); } }
     if (u.type === 'hero') { for (let i = 0; i < this.players.length; i++) { const p = this.players[i]; if (p.commanderId === u.id) { for (let k = 0; k < p.squads.length; k++) { const sq = this.squads[p.squads[k]]; if (sq.alive && !sq.def.fearless) sq.morale = Math.max(0, sq.morale - 30); } this.events.push({ t: 'commanderdown', p: p.idx }); } } }
     if (this.mode === 'assault' && u.team === this.mission.attacker && u.type !== 'horse') this.tickets = Math.max(0, this.tickets - 1);
+    if (cause === 'arrow') { ix *= 0.15; iz *= 0.15; iy = Math.min(iy, 0.3); } /* an arrow drops a man where he stands: he folds, he is not thrown */
     this.events.push({ t: 'death', id: u.id, ix, iy, iz, cause, killer: killerId });
     if (u.def.ai === 'cannon') this.explode(u.x, u.y + 0.6, u.z, u.team, u.id, 4.5, 90);
   }

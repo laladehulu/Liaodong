@@ -474,7 +474,7 @@ class Particles {
       const wd = this.wind && this.grav[i] <= 0 ? this.wind : null; this.pos[i * 3] += (this.vel[i * 3] + (wd ? wd[0] : 0)) * dt; this.pos[i * 3 + 1] += (this.vel[i * 3 + 1] + (wd ? wd[1] : 0)) * dt; this.pos[i * 3 + 2] += (this.vel[i * 3 + 2] + (wd ? wd[2] : 0)) * dt;
       if (this.grav[i] > 0) { const g = terrainH(this.pos[i * 3], this.pos[i * 3 + 2]) + 0.03; if (this.pos[i * 3 + 1] < g) { this.pos[i * 3 + 1] = g; this.vel[i * 3 + 1] *= -0.3; this.vel[i * 3] *= 0.5; this.vel[i * 3 + 2] *= 0.5; } }
       this.age[i] = t; const puff = this.smokey && this.seed[i] >= 0;
-      this.size[i] = puff ? this.s0[i] + (this.s1[i] - this.s0[i]) * (1 - (1 - t) * (1 - t) * (1 - t)) : this.s0[i] + (this.s1[i] - this.s0[i]) * t; /* smoke bursts out fast, then spreads slowly */
+      this.size[i] = puff ? this.s0[i] + (this.s1[i] - this.s0[i]) * Math.sqrt(t) * 0.9 : this.s0[i] + (this.s1[i] - this.s0[i]) * t; /* smoke bursts out fast, then spreads slowly */
       const fade = puff ? (t < 0.06 ? t / 0.06 : 1 - t * t * 0.55) : t < 0.15 ? t / 0.15 : (1 - t) / 0.85;
       this.col[i * 4] = this.cr[i] + (this.cr1[i] - this.cr[i]) * t; this.col[i * 4 + 1] = this.cg[i] + (this.cg1[i] - this.cg[i]) * t; this.col[i * 4 + 2] = this.cb[i] + (this.cb1[i] - this.cb[i]) * t; this.col[i * 4 + 3] = this.a0[i] * fade;
       i++;
@@ -596,6 +596,10 @@ class Renderer {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !this.lowfx, powerPreference: 'high-performance' });
     this.safari = typeof navigator !== 'undefined' && /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent); /* Safari's WebGL is slower: native pixels, smaller shadow map */
     this.renderer.setPixelRatio(this.lowfx ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+    /* lag hunting: ?off=feet,rig,smoke,gear,shadows,faces in the address turns those off (e.g. .../realism/?off=feet) */
+    { const m = (typeof location !== 'undefined' && location.search.match(/[?&]off=([a-z,]+)/)) || null; this.off = new Set(m ? m[1].split(',') : []);
+      if (typeof ANIM !== 'undefined') { if (this.off.has('feet')) ANIM.fpOn = false; if (this.off.has('rig')) ANIM.on = false; }
+      if (this.off.has('shadows')) this.renderer.shadowMap.enabled = false; }
     this.renderer.shadowMap.enabled = !this.lowfx; this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.biome.fog);
@@ -1074,6 +1078,7 @@ class Renderer {
       shield: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), 0xa8844a), boss: mk(new THREE.CylinderGeometry(0.5, 0.5, 1, 10), 0x8a2a20),
       bow: mk(box, 0x5a3b1e, 2), bstring: mk(box, 0xe8e2cc, 2, false), arrow: mk(box, 0x8a6a3a, 1, false), rod: mk(box, 0x9aa0a6, 1, false), flask: mk(box, 0xc9a25a, 1, false), twig: mk(box, 0x6b6a3a, 9, false),
     };
+    if (this.off && this.off.has('gear')) for (const k of ['gb', 'gc', 'gy']) if (this.fig[k]) this.fig[k].visible = false;
     this.anims = [];
     this.tg = { wp: [0, 0, 0], wd: [0, 1, 0], rh: [0, 0, 0], lh: [0, 0, 0] };
     this.fdt = 1 / 60;
@@ -1218,7 +1223,7 @@ class Renderer {
     if (this.flags.instanceColor) this.flags.instanceColor.needsUpdate = true;
   }
   buildFX() {
-    this.smoke = new Particles(this.scene, this.lowfx ? 5000 : 9000, false); this.smoke.wind = [0.55, 0.04, 0.25]; this.suppress = 0;
+    this.smoke = new Particles(this.scene, this.lowfx ? 5000 : 9000, false); if (this.off && this.off.has('smoke')) this.smoke.points.visible = false; this.smoke.wind = [0.55, 0.04, 0.25]; this.suppress = 0;
     this.sparks = new Particles(this.scene, 2500, true);
     const TR = 260; this.tracerN = TR; this.tracers = []; this.tracerNext = 0;
     this.tracerMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), TR);
