@@ -154,17 +154,17 @@ const STORY = [
 const FACTION = [{ name: 'Ming Army', jp: '大明', short: 'Ming' }, { name: 'Later Jin', jp: '後金', short: 'Jin' }];
 const BATTLES = {
   field:    { name: 'Sarhu', jp: '薩爾滸', when: 'April 1619', biome: 'autumn', fog: 0, terrain: 0.7, features: ['hill'], desc: 'Jiefan hill with a shrine arch on the crest. Whoever holds the height shoots farther and cuts downhill.' },
-  toba:     { name: 'Hun River', jp: '渾河', when: 'March 1621', biome: 'winter', fog: 0.35, terrain: 0.6, features: ['river', 'village'], desc: 'A half-frozen river splits the field outside Shenyang. Two bridges and a shallow ford are the only quick crossings; mist shortens every musket.' },
-  ueno:     { name: 'Songshan', jp: '松山', when: 'Summer 1641', biome: 'summer', fog: 0.1, terrain: 0.7, features: ['temple', 'houses'], desc: 'Hong Chengchou\'s men hold a walled temple compound on a raised plateau. Storm the gate or shell it with heavy guns.' },
-  nagaoka:  { name: 'Yangzhou', jp: '揚州', when: 'May 1645', biome: 'summer', weather: 'storm', fog: 0.3, terrain: 0.3, features: ['paddies', 'flankriver'], desc: 'Jiangnan rice paddies under a spring thunderstorm. Rain fouls matchlocks, lightning seeks the banners, and one bridge guards the western flank.' },
-  aizu:     { name: 'Liaoyang', jp: '遼陽', when: 'April 1621', biome: 'autumn', fog: 0.15, terrain: 0.6, features: ['castle', 'streets'], desc: 'The Liaodong capital: a gate tower on its stone base, ringed by a moat. Fight through the city streets to reach the gate.' },
-  hakodate: { name: 'Ningyuan', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.05, terrain: 0.4, features: ['starfort', 'sea'], desc: 'Yuan Chonghuan\'s fortress by the Bohai Sea, its walls bristling with Portuguese-pattern cannon. The sea lies to the east.' },
+  toba:     { name: 'Hun River', jp: '渾河', when: 'March 1621', biome: 'winter', fog: 0.35, terrain: 0.6, horizon: { lo: 0.45, nokarst: true }, features: ['river', 'village'], desc: 'A half-frozen river splits the field outside Shenyang. Two bridges and a shallow ford are the only quick crossings; mist shortens every musket.' },
+  ueno:     { name: 'Songshan', jp: '松山', when: 'Summer 1641', biome: 'summer', fog: 0.1, terrain: 0.7, horizon: { lo: 0.6, nokarst: true, open: [0.9, 2.3] }, features: ['temple', 'houses'], desc: 'Hong Chengchou\'s men hold a walled temple compound on a raised plateau. Storm the gate or shell it with heavy guns.' },
+  nagaoka:  { name: 'Yangzhou', jp: '揚州', when: 'May 1645', biome: 'summer', weather: 'storm', fog: 0.3, terrain: 0.3, horizon: { lo: 0.3, nokarst: true }, features: ['paddies', 'flankriver'], desc: 'Jiangnan rice paddies under a spring thunderstorm. Rain fouls matchlocks, lightning seeks the banners, and one bridge guards the western flank.' },
+  aizu:     { name: 'Liaoyang', jp: '遼陽', when: 'April 1621', biome: 'autumn', fog: 0.15, terrain: 0.6, horizon: { lo: 0.5, nokarst: true }, features: ['castle', 'streets'], desc: 'The Liaodong capital: a gate tower on its stone base, ringed by a moat. Fight through the city streets to reach the gate.' },
+  hakodate: { name: 'Ningyuan', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.05, terrain: 0.4, horizon: { lo: 0.6, nokarst: true, open: [0.7, 2.5] }, features: ['starfort', 'sea'], desc: 'Yuan Chonghuan\'s fortress by the Bohai Sea, its walls bristling with Portuguese-pattern cannon. The sea lies to the east.' },
   abudali:  { name: 'Abudali Pass', jp: '阿布達里岡', when: 'April 1619', biome: 'winter', fog: 0.3, terrain: 0.45, features: ['pass'], hidden: true, desc: 'A narrow valley in the mountains east of Hetu Ala, its slopes thick with pine and late snow.' },
-  bjgate:   { name: 'The Guangqu Gate', jp: '廣渠門', when: 'December 1629', biome: 'winter', fog: 0.15, terrain: 0.2, features: ['streets'], hidden: true, desc: 'The suburb outside the outer wall of Beijing. The wall and its gate towers stand behind, too big to see the end of.' },
+  bjgate:   { name: 'The Guangqu Gate', jp: '廣渠門', when: 'December 1629', biome: 'winter', fog: 0.15, terrain: 0.2, horizon: { lo: 0.35, nokarst: true, open: [-0.6, 3.6] }, features: ['streets'], hidden: true, desc: 'The suburb outside the outer wall of Beijing. The wall and its gate towers stand behind, too big to see the end of.' },
   zroad:    { name: 'The road', jp: '道', when: '1619', biome: 'winter', fog: 0.2, terrain: 0.3, features: [], hidden: true, desc: 'A cart road through the Liaodong hills, a village by the way.' },
-  sjvil:    { name: 'A village east of Tongzhou', jp: '村', when: 'November 1629', biome: 'winter', fog: 0.22, terrain: 0.12, features: [], hidden: true, desc: 'A walled farming village on the Tongzhou road: courtyard houses either side of the street, a well in the middle.' },
+  sjvil:    { name: 'A village east of Tongzhou', jp: '村', when: 'November 1629', biome: 'winter', fog: 0.22, terrain: 0.12, horizon: { lo: 0.3, nokarst: true, open: [-1, 2.2] }, features: [], hidden: true, desc: 'A walled farming village on the Tongzhou road: courtyard houses either side of the street, a well in the middle.' },
   zcamp:    { name: 'Camp', jp: '營', when: '1619', biome: 'night', fog: 0.2, terrain: 0.25, features: [], hidden: true, desc: 'A night camp in the hills.' },
-  siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
+  siegecity: { name: 'Ningyuan (siege)', jp: '寧遠', when: 'February 1626', biome: 'winter', fog: 0.12, terrain: 0.08, horizon: { lo: 0.6, nokarst: true, open: [0.7, 2.5] }, features: [], hidden: true, desc: 'A walled town on the frozen coast: ditch, rampart, gatehouse and streets.' },
   bonari:   { name: 'Shanhai Pass', jp: '山海關', when: 'May 1644', biome: 'spring', fog: 0.25, terrain: 0.5, features: ['pass'], desc: 'The First Pass Under Heaven: a narrow gap between steep ridges, blocked by two lines of earthworks. Flanking over the slopes is slow and costly.' },
 };
 // terrain features (deterministic: only + - * / sqrt and DM trig)
@@ -233,7 +233,7 @@ function terrainHExact(x, z) {
   const rm = TERR.rmoat;
   if (rm) { const ad0 = rmoatDist(rm, x, z), ad = ad0 < 0 ? -ad0 : ad0; if (ad < rm.w && !rmoatGate(rm, x, z, 49)) { const t = 1 - (ad / rm.w) * (ad / rm.w); h -= rm.depth * t; } }
   const tr = TERR.trenches;
-  for (let i = 0; i < tr.length; i++) { const t0 = tr[i]; const d = segDist(t0, x, z); if (d < t0.w) { const t = 1 - (d / t0.w) * (d / t0.w); h -= t0.depth * t; } else if (t0.bank && d < t0.w + 2.2) { const u = (d - t0.w) / 2.2; h += t0.bank * (1 - u) * u * 4; } } /* a dug trench with the spoil thrown up as a bank beside it */
+  for (let i = 0; i < tr.length; i++) { const t0 = tr[i]; const d = segDist(t0, x, z); if (d < t0.w) { let gap = false; if (t0.gaps) { const al = t0.x1 - t0.x0 !== 0 ? x : z; for (let k = 0; k < t0.gaps.length; k++) if (al > t0.gaps[k] - 4.5 && al < t0.gaps[k] + 4.5) gap = true; } if (!gap) { const t = 1 - (d / t0.w) * (d / t0.w); h -= t0.depth * t; } } else if (t0.bank && d < t0.w + 2.2) { const u = (d - t0.w) / 2.2; h += t0.bank * (1 - u) * u * 4; } } /* a dug trench with the spoil thrown up as a bank beside it */
   const m = TERR.moat;
   if (m) { const dx = x - m.x, dz = z - m.z; const r = Math.sqrt(dx * dx + dz * dz); const ad = r > m.R ? r - m.R : m.R - r; if (ad < m.w) { let gate = false; for (let i = 0; i < m.gates.length; i++) { const g = m.gates[i]; if ((x - g[0]) * (x - g[0]) + (z - g[1]) * (z - g[1]) < 49) gate = true; } if (!gate) { const t = 1 - (ad / m.w) * (ad / m.w); h -= m.depth * t; } } }
   if (TERR.swall) h = siegeWallH(TERR.swall, x, z, h);
@@ -340,7 +340,10 @@ class Sim {
       L.hills.push({ x: -40, z: -118, r: 48, h: 4 }); L.hills.push({ x: 120, z: 30, r: 40, h: 3 }); }
     if (b === 'ueno') { const cx = r.range(-25, 25); this.templeX = cx; L.plateaus.push({ x: cx, z: 72, r0: 32, r1: 46, h: 7 }); }
     if (b === 'nagaoka') L.river = { axis: 'z', c0: -105, amp: 10, freq: 0.022, ph: r.range(0, 6), w: 11, depth: 3.2, bridges: [{ at: r.range(-30, 30), hw: 4.5 }] };
-    if (b === 'aizu') { L.plateaus.push({ x: 0, z: 96, r0: 21, r1: 27, h: 8 }); L.moat = { x: 0, z: 96, R: 33, w: 5, depth: 2.8, gates: [[0, 63]] }; L.hills.push({ x: -150, z: 40, r: 60, h: 14 }); L.hills.push({ x: 160, z: -20, r: 55, h: 12 }); }
+    if (b === 'aizu') { L.plateaus.push({ x: 0, z: 96, r0: 21, r1: 27, h: 6 }); L.rmoat = { x: 0, z: 96, hw: 31, hd: 31, w: 5.5, depth: 2.8, gates: [[0, 63]] }; L.hills.push({ x: -150, z: 40, r: 60, h: 14 });
+      /* 遼陽 1621 (《滿文老檔》天命六年三月二十日, 《明史》袁應泰傳): a square walled city with a wide wet moat fed from the 太子河, which runs past the east side; the Jin cut the inlet dyke, drained the moat and filled it to cross.
+         The river is the east edge of the field with one bridge on the east road; the moat is square now (the round one and the hill were a Japanese castle's) */
+      L.river = { axis: 'z', c0: 132, amp: 4, freq: 0.03, ph: r.range(0, 6), w: 9, depth: 3.4, bridges: [{ at: 60, hw: 4 }] }; }
     if (b === 'hakodate') { L.plateaus.push({ x: 0, z: 74, r0: 34, r1: 38, h: 1.6 }); L.rmoat = { x: 0, z: 74, hw: 40, hd: 40, w: 5, depth: 2.6, gates: [[0, 30], [0, 118], [-44, 74], [44, 74]], ice: true }; /* a square moat, frozen, round a square city of four gates (《遼東志》寧遠衛: 城周六里八步, 四門; the circle it had was a Japanese castle's) */
       /* 寧遠 1626: the first month of the year, the Bohai frozen (《清太祖實錄》天命十一年正月: the banners crossed to 覺華島 over the ice and burned the Ming grain depot and ships there); Juehua is the low island on the ice to the east */
       L.sea = { x0: 128, depth: 7, ice: true }; L.hills.push({ x: 146, z: -36, r: 18, h: 9 }); }
@@ -349,7 +352,9 @@ class Sim {
     if (b === 'abudali') { L.pass = { r0: 15, r1: 46, h: 24 }; L.hills.push({ x: -34, z: 6, r: 30, h: 6 }); L.hills.push({ x: 30, z: -48, r: 26, h: 5 }); }
     if (b === 'sjvil') { L.hills.push({ x: -130, z: 60, r: 70, h: 9 }); L.hills.push({ x: 130, z: -50, r: 70, h: 8 }); }
     if (b === 'zroad') { L.hills.push({ x: -105, z: -30, r: 70, h: 13 }); L.hills.push({ x: 110, z: 50, r: 75, h: 15 }); L.hills.push({ x: -95, z: 110, r: 50, h: 9 }); L.hills.push({ x: 0, z: 70, r: 30, h: 2.5 }); }
-    if (b === 'bjgate') { L.hills.push({ x: -170, z: -40, r: 70, h: 5 }); L.hills.push({ x: 170, z: -90, r: 60, h: 4 }); }
+    if (b === 'bjgate') { L.hills.push({ x: -170, z: -40, r: 70, h: 5 }); L.hills.push({ x: 170, z: -90, r: 60, h: 4 });
+      /* 廣渠門 1629 (《崇禎長編》二年十一月二十日, 《明史》袁崇煥傳): the outer city's moat (外城護城河, 《帝京景物略》) runs along the wall foot; the Guangqu Gate road crosses it on a stone bridge. Frozen in the eleventh month. */
+      L.trenches = [{ x0: -175, z0: 160, x1: 175, z1: 160, w: 6, depth: 2.6, wet: true, ice: true, gaps: [6] }]; }
     if (b === 'zcamp') { L.hills.push({ x: -90, z: 60, r: 70, h: 14 }); L.hills.push({ x: 100, z: -40, r: 80, h: 16 }); L.hills.push({ x: 0, z: 130, r: 70, h: 12 }); }
     // objectives worth holding
     const O = [];
@@ -386,7 +391,7 @@ class Sim {
         for (let i = 0; i < 7; i++) { const x = -78 + (i % 4) * 7, z = -60 - Math.floor(i / 4) * 7; if (clear(x, z, 2)) { this.boxes.push({ x, z, hw: 1.1, hd: 1.9, h: 1.8, kind: 'wagon' }); keep.push({ x, z, r: 3 }); } } keep.push({ x: -68, z: -63, r: 18 }); }
       cityWall(this, { axis: 'x', at: 147, from: -165, to: 40, h: 11, hd: 4, out: -1, name: '瀋陽', notower: true }); /* Shenyang's wall, taken by the Jin three days before, closes the north-western skyline behind the Jin side (+z is the north bank here) */
     }
-    if (B === 'aizu') { // Tsuruga castle: square walls on the stone base, a keep, castle-town blocks below
+    if (B === 'aizu') { // Liaoyang's inner city (the old 東寧衛 walls, 《遼東志》: square, brick-faced): walls on the raised ground, the south gate tower ('keep' is drawn as a brick-based gate tower), the market quarter's courtyard blocks below
       const cx = 0, cz = 96, s = 18, wall = (x, z, hw, hd) => this.boxes.push({ x, z, hw, hd, h: 2.4, kind: 'wall' });
       wall(cx - s, cz, 0.7, s); wall(cx + s, cz, 0.7, s); wall(cx, cz + s, s, 0.7); wall(cx - s * 0.6, cz - s, s * 0.4, 0.7); wall(cx + s * 0.6, cz - s, s * 0.4, 0.7);
       this.boxes.push({ x: cx, z: cz + 4, hw: 5, hd: 5, h: 15, kind: 'keep' }); keep.push({ x: cx, z: cz, r: 40 });

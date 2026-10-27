@@ -1062,6 +1062,9 @@ class Renderer {
       strip(pts);
       for (const d of this.sim.deco.filter(q => (q.kind === 'bridge' || q.kind === 'ford') && (q.rv === undefined ? rv === L.river : q.rv === rv.id))) this.buildCrossing(d, rv);
     }
+    for (const t of (L.trenches || []).filter(q => q.wet)) { const dx = t.x1 - t.x0, dz = t.z1 - t.z0, l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l; const pts = [], n = Math.max(8, Math.round(l / 4)); const wi = t.w * 0.85;
+      for (let i = 0; i <= n; i++) { const k = i / n, x = t.x0 + dx * k, z = t.z0 + dz * k; const lvl = Math.min(terrainH(x + nx * (t.w + 1), z + nz * (t.w + 1)), terrainH(x - nx * (t.w + 1), z - nz * (t.w + 1))) - t.depth * 0.35; pts.push([x - nx * wi, lvl, z - nz * wi, x + nx * wi, lvl, z + nz * wi]); } strip(pts);
+      for (const g of t.gaps || []) { const x = dx !== 0 ? g : t.x0, z = dx !== 0 ? t.z0 : g; const cw = new THREE.Mesh(new THREE.BoxGeometry(dx !== 0 ? 8 : t.w * 2.6, 1, dx !== 0 ? t.w * 2.6 : 8), new THREE.MeshLambertMaterial({ color: 0x8a8274 })); cw.position.set(x, terrainH(x, z) - 0.45, z); cw.receiveShadow = true; this.scene.add(cw); } }
     const rm = L.rmoat; /* a square moat round a Chinese city wall: four straight strips */
     if (rm) { const corners = [[rm.x - rm.hw, rm.z - rm.hd], [rm.x + rm.hw, rm.z - rm.hd], [rm.x + rm.hw, rm.z + rm.hd], [rm.x - rm.hw, rm.z + rm.hd]];
       for (let s = 0; s < 4; s++) { const A = corners[s], B = corners[(s + 1) % 4]; const pts = []; const n = 24; const nx = s % 2 ? (s === 1 ? 1 : -1) : 0, nz = s % 2 ? 0 : (s === 0 ? -1 : 1);
@@ -2825,16 +2828,18 @@ class Renderer {
     let seed = 7 + (this.sim.seed & 255); const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     // two ranges of distant mountains, flat-coloured like printed layers, plus one tall snow-capped cone
     const ranges = [{ R: 520, n: 34, h: [40, 95], col: B.mtn[0] }, { R: 430, n: 28, h: [22, 55], col: B.mtn[1] }];
+    // the horizon follows the real ground (maps agent): bdef.horizon = { lo: fraction of mountain height, open: [yaw0, yaw1] a sector left open (the plain, the sea) }
+    const HZ = this.sim.bdef.horizon || null; const openAt = (a) => { if (!HZ || !HZ.open) return false; const y = ((a % 6.2832) + 6.2832) % 6.2832, o0 = ((HZ.open[0] % 6.2832) + 6.2832) % 6.2832, o1 = ((HZ.open[1] % 6.2832) + 6.2832) % 6.2832; return o0 <= o1 ? (y >= o0 && y <= o1) : (y >= o0 || y <= o1); };
     for (const rg of ranges) {
       const mat = new THREE.MeshBasicMaterial({ color: rg.col, fog: false });
       for (let i = 0; i < rg.n; i++) {
-        const a = (i / rg.n) * Math.PI * 2 + rr() * 0.12; const h = rg.h[0] + rr() * (rg.h[1] - rg.h[0]); const w = h * (1.6 + rr() * 1.2);
+        const a = (i / rg.n) * Math.PI * 2 + rr() * 0.12; let h = rg.h[0] + rr() * (rg.h[1] - rg.h[0]); if (HZ) { if (openAt(a)) { rr(); rr(); continue; } h *= HZ.lo || 1; } const w = h * (1.6 + rr() * 1.2);
         const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 5 + Math.floor(rr() * 3), 1), mat); m.position.set(Math.sin(a) * rg.R, h / 2 - 8, Math.cos(a) * rg.R); m.rotation.y = rr() * 6.28; m.renderOrder = -9; group.add(m);
       }
     }
     // karst pinnacles: tall, narrow ink-wash peaks in two misty layers
     for (const [R, n, col, hs] of [[460, 26, B.mtn[0], [70, 150]], [395, 20, B.mtn[1], [40, 95]]]) { const mat = new THREE.MeshBasicMaterial({ color: col, fog: false });
-      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rr() * 0.2; if (rr() < 0.25) continue; const h = hs[0] + rr() * (hs[1] - hs[0]); const w = h * (0.28 + rr() * 0.14);
+      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rr() * 0.2; if (rr() < 0.25) continue; if (HZ && (HZ.nokarst || openAt(a))) { rr(); rr(); continue; } /* the North China plain and the Liaodong lowland have no karst pinnacles */ const h = hs[0] + rr() * (hs[1] - hs[0]); const w = h * (0.28 + rr() * 0.14);
         const g = new THREE.CylinderGeometry(w * 0.35, w, h, 7, 1); const m = new THREE.Mesh(g, mat); m.position.set(Math.sin(a) * R, h / 2 - 10, Math.cos(a) * R); m.renderOrder = -9; group.add(m);
         const cap = new THREE.Mesh(new THREE.SphereGeometry(w * 0.36, 7, 5), mat); cap.position.set(m.position.x, h - 10, m.position.z); cap.scale.y = 0.7; cap.renderOrder = -9; group.add(cap); } }
     // kasumi: horizontal bands of mist across the foot of the mountains
