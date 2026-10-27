@@ -17,7 +17,7 @@ const heroId = mySq.unitIds[2]; const h = sim.units[heroId]; h.ctrl = 0; me.hero
 if (scen === 'solo') { for (const id of mySq.unitIds) if (id !== heroId) { const u = sim.units[id]; u.dead = true; u.inactive = true; } }
 const yq = (y) => ((Math.round(y / (Math.PI * 2) * 65536) % 65536) + 65536) % 65536;
 const wd = [], hd = [], loiter = []; let face = 0, faceAny = 0, engT = 0, inReach = 0, ticks = 0, myHits = 0, myBlocks = 0, hitsOnMe = 0, blockedByMe = 0, myDeath = -1, firstContact = -1;
-const wTick = {}, reachSince = {}; let lastAtk = -99, blockUntil = -1;
+const wTick = {}, reachSince = {}, combos = {}, hitBy = {}; let lastStep = ''; let lastAtk = -99, blockUntil = -1;
 for (let t = 0; t < maxT && sim.winner < 0; t++) {
   if (t === 30) { for (const c of foes) { c.order = S.ORD_CHARGE; c.tx = mySq.cx; c.tz = mySq.cz; } mySq.order = S.ORD_CHARGE; mySq.tx = foes[0].cx; mySq.tz = foes[0].cz; }
   const hero = sim.units[heroId]; let keys = 0, yaw = hero.yaw, acts = 0;
@@ -25,7 +25,7 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
     let e = null, ed = 1e9; for (const v of sim.teamAlive[1]) { const d = Math.hypot(v.x - hero.x, v.z - hero.z); if (d < ed) { ed = d; e = v; } }
     if (e) { yaw = Math.atan2(e.x - hero.x, e.z - hero.z);
       if (ed > 2.0 && hero.st === S.ST_IDLE && t - lastAtk > 30 && blockUntil < t) keys |= S.KEY_W; /* he steps in only to cut, else he holds his place in the line */
-      if (ed < 2.1 && t - lastAtk > 36 && hero.st === S.ST_IDLE && blockUntil < t) { acts |= S.A_ATK; lastAtk = t; }
+      if (ed < 2.1 && t - lastAtk > (process.env.CHAIN ? 14 : 36) && (hero.st === S.ST_IDLE || hero.st === S.ST_RECOVER) && blockUntil < t) { acts |= S.A_ATK; lastAtk = t; }
       else if (ed < 3 && e.st === S.ST_WINDUP && t > blockUntil + 20 && t - lastAtk > 12 && hero.st === S.ST_IDLE) blockUntil = t + 15;
       if (blockUntil >= t) acts |= S.A_BLOCK; }
   }
@@ -37,6 +37,8 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
     if (ev.t === 'block' && ev.by === heroId) blockedByMe++;
     if (ev.t === 'block' && ev.att === heroId) myBlocks++;
     if (ev.t === 'death' && ev.id === heroId) myDeath = t / 30;
+    if (ev.t === 'combo' && ev.id === heroId) { const k = ev.zh + ev.n + ev.step; combos[k] = (combos[k] || 0) + 1; lastStep = k; }
+    if (ev.t === 'hit' && ev.att === heroId) { hitBy[lastStep] = (hitBy[lastStep] || 0) + 1; }
   }
   if (!hero.dead) { let near = false, reach = false, anyNear = false, eng = false; for (const v of sim.teamAlive[1]) { const d = Math.hypot(v.x - hero.x, v.z - hero.z); const swinging = v.st === S.ST_WINDUP || v.st === S.ST_RELEASE;
       if (d < v.def.reach + 0.3 && !v.breathE) { reach = true; if (!(reachSince[v.id] >= 0)) reachSince[v.id] = t; } else reachSince[v.id] = -1; if (swinging) reachSince[v.id] = -1;
@@ -46,4 +48,4 @@ for (let t = 0; t < maxT && sim.winner < 0; t++) {
 const q = (a) => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); return [s[Math.floor(s.length * 0.1)], s[Math.floor(s.length * 0.5)], s[Math.floor(s.length * 0.9)]].map(v => +v.toFixed(2)); };
 const mean = (a) => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : null;
 console.log(JSON.stringify({ seed, scen, contactS: +(firstContact / 30).toFixed(1), fightTicks: ticks, windupDist_p10_50_90: q(wd), windupDistMean: mean(wd), hitDist_p10_50_90: q(hd), loiterS_p10_50_90: q(loiter), loiterMean: mean(loiter),
-  faceTime: +(face / Math.max(1, ticks)).toFixed(2), faceAny: +(faceAny / Math.max(1, ticks)).toFixed(2), engaged: +(engT / Math.max(1, ticks)).toFixed(2), inReachTime: +(inReach / Math.max(1, ticks)).toFixed(2), enemySwingsAtMe: wd.length, hitsOnMe, blockedByMe, myHits, myBlocked: myBlocks, myDeathS: myDeath >= 0 ? +myDeath.toFixed(1) : null, hash: sim.hash() }));
+  faceTime: +(face / Math.max(1, ticks)).toFixed(2), faceAny: +(faceAny / Math.max(1, ticks)).toFixed(2), engaged: +(engT / Math.max(1, ticks)).toFixed(2), inReachTime: +(inReach / Math.max(1, ticks)).toFixed(2), enemySwingsAtMe: wd.length, hitsOnMe, blockedByMe, myHits, myBlocked: myBlocks, myDeathS: myDeath >= 0 ? +myDeath.toFixed(1) : null, combos, hitBy, hash: sim.hash() }));

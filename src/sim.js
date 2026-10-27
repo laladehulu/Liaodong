@@ -906,8 +906,8 @@ class Sim {
     if (this.xc && !this.noChargeAtk && !u.champ && u.ctrlActive && atkPressed && u.sprint && u.flinchT <= 0 && u.st === ST_IDLE && !u.mounted && u.mount < 0 && !u.airborne && !(u.weapon === 'rifle' && !u.club) && u.weapon !== 'bow' && u.weapon !== 'revolver') {
       u.blocking = false; this.startWindup(u, u.weapon === 'yari' ? DIR_DOWN : DIR_UP); u.chg = 1; this.events.push({ t: 'chargeatk', id: u.id, x: u.x, y: u.y, z: u.z });
       u.atkHeld = atk; u.blockHeld = blk; return; }
-    if (atkPressed && u.flinchT <= 0 && (u.st === ST_IDLE || (u.st === ST_RECOVER && u.stT > u.def.recover * 0.6))) {
-      u.blocking = false; if (u.champ) { const chain = this.tick - (u.lastSwing || -999) < 40; u.combo = chain ? (u.combo || 0) + 1 : 0; u.lastSwing = this.tick; u.sta -= 6 + u.combo * 3; u.staT = 0; } this.startWindup(u, u.weapon === 'rifle' && u.club ? ad : weaponDir(u.weapon, ad));
+    if (atkPressed && u.flinchT <= 0 && (u.st === ST_IDLE || (u.st === ST_RECOVER && u.stT > u.def.recover * (this.xc && u.cbN > 0 ? 0.42 : 0.6)))) {
+      u.blocking = false; if (u.champ) { const chain = this.tick - (u.lastSwing || -999) < 40; u.combo = chain ? (u.combo || 0) + 1 : 0; u.lastSwing = this.tick; u.sta -= 6 + u.combo * 3; u.staT = 0; } this.startWindup(u, this.comboDir(u, u.weapon === 'rifle' && u.club ? ad : weaponDir(u.weapon, ad)));
     } else if (blk && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_KICK && u.st !== ST_SWAP && (u.flinchT <= 0 || (u.ctrlActive && u.flinchT < 0.3)) && (u.st === ST_IDLE || u.st === ST_RECOVER || u.st === ST_RELOAD)) { /* a player can get his guard back up while still shaken from a blow */
       if (!u.blocking) { u.blocking = true; u.blockT = 0; u.blockDir = bd; }
       if (u.st === ST_RECOVER) { u.st = ST_IDLE; u.stT = 0; }
@@ -920,7 +920,7 @@ class Sim {
     if (u.weapon === 'rifle' && (u.club || u.ctrl < 0) && dir !== DIR_UP && dir !== DIR_LEFT && dir !== DIR_RIGHT) dir = u.ctrl >= 0 ? DIR_UP : [DIR_UP, DIR_RIGHT, DIR_LEFT][u.windupId % 3];
     /* (was swallowed by a comment long ago; left off so combat tuning is unchanged) if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } */
     if (this.xc && u.ctrl >= 0 && !u.champ) { // mashing: each swing in quick succession costs arm; past three in a breath the windups slow and telegraph
-      u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + 1; u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
+      u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + (u.cbChain ? 0.5 : 1); u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
     if (this.xc && u.ctrl < 0 && !u.champ) u.wMul *= 0.82 + this.rng.next() * 0.42; /* no two cuts come at the same beat: the wind-up runs a little short or a little long */
     u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
   footControl(u, keys, a, disabled) {
@@ -1068,11 +1068,11 @@ class Sim {
     if (sq.order === ORD_FOLLOW) {
       const p = sq.owner >= 0 ? this.players[sq.owner] : null; const hero = p ? units[p.heroId] : null;
       if (hero && !hero.dead) { // hysteresis: the company re-forms only when its leader has actually marched somewhere, not when he turns his head or shuffles about
-        if (sq.fAx === undefined || len(hero.x - sq.fAx, hero.z - sq.fAz) > 40) { sq.fAx = hero.x; sq.fAz = hero.z; sq.fH = hero.yaw; sq.tx = hero.x - sin(hero.yaw) * 9; sq.tz = hero.z - cos(hero.yaw) * 9; sq.facing = hero.yaw; }
+        if (sq.fAx === undefined || len(hero.x - sq.fAx, hero.z - sq.fAz) > 40) { sq.fAx = hero.x; sq.fAz = hero.z; sq.fH = hero.yaw; sq.tx = hero.x - sin(hero.yaw) * 5; sq.tz = hero.z - cos(hero.yaw) * 5; sq.facing = hero.yaw; }
         const mv = len(hero.x - sq.fAx, hero.z - sq.fAz);
-        if (mv > ((hero.speedNow || 0) > 4.6 ? 3 : 7)) { const hd = atan2(hero.x - sq.fAx, hero.z - sq.fAz); /* a running leader is followed closely, a walking one with hysteresis */ const turn = Math.abs(wrap(hd - sq.fH)); if (turn < 1.2 || mv > 12) sq.fH = hd; sq.fAx = hero.x; sq.fAz = hero.z;
-          sq.tx = hero.x - sin(sq.fH) * 9; sq.tz = hero.z - cos(sq.fH) * 9; sq.facing = sq.fH; }
-        else if (len(sq.tx - hero.x, sq.tz - hero.z) > 22) { sq.tx = hero.x - sin(sq.fH) * 9; sq.tz = hero.z - cos(sq.fH) * 9; } }
+        if (mv > ((hero.speedNow || 0) > 4.6 ? 3 : 5)) { const hd = atan2(hero.x - sq.fAx, hero.z - sq.fAz); /* a running leader is followed closely, a walking one with hysteresis */ const turn = Math.abs(wrap(hd - sq.fH)); if (turn < 1.2 || mv > 12) sq.fH = hd; sq.fAx = hero.x; sq.fAz = hero.z;
+          sq.tx = hero.x - sin(sq.fH) * 5; sq.tz = hero.z - cos(sq.fH) * 5; sq.facing = sq.fH; } /* the company's front rank a few paces behind its leader, not a street away */
+        else if (len(sq.tx - hero.x, sq.tz - hero.z) > 14) { sq.tx = hero.x - sin(sq.fH) * 5; sq.tz = hero.z - cos(sq.fH) * 5; } }
       else sq.order = ORD_HOLD;
     }
     if (sq.order === ORD_MOVE && len(sq.cx - sq.tx, sq.cz - sq.tz) < 2.5) sq.order = ORD_HOLD;
@@ -1595,9 +1595,9 @@ class Sim {
           if (u.stT > 0.2) for (const v of this.units) { if (v.dead || v.team === u.team || v.type === 'horse') continue; const dx = v.x - u.x, dz = v.z - u.z; if (dx * dx + dz * dz < R * R && dx * fx + dz * fz > 0.5) { near = true; break; } }
           if ((!u.atkHeld && u.stT >= 0.22) || near || u.stT > 1.4 || !u.sprint && u.stT > 0.3) { u.heavy = u.stT > 0.3 || near; u.lunge = true; u.vx += fx * 2.6; u.vz += fz * 2.6; this.release(u); }
         } else if (u.ctrlActive) {
-          const minW = (u.counterT > 0 ? 0.08 : 0.28) * (u.champ && u.sta < 15 ? 1.7 : 1);
+          const minW = (u.counterT > 0 ? 0.08 : u.cbHeavy ? 0.4 : u.cbFast ? 0.2 : 0.28) * (u.champ && u.sta < 15 ? 1.7 : 1);
           if (!u.atkHeld) u.relQ = true;
-          if (u.relQ && u.stT >= minW) this.release(u);
+          if (u.relQ && u.stT >= minW) { if (u.cbHeavy) u.heavy = true; this.release(u); }
           else if (u.stT > 3) this.release(u);
         } else if (u.stT >= def.windup * (u.aiHeavy ? 1.9 : 1) * (u.wMul || 1)) this.release(u);
         break;
@@ -1605,7 +1605,7 @@ class Sim {
       case ST_RELEASE:
         u.stT += DT;
         if (!u.swingHit && u.stT <= RELEASE_T) { if (this.xc && !u.champ && !u.mounted && u.mount < 0) this.sweepHit(u); else this.tryMeleeHit(u); }
-        if (u.stT >= RELEASE_T) { u.st = ST_RECOVER; u.stT = 0; }
+        if (u.stT >= RELEASE_T) { u.st = ST_RECOVER; u.stT = 0; u.cbE = this.tick; }
         break;
       case ST_RECOVER: u.stT += DT; if (u.stT >= def.recover * (u.chg ? 1.35 : 1)) { u.st = ST_IDLE; u.stT = 0; } break;
       case ST_STUN: u.stT += DT; u.blocking = false; if (u.stT >= u.stunDur) { u.st = ST_IDLE; u.stT = 0; } break;
@@ -1780,7 +1780,7 @@ class Sim {
     }
     if ((def_.mounted || def_.type === 'horse' || def_.mount >= 0) && !(att.mounted || att.mount >= 0)) { const hs = def_.type === 'horse' ? def_ : def_.mounted ? def_ : this.units[def_.mount]; const fast = hs && Math.abs(hs.hspeed) > 5; dmg *= fast ? 0.95 : 1.4; if (hs) hs.hspeed *= fast ? 0.85 : 0.35; } // a galloping horseman is a glancing target; a halted one is cut down
     def_.lastAttacker = att.id;
-    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1) * (this.xc && att.ctrl >= 0 && !this.players[att.ctrl].ai && !def_.champ ? 1.3 : 1);
+    const kb = (dir === DIR_UP ? 2.2 : 1.6) * (heavy ? 1.8 : 1) * (att.chg ? 1.6 : 1) * (this.xc && att.ctrl >= 0 && !this.players[att.ctrl].ai && !def_.champ ? 0.8 : 1); /* your own cut does not shove him out of your reach: the chain that follows must still find him */
     if (att.def.brush && def_.type !== 'horse') this.brushCatch(def_, att, nx, nz, false, hx, hy, hz);
     this.posture(def_, dmg * (heavy ? 0.9 : 0.45) * (att.def.posture || 1), att);
     this.applyDamage(def_, dmg, att.id, nx * kb, heavy ? 1.2 : 0, nz * kb, 'melee', hx, hy, hz); if (att.chg && !def_.dead && def_.type !== 'horse' && !def_.mounted && def_.mount < 0) { def_.downT = Math.max(def_.downT || 0, heavy ? 0.9 : 0.5); att.vx *= 0.3; att.vz *= 0.3; }
@@ -4354,6 +4354,46 @@ Sim.prototype.pointWait = function (u, tgt, d, reach) {
   u.ptW = (u.ptW || 0) + DT; if (u.ptW > 2.2 + (u.id % 5) * 0.3) { u.ptW = 0; u.rushT = 1.2; return false; } /* waited long enough: beat the point aside and go */
   const want = tr + 0.45, nx = (tgt.x - u.x) / (d || 1), nz = (tgt.z - u.z) / (d || 1), sd = (u.id & 1) ? 1 : -1, rad = clamp((d - want) * 2, -2, 2);
   u.mx = nx * rad + nz * sd * 0.9; u.mz = nz * rad - nx * sd * 0.9; if (!u.blocking && this.rng.next() < 0.03) { u.blocking = true; u.blockT = 0; u.blockDir = DIR_DOWN; u.blockHold = 0.5; } return true;
+};
+// ---- the combo (xc, the player's blade): the attack button does not pick a side. The sim reads the fight - where the man is,
+// whether his guard is up or he is reeling, how close he stands, whether there is a second man - and the cut comes as the next
+// step of a chain that fits it. R (a thrust) and the wheel-up (a chop) can be thrown into any chain and the chain goes on; a
+// cut pressed within 0.8 s of the last one is chained, with quicker wind-ups, and a chain's last step is a heavy blow by itself.
+// Chains (紀效新書 辛酉刀法 and the 長刀 drill name the step-and-cut sequences; the groupings here are the game's):
+//   連環 cut, cut back, chop · 雙敵 left man, right man · 短打 cut, thrust, cut (a man inside the measure, or behind a shield)
+//   探 thrust, cut, cut back (a man at the edge of reach) · 破 cut, chop (a plain guard up) · 追 cut, cut back, chop (quick, on a reeling man)
+//   反 riposte: the chop that follows a parry
+const CB = { lianhuan: ['s', 'b', 'U'], shuangdi: ['L', 'R', 'L', 'R'], duanda: ['s', 'D', 'b'], tan: ['D', 's', 'b'], po: ['s', 'U'], zhui: ['s', 'b', 'U'], fan: ['U'] };
+const CB_NAME = { lianhuan: '連環', shuangdi: '雙敵', duanda: '短打', tan: '探', po: '破', zhui: '追', fan: '反' };
+Sim.prototype.comboDir = function (u, ad) {
+  if (!this.xc || u.champ || u.weapon === 'yari' || u.weapon === 'bow' || u.weapon === 'revolver' || u.def.brush || (u.weapon === 'rifle' && !u.club)) { u.cbChain = 0; u.cbHeavy = 0; u.cbFast = 0; return ad; }
+  const T = this.tick, chained = (u.cbE || 0) > T - 24 && u.cbN > 0;
+  /* the men in front of him: the nearest, and whether there is one on each side */
+  const R = u.def.reach + 1.3; const n = this.gatherNear(u.x, u.z, R); let tgt = null, bd = 1e9, left = 0, right = 0;
+  for (let i = 0; i < n; i++) { const v = this.units[this.nearBuf[i]]; if (v === u || v.dead || v.team === u.team || v.type === 'horse' || v.downed) continue; const dx = v.x - u.x, dz = v.z - u.z, d = len(dx, dz); if (d > R) continue; const rel = wrap(atan2(dx, dz) - u.yaw); if (Math.abs(rel) > 1.25) continue;
+    if (rel > 0.3) left++; else if (rel < -0.3) right++; if (d < bd) { bd = d; tgt = v; } }
+  const manual = ad === DIR_UP || ad === DIR_DOWN; let key = chained ? u.cbK : null, idx = chained ? u.cbN : 0;
+  if (!chained || !key) { /* a new chain: read the situation */
+    if (u.counterT > 0) key = 'fan';
+    else if (!tgt) key = 'lianhuan';
+    else if (left && right) key = 'shuangdi';
+    else if (tgt.st === ST_STUN || tgt.hrT > 0 || tgt.openT > 0 || tgt.flinchT > 0.1) key = 'zhui';
+    else if (tgt.blocking && !tgt.def.shield) key = 'po';
+    else if (bd < u.def.reach * 0.62 || tgt.def.shield) key = 'duanda';
+    else if (bd > u.def.reach * 0.85) key = 'tan';
+    else key = 'lianhuan';
+    idx = 0; }
+  let steps = CB[key]; if (idx >= steps.length) { idx = 0; if (key === 'fan' || key === 'zhui') key = 'lianhuan'; steps = CB[key]; } /* a chain that has run out starts over */
+  let st = steps[idx]; if (manual) st = ad === DIR_UP ? 'U' : 'D'; /* a chop or a thrust thrown in by hand takes the step's place */
+  /* the side of a cut: 's' cuts toward the man, 'b' cuts back the other way, 'L'/'R' cut into the man on that side */
+  const relT = tgt ? wrap(atan2(tgt.x - u.x, tgt.z - u.z) - u.yaw) : 0; const into = relT > 0 ? DIR_LEFT : DIR_RIGHT; /* the blade starts on his side, so it meets him first (DIR_LEFT sweeps from the left; the sweep stops at the first body) */
+  let dir; if (st === 'U') dir = DIR_UP; else if (st === 'D') dir = DIR_DOWN; else if (st === 'L') dir = DIR_LEFT; else if (st === 'R') dir = DIR_RIGHT;
+  else if (st === 's') dir = into; else dir = u.cbD === DIR_RIGHT ? DIR_LEFT : u.cbD === DIR_LEFT ? DIR_RIGHT : counterDir(into);
+  const last = idx === steps.length - 1 && steps.length > 1;
+  u.cbK = key; u.cbN = idx + 1; u.cbD = dir; u.cbChain = chained ? 1 : 0; u.cbHeavy = (st === 'U' && (last || key === 'fan') && !manual) ? 1 : 0; u.cbFast = (key === 'zhui' || (chained && idx > 0)) ? 1 : 0;
+  this.events.push({ t: 'combo', id: u.id, key, zh: CB_NAME[key], n: idx + 1, of: steps.length, step: st, heavy: !!u.cbHeavy });
+  if (u.cbHeavy) this.events.push({ t: 'heavy', id: u.id });
+  return dir;
 };
 // ---- measure (xc, AI blades only): a swordsman does not walk up into a man's face and stand there. He stops a pace
 // outside his own reach, shuffles, and when he goes he goes with the cut: the step in and the blow are one movement, the
