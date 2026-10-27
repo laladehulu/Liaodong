@@ -921,6 +921,7 @@ class Sim {
     /* (was swallowed by a comment long ago; left off so combat tuning is unchanged) if (this.xc && u.ctrl < 0 && u.target >= 0) { const t = this.units[u.target]; if (t && t.ctrl >= 0 && !this.players[t.ctrl].ai) u.wMul = 1.3; } */
     if (this.xc && u.ctrl >= 0 && !u.champ) { // mashing: each swing in quick succession costs arm; past three in a breath the windups slow and telegraph
       u.spamR = Math.max(0, (u.spamR || 0) - (this.tick - (u.spamTk || 0)) / 45) + 1; u.spamTk = this.tick; u.wMul *= 1 + clamp(u.spamR - 3, 0, 4) * 0.12; }
+    if (this.xc && u.ctrl < 0 && !u.champ) u.wMul *= 0.82 + this.rng.next() * 0.42; /* no two cuts come at the same beat: the wind-up runs a little short or a little long */
     u.heavy = false; u.aiHeavy = u.ctrl < 0 && !u.ctrlActive && this.rng.next() < (u.def.overhead ? 0.4 : 0.18); u.st = ST_WINDUP; u.stT = 0; u.atkDir = dir; u.relQ = false; u.windupId++; u.swingHit = false; u.blocking = false; u.aiming = false; this.events.push({ t: 'windup', id: u.id, dir }); }
   footControl(u, keys, a, disabled) {
     if (!u.champ && u.dodgeT > 0) { const k = u.dodgeT / 0.32, sp = (this.real ? 4.6 : 5.4) * (0.55 + 0.75 * k); u.mx = u.dodgeX * sp; u.mz = u.dodgeZ * sp; return; } // a sidestep of a pace and a half (about 1.4 m), fast off the mark, bleeding speed; mid-step the body is committed
@@ -4378,6 +4379,7 @@ Sim.prototype.xcMeasure = function (u, tgt, d, reach) {
   if (e < -0.3) { if (gave < 1.0) { sp = -Math.min(u.def.speed * 0.6, -e * 2.2); u.xcGave = gave - sp * DT; } } else { if (e > 0.35) sp = Math.min(u.def.speed * 0.8, e * 2.5); u.xcGave = Math.max(0, gave - 0.6 * DT); }
   const drift = (u.blocking ? 0.15 : 0.45) * (lined ? 0.3 : 1) * sin(this.tick * 0.07 * mt + u.xcPh);
   u.mx = nx * sp - nz * drift; u.mz = nz * sp + nx * drift;
+  if (Math.abs(e) <= 0.5 && !u.blocking && u.st === ST_IDLE && this.rng.next() < 0.03) this.xcGuard(u); /* at measure the guard comes up now and then */
   u.xcM = this.tick; /* this tick the measure code holds him: the stand-and-cut below is off */
   if (Math.abs(e) <= 0.35) { if (!(u.xcAt > 0)) u.xcAt = this.tick + Math.round((5 + this.rng.next() * 20) * mt); }
   else if (e < -0.5 && u.st === ST_IDLE && this.rng.next() < (gave >= 1.0 ? 0.16 : 0.07)) u.xcAt = this.tick; /* crowded inside his measure: he gives ground, or cuts from where he stands */
