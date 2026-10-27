@@ -2047,14 +2047,14 @@ class Sim {
               if (p.kind === 'arrow' && v.ctrl >= 0 && !v.dead && (v.iframe > 0 || (v.blocking && Math.abs(wrap(atan2(p.x - v.x, p.z - v.z) - v.yaw)) < 1.2 && this.rng.next() < (v.def.shield ? 1 : 0.8)))) { this.events.push({ t: v.iframe > 0 ? 'evade' : 'arrowstick', id: v.id, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); if (v.iframe <= 0) this.events.push({ t: 'block', x: p.x, y: p.y, z: p.z, perfect: false, by: v.id, att: -1, shield: !!v.def.shield }); done = true; break; } // you can slide under an arrow or turn it on your guard
               if (p.kind === 'arrow' && v.zfile && !v.dead && this.coverShield(v, p)) { this.events.push({ t: 'arrowstick', x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz }); done = true; break; }
               if (p.kind === 'arrow') { v.lastAttacker = p.owner; this.applyDamage(v, (p.dmg || (this.units[p.owner].def.bow || { dmg: 30 }).dmg) * (v.def.ai === 'cannon' ? 0.3 : 1) * (v.ctrl >= 0 && !(this.players[v.ctrl] && this.players[v.ctrl].ai) ? 0.65 : 1), p.owner, p.vx * 0.03, 0, p.vz * 0.03, 'arrow', p.x, p.y, p.z); if (!v.dead) { if (this.xc) this.hitReact(v, this.units[p.owner], 'shot', false, false); else { v.flinchT = Math.max(v.flinchT, 0.25); if (v.st === ST_WINDUP || v.st === ST_AIM) { v.st = ST_IDLE; v.stT = 0; } } } this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); done = true; break; }
-              if (p.bolt) { v.lastShotBy = p; p.hits++; this.applyDamage(v, 80, p.owner, p.vx * 0.05, 1, p.vz * 0.05, 'arrow', p.x, p.y, p.z); if (!v.dead && v.mass < 5) v.downT = Math.max(v.downT, 0.8); this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z }); if (p.hits >= 3) { done = true; break; } continue; }
+              if (p.bolt) { v.lastShotBy = p; p.hits++; this.applyDamage(v, 80, p.owner, p.vx * 0.05, 1, p.vz * 0.05, 'arrow', p.x, p.y, p.z); if (!v.dead && v.mass < 5) v.downT = Math.max(v.downT, 0.8); this.events.push({ t: 'arrowhit', x: p.x, y: p.y, z: p.z, by: p.owner, killed: v.dead }); if (p.hits >= 3) { done = true; break; } continue; }
               // solid shot: bowl through
               const sp = len(p.vx, p.vz) || 1; const nx = p.vx / sp, nz = p.vz / sp;
               v.lastShotBy = p; p.hits++;
               const dmg = 60 + sp * 1.4;
               if (v.mass < 5) { v.downT = Math.max(v.downT, 1.5); v.st = ST_IDLE; v.stT = 0; v.blocking = false; v.aiming = false; }
               this.applyDamage(v, dmg, p.owner, nx * (6 + sp * 0.25), 5 + sp * 0.12, nz * (6 + sp * 0.25), 'solid', p.x, p.y, p.z);
-              this.events.push({ t: 'solidhit', x: p.x, y: p.y, z: p.z });
+              this.events.push({ t: 'solidhit', x: p.x, y: p.y, z: p.z, by: p.owner, killed: v.dead });
               p.vx *= 0.78; p.vz *= 0.78; p.vy *= 0.6;
               if (len(p.vx, p.vz) < 7) { done = true; break; }
             }
@@ -3985,7 +3985,7 @@ Sim.prototype.siegeTick = function () {
   for (let i = ps.length - 1; i >= 0; i--) { const p = ps[i]; if (p.kind === 'bomb') continue;
     for (const e of sg.engines) { if (e.hp <= 0 || p.team === e.team) continue; const S = SGE[e.kind]; if (Math.abs(p.x - e.x) > S.hw || Math.abs(p.z - e.z) > S.hd || p.y > terrainH(e.x, e.z) + S.h) continue;
       const dmg = p.kind === 'shell' ? 260 : p.kind === 'solid' ? (p.bolt ? 50 : 180) : 4; this.sgHurt(e, dmg); if (p.kind === 'arrow' && e.kind !== 'cart' && this.rng.next() < 0.04 && !this.rain) e.burn = Math.max(e.burn, 6);
-      this.events.push({ t: 'sghit', x: p.x, y: p.y, z: p.z, kind: p.kind, eng: e.kind }); ps[i] = ps[ps.length - 1]; ps.pop(); break; } }
+      this.events.push({ t: 'sghit', x: p.x, y: p.y, z: p.z, kind: p.kind, eng: e.kind, by: p.owner, left: Math.max(0, e.hp) / e.max }); ps[i] = ps[ps.length - 1]; ps.pop(); break; } }
   for (const e of sg.emp) { if (e.cd > 0) e.cd--; if (e.man < 0) continue; const u = this.units[e.man];
     if (!u || u.dead || len(u.x - e.x, u.z - e.z) > 3.2) { e.man = -1; if (u) u.manE = -1; continue; }
     // the piece traverses and elevates toward where its gunner looks, at the speed a crew can lay it; he stands at its breech
@@ -4000,7 +4000,7 @@ Sim.prototype.sgFire = function (e, yaw, pitch, by) {
   const bow = e.kind === 'bow', v = bow ? 62 : 78; e.cd = bow ? 30 * 5 : 30 * 9; e.cdMax = e.cd;
   const cp = cos(pitch), x = e.x + sin(yaw) * 1.6, z = e.z + cos(yaw) * 1.6, y = e.y + (bow ? 1.4 : 1.2);
   // a piece on the wall top fires out through its embrasure, over the parapet in front of it
-  this.projectiles.push({ kind: 'solid', bolt: bow, x, y, z, vx: sin(yaw) * cp * v, vy: sin(pitch) * v, vz: cos(yaw) * cp * v, team: e.team, owner: -1, life: 0, hits: 0, over: e.team === this.sg.D });
+  this.projectiles.push({ kind: 'solid', bolt: bow, x, y, z, vx: sin(yaw) * cp * v, vy: sin(pitch) * v, vz: cos(yaw) * cp * v, team: e.team, owner: by >= 0 ? by : -1, life: 0, hits: 0, over: e.team === this.sg.D });
   this.events.push({ t: 'sgshot', x, y, z, dx: sin(yaw), dz: cos(yaw), gun: !bow, team: e.team, by: by === undefined ? -1 : by, emp: e.id });
 };
 // a manned piece takes all of its gunner's hands: left click (attack or fire) looses it, E leaves it; his own weapon is
