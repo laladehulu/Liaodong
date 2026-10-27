@@ -54,7 +54,7 @@ function soldierEvent(ev) {
 }
 function soldierHUD(dt) {
   if (!SOLD) return; const sim = state.sim, me = sim.players[state.localIdx], h = sim.units[me.heroId];
-  const dead = !h || h.dead; $('fallen').hidden = !dead || state.ended || sim.phase !== 1;
+  const dead = !h || h.dead; $('fallen').hidden = !dead || state.ended || sim.phase !== 1 || !!state.dying;
   if (dead && me.respawnAt) $('fallenT').textContent = `Next wave in ${Math.max(0, Math.ceil((me.respawnAt - sim.tick) / 30))} s`;
   if (SOLD.cueT > 0) { SOLD.cueT -= dt; $('drill').style.opacity = Math.min(1, SOLD.cueT * 1.5); }
   $('suppress').style.opacity = Math.min(0.85, (state.renderer.suppress || 0) * 0.9);
@@ -485,6 +485,6 @@ function depKey(c, e) {
 }
 function depHUD(dt) {
   const sim = state.sim; if (!sim || (sim.mode !== 'assault' && sim.mode !== 'campaign') || (sim.mission && (sim.mission.soldier || sim.mission.camp)) || state.ended || sim.mwin !== undefined) { if (DEP.open) depOpen(false); return; }
-  const h = localHero(); if (h && !h.dead) DEP.dismissed = false; else if (!DEP.open && !DEP.dismissed && sim.phase === 1) depOpen(true);
+  const h = localHero(); if (h && !h.dead) DEP.dismissed = false; else if (!DEP.open && !DEP.dismissed && sim.phase === 1 && !state.dying) depOpen(true);
   if (DEP.open) { $('fallen').hidden = true; DEP.t -= dt; if (DEP.t <= 0) { DEP.t = 0.4; depRender(); } }
 }

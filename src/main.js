@@ -75,7 +75,7 @@ function heroHUD() {
   const keys = ['Z', 'X', 'C', 'V'];
   const sta = Math.max(0, h.sta === undefined ? 100 : h.sta); const sb = $('stamina'); sb.style.setProperty('--s', sta.toFixed(0) + '%'); sb.classList.toggle('low', sta < 25); sb.classList.toggle('full', sta >= 99.5); sb.hidden = h.dead;
   const HC = S.HCLASS[h.hclass | 0]; const HCOUNTER = HC.abil.map(a => a.ctr);
-  { const pk = $('herosel'); const show = h.dead || state.pickOpen; pk.hidden = !show; if (show) { const nc = me.nextClass >= 0 ? me.nextClass : h.hclass | 0; const html = `<h4>${h.dead ? 'Choose who rides out next' : 'Change champion (only at your spawn, or on your next return)'}</h4>` + S.HCLASS.map((c, i) => `<div class="hc${i === nc ? ' on' : ''}"><kbd>${i + 1}</kbd><b>${c.name} <span>${c.jp}</span></b><small>${c.desc}</small><em>${c.abil.map(a => a.name).join(' · ')}</em></div>`).join(''); if (pk.dataset.h !== html) { pk.innerHTML = html; pk.dataset.h = html; } } }
+  { const pk = $('herosel'); const show = (h.dead && !state.dying) || state.pickOpen; pk.hidden = !show; if (show) { const nc = me.nextClass >= 0 ? me.nextClass : h.hclass | 0; const html = `<h4>${h.dead ? 'Choose who rides out next' : 'Change champion (only at your spawn, or on your next return)'}</h4>` + S.HCLASS.map((c, i) => `<div class="hc${i === nc ? ' on' : ''}"><kbd>${i + 1}</kbd><b>${c.name} <span>${c.jp}</span></b><small>${c.desc}</small><em>${c.abil.map(a => a.name).join(' · ')}</em></div>`).join(''); if (pk.dataset.h !== html) { pk.innerHTML = html; pk.dataset.h = html; } } }
   const ab = S.HCLASS[h.hclass | 0].abil.map((a, i) => { const cd = Math.max(0, h.cd[i]); return `<div class="ab${cd > 0 ? '' : ' ready'}${(i === 2 && h.guardT > 0) || (i === 1 && h.dashT > 0) ? ' on' : ''}" title="${HCOUNTER[i]}"><kbd>${keys[i]}</kbd><b>${a.name}</b><i style="--p:${(cd / a.cd * 100).toFixed(0)}%"></i><small>${cd > 0 ? Math.ceil(cd) + 's' : HCOUNTER[i]}</small></div>`; }).join('') + `<div class="ab${me.fury >= S.FURY_MAX ? ' ready' : ''}"><kbd>G</kbd><b>Valor</b><i style="--p:${(100 - me.fury).toFixed(0)}%"></i><small>${me.fury >= S.FURY_MAX ? 'READY' : 'fury ' + Math.round(me.fury) + '%'}</small></div>`;
   if ($('abil').dataset.h !== ab) { $('abil').innerHTML = ab; $('abil').dataset.h = ab; }
   const g = sim.gate, ph = sim.hphase; const t = Math.max(0, Math.ceil((sim.scen.limit - sim.tick) / 30));
@@ -1091,6 +1091,7 @@ function predictHero(ls) {
   }
   const P = R.pred || (R.pred = { x: 0, z: 0 }); const a = 1 - Math.exp(-(state.dtF || 0.016) * 30); P.x += (ox - P.x) * a; P.z += (oz - P.z) * a;
 }
+const DEATH_MS = 3800;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.1, (now - state.last) / 1000 || 0); state.last = now;
@@ -1112,12 +1113,16 @@ function frame(now) {
   }
   if (steps >= maxS) state.acc = 0;
   const hero = localHero();
-  if (hero && hero.dead && !Input.cmdMode && !state.ended && state.sim.mode !== 'assault') { toggleCmd(true); toast(state.sim.heroMode ? 'You have fallen. You will return in a few moments' : 'You have fallen'); }
+  // your own death, seen through your own eyes: a few seconds of the fall before the command view or the soldier picker
+  if (hero && hero.dead) { if (state.deadId !== hero.id) { state.deadId = hero.id; state.deathAt = now; state.deathCam = !Input.cmdMode && !state.ended; if (state.deathCam && AUDIO.shellshock) AUDIO.shellshock(0.75); } } else state.deadId = -1;
+  const dying = !!(hero && hero.dead && state.deathCam && !state.ended && now - state.deathAt < DEATH_MS); state.dying = dying;
+  { const cv = state.renderer && state.renderer.renderer && state.renderer.renderer.domElement; if (cv) { const k = dying ? Math.min(1, (now - state.deathAt) / DEATH_MS) : 0; const f = k > 0 ? `grayscale(${Math.min(1, k * 1.6).toFixed(2)}) brightness(${(1 - Math.max(0, k - 0.45) * 1.5).toFixed(2)}) contrast(${(1 + k * 0.15).toFixed(2)})` : ''; if (cv.style.filter !== f) cv.style.filter = f; } }
+  if (hero && hero.dead && !dying && !Input.cmdMode && !state.ended && state.sim.mode !== 'assault') { toggleCmd(true); toast(state.sim.heroMode ? 'You have fallen. You will return in a few moments' : 'You have fallen'); }
   if (hero && !hero.dead && Input.cmdMode && (state.sim.heroMode || state.sim.mode === 'assault') && !state.ended && !(typeof DEP !== 'undefined' && DEP.open)) toggleCmd(false);
   if (hero && hero.id !== state.lastHeroId) { state.lastHeroId = hero.id; }
   cmdCamUpdate(dt);
   if (typeof SPEECH !== 'undefined' && SPEECH.pump) SPEECH.pump(dt); // speaker faces are drawn before the frame, never over it
-  state.renderer.render(state.acc / DT, dt, { mode: Input.cmdMode || !hero || hero.dead ? 'cmd' : 'fp', yaw: Input.yaw, pitch: Input.pitch, selected: (Input.orderMode || state.zHeld) ? state.fpSel : state.selected, fpSel: state.fpSel, ghost: Drag.active ? Drag.ghost : state.fpGhost, ghostLine: Drag.active ? Drag.line : null });
+  state.renderer.render(state.acc / DT, dt, { mode: dying ? 'death' : Input.cmdMode || !hero || hero.dead ? 'cmd' : 'fp', deathK: dying ? (now - state.deathAt) / DEATH_MS : 0, yaw: Input.yaw, pitch: Input.pitch, selected: (Input.orderMode || state.zHeld) ? state.fpSel : state.selected, fpSel: state.fpSel, ghost: Drag.active ? Drag.ghost : state.fpGhost, ghostLine: Drag.active ? Drag.line : null });
   if (Input.orderMode || state.zHeld) { state.ordT = (state.ordT || 0) - dt; if (state.ordT <= 0) { state.ordT = 0.08; const lay = fpLayout(); state.fpGhost = lay ? lay.ghost : null; if (Input.orderMode) renderOrderMenu(); } }
   updateHUD(dt); storyTick(); heroHUD(); if (typeof SPEECH !== 'undefined') SPEECH.frame(dt); if (typeof zheHUD === 'function') zheHUD(dt);
 }

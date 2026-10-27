@@ -2565,8 +2565,20 @@ class Renderer {
       this.fov += (this.fovTarget - this.fov) * (1 - Math.exp(-dt * 10)); if (Math.abs(cam.fov - this.fov) > 0.05) { cam.fov = this.fov; cam.updateProjectionMatrix(); }
       const c = this.cmdCam; const gy = terrainH(c.x, c.z);
       const back = c.h * 0.62; camYaw = c.yaw;
+      const rag = view.mode === 'death' && hero ? this.ragdolls.find(r => r.active && r.unit === hero) : null;
+      if (rag) { // your own death in first person: the eye rides the falling head; the gaze sags from where you were looking toward
+        // where the body takes it (the sky if you go over backwards, the earth if you pitch forward), the world tilts and greys out
+        const P = rag.p, k = clamp(view.deathK || 0, 0, 1), D = this.dcam || (this.dcam = { yaw: view.yaw, pitch: view.pitch, roll: 0, id: -1 });
+        if (D.id !== hero.id) { D.id = hero.id; D.yaw = view.yaw; D.pitch = view.pitch; D.roll = 0; D.side = uhash(hero.id, 5) < 0.5 ? -1 : 1; }
+        const hx = P[0], hy = P[1], hz = P[2], fx = Math.sin(D.yaw), fz = Math.cos(D.yaw); const ux = P[0] - P[3], uy = P[1] - P[4], uz = P[2] - P[5], ul = Math.hypot(ux, uy, uz) || 1;
+        const lean = (ux * fx + uz * fz) / ul; const tgtP = lean > 0.15 ? -1.2 : lean < -0.15 ? 1.1 : -0.35; const e = 1 - Math.exp(-dt * 2.2);
+        D.pitch += (tgtP - D.pitch) * e; D.roll += (D.side * 0.9 * Math.min(1, k * 2) - D.roll) * e;
+        cam.position.set(hx + fx * 0.08, Math.max(hy + 0.04, terrainH(hx, hz) + 0.18), hz + fz * 0.08); const cp = Math.cos(D.pitch);
+        cam.lookAt(T.v.set(cam.position.x + Math.sin(D.yaw) * cp, cam.position.y + Math.sin(D.pitch), cam.position.z + Math.cos(D.yaw) * cp)); cam.rotateZ(D.roll);
+        this.fovTarget = 64 - k * 10; camYaw = D.yaw;
+      } else {
       cam.position.set(c.x - Math.sin(c.yaw) * back, gy + c.h, c.z - Math.cos(c.yaw) * back);
-      cam.lookAt(T.v.set(c.x, gy, c.z));
+      cam.lookAt(T.v.set(c.x, gy, c.z)); }
       if (this.cine) { const C = this.cine; cam.position.set(C.pos[0], C.pos[1], C.pos[2]); cam.lookAt(T.v.set(C.look[0], C.look[1], C.look[2])); if (C.fov && Math.abs(cam.fov - C.fov) > 0.05) { cam.fov = this.fov = C.fov; cam.updateProjectionMatrix(); } } // cinematic camera (trailers)
     }
     // commanders see through the murk: push the fog out in the command view
