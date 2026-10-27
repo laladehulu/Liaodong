@@ -496,19 +496,29 @@ const RAG_CON = [[0, 1, 0.36], [1, 2, 0.42], [1, 3, 0.62], [1, 4, 0.62], [2, 5, 
 const RAG_STIFF = [1, 1, 1, 1, 1, 1, 1, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3];
 class Ragdoll {
   constructor() { this.p = new Float32Array(21); this.q = new Float32Array(21); this.age = 0; this.active = false; this.slot = -1; this.yaw = 0; this.settle = 0; }
-  spawn(u, ix, iy, iz, slot) {
+  spawn(u, ix, iy, iz, slot, ev) {
     const yaw = u.yaw, cx = Math.cos(yaw), sx = Math.sin(yaw);
     const b = (u.mount >= 0 || u.mounted) ? 1.0 : 0;
     const rest = [[0, 1.62, 0], [0, 1.3, 0], [0, 0.9, 0], [0.32, 0.9, 0.05], [-0.32, 0.9, 0.05], [0.15, 0.02, 0], [-0.15, 0.02, 0]];
-    const vx = (u.mx + u.vx) * 0.6 + ix * 0.9, vy = u.vy * 0.5 + iy * 0.7 + 0.5, vz = (u.mz + u.vz) * 0.6 + iz * 0.9;
+    // the fall follows the blow (melee only; a heavy blow, a charge or a trample still throws him): a side cut crumples him across
+    // the way the blade went, a thrust takes the knees and he sinks over the point, an overhead drops him to his knees and forward;
+    // shot men and the rest keep the old loose fall. Per-point velocities on the Verlet points: [head, chest, pelvis, handL, handR, footL, footR]
+    const hd = ev ? ev.hdir : -1, melee = ev && (ev.cause === 'melee' || ev.cause === 'spear' || ev.cause === 'counter') && hd >= 0 && !ev.heavy;
+    let km = 1, ky = 1; const pv = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    if (melee) { const ax = ev.hx - u.x, az = ev.hz - u.z, al = Math.hypot(ax, az) || 1, tx = ax / al, tz = az / al; /* toward the man who struck him */
+      km = 0.25; ky = 0;
+      if (hd === 1 || hd === 3) { /* side cut: the blade's travel across him */ const sg = hd === 1 ? -1 : 1, bx = sg * tz, bz = -sg * tx; /* DIR_RIGHT travels toward the striker's left */ pv[0] = [bx * 2.2, 0.3, bz * 2.2]; pv[1] = [bx * 1.6, 0, bz * 1.6]; pv[2] = [bx * 0.5, -0.8, bz * 0.5]; pv[5] = [-bx * 0.6, 0, -bz * 0.6]; pv[6] = [-bx * 0.6, 0, -bz * 0.6]; }
+      else if (hd === 2) { /* thrust: the knees go, he sinks over the point and folds */ pv[2] = [-tx * 0.3, -2.4, -tz * 0.3]; pv[1] = [tx * 0.5, -0.6, tz * 0.5]; pv[0] = [tx * 0.9, -0.2, tz * 0.9]; pv[3] = [tx * 0.8, 0.6, tz * 0.8]; pv[4] = [tx * 0.8, 0.6, tz * 0.8]; }
+      else { /* overhead: driven down to the knees, then forward */ pv[0] = [tx * 0.6, -2.2, tz * 0.6]; pv[1] = [tx * 0.9, -1.6, tz * 0.9]; pv[2] = [0, -2.6, 0]; pv[5] = [-tx * 0.5, 0, -tz * 0.5]; pv[6] = [-tx * 0.5, 0, -tz * 0.5]; } }
+    const vx = (u.mx + u.vx) * 0.6 + ix * 0.9 * km, vy = u.vy * 0.5 + (iy * 0.7 + 0.5) * ky, vz = (u.mz + u.vz) * 0.6 + iz * 0.9 * km;
     for (let i = 0; i < 7; i++) {
       const lx = rest[i][0], ly = rest[i][1] + b, lz = rest[i][2];
       const wx = u.x + lx * cx + lz * sx, wy = u.y + ly, wz = u.z - lx * sx + lz * cx;
       this.p[i * 3] = wx; this.p[i * 3 + 1] = wy; this.p[i * 3 + 2] = wz;
-      const j = (i === 0 ? 1.6 : 1) * 0.6, dt = 1 / 60;
-      this.q[i * 3] = wx - (vx + rnd(-j, j)) * dt; this.q[i * 3 + 1] = wy - (vy + rnd(-j, j)) * dt; this.q[i * 3 + 2] = wz - (vz + rnd(-j, j)) * dt;
+      const j = (i === 0 ? 1.6 : 1) * (melee ? 0.25 : 0.6), dt = 1 / 60;
+      this.q[i * 3] = wx - (vx + pv[i][0] + rnd(-j, j)) * dt; this.q[i * 3 + 1] = wy - (vy + pv[i][1] + rnd(-j, j)) * dt; this.q[i * 3 + 2] = wz - (vz + pv[i][2] + rnd(-j, j)) * dt;
     }
-    this.age = 0; this.active = true; this.slot = slot; this.yaw = yaw; this.settle = 0;
+    this.age = 0; this.active = true; this.slot = slot; this.yaw = yaw; this.settle = 0; this.flatAt = melee ? (hd === 2 ? 1.1 : 0.8) : 0.45; /* a cut-down man takes a moment longer to go all the way down; a man sinking over a thrust longer still */
   }
   step(dt) {
     const p = this.p, q = this.q; this.age += dt;
@@ -533,7 +543,7 @@ class Ragdoll {
     }
     // a dead man goes all the way down: after the first moment the trunk and head are drawn on to the ground, so a body never
     // stays propped on its knees or folded upright like a statue (knees and feet slide out from under it)
-    if (this.age > 0.45) { const k = Math.min(1, (this.age - 0.45) * 1.6) * dt * 9; for (const i of [0, 1, 2]) { const gh = terrainH(p[i * 3], p[i * 3 + 2]) + (i === 0 ? 0.14 : 0.12); const over = p[i * 3 + 1] - gh; if (over > 0.05) p[i * 3 + 1] -= over * k; }
+    if (this.age > (this.flatAt || 0.45)) { const k = Math.min(1, (this.age - (this.flatAt || 0.45)) * 1.6) * dt * 9; for (const i of [0, 1, 2]) { const gh = terrainH(p[i * 3], p[i * 3 + 2]) + (i === 0 ? 0.14 : 0.12); const over = p[i * 3 + 1] - gh; if (over > 0.05) p[i * 3 + 1] -= over * k; }
       for (const i of [5, 6]) { const gh = terrainH(p[i * 3], p[i * 3 + 2]) + 0.1; if (p[i * 3 + 1] < gh + 0.02) { const vx = p[i * 3] - q[i * 3], vz = p[i * 3 + 2] - q[i * 3 + 2]; q[i * 3] = p[i * 3] - vx * 0.9; q[i * 3 + 2] = p[i * 3 + 2] - vz * 0.9; } } }
     if (moving < 0.004) this.settle += dt; else this.settle = 0;
     if (this.settle > 2 || this.age > 20) { const sink = (this.settle > 2 ? (this.settle - 2) : 0) * 0.08 + (this.age > 20 ? (this.age - 20) * 0.1 : 0); for (let i = 0; i < 7; i++) { p[i * 3 + 1] -= sink * dt * 2; q[i * 3 + 1] -= sink * dt * 2; } if (sink > 1.4) this.active = false; }
@@ -1659,7 +1669,7 @@ class Renderer {
           if (u.type === 'horse' || u.mounted) { this.deadHorses.push({ id: u.id, x: u.x, y: u.y, z: u.z, yaw: u.type === 'horse' ? u.yaw : u.hyaw, t: 0 }); if (u.type === 'horse') { this.hideFigure(u.id); AUDIO.play('death', u.x, u.y, u.z, 0.8); break; } }
           const rag = this.ragdolls[this.ragNext]; this.ragNext = (this.ragNext + 1) % MAXRAG;
           const slot = units.length + this.ragdolls.indexOf(rag);
-          rag.spawn(u, ev.ix, ev.iy, ev.iz, slot); rag.unit = u; this.colorFigure(slot, u);
+          rag.spawn(u, ev.ix, ev.iy, ev.iz, slot, ev); rag.unit = u; this.colorFigure(slot, u);
           this.blood(u.x, u.y + 1.1, u.z, 6, 0, 1, 0);
           { const gr = terrainH(u.x, u.z); if (ev.cause !== 'fire' && ev.cause !== 'lightning') this.timers.push({ t: 0.9, fn: () => { this.decal(u.x + rnd(-0.4, 0.4), gr, u.z + rnd(-0.4, 0.4), 0.55 + Math.random() * 0.45, 0x4a0d0e); } }); else this.decal(u.x, gr, u.z, 0.9, 0x161210); }
           { const g = gearFor(u); const imp = Math.hypot(ev.ix, ev.iz); rag.hatOff = !!g.hat && (uhash(u.id, 11) < 0.65 || imp > 6);
