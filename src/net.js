@@ -25,6 +25,7 @@ function genCode() { let s = ''; for (let i = 0; i < 5; i++) s += CODE_CHARS[Mat
 class Net {
   constructor() {
     this.peer = null; this.conns = {}; this.isHost = false; this.players = []; this.myIdx = -1; this.myCfg = null; this.code = ''; this.started = false;
+    this.fast = {}; this.sent = []; this.rtt = {}; this.rtick = {};
     this.onLobby = null; this.onStart = null; this.onInput = null; this.onHash = null; this.onPeerLeft = null; this.onFail = null; this.onChat = null;
   }
   static available() { return typeof Peer !== 'undefined' && typeof RTCPeerConnection !== 'undefined'; }
@@ -35,11 +36,14 @@ class Net {
     if (!this.ice) { iceServers().then(ice => { this.ice = ice; this.host(cfg, cb); }); return; }
     try { peer = new Peer(PREFIX + code, peerOpts(this.ice)); } catch (e) { cb(e); return; }
     this.peer = peer;
-    peer.on('open', (id) => { this.players[0].id = id; cb(null, code); this.pingTimer = setInterval(() => { if (this.started) { clearInterval(this.pingTimer); return; } this.broadcast({ t: 'ping', ts: performance.now() }); }, 2000); });
+    peer.on('open', (id) => { this.players[0].id = id; cb(null, code); this.startPing(); });
     peer.on('error', (e) => { if (e.type === 'unavailable-id') { try { peer.destroy(); } catch (_) { } this.host(cfg, cb); } else cb(e); });
     peer.on('connection', (conn) => this.acceptConn(conn));
     peer.on('disconnected', () => { try { peer.reconnect(); } catch (_) { } });
   }
+  // round trips are measured all through the battle (over the fast channel when it is up) so the input delay can follow the network
+  startPing() { clearInterval(this.pingTimer); this.pingTimer = setInterval(() => { const m = { t: 'ping', ts: performance.now() }; for (const id in this.conns) { const f = this.fast[id]; if (f && f.readyState === 'open') { try { f.send(JSON.stringify(m)); continue; } catch (e) { } } try { this.conns[id].send(m); } catch (e) { } } }, this.started ? 700 : 2000); }
+  maxRtt() { let m = 0; for (const id in this.conns) { const r = this.rtt[id]; if (r > m) m = r; } return m; }
   join(code, cfg, cb) {
     this.code = code; this.isHost = false; this.myCfg = cfg;
     if (!this.ice) { iceServers().then(ice => { this.ice = ice; this.join(code, cfg, cb); }); return; }
@@ -63,7 +67,11 @@ class Net {
   }
   wire(conn, onOpen) {
     conn.on('open', () => {
-      this.conns[conn.peer] = conn;
+      this.conns[conn.peer] = conn; if (!this.pingTimer) this.startPing();
+      // a second, unordered and unretransmitted channel on the same connection carries the inputs: a lost packet never holds up
+      // the ones behind it (each packet repeats the last few ticks), and the reliable channel still backs every input up
+      try { const pc = conn.peerConnection; if (pc && !this.fast[conn.peer]) { const dc = pc.createDataChannel('fast', { negotiated: true, id: 77, ordered: false, maxRetransmits: 0 }); this.fast[conn.peer] = dc;
+        dc.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch (_) { return; } this.onData(conn, m); }; } } catch (e) { console.warn('fast channel', e); }
       if (this.isHost) {
         const idx = this.players.length;
         this.players.push({ id: conn.peer, idx, cfg: null, connected: true });
@@ -106,10 +114,11 @@ class Net {
       case 'pcfg': { const p = this.players.find(p => p.idx === m.idx); if (p) p.cfg = m.cfg; this.onLobby && this.onLobby(); break; }
       case 'start': { this.started = true; this.onStart && this.onStart(m); break; }
       case 'i': { this.onInput && this.onInput(m.p, m.k, m.d); break; }
+      case 'I': { this.rtick[m.p] = { k: m.r, at: performance.now(), id: conn.peer }; if (this.onInput) for (let j = 0; j < m.h.length; j++) this.onInput(m.p, m.k - j, m.h[j]); break; }
       case 'h': { this.onHash && this.onHash(m.p, m.k, m.h); break; }
       case 'chat': { this.onChat && this.onChat(m.p, m.s); break; }
       case 'ping': { try { conn.send({ t: 'pong', ts: m.ts }); } catch (e) { } break; }
-      case 'pong': { const p = this.playerByPeer(conn.peer); if (p) p.rtt = Math.round(performance.now() - m.ts); this.onLobby && this.onLobby(); break; }
+      case 'pong': { const r = performance.now() - m.ts, o = this.rtt[conn.peer]; this.rtt[conn.peer] = o ? (r > o ? o * 0.6 + r * 0.4 : o * 0.85 + r * 0.15) : r; const p = this.playerByPeer(conn.peer); if (p) p.rtt = Math.round(this.rtt[conn.peer]); if (!this.started) this.onLobby && this.onLobby(); break; }
       case 'reject': { this.onFail && this.onFail('That battle has already started.'); break; }
     }
   }
@@ -121,7 +130,13 @@ class Net {
   }
   sendCfg(cfg) { this.myCfg = cfg; const me = this.players.find(p => p.idx === this.myIdx); if (me) me.cfg = cfg; if (this.myIdx >= 0) this.broadcast({ t: 'cfg', idx: this.myIdx, cfg }); }
   start(msg) { this.started = true; this.broadcast(msg); this.onStart && this.onStart(msg); }
-  sendInput(tick, data) { this.broadcast({ t: 'i', p: this.myIdx, k: tick, d: data }); }
+  sendInput(tick, data, now) {
+    this.broadcast({ t: 'i', p: this.myIdx, k: tick, d: data });
+    const S = this.sent; S.push([tick, data]); if (S.length > 8) S.shift();
+    const h = []; for (let j = S.length - 1; j >= 0 && S[j][0] === tick - h.length; j--) h.push(S[j][1]);
+    const msg = JSON.stringify({ t: 'I', p: this.myIdx, k: tick, r: now, h });
+    for (const id in this.fast) { const f = this.fast[id]; if (f.readyState === 'open') try { f.send(msg); } catch (e) { } }
+  }
   sendHash(tick, h) { this.broadcast({ t: 'h', p: this.myIdx, k: tick, h }); }
   sendChat(s) { this.broadcast({ t: 'chat', p: this.myIdx, s }); }
   destroy() { clearInterval(this.pingTimer); try { this.peer && this.peer.destroy(); } catch (e) { } }
@@ -138,10 +153,15 @@ class Lockstep {
   get(t) { let a = this.buf.get(t); if (!a) { a = new Array(this.n).fill(undefined); this.buf.set(t, a); } return a; }
   ready(t) { const a = this.get(t); for (let p = 0; p < this.n; p++) if (this.connected[p] && a[p] === undefined) return false; return true; }
   waitingOn(t) { const a = this.get(t); const out = []; for (let p = 0; p < this.n; p++) if (this.connected[p] && a[p] === undefined) out.push(p); return out; }
-  queueLocal(inp) { const t = this.tick + this.delay; this.get(t)[this.me] = inp; return t; }
-  onRemote(p, t, d) { if (t < this.tick) return; this.get(t)[p] = d; }
+  queueLocal(inp) { const t = this.tick + this.delay; this.get(t)[this.me] = inp; this.lastQ = t; return t; }
+  // the input delay can change mid-battle: each peer only chooses when its own inputs take effect, so this needs no agreement.
+  // Lengthening leaves a tick with no input of ours (filled with a copy of the last one, minus one-off commands); shortening
+  // skips a tick's input (that tick's slot was already filled)
+  needsInput() { return this.lastQ === undefined || this.tick + this.delay > this.lastQ; }
+  onRemote(p, t, d) { if (t < this.tick) return; const a = this.get(t); if (a[p] === undefined) a[p] = d; }
   inputsFor(t) { const a = this.get(t); for (let p = 0; p < this.n; p++) if (a[p] === undefined) a[p] = 0; return a; }
   advance() { this.buf.delete(this.tick - 3); this.tick++; }
+  local(t) { const a = this.buf.get(t); return a ? a[this.me] : undefined; }
   disconnect(p) { this.connected[p] = false; }
   recordHash(p, t, h) {
     let m = this.hashes.get(t); if (!m) { m = new Array(this.n).fill(undefined); this.hashes.set(t, m); }

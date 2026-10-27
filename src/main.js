@@ -805,7 +805,7 @@ function replayFrame(dt) {
     }
     if (state.replayTick >= rp.inputs.length) state.acc = 0;
   }
-  cmdCamUpdate(dt);
+  predictHero(ls); cmdCamUpdate(dt);
   state.renderer.render(Math.min(1, state.acc / DT), dt, { mode: 'cmd', yaw: Input.yaw, pitch: Input.pitch, selected: [] });
   if (state.toastT > 0) { state.toastT -= dt; if (state.toastT <= 0) $('toast').classList.remove('show'); }
   state.hudT -= dt;
@@ -1027,12 +1027,46 @@ function updateHUD(dt) {
 function stepOnce() {
   const sim = state.sim, ls = state.ls, net = state.net;
   if (!ls.ready(ls.tick)) return false;
-  const inp = collectInput(); const tk = ls.queueLocal(inp); if (net) net.sendInput(tk, inp);
+  if (net) netTune(ls, net);
+  if (ls.needsInput()) { const t0 = ls.tick + ls.delay;
+    if (ls.lastQ !== undefined && ls.lastQ < t0 - 1) { const last = ls.local(ls.lastQ); for (let t = ls.lastQ + 1; t < t0; t++) { const f = last ? [last[0], last[1], last[2], last[3] & (S.A_ATK | S.A_BLOCK | S.A_AIM | S.A_CMD), last[4], last[5], [], 0] : 0; ls.get(t)[ls.me] = f; if (net) net.sendInput(t, f, ls.tick); } }
+    const inp = collectInput(); const tk = ls.queueLocal(inp); if (net) net.sendInput(tk, inp, ls.tick); }
   const tickInputs = ls.inputsFor(ls.tick); if (state.replay && state.replay.inputs.length < 30 * 60 * 40) state.replay.inputs.push(tickInputs.slice());
   sim.step(tickInputs); ls.advance();
   state.renderer.processEvents(sim.events); handleEvents(sim.events);
   if (ls.tick % 60 === 0 && net) { const h = sim.hash(); net.sendHash(ls.tick, h); ls.recordHash(ls.me, ls.tick, h); }
   return true;
+}
+// online play: the input delay follows the measured round trip (half of it, plus a margin for jitter) and moves one tick at a time
+function netTune(ls, net) {
+  const now = performance.now(); if (now - (state.tuneT || 0) < 1500) return; state.tuneT = now;
+  const rtt = net.maxRtt(); if (!rtt) return; const want = Math.max(2, Math.min(12, Math.ceil((rtt / 2 + 22) / (DT * 1000)) + 1));
+  if (want > ls.delay) ls.delay++; else if (want < ls.delay - 1) ls.delay--; state.delay = ls.delay;
+}
+// keep every peer's clock in step: a peer running ahead of the others would only stall waiting for their inputs, so it slows a
+// touch instead (the slower peer is never asked to speed up past real time)
+function netAhead(ls, net) {
+  let ahead = 0; const now = performance.now();
+  for (const p in net.rtick) { const R = net.rtick[p]; if (!ls.connected[p]) continue; const est = R.k + ((net.rtt[R.id] || 0) / 2 + (now - R.at)) / (DT * 1000); ahead = Math.max(ahead, ls.tick - est); }
+  return ahead;
+}
+// what the local man's own pending inputs will do: in first person the camera moves at once with the keys instead of after the
+// input delay (drawing only; the simulation is untouched and catches up to the same place)
+function predictHero(ls) {
+  const h = localHero(); const R = state.renderer; if (!R) return;
+  let ox = 0, oz = 0;
+  if (h && !h.dead && state.net && h.mount < 0 && !h.mounted && !h.airborne && !(h.downT > 0) && !(h.dodgeT > 0) && h.st !== S.ST_STUN) {
+    const base = h.def.speed * state.sim.zoneSpeed(h.x, h.z, Math.sin(h.yaw), Math.cos(h.yaw)); const cur = Math.hypot(h.mx, h.mz), was = state.predSp || base;
+    const k = Math.min(1.2, cur > 0.05 ? cur / Math.max(0.1, was) : 1);
+    for (let t = ls.tick; t < ls.tick + ls.delay; t++) { const inp = ls.local(t); if (!inp || !inp[0]) continue; const keys = inp[0], yaw = inp[1] / 65536 * Math.PI * 2;
+      const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw); let mx = 0, mz = 0;
+      if (keys & S.KEY_W) { mx += fx; mz += fz; } if (keys & S.KEY_S) { mx -= fx; mz -= fz; } if (keys & S.KEY_D) { mx += rx; mz += rz; } if (keys & S.KEY_A) { mx -= rx; mz -= rz; }
+      const l = Math.hypot(mx, mz); if (l < 1e-3) continue; let sp = base; if ((keys & S.KEY_S) && !(keys & S.KEY_W)) sp *= 0.65; if ((keys & S.KEY_SPRINT) && (keys & S.KEY_W) && !(keys & S.KEY_S) && !h.winded) sp *= 1.42;
+      ox += mx / l * sp * k * DT; oz += mz / l * sp * k * DT; }
+    const pl = Math.hypot(ox, oz); if (pl > 2) { ox *= 2 / pl; oz *= 2 / pl; }
+    { let sp = base; const keys = ls.local(ls.tick - 1); if (keys && keys[0] & S.KEY_SPRINT) sp *= 1.42; state.predSp = sp; }
+  }
+  const P = R.pred || (R.pred = { x: 0, z: 0 }); const a = 1 - Math.exp(-(state.dtF || 0.016) * 30); P.x += (ox - P.x) * a; P.z += (oz - P.z) * a;
 }
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1045,7 +1079,8 @@ function frame(now) {
   const sim = state.sim, ls = state.ls, net = state.net;
   // game speed (solo only): more fixed-length ticks per frame; capped so a slow machine just runs slower
   const spd = state.net ? 1 : (state.speed || 1), maxS = Math.min(48, Math.max(2, Math.ceil(6 * spd)));
-  state.acc += dt * spd; let steps = 0; const tStep = performance.now();
+  state.dtF = dt; let ndt = dt; if (net && state.ls) { const ah = netAhead(ls, net); if (ah > 1.5) ndt *= ah > 4 ? 0.8 : 0.92; }
+  state.acc += ndt * spd; let steps = 0; const tStep = performance.now();
   while (state.acc >= DT && steps < maxS) {
     if (spd > 1 && steps >= 2 && performance.now() - tStep > 14) { state.acc = 0; break; } // fast-forward never starves the frame: a slow machine just gets less speed
     if (!stepOnce()) { state.acc = Math.min(state.acc, DT); state.stalled = true; state.stallT += dt; break; }

@@ -2510,7 +2510,7 @@ class Renderer {
     const cam = this.camera;
     let camYaw = view.yaw;
     if (fp) {
-      const hx = lerp(hero.px, hero.x, alpha), hy = lerp(hero.py, hero.y, alpha), hz = lerp(hero.pz, hero.z, alpha);
+      const PR = this.pred, hx = lerp(hero.px, hero.x, alpha) + (PR ? PR.x : 0), hy = lerp(hero.py, hero.y, alpha), hz = lerp(hero.pz, hero.z, alpha) + (PR ? PR.z : 0);
       const mounted = hero.mount >= 0 || hero.mounted;
       const slideK = !hero.champ && hero.dodgeT > 0 ? Math.sin(clamp(1 - hero.dodgeT / 0.32, 0, 1) * PI) : 0;
       if (!hero.champ) { const fx0 = Math.sin(view.yaw), fz0 = Math.cos(view.yaw); const side = hero.dodgeT > 0 ? (hero.dodgeX * -fz0 + hero.dodgeZ * fx0) : 0; this.slideRoll = (this.slideRoll || 0) + ((side > 0.4 ? 1 : side < -0.4 ? -1 : 0) * slideK * 0.16 - (this.slideRoll || 0)) * (1 - Math.exp(-dt * 16)); }
