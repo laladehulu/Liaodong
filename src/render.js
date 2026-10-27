@@ -1098,6 +1098,27 @@ class Renderer {
     f.hilt.setColorAt(slot, c.set(u.weapon === 'yari' ? 0xc8281e : 0x5a1a1a)); f.pistol.setColorAt(slot, c.set(0x5a4a2a)); f.barrel.setColorAt(slot, c.set(u.type === 'rifle_spencer' ? 0x3a3a3a : 0x55595e));
     for (const k of ['torso', 'hips', 'uarmL', 'uarmR', 'farmL', 'farmR', 'thighL', 'thighR', 'shinL', 'shinR', 'head', 'kabuto', 'hand', 'hilt', 'pistol', 'barrel']) f[k].instanceColor.needsUpdate = true;
   }
+  // realism: men and horses throw no shadow-map shade (the ink wash there is for houses, walls, trees and rocks, which
+  // never move); each throws instead a single drop of ink laid on the ground along the sun: a soft, pale wash with the
+  // ink pooled a little darker at its rim and densest at his feet. It glides with him, with no grain to crawl.
+  inkInit() {
+    const N = 700, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 0, 1, -0.5, 0, 1], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2)); g.setIndex([0, 2, 1, 0, 3, 2]);
+    const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, fog: false,
+      uniforms: { ink: { value: new THREE.Color(0x14161c) }, op: { value: 0.42 } },
+      vertexShader: 'varying vec2 vU; varying float vD; void main(){ vU = uv; vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0); vD = -mv.z; gl_Position = projectionMatrix * mv; }',
+      fragmentShader: 'uniform vec3 ink; uniform float op; varying vec2 vU; varying float vD; void main(){ vec2 q = vec2((vU.x - 0.5) * 2.0, vU.y * 2.0 - 1.0); q.y = q.y < 0.0 ? q.y * 2.2 : q.y; float r = length(q); if (r > 1.0) discard;\n float body = smoothstep(1.0, 0.45, r), rim = smoothstep(0.62, 0.9, r) * smoothstep(1.0, 0.9, r), feet = 1.0 - vU.y * 0.45;\n float a = (body * 0.78 * feet + rim * 0.3) * op * clamp(1.0 - (vD - 50.0) / 40.0, 0.0, 1.0); gl_FragColor = vec4(ink, a); }' });
+    const mesh = new THREE.InstancedMesh(g, m, N); mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.count = 0; this.scene.add(mesh);
+    this.inkB = { mesh, N, n: 0, M: new THREE.Matrix4(), X: new THREE.Vector3(), Y: new THREE.Vector3(), Z: new THREE.Vector3() };
+    for (const k in this.fig) this.fig[k].castShadow = false; if (this.horse) for (const k in this.horse) this.horse[k].castShadow = false;
+  }
+  inkPush(x, y, z, h, w, mounted) {
+    const B = this.inkB; if (B.n >= B.N) return; const cp = this.camera.position; if ((x - cp.x) * (x - cp.x) + (z - cp.z) * (z - cp.z) > 90 * 90) return;
+    const sd = this.sunDir; if (!sd || sd.y <= 0.05) return; const hl = Math.hypot(sd.x, sd.z) || 1, dx = -sd.x / hl, dz = -sd.z / hl, L = Math.min(9, h / (sd.y / hl)) + 0.4;
+    const gy = terrainH(x, z), tx = x + dx * L, tz = z + dz * L, ty = terrainH(tx, tz);
+    B.Z.set(dx * L, ty - gy, dz * L); B.X.set(dz * w * 2, 0, -dx * w * 2); B.Y.set(0, 1, 0);
+    B.M.makeBasis(B.X, B.Y, B.Z); B.M.setPosition(x - dx * 0.3, gy + 0.04, z - dz * 0.3); B.mesh.setMatrixAt(B.n++, B.M);
+  }
+  inkEnd() { const B = this.inkB; B.mesh.count = B.n; B.mesh.instanceMatrix.needsUpdate = true; B.n = 0; }
   hideFigure(slot) { const z = this.tmp.zero; for (const k in this.fig) { const m = this.fig[k], n = m.userData.mult; for (let j = 0; j < n; j++) m.setMatrixAt(slot * n + j, z); } }
   anim(id) {
     let a = this.anims[id];
@@ -2489,6 +2510,7 @@ class Renderer {
     const heroId = hero ? hero.id : -1;
     const cx = cam.position.x, cz = cam.position.z;
     const om = this.ownMarkStart(fp); const capt = {};
+    if (!this.inkB && typeof window !== 'undefined' && window.MING_REAL && !window.MING_STYLE && this.fig && !this.lowfx) this.inkInit();
     for (let i = 0; i < units.length; i++) {
       if (this.studio && i === this.studio.id) { const S0 = this.studio; this.drawFigure(i, S0.u, S0.x, S0.y, S0.z, S0.yaw, 1, false); continue; } // portrait studio: one man posed alone, high above the field
       const u = units[i];
@@ -2504,7 +2526,9 @@ class Renderer {
       if (u.mounted) { const hs = this.horseSlot.get(u.id); this.drawHorse(hs, u, x, y, z, lerpA(u.phyaw, u.hyaw, alpha), u.speedNow, u.walk, false, 0); }
       const sy = u.champ && u.spinT > 0 ? yaw + (1 - clamp(u.spinT / 0.55, 0, 1)) * PI * 2 : yaw;
       this.drawFigure(i, u, x, y, z, sy, alpha, far || (fp && i === heroId && (this.tp || 0) < 0.3));
+      if (this.inkB) this.inkPush(x, y, z, u.mounted ? 2.5 : 1.75, u.mounted ? 0.95 : 0.62, u.mounted || u.mount >= 0);
     }
+    if (this.inkB) this.inkEnd();
     this.ownMarkEnd(om, capt, view);
     // dead horses
     for (let i = this.deadHorses.length - 1; i >= 0; i--) {
