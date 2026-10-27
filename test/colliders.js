@@ -1,10 +1,10 @@
 // node test/colliders.js [page] : for every map, finds solid-looking building geometry a man could walk into (no sim collider under it)
-const { chromium } = require('playwright');
+const { chromium } = require('/opt/npm-tools/node_modules/playwright-core');
 const path = require('path');
 const PAGE = process.argv[2] || 'test.html';
 const CASES = (process.argv[3] || 'grand:field,grand:toba,grand:ueno,grand:nagaoka,grand:aizu,grand:hakodate,grand:abudali,grand:bjgate,grand:zroad,grand:sjvil,grand:siegecity,grand:bonari,assault:op=ningyuan_siege,assault:op=liaoyang,assault:op=shanhai').split(',');
 (async () => {
-  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
   for (const cs of CASES) {
     const [mode, b] = cs.split(':');
     const page = await browser.newPage({ viewport: { width: 400, height: 300 } }); const errs = [];
