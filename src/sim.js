@@ -3291,7 +3291,12 @@ const MISSIONS = {
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
   ningyuan_siege: {
     siege: true, title: '寧遠攻守 · The Siege of Ningyuan', year: 'February 1626', battle: 'siegecity', attacker: 1, tickets: 640,
-    brief: 'Nurhaci brings the Eight Banners against Ningyuan in the depth of winter. Yuan Chonghuan has burned the suburbs, brought the people inside and mounted Western cannon on the walls. The Jin must fill the ditch, climb or break the walls, take the gatehouse and fight through the streets to the yamen.',
+    brief: 'Nurhaci\'s banners against Yuan Chonghuan\'s walls and Western cannon, in the depth of winter.',
+    // the briefing is talk, spaced through the first minutes and heard by one side only (talk[team]): [t, who, en, zh]
+    talk: { 1: [[4, 'A bannerman', 'The suburbs are ash. He burned them himself.', '城外燒成灰了。他自己燒的。'], [16, 'Your banner chief', 'Fill the ditch first. Nobody climbs till the ditch is full.', '先填壕。壕不滿誰也不許爬。'],
+        [40, 'A bannerman', 'Those are Western guns on the wall. Big ones.', '牆上是西洋砲。大傢伙。'], [70, 'Your banner chief', 'The gatehouse, then the streets. The yamen is at the end.', '先門樓，再街巷。衙門在最裡頭。']],
+      0: [[4, 'Yuan Chonghuan', 'I burned the suburbs myself. They get nothing out there.', '城外是我自己燒的。他們什麼也撈不著。'], [16, 'A gunner', 'Red cannon loaded. Wait till they are in the ditch.', '紅衣砲裝好了。等他們進壕。'],
+        [40, 'A sergeant', 'They fall back from the ditch, we fall back to the wall. Then the gate.', '壕丟了退上牆。牆丟了退到門。'], [70, 'Yuan Chonghuan', 'The yamen is the last line. There is nothing behind it.', '衙門是最後一道。後頭什麼都沒有。']] },
     zones: [{ key: 'ditchW', x: -28, z: 22, r: 13, name: 'A · West ditch', rate: 0.5 }, { key: 'ditchE', x: 28, z: 22, r: 13, name: 'B · East ditch', rate: 0.5 },
       { key: 'wallW', x: -25, z: 43.5, r: 7, name: 'A · West wall', owner: 0, rate: 0.6 }, { key: 'wallE', x: 25, z: 43.5, r: 7, name: 'B · East wall', owner: 0, rate: 0.6 },
       { key: 'gatehouse', x: 0, z: 55, r: 8, name: 'A · The gatehouse', owner: 0, rate: 0.5 },
@@ -3305,7 +3310,11 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
   },
   liaoyang: {
     title: '遼陽之戰 · Assault on Liaoyang', year: 'April 1621', battle: 'aizu', attacker: 1, tickets: 520,
-    brief: 'The Jin storm Liaoyang, capital of Liaodong. Three lines stand between the banners and the keep: the outer trenches, the market quarter and the city gate.',
+    brief: 'The Jin storm Liaoyang, the capital of Liaodong.',
+    talk: { 1: [[4, 'Your banner chief', 'Liaoyang. Take this and Liaodong is ours.', '遼陽。拿下它，遼東就是咱們的。'], [18, 'A bannerman', 'Trenches first, west and east. They have muskets in them.', '先是壕，東西兩道。裡頭有銃。'],
+        [45, 'Your banner chief', 'Behind the trenches, the market. Then the gate. Then the keep.', '壕後頭是市集。再是城門。再是內城。']],
+      0: [[4, 'Yuan Yingtai', 'They are coming for the capital. Hold the trenches.', '他們衝著省城來。守住壕。'], [18, 'A sergeant', 'Muskets in the trench. Fire when they reach the stakes.', '銃手在壕裡。到了木樁再放。'],
+        [45, 'A sergeant', 'If the trench goes, the market. If the market goes, the gate.', '壕丟了守市集。市集丟了守城門。']] },
     zones: [{ key: 'a1', x: -40, z: -62, r: 12, name: 'A · West trench', owner: 0, rate: 0.55 }, { key: 'b1', x: 40, z: -62, r: 12, name: 'B · East trench', owner: 0, rate: 0.55 },
       { key: 'a2', x: 0, z: 6, r: 14, name: 'A · Market quarter', owner: 0, rate: 0.5 }, { key: 'b2', x: -60, z: 20, r: 12, name: 'B · Drum tower', owner: 0, rate: 0.55 },
       { key: 'a3', x: 0, z: 63, r: 10, name: 'A · City gate', owner: 0, rate: 0.45 }, { key: 'b3', x: 0, z: 96, r: 13, name: 'B · The keep', owner: 0, rate: 0.4 }],
@@ -3319,7 +3328,11 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
   },
   shanhai: {
     title: '山海關 · The First Pass Under Heaven', year: 'May 1644', battle: 'bonari', attacker: 1, tickets: 480,
-    brief: 'Li Zicheng\'s rebels hold Beijing; the Qing banners come down on Shanhai Pass. The pass is narrow: an outer trench line, the earthwork, and the great gate itself.',
+    brief: 'The Qing banners come down on Shanhai Pass, the First Pass Under Heaven.',
+    talk: { 1: [[4, 'Your banner chief', 'Beijing has fallen to the rebels. This pass is the way in.', '北京落到流賊手裡了。這道關是進去的路。'], [18, 'A bannerman', 'Narrow. A trench line, then an earthwork, then the gate.', '窄。一道壕，一道土牆，再是關門。'],
+        [45, 'Your banner chief', 'No way round the slopes. Straight up the middle, point by point.', '兩邊坡繞不過去。從中間一處一處打。']],
+      0: [[4, 'Wu Sangui', 'Beijing is gone. This pass is all that is left of the Ming.', '北京沒了。大明就剩這道關。'], [18, 'A sergeant', 'Trench line first. When it goes, the earthwork. Then the gate.', '先守壕。壕丟了守土牆。再守關門。'],
+        [45, 'A gunner', 'They must come up the middle. Every gun on the road.', '他們只能從中間上來。所有砲對著路。']] },
     zones: [{ key: 'a1', x: -14, z: -40, r: 11, name: 'A · Trench line', owner: 0, rate: 0.55 }, { key: 'b1', x: 16, z: -34, r: 11, name: 'B · Signal tower', owner: 0, rate: 0.55 },
       { key: 'a2', x: 0, z: 32, r: 11, name: 'A · Outer earthwork', owner: 0, rate: 0.5 },
       { key: 'a3', x: -10, z: 92, r: 11, name: 'A · Pass gate', owner: 0, rate: 0.45 }, { key: 'b3', x: 14, z: 104, r: 10, name: 'B · Gate tower', owner: 0, rate: 0.45 }],
@@ -3423,7 +3436,8 @@ Sim.prototype.mBreak = function (gid) { // a beaten group gives up the field and
 Sim.prototype.mAct = function (a) {
   if (a[0] === 'release') this.mRelease(a[1]);
   else if (a[0] === 'dir') this.mDir(a[1], a.slice(2));
-  else if (a[0] === 'say') this.events.push({ t: 'msay', who: a[1], text: a[2] });
+  else if (a[0] === 'say') this.events.push({ t: 'msay', who: a[1], text: a[2], zh: a[3] || '', ord: a[4] });
+  else if (a[0] === 'fell') this.mFell(a[1] | 0, a[2]);
   else if (a[0] === 'show') { const z = this.missionZone(a[1]); if (z) z.hidden = false; }
   else if (a[0] === 'hide') { const z = this.missionZone(a[1]); if (z) z.hidden = true; }
   else if (a[0] === 'kill') { const g = this.mg[a[1]]; if (g) { const h = this.units[this.players[g.p].heroId]; if (h && !h.dead) { h.officer = false; this.applyDamage(h, 1e6, -1, 0, 0, 0, 'arrow'); } this.events.push({ t: 'mkill', gid: a[1], name: g.G.name, zh: g.G.zh || '' }); } }
@@ -3457,6 +3471,18 @@ Sim.prototype.zWound = function (k) {
     u.hp = 1; u.wounded = true; u.downed = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * (this.mission && this.mission.soft ? 240 : 60); u.medic = -1; u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.downT = Math.max(u.downT, 1.2); u.mx = 0; u.mz = 0;
     this.events.push({ t: 'zwound', p: p.idx, id: u.id, x: u.x, z: u.z }); }
 };
+// co-op missions: a man of each player's own company is hit and goes down where he stands (an arrow off a roof, a
+// grapeshot). He bleeds for a minute; a player beside him with E gets him up (helpWounded), as in the story chapters.
+// Objective { rescue: true } waits while any such man still lies there alive. n men per player (default one).
+Sim.prototype.mFell = function (n, why) {
+  for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; const cand = [];
+    for (const id of p.squads) { const q = this.squads[id]; if (!q.alive || q.inactive || q.def.ai === 'cannon' || q.def.mounted) continue; for (const uid of q.unitIds) { const u = this.units[uid]; if (!u.dead && !u.wounded && !u.inactive && u.ctrl < 0 && u.type !== 'horse' && !u.mounted) cand.push(u); } }
+    if (!cand.length) continue; const hx = h ? h.x : 0, hz = h ? h.z : 0; cand.sort((a, b) => (len(a.x - hx, a.z - hz) - len(b.x - hx, b.z - hz)) || (a.id - b.id));
+    for (let k = 0; k < Math.max(1, n | 0) && k < cand.length; k++) { const u = cand[k];
+      u.hp = 1; u.wounded = true; u.downed = true; u.mFell = true; u.helpedBy = -1; u.reviveBy = -1; u.reviveT = 0; u.bleed = 30 * 60; u.medic = -1; u.st = ST_IDLE; u.stT = 0; u.blocking = false; u.aiming = false; u.target = -1; u.downT = Math.max(u.downT, 1.2); u.mx = 0; u.mz = 0;
+      this.events.push({ t: 'zwound', p: p.idx, id: u.id, x: u.x, z: u.z, why: why || '' }); } }
+};
+Sim.prototype.mFallen = function () { let n = 0; for (const u of this.units) if (u.mFell && u.downed && !u.dead) n++; return n; };
 Sim.prototype.helpWounded = function (u) { // E beside a downed or wounded comrade: haul him up, or get his arm over your shoulder
   if (u.dead || u.mounted) return false; let best = null, bd = 2.6;
   for (const v of this.teamAlive[u.team]) { if (!v.downed || v.aided || v === u) continue; const d = len(v.x - u.x, v.z - u.z); if (d < bd) { bd = d; best = v; } }
@@ -3853,9 +3879,12 @@ Sim.prototype.mObj = function (o, el) {
   if (o.capture) { for (const k of o.capture) { const z = this.missionZone(k); if (z.owner !== this.mission.side) return 0; } }
   if (o.defeat) { for (const gid of o.defeat) { const g = this.mg[gid]; if (!g || (!g.released && !g.broken)) return 0; if (!g.broken && this.mGroupFrac(gid) > 1 - (o.frac || 0.8)) return 0; } for (const gid of o.defeat) this.mBreak(gid); }
   if (o.officer) { const g = this.mg[o.officer]; if (!g || !g.released) return 0; const h = this.units[this.players[g.p].heroId]; const wound = g.G.wound; if (h && !h.dead && !(wound && h.hp < h.def.hp * wound)) return 0; if (!g.broken) { this.events.push({ t: 'mofficer', name: g.G.name, zh: g.G.zh || '', gid: o.officer, wounded: !!(h && !h.dead) }); this.mBreak(o.officer); } }
-  if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; } if (a === 0) return -1; if (n < a) return 0; }
+  if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; }
+    if (a === 0) { const gh = this.units[p.heroId]; if (!(o.general && gh && !gh.dead)) return -1; if (len(gh.x - z.x, gh.z - z.z) >= z.r + 8) return 0; } /* arrive + general: his companies may all be gone as long as he himself gets through */
+    else if (n < a) return 0; }
   if (o.survive) { if (el < o.survive && !this.mQuietDone(el)) return 0; } /* 'hold out' only while there is something to hold against */
   if (o.never) return 0;
+  if (o.rescue && this.mFallen() > 0) return 0; /* a man of yours is still down: get him up (he dies of it in a minute, and then the phase goes on without him) */
   if (o.extract) { const z = this.missionZone(o.extract); let ok = false; for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 1) ok = true; } if (!ok) return 0;
     // you are out: wait (up to 20 s) for the men of your file who are still on their feet and coming
     if (this.mv.exT === undefined) { this.mv.exT = this.tick; this.events.push({ t: 'zwait', s: 20 }); }
@@ -3892,7 +3921,7 @@ Sim.prototype.missionThink = function () {
   const P = M.phases[mv.ph], el = (this.tick - mv.t0) / 30;
   for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k] && el >= t) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }
   for (const [t, a] of P.at || []) { const k = mv.ph + ':at:' + t; if (!mv.ats[k] && el >= t) { mv.ats[k] = 1; this.mAct(a); } }
-  for (const [t, who, text, zh] of P.say || []) { const k = mv.ph + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '' }); } }
+  for (const [t, who, text, zh, ord] of P.say || []) { const k = mv.ph + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '', ord }); } }
   if (this.tick % 60 === 0) this.mAggro();
   // broken groups melt away at the field's edge
   for (const gid in this.mg) { const g = this.mg[gid]; if (!g.broken) continue; const p = this.players[g.p];
@@ -3980,6 +4009,8 @@ Sim.prototype.reviveUnit = function (u, x, z) {
 Sim.prototype.defKey = function (di) { const M = this.mission; let k = 0; for (const s of M.sectors) for (const key of s) { if (k === di) return key; k++; } return null; };
 Sim.prototype.assaultThink = function () {
   const M = this.mission, A = M.attacker; const keys = M.sectors[this.sector];
+  // the briefing as talk: each side's lines, spaced through the opening (both sides' events go out; the HUD keeps its own)
+  if (M.talk) { const mv = this.mv, el = this.tick / 30; for (const tm in M.talk) for (const [t, who, text, zh] of M.talk[tm]) { const k = 'op:' + tm + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '', team: tm | 0 }); } } }
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
   let act = 0, rngN = 0; for (const u of this.teamAlive[A]) if (!u.inactive && u.type !== 'horse' && u.def.ai !== 'cannon') { act += u.def.ai === 'ranged' ? 0.35 : 1; if (u.def.ai === 'ranged') rngN++; } act = Math.round(act); /* archers and gunners stand back and seldom fall: counted at a third, so a standing archery company cannot fill the field and starve the assault of fresh men */
   const CAP = M.cap || 64;
