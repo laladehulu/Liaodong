@@ -360,7 +360,8 @@ function missionEvent(ev) {
   if (ev.t === 'mphase' && M.camp) return;
   if (ev.t === 'mphase' && M.soldier) { const P = M.phases[ev.ph] || {}; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, P.goal || (ev.text || '').split(/(?<=[.!?])\s/)[0], 5); if (ev.ph) MUSIC.accent('phase'); return; }
   if (ev.t === 'msay' && M.soldier && typeof zheSay === 'function' && zheSay(ev)) return;
-  if (ev.t === 'mphase') { const first = ev.ph === 0; storyCard(first ? `${M.brief}<br><br><b>${ev.title}.</b> ${ev.text}` : ev.text, first ? `${M.title} · ${M.year}` : ev.title); if (!first) { banner(ev.title.split(' · ')[1] || ev.title, 'New orders', 3); MUSIC.accent('phase'); } }
+  if (ev.t === 'mphase') { const first = ev.ph === 0; if (first) storyCard(`${M.brief}<br><br><b>${ev.title}.</b> ${ev.text}`, `${M.title} · ${M.year}`);
+    else { const P = M.phases[ev.ph] || {}; const short = P.goal || (ev.text || '').split(/(?<=[.!?])\s/)[0]; banner(ev.title.split(' · ').slice(1).join(' · ') || ev.title, short, 4.5); if (ev.text && ev.text !== short) feed(ev.text, true); MUSIC.accent('phase'); } } /* in the fight a new phase is a short order on the banner, not a card of text; the rest goes to the feed */
   else if (ev.t === 'msay') radio(ev.who, ev.text);
   else if (ev.t === 'mwave') { if (ev.team !== me.team) feed(`Enemy reinforcements: ${ev.name}`); else feed(`${ev.name} joins the battle`, true); }
   else if (ev.t === 'mofficer') { banner(`敵將${ev.wounded ? '負傷' : '討取'} · ${ev.zh || ''}`, `${ev.name} ${ev.wounded ? 'is wounded and carried off' : 'is slain'}`, 4); MUSIC.accent('breach'); }
