@@ -932,9 +932,9 @@ class Renderer {
     const plm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: snow ? 0x8a8780 : 0x75706a }), houses.length + 1);
     houses.forEach((b, i) => {
       const y = terrainH(b.x, b.z); const wh = b.h * 0.62, fy = this.footY(b), pt = y + 0.32;
-      T.m.compose(T.v.set(b.x, (fy + pt) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.36, pt - fy, b.hd * 2 + 0.36)); plm.setMatrixAt(i, T.m);
+      T.m.compose(T.v.set(b.x, (fy + pt) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.12, pt - fy, b.hd * 2 + 0.12)); plm.setMatrixAt(i, T.m); /* the plinth barely proud of the walls, so a man pressed against the house stands outside it, not in it */
       T.m.compose(T.v.set(b.x, (pt - 0.05 + y + wh) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, y + wh - pt + 0.05, b.hd * 2)); hm.setMatrixAt(i, T.m);
-      T.m.compose(T.v.set(b.x, y + wh + b.h * 0.2, b.z), T.q.setFromEuler(T.e.set(0, PI / 4, 0)), T.v2.set(Math.max(b.hw, b.hd) * 2 * 1.15, b.h * 0.42, Math.max(b.hw, b.hd) * 2 * 1.15)); rm.setMatrixAt(i, T.m);
+      T.m.compose(T.v.set(b.x, y + wh + b.h * 0.2, b.z), T.q.setFromEuler(T.e.set(0, PI / 4, 0)), T.v2.set(1, b.h * 0.42, 1)); { const rs = new THREE.Matrix4().makeScale((b.hw * 2 + 0.7) / 1.02, 1, (b.hd * 2 + 0.7) / 1.02); T.m.premultiply(new THREE.Matrix4().makeTranslation(-b.x, -(y + wh + b.h * 0.2), -b.z)).premultiply(rs).premultiply(new THREE.Matrix4().makeTranslation(b.x, y + wh + b.h * 0.2, b.z)); } rm.setMatrixAt(i, T.m); /* a hipped roof the shape of the house under it, eaves 35 cm out, not a square cap overhanging the neighbours */
     });
     const wm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), plasterMat, walls.length + 1), cm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), capMat, walls.length + 1);
     walls.forEach((b, i) => { const y = terrainH(b.x, b.z), fy = this.footY(b); T.m.compose(T.v.set(b.x, (fy + y + b.h) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, y + b.h - fy, b.hd * 2)); wm.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.08, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.3, 0.18, b.hd * 2 + 0.3)); cm.setMatrixAt(i, T.m); });

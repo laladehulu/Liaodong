@@ -1249,7 +1249,17 @@ class Sim {
   buildNav() {
     const C = 2, W = Math.ceil((HALF * 2) / C); this.navC = C; this.navW = W; const bl = new Uint8Array(W * W); this.navBlk = bl;
     for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const x = -HALF + (i + 0.5) * C, z = -HALF + (j + 0.5) * C; if (waterAt(x, z) === 1) bl[j * W + i] = 1; }
-    this.navBoxes(); this.flows = new Map(); this.flowOrder = []; this.navStamp = 0;
+    this.untangleHouses(); this.navBoxes(); this.flows = new Map(); this.flowOrder = []; this.navStamp = 0;
+  }
+  // houses laid out by the map makers must not stand inside one another (roofs and eaves included): a house that overlaps an
+  // earlier one is trimmed back clear of it, and dropped if too little is left (it keeps its slot so indices don't move)
+  untangleHouses() {
+    const H = this.boxes.filter(b => b.kind === 'house' || b.kind === 'hall'), m = 0.9; // the eaves overhang the walls
+    for (let i = 0; i < H.length; i++) { const b = H[i];
+      for (let j = 0; j < i; j++) { const a = H[j]; if (a.kind === 'gone') continue;
+        const ox = (a.hw + b.hw + m) - Math.abs(a.x - b.x), oz = (a.hd + b.hd + m) - Math.abs(a.z - b.z); if (ox <= 0 || oz <= 0) continue;
+        if (ox < oz) { b.hw -= ox; b.x += (b.x >= a.x ? 1 : -1) * ox / 2; } else { b.hd -= oz; b.z += (b.z >= a.z ? 1 : -1) * oz / 2; }
+        if (b.hw < 1.6 || b.hd < 1.6) { b.kind = 'gone'; b.hw = b.hd = 0.01; b.h = 0; break; } } }
   }
   navBoxes() {
     const C = this.navC, W = this.navW, bl = this.navBlk;
