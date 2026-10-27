@@ -326,12 +326,21 @@ const CAREER = (() => {
 CAREER.init(); renderMenu();
 
 // ===== Co-op campaign & Assault: menus and HUD =====
+// difficulty: chosen once, kept in this browser, carried by the host's start message so every player fights the same battle
+const DIFFS = [['新兵', 'Recruit', 'Softer enemies; your allies hit harder.'], ['兵', 'Soldier', 'As the battles were fought.'], ['老兵', 'Veteran', 'Full-strength enemies with an extra company in each large group.'], ['孤旗', 'Lone banner', 'Veteran, and no AI companies on your side in co-op: only the players and their own men.']];
+function diffUI(host, id) {
+  if (!host) return; let el = $(id); if (!el) { el = document.createElement('div'); el.id = id; el.className = 'diffrow'; host.parentNode.insertBefore(el, host);
+    if (!$('diffCss')) { const st = document.createElement('style'); st.id = 'diffCss'; st.textContent = '.diffrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; } .diffrow > span { font: 700 11px sans-serif; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin-right: 6px; } .diffrow button { padding: 5px 10px; border: 1px solid #8a7a5a; background: transparent; color: inherit; font: 13px Georgia, serif; cursor: pointer; } .diffrow button.on { background: #8a2a1e; color: #f4ead6; border-color: #8a2a1e; } .diffrow small { flex-basis: 100%; opacity: .75; font: 12px sans-serif; }'; document.head.appendChild(st); } }
+  const cur = diffPref(); el.innerHTML = '<span>Difficulty</span>' + DIFFS.map((d, i) => `<button type="button" class="${i === cur ? 'on' : ''}" data-d="${i}">${d[0]} ${d[1]}</button>`).join('') + `<small>${DIFFS[cur][2]}</small>`;
+  el.querySelectorAll('button').forEach(b => b.onclick = () => { try { localStorage.setItem('mingDiff', b.dataset.d); } catch (e) { } AUDIO.init(); AUDIO.play('ui'); diffUI(host, id); if ($('diffRowStory') && id !== 'diffRowStory') diffUI($('zheCta'), 'diffRowStory'); if ($('diffRowMis') && id !== 'diffRowMis') diffUI($('missionList'), 'diffRowMis'); });
+}
 function renderMissions() {
   const sgm = state.mode === 'siege', as = state.mode === 'assault' || sgm; const L = as ? S.OPS : S.MISSIONS;
   if (as && (!L[state.op] || !!L[state.op].siege !== sgm)) state.op = Object.keys(L).find(k => !L[k].hidden && !!L[k].siege === sgm);
   const cur = as ? state.op : state.mission;
   $('missionHead').textContent = as ? 'Operation' : 'Mission';
   $('missionList').innerHTML = Object.keys(L).filter(k => !L[k].hidden && (!as || !!L[k].siege === sgm)).map(k => { const M = L[k]; return `<button type="button" class="chap${k === cur ? ' on' : ''}" data-k="${k}"><b>${M.title}</b><small>${M.year} · ${M.brief}</small></button>`; }).join('');
+  if (!as) diffUI($('missionList'), 'diffRowMis'); else if ($('diffRowMis')) $('diffRowMis').remove();
   $('missionList').querySelectorAll('button').forEach(b => b.onclick = () => { if (as) state.op = b.dataset.k; else state.mission = b.dataset.k; AUDIO.init(); AUDIO.play('ui'); renderMissions(); });
   const side = as ? state.faction : 0; const list = side === 1 ? ROLE_INFO_JIN : ROLE_INFO; if (!list.some(r => r[0] === state.role)) state.role = list[0][0];
   $('mroleList').innerHTML = list.map(r => `<button type="button" class="chap${r[0] === state.role ? ' on' : ''}" data-r="${r[0]}"><b>${r[1]} · ${r[2]}</b><small>${r[3]}</small></button>`).join('');

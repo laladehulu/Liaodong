@@ -384,3 +384,6 @@ const SJ2ZONE = { battleZ: 'south', battleY: 'wall', battleK: 'ridge' };
     return _s(scene); }; }
 // Han Qi must be on the rolls for Luanzhou and Lengkou: if no place was empty for him, he joins as the eleventh man
 { const _r = sjRefill; sjRefill = function (ch) { _r(ch); if (ch === 3 && !ZS.team.includes('sj_n7') && !ZS.fate.sj_n7) { ZS.team.push('sj_n7'); ZS.alive.sj_n7 = true; ZS.newMen.push('sj_n7'); } }; }
+
+// the difficulty row above the story campaigns (the same choice the co-op missions use)
+if (typeof diffUI === 'function' && $('zheCta')) diffUI($('zheCta'), 'diffRowStory');
