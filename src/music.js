@@ -148,8 +148,8 @@ const MUSIC = (() => {
     } };
   }
   const TRACKS = {
-    battle: warTrack({ bpm: 132, roots: BAT_R, m: [BAT_A, BAT_B, BAT_C, BAT_D], gong: 'gong_big' }),
-    siege: warTrack({ bpm: 112, roots: SIEGE_R, m: [SIG_A, SIG_B, SIG_C, SIG_D], gong: 'gong_big' }),
+    battle: warTrack({ bpm: 138, roots: BAT_R, m: [BAT_A, BAT_B, BAT_C, BAT_D], gong: 'gong_big' }),
+    siege: warTrack({ bpm: 134, roots: SIEGE_R, m: [SIG_A, SIG_B, SIG_C, SIG_D], gong: 'gong_big' }),
     menu: { bpm: 64, len: 256, rec: { key: 'mus_red_dawn', pure: true, e8: 0.47 }, play(s, t, e8) {
       if (REC && REC.pure) return;
       const sec = Math.floor(s / 64), bar = Math.floor(s / 8) % 8, b8 = s % 8, root = MENU_R[sec][bar];
@@ -188,7 +188,7 @@ const MUSIC = (() => {
       else line('xunB', BAT, s, t, e8, (tt, m, d) => xun(tt, m, d * 0.95, 0.26));
       if (I > 0.82) line('erhuB', BAT, s, t, e8, (tt, m, d) => erhu(tt, m - 12, d * 0.95, 0.17));
     } },
-    siege0: { bpm: 104, rec: { key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, recs: [{ key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, { key: 'mus_hill', pure: true, e8: 0.3104 }, { key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }], len: 128, play(s, t, e8) {
+    siege0: { bpm: 124, rec: { key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, recs: [{ key: 'mus_taiko_2', e8: 0.3104, ph: 0.19 }, { key: 'mus_hill', pure: true, e8: 0.3104 }, { key: 'mus_taiko_1', e8: 0.3076, ph: 0.01 }], len: 128, play(s, t, e8) {
       if (REC && REC.pure) return;
       const bar = Math.floor(s / 8), b8 = s % 8, root = SIEGE_R[bar % 16];
       if (REC) { } else if (b8 === 0 || b8 === 4) dagu(t, 'ff', 0.6); if (b8 === 2 || b8 === 6) dagu(t, 'hand', 0.34); if (b8 === 7) dagu(t, 'rim', 0.22);
@@ -233,7 +233,7 @@ const MUSIC = (() => {
     else if (kind === 'phase') { hit('gong_f', t, 0.3); gliss(t, true, 0.24); }
     else if (kind === 'wave') { hit('bo_ff', t, 0.24); dagu(t, 'ff', 0.5); dagu(t + 0.2, 'ff', 0.5); }
   }
-  function setIntensity(v) { target = v; }
+  function setIntensity(v) { target = (playing === 'battle' || playing === 'siege') ? Math.max(0.6, v) : v; } /* a fight never falls to the quiet layer */
   // render a cue offline (for previews and tests): the same scheduler, driven by a fake clock into an OfflineAudioContext
   async function _offline(name, iv, secs, curve) {
     const live = { ctx, out, dry, comp, nb, playing, REC, recSrc, recG, recEnd, nextT, step, I, target, prevMel, recIdx };

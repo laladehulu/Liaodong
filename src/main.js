@@ -756,7 +756,7 @@ function handleEvents(events) {
     }
     else if (ev.t === 'squaddead') { const sq = sim.squads[ev.sq]; if (sq.owner === state.localIdx) feed(`Your ${sq.def.name} are wiped out`); }
     else if (ev.t === 'end') { state.slowT = 3.2; finish(ev.winner); }
-    else if (ev.t === 'battle') { toast('The battle begins'); MUSIC.play(sim.heroMode ? 'siege' : 'battle'); MUSIC.setIntensity(0.6); }
+    else if (ev.t === 'battle') { toast('The battle begins'); MUSIC.play(sim.heroMode ? 'siege' : 'battle'); MUSIC.setIntensity(0.85); }
     else if (ev.t === 'rout') { const sq = sim.squads[ev.sq]; if (sq.owner === state.localIdx) feed(`Your ${sq.def.name} are routing!`); else if (sq.team !== sim.players[state.localIdx].team) feed(`Enemy ${sq.def.name} break and run`, true); }
     else if (ev.t === 'rallied') { const sq = sim.squads[ev.sq]; if (sq.owner === state.localIdx) feed(`Your ${sq.def.name} rally`); }
     else if (ev.t === 'rally' && ev.p === state.localIdx) { toast(ev.n ? `Rally! ${ev.n} squad${ev.n === 1 ? '' : 's'} take heart` : 'No one close enough to hear you'); }
@@ -829,7 +829,7 @@ function finish(winner) {
 }
 // ---------- replay ----------
 function startReplay() {
-  MUSIC.play(state.sim && state.sim.heroMode ? 'siege' : 'battle'); MUSIC.setIntensity(0.6);
+  MUSIC.play(state.sim && state.sim.heroMode ? 'siege' : 'battle'); MUSIC.setIntensity(0.85);
   const rp = state.replay; if (!rp) return;
   state.replayMode = true; state.replayTick = 0; state.replaySpeed = 1; state.replayPaused = false; state.ended = true;
   state.sim = new S.Sim(rp.cfg);
@@ -1057,7 +1057,7 @@ function updateHUD(dt) {
   state.hudT -= dt;
   if (state.hudT <= 0) {
     state.hudT = 0.4;
-    if (sim.phase === 1 && hero && !state.ended) { let near = 0; for (const v of sim.teamAlive[1 - me.team]) if (Math.abs(v.x - hero.x) + Math.abs(v.z - hero.z) < 40) near++; MUSIC.setIntensity(0.38 + Math.min(1, near / 12) * 0.62); }
+    if (sim.phase === 1 && hero && !state.ended) { let near = 0; for (const v of sim.teamAlive[1 - me.team]) if (Math.abs(v.x - hero.x) + Math.abs(v.z - hero.z) < 40) near++; MUSIC.setIntensity(0.72 + Math.min(1, near / 8) * 0.28); } /* in a battle the drums never drop to the quiet level: the floor is the full band, and a crowd of foes takes it to the top */
     const a0 = sim.teamAlive[0].length, a1 = sim.teamAlive[1].length;
     $('status').innerHTML = `<span class="t0">${S.FACTION[0].jp} ${a0}</span><span class="vs">·</span><span class="t1">${a1} ${S.FACTION[1].jp}</span>`;
     if (sim.mission && sim.mission.beacon && typeof beaconGoal === 'function') $('status').innerHTML = beaconGoal();
