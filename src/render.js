@@ -941,6 +941,7 @@ class Renderer {
   }
   buildStructures() {
     if (this.sim.battle === 'bjgate') this.buildBeijing();
+    if (this.buildCityWalls) this.buildCityWalls();
     const boxes = this.sim.boxes; if (!boxes.length) return; this.buildSpecialStructures(boxes);
     const T = this.tmp; const snow = this.biome.snow;
     const wallMat = new THREE.MeshLambertMaterial({ color: 0xa9a49a }), roofMat = new THREE.MeshLambertMaterial({ color: snow ? 0xe6e9ec : 0x3e4044 }), plasterMat = new THREE.MeshLambertMaterial({ color: 0x9a958c }), capMat = new THREE.MeshLambertMaterial({ color: snow ? 0xeef0f2 : 0x34363a });
@@ -952,11 +953,13 @@ class Renderer {
       const y = terrainH(b.x, b.z); const wh = b.h * 0.62, fy = this.footY(b), pt = y + 0.32;
       T.m.compose(T.v.set(b.x, (fy + pt) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.12, pt - fy, b.hd * 2 + 0.12)); plm.setMatrixAt(i, T.m); /* the plinth barely proud of the walls, so a man pressed against the house stands outside it, not in it */
       T.m.compose(T.v.set(b.x, (pt - 0.05 + y + wh) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, y + wh - pt + 0.05, b.hd * 2)); hm.setMatrixAt(i, T.m);
+      if (b.burnt) { hm.setColorAt(i, T.c.set(0x4a4440)); rm.setMatrixAt(i, T.zero); return; } /* a burnt-out shell: sooted walls, no roof */
       T.m.compose(T.v.set(b.x, y + wh + b.h * 0.2, b.z), T.q.setFromEuler(T.e.set(0, PI / 4, 0)), T.v2.set(1, b.h * 0.42, 1)); { const rs = new THREE.Matrix4().makeScale((b.hw * 2 + 0.7) / 1.02, 1, (b.hd * 2 + 0.7) / 1.02); T.m.premultiply(new THREE.Matrix4().makeTranslation(-b.x, -(y + wh + b.h * 0.2), -b.z)).premultiply(rs).premultiply(new THREE.Matrix4().makeTranslation(b.x, y + wh + b.h * 0.2, b.z)); } rm.setMatrixAt(i, T.m); /* a hipped roof the shape of the house under it, eaves 35 cm out, not a square cap overhanging the neighbours */
     });
     const wm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), plasterMat, walls.length + 1), cm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), capMat, walls.length + 1);
     walls.forEach((b, i) => { const y = terrainH(b.x, b.z), fy = this.footY(b); T.m.compose(T.v.set(b.x, (fy + y + b.h) / 2, b.z), T.q.identity(), T.v2.set(b.hw * 2, y + b.h - fy, b.hd * 2)); wm.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.08, b.z), T.q.identity(), T.v2.set(b.hw * 2 + 0.3, 0.18, b.hd * 2 + 0.3)); cm.setMatrixAt(i, T.m); });
     houses.length || plm.setMatrixAt(0, T.zero); for (let i = houses.length; i < houses.length + 1; i++) plm.setMatrixAt(i, T.zero);
+    if (hm.instanceColor) { houses.forEach((b, i) => { if (!b.burnt) hm.setColorAt(i, T.c.set(0xffffff)); }); hm.instanceColor.needsUpdate = true; }
     for (const m of [hm, rm, wm, cm, plm]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
     const temple = this.sim.deco.find(d => d.kind === 'temple');
     if (temple) { const g = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 4.2, 8), new THREE.MeshLambertMaterial({ color: 0xb8402a })); const y = terrainH(temple.x, temple.z - 20); g.position.set(temple.x - 3.2, y + 2.1, temple.z - 20); this.scene.add(g); const g2 = g.clone(); g2.position.x = temple.x + 3.2; this.scene.add(g2); const beam = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.5, 0.6), new THREE.MeshLambertMaterial({ color: 0x2b2420 })); beam.position.set(temple.x, y + 4.4, temple.z - 20); this.scene.add(beam); const gr = new THREE.Mesh(new THREE.ConeGeometry(5.6, 1.4, 4), new THREE.MeshLambertMaterial({ color: this.biome.snow ? 0xe6e9ec : 0x2f5a4a })); gr.rotation.y = PI / 4; gr.scale.set(1.2, 1, 0.45); gr.position.set(temple.x, y + 5.3, temple.z - 20); this.scene.add(gr); }
@@ -1017,10 +1020,15 @@ class Renderer {
       add(box, 0x9a2a22, b.x, y + 11.4, b.z, w * 1.0, 2.4, w * 0.7); add(pyr, tileC, b.x, y + 13.4, b.z, w * 1.9, 1.8, w * 1.3, PI / 4);
       add(box, 0xd8b44a, b.x, y + 11.6, b.z - w * 0.36, 1.2, 0.6, 0.1);
     }
+    // wagon-camp carts (車營, after 《練兵實紀》 車營 and the 偏廂車 drawings in 《武備志》): a plank bed on two wheels, a board screen on the outward side
+    for (const b of boxes.filter(q => q.kind === 'wagon')) { const y = terrainH(b.x, b.z), ax = b.hw >= b.hd; const g = new THREE.Group(); g.position.set(b.x, y, b.z); if (!ax) g.rotation.y = HPI; const wood = new THREE.MeshLambertMaterial({ color: 0x6a4a2c }), dark = new THREE.MeshLambertMaterial({ color: 0x3e2c1c }); const L = Math.max(b.hw, b.hd) * 2, W = Math.min(b.hw, b.hd) * 2;
+      const mb = (geo, m, x, yy, z, rx, rz) => { const o = new THREE.Mesh(geo, m); o.position.set(x, yy, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; o.castShadow = true; g.add(o); };
+      mb(new THREE.BoxGeometry(L, 0.18, W * 0.8), wood, 0, 0.95, 0); mb(new THREE.BoxGeometry(L, b.h, 0.1), dark, 0, 0.95 + b.h / 2, (b.z > 0 ? -1 : 1) * W * 0.42); for (const sx of [-1, 1]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.14, 10), wood); wh.rotation.x = HPI; wh.position.set(sx * L * 0.3, 0.62, 0); g.add(wh); }
+      mb(new THREE.BoxGeometry(0.12, 0.12, 2.4), wood, L / 2 + 1, 0.9, 0, 0, 0); this.scene.add(g); }
     // earthen ramparts with a grass cap; palisades of sharpened stakes
     const ramp = boxes.filter(q => q.kind === 'rampart'), pal = boxes.filter(q => q.kind === 'palisade');
     if (ramp.length) { const em = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x8a867e }), ramp.length), gm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: snow ? 0xe8ebee : 0x6a6660 }), ramp.length);
-      ramp.forEach((b, i) => { const y = terrainH(b.x, b.z); T.m.compose(T.v.set(b.x, y + b.h / 2 - 0.2, b.z), T.q.identity(), T.v2.set(b.hw * 2.25, b.h + 0.4, b.hd * 2.25)); em.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.4, b.z), T.q.identity(), T.v2.set(b.hw * 1.1, 0.8, b.hd * 1.1)); gm.setMatrixAt(i, T.m); });
+      ramp.forEach((b, i) => { const y = terrainH(b.x, b.z); const k = b.tight ? 2 : 2.25; /* tight: drawn the size of its collider (gun platforms a man walks round) */ T.m.compose(T.v.set(b.x, y + b.h / 2 - 0.2, b.z), T.q.identity(), T.v2.set(b.hw * k, b.h + 0.4, b.hd * k)); em.setMatrixAt(i, T.m); T.m.compose(T.v.set(b.x, y + b.h + 0.4, b.z), T.q.identity(), T.v2.set(b.hw * 1.1, 0.8, b.hd * 1.1)); gm.setMatrixAt(i, T.m); });
       for (const m of [em, gm]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); } }
     if (pal.length) { // stakes run along the palisade's long side, one every ~0.55 m, so every metre of the collision box is a visible wall
       const cnt = pal.map(b => Math.max(5, Math.ceil(Math.max(b.hw, b.hd) * 2 / 0.55))); const n = cnt.reduce((a, c) => a + c, 0);
@@ -1053,17 +1061,25 @@ class Renderer {
       for (let i = 0; i < n; i++) { const q = pts[i]; pos.set([q[0], q[1], q[2], (q[0] + q[3]) / 2, (q[1] + q[4]) / 2, (q[2] + q[5]) / 2, q[3], q[4], q[5]], i * 9); edge.set([1, 0, 1], i * 3); if (i < n - 1) { const a = i * 3, c = (i + 1) * 3; idx.push(a, c, a + 1, a + 1, c, c + 1, a + 1, c + 1, a + 2, a + 2, c + 1, c + 2); } }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('edge', new THREE.BufferAttribute(edge, 1)); g.setIndex(idx);
       const m = new THREE.Mesh(g, mkMat()); m.frustumCulled = false; m.renderOrder = 2; this.scene.add(m); };
-    const rv = L.river;
-    if (rv) {
+    for (const rv of (L.river ? [L.river] : []).concat(L.rivers || [])) {
       const pts = []; const at = (al, ac) => rv.axis === 'x' ? [al, ac] : [ac, al];
-      for (let al = -HALF - 40; al <= HALF + 40; al += 2.5) {
+      const a0 = rv.a0 === undefined ? -HALF - 40 : rv.a0 - 8, a1 = rv.a1 === undefined ? HALF + 40 : rv.a1 + 8;
+      for (let al = a0; al <= a1; al += 2.5) {
         const c = rv.c0 + rv.amp * Math.sin(al * rv.freq + rv.ph); const e1 = at(al, c - rv.w), e2 = at(al, c + rv.w);
         const lvl = Math.min(terrainH(e1[0], e1[1]), terrainH(e2[0], e2[1])) - rv.depth * 0.32; const a = at(al, c - rv.w * 0.86), b = at(al, c + rv.w * 0.86);
         pts.push([a[0], lvl, a[1], b[0], lvl, b[1]]);
       }
       strip(pts);
-      for (const d of this.sim.deco.filter(q => q.kind === 'bridge' || q.kind === 'ford')) this.buildCrossing(d, rv);
+      for (const d of this.sim.deco.filter(q => (q.kind === 'bridge' || q.kind === 'ford') && (q.rv === undefined ? rv === L.river : q.rv === rv.id))) this.buildCrossing(d, rv);
     }
+    for (const t of (L.trenches || []).filter(q => q.wet)) { const dx = t.x1 - t.x0, dz = t.z1 - t.z0, l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l; const pts = [], n = Math.max(8, Math.round(l / 4)); const wi = t.w * 0.85;
+      for (let i = 0; i <= n; i++) { const k = i / n, x = t.x0 + dx * k, z = t.z0 + dz * k; const lvl = Math.min(terrainH(x + nx * (t.w + 1), z + nz * (t.w + 1)), terrainH(x - nx * (t.w + 1), z - nz * (t.w + 1))) - t.depth * 0.35; pts.push([x - nx * wi, lvl, z - nz * wi, x + nx * wi, lvl, z + nz * wi]); } strip(pts);
+      for (const g of t.gaps || []) { const x = dx !== 0 ? g : t.x0, z = dx !== 0 ? t.z0 : g; const cw = new THREE.Mesh(new THREE.BoxGeometry(dx !== 0 ? 8 : t.w * 2.6, 1, dx !== 0 ? t.w * 2.6 : 8), new THREE.MeshLambertMaterial({ color: 0x8a8274 })); cw.position.set(x, terrainH(x, z) - 0.45, z); cw.receiveShadow = true; this.scene.add(cw); } }
+    const rm = L.rmoat; /* a square moat round a Chinese city wall: four straight strips */
+    if (rm) { const corners = [[rm.x - rm.hw, rm.z - rm.hd], [rm.x + rm.hw, rm.z - rm.hd], [rm.x + rm.hw, rm.z + rm.hd], [rm.x - rm.hw, rm.z + rm.hd]];
+      for (let s = 0; s < 4; s++) { const A = corners[s], B = corners[(s + 1) % 4]; const pts = []; const n = 24; const nx = s % 2 ? (s === 1 ? 1 : -1) : 0, nz = s % 2 ? 0 : (s === 0 ? -1 : 1);
+        for (let i = 0; i <= n; i++) { const t = i / n; const x = A[0] + (B[0] - A[0]) * t, z = A[1] + (B[1] - A[1]) * t; const lvl = terrainH(x + nx * (rm.w + 1), z + nz * (rm.w + 1)) - rm.depth * 0.35; const wi = rm.w * 0.85; pts.push([x - nx * wi, lvl, z - nz * wi, x + nx * wi, lvl, z + nz * wi]); } strip(pts); }
+      for (const g of rm.gates) { const dx = g[0] - rm.x, dz = g[1] - rm.z; const ang = Math.abs(dx) / rm.hw > Math.abs(dz) / rm.hd ? Math.PI / 2 : 0; const cw = new THREE.Mesh(new THREE.BoxGeometry(9, 1, rm.w * 2.6), new THREE.MeshLambertMaterial({ color: 0x8a8274 })); cw.position.set(g[0], terrainH(g[0], g[1]) - 0.45, g[1]); cw.rotation.y = ang; cw.receiveShadow = true; this.scene.add(cw); } }
     const m = L.moat;
     if (m) { const pts = []; for (let i = 0; i <= 96; i++) { const a = i / 96 * Math.PI * 2, sx = Math.sin(a), cz = Math.cos(a); const lvl = terrainH(m.x + sx * (m.R + m.w), m.z + cz * (m.R + m.w)) - m.depth * 0.35; pts.push([m.x + sx * (m.R - m.w * 0.85), lvl, m.z + cz * (m.R - m.w * 0.85), m.x + sx * (m.R + m.w * 0.85), lvl, m.z + cz * (m.R + m.w * 0.85)]); } strip(pts);
       // stone-faced earth causeways at the gates
@@ -2849,16 +2865,18 @@ class Renderer {
     let seed = 7 + (this.sim.seed & 255); const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     // two ranges of distant mountains, flat-coloured like printed layers, plus one tall snow-capped cone
     const ranges = [{ R: 520, n: 34, h: [40, 95], col: B.mtn[0] }, { R: 430, n: 28, h: [22, 55], col: B.mtn[1] }];
+    // the horizon follows the real ground (maps agent): bdef.horizon = { lo: fraction of mountain height, open: [yaw0, yaw1] a sector left open (the plain, the sea) }
+    const HZ = this.sim.bdef.horizon || null; const openAt = (a) => { if (!HZ || !HZ.open) return false; const y = ((a % 6.2832) + 6.2832) % 6.2832, o0 = ((HZ.open[0] % 6.2832) + 6.2832) % 6.2832, o1 = ((HZ.open[1] % 6.2832) + 6.2832) % 6.2832; return o0 <= o1 ? (y >= o0 && y <= o1) : (y >= o0 || y <= o1); };
     for (const rg of ranges) {
       const mat = new THREE.MeshBasicMaterial({ color: rg.col, fog: false });
       for (let i = 0; i < rg.n; i++) {
-        const a = (i / rg.n) * Math.PI * 2 + rr() * 0.12; const h = rg.h[0] + rr() * (rg.h[1] - rg.h[0]); const w = h * (1.6 + rr() * 1.2);
+        const a = (i / rg.n) * Math.PI * 2 + rr() * 0.12; let h = rg.h[0] + rr() * (rg.h[1] - rg.h[0]); if (HZ) { if (openAt(a)) { rr(); rr(); continue; } h *= HZ.lo || 1; } const w = h * (1.6 + rr() * 1.2);
         const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 5 + Math.floor(rr() * 3), 1), mat); m.position.set(Math.sin(a) * rg.R, h / 2 - 8, Math.cos(a) * rg.R); m.rotation.y = rr() * 6.28; m.renderOrder = -9; group.add(m);
       }
     }
     // karst pinnacles: tall, narrow ink-wash peaks in two misty layers
     for (const [R, n, col, hs] of [[460, 26, B.mtn[0], [70, 150]], [395, 20, B.mtn[1], [40, 95]]]) { const mat = new THREE.MeshBasicMaterial({ color: col, fog: false });
-      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rr() * 0.2; if (rr() < 0.25) continue; const h = hs[0] + rr() * (hs[1] - hs[0]); const w = h * (0.28 + rr() * 0.14);
+      for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rr() * 0.2; if (rr() < 0.25) continue; if (HZ && (HZ.nokarst || openAt(a))) { rr(); rr(); continue; } /* the North China plain and the Liaodong lowland have no karst pinnacles */ const h = hs[0] + rr() * (hs[1] - hs[0]); const w = h * (0.28 + rr() * 0.14);
         const g = new THREE.CylinderGeometry(w * 0.35, w, h, 7, 1); const m = new THREE.Mesh(g, mat); m.position.set(Math.sin(a) * R, h / 2 - 10, Math.cos(a) * R); m.renderOrder = -9; group.add(m);
         const cap = new THREE.Mesh(new THREE.SphereGeometry(w * 0.36, 7, 5), mat); cap.position.set(m.position.x, h - 10, m.position.z); cap.scale.y = 0.7; cap.renderOrder = -9; group.add(cap); } }
     // kasumi: horizontal bands of mist across the foot of the mountains
@@ -2962,6 +2980,30 @@ Renderer.prototype.buildBeijing = function () {
   box(far, -40, 6, 330, 900, 34, 10); for (const [x, s] of [[-170, 1.5], [120, 1.4], [-430, 1.2]]) { box(farR, x, 23 + 4 * s, 330, 22 * s, 8 * s, 11 * s); hip(roof, x, 23 + 7.4 * s, 330, 30 * s, 16 * s, 7 * s); }
   grp.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
 };
+// ---- a Ming city wall (or the Great Wall) along one edge of the field, from sim.deco 'cwall' entries (maps agent) ----
+// Rammed earth faced with grey brick, the wall top with crenellations (垛口) on the outer face, bastions (馬面) every
+// sixty paces, a gate passage with a gate tower (城樓) over it where gx is given, corner/watch towers at the ends.
+// Measures after 《遼東志》 and the surviving Ming walls of Xingcheng (Ningyuan): walls 8-10 m, bastions 10 m square.
+Renderer.prototype.buildCityWalls = function () {
+  const ws = this.sim.deco.filter(d => d.kind === 'cwall'); if (!ws.length) return; const sc = this.scene, snow = this.biome.snow, T = this.tmp;
+  const brick = new THREE.MeshLambertMaterial({ color: 0x6f6b64 }), brickD = new THREE.MeshLambertMaterial({ color: 0x5c5852 }), top = new THREE.MeshLambertMaterial({ color: 0x8a857c }), red = new THREE.MeshLambertMaterial({ color: 0x8a3226 }), roof = new THREE.MeshLambertMaterial({ color: snow ? 0x5a605e : 0x3d433e });
+  const box = (m, x, y, z, w, h, d) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; sc.add(o); return o; };
+  const hip = (m, x, y, z, w, d, h) => { const o = new THREE.Mesh(new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1), m); o.rotation.y = Math.PI / 4; o.scale.set(w, h, d); o.position.set(x, y + h / 2, z); o.castShadow = true; sc.add(o); return o; };
+  const cren = [];
+  for (const d of ws) { const H = d.h || 12, Tk = (d.hd || 4.5) * 2, ax = d.axis === 'x'; const P = (al, ac) => ax ? [al, ac] : [ac, al]; const out = d.out === undefined ? -1 : d.out; /* which side faces the enemy: -1 = toward smaller across-coordinate */
+    const runs = d.gx === undefined ? [[d.from, d.to]] : [[d.from, d.gx - (d.gw || 3.2)], [d.gx + (d.gw || 3.2), d.to]];
+    for (const [a, b] of runs) { if (b - a < 1) continue; for (let s = a; s < b; s += 24) { const e = Math.min(b, s + 24), c = (s + e) / 2; const p = P(c, d.at); const y0 = this.footY({ x: p[0], z: p[1], hw: ax ? (e - s) / 2 : Tk / 2, hd: ax ? Tk / 2 : (e - s) / 2 }) - 1; box(brick, p[0], (y0 + H) / 2, p[1], ax ? e - s + 0.05 : Tk, H - y0, ax ? Tk : e - s + 0.05); }
+      const pc = P((a + b) / 2, d.at); box(top, pc[0], H + 0.05, pc[1], ax ? b - a : Tk - 1, 0.1, ax ? Tk - 1 : b - a);
+      for (let s = a + 1.2; s < b - 0.6; s += 2.4) { const p = P(s, d.at + out * (Tk / 2 - 0.35)); cren.push(p); } }
+    for (let s = d.from + 30; s < d.to - 10; s += 60) { if (d.gx !== undefined && Math.abs(s - d.gx) < 20) continue; const p = P(s, d.at + out * (Tk / 2 + 2.5)); const y0 = terrainH(p[0], p[1]) - 1; box(brick, p[0], (y0 + H) / 2, p[1], ax ? 10 : 5, H - y0, ax ? 5 : 10); for (let k = -1; k <= 1; k++) { const q = P(s + k * 3, d.at + out * (Tk / 2 + 4.6)); cren.push(q); } }
+    if (d.gx !== undefined) { const p = P(d.gx, d.at); const y0 = terrainH(p[0], p[1]); const gw = (d.gw || 3.2) * 2; /* the gate passage: brick jambs either side are the wall runs; an arch lintel over it, the gate tower on top */
+      box(brickD, p[0], H - 1.2, p[1], ax ? gw + 0.4 : Tk, 2.4, ax ? Tk : gw + 0.4); const gl = new THREE.Mesh(new THREE.CylinderGeometry(gw / 2, gw / 2, Tk + 0.2, 12, 1, false, 0, Math.PI), brickD); gl.rotation.z = Math.PI / 2; if (!ax) gl.rotation.y = Math.PI / 2; gl.rotation.order = ax ? 'XYZ' : 'YZX'; gl.position.set(p[0], H - 2.4, p[1]); sc.add(gl);
+      const tw = ax ? 16 : 7, td = ax ? 7 : 16; box(red, p[0], H + 2.4, p[1], tw, 4.6, td); hip(roof, p[0], H + 4.4, p[1], tw * 1.35, td * 1.4, 2.4); box(red, p[0], H + 8.4, p[1], tw * 0.75, 3.2, td * 0.75); hip(roof, p[0], H + 11, p[1], tw * 1.1, td * 1.2, 3.4);
+      if (d.name) { const bn = box(new THREE.MeshLambertMaterial({ color: 0xd8b44a }), p[0] + (ax ? 0 : out * (td / 2 + 0.1)), H + 3.4, p[1] + (ax ? out * (td / 2 + 0.1) : 0), ax ? 2.2 : 0.1, 0.8, ax ? 0.1 : 2.2); bn.castShadow = false; } }
+    for (const s of [d.from, d.to]) { if (d.notower) continue; const p = P(s, d.at); const y0 = terrainH(p[0], p[1]) - 1; box(brick, p[0], (y0 + H) / 2, p[1], Tk + 3, H - y0, Tk + 3); box(red, p[0], H + 2, p[1], Tk + 1, 4, Tk + 1); hip(roof, p[0], H + 3.6, p[1], Tk + 4, Tk + 4, 3); }
+  }
+  if (cren.length) { const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, 1.5, 0.7), brick, cren.length); const H0 = ws[0].h || 12; cren.forEach((p, i) => { T.m.compose(T.v.set(p[0], H0 + 0.75, p[1]), T.q.setFromEuler(T.e.set(0, ws[0].axis === 'x' ? 0 : Math.PI / 2, 0)), T.v2.set(1, 1, 1)); im.setMatrixAt(i, T.m); }); im.castShadow = true; im.frustumCulled = false; sc.add(im); }
+};
 // ---- grounding: where things meet the earth ----
 // One ground map for the whole field, painted once when the battle is built: R = contact shadow (ambient occlusion
 // round every house, wall, palisade, mantlet, tent, rock and trunk), G = trodden earth (an uneven skirt of bare,
@@ -2974,7 +3016,7 @@ Renderer.prototype.buildGroundMap = function () {
   let seed = 4711 + (sim.seed & 1023); const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const X = (x) => (x + E) * k, Zc = (z) => (z + E) * k;
   // [dirt margin m, contact strength] per kind of structure
-  const KIND = { house: [1.1, 0.8], hall: [1.3, 0.85], wall: [0.7, 0.65], palisade: [0.85, 0.6], mantlet: [0.95, 0.65], tent: [0.7, 0.5], rampart: [1.4, 0.45], gate: [1.3, 0.8], keep: [1.6, 0.85] };
+  const KIND = { house: [1.1, 0.8], hall: [1.3, 0.85], wall: [0.7, 0.65], palisade: [0.85, 0.6], mantlet: [0.95, 0.65], tent: [0.7, 0.5], rampart: [1.4, 0.45], gate: [1.3, 0.8], keep: [1.6, 0.85], cwall: [1.8, 0.85], wagon: [0.8, 0.6] };
   const blob = (g, cx, cz, hw, hd, m, a, jag) => { // an uneven rounded outline round a footprint, grown by m
     const pts = [], per = 2 * (hw + hd) + 4 * m, n = Math.max(10, Math.min(64, Math.round(per / 0.7)));
     for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);

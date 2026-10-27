@@ -1,6 +1,6 @@
 // Simulates 3 peers with a lossless, ordered, delayed transport and checks lockstep determinism.
 const fs = require('fs'), vm = require('vm'), path = require('path');
-const src = ['dmath.js', 'sim.js', 'net.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
+const src = ['dmath.js', 'sim.js', 'sim_maps.js', 'net.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
 const ctx = { console, Math, Int32Array, Float64Array, performance, setInterval, clearInterval, Peer: undefined, RTCPeerConnection: undefined }; vm.createContext(ctx);
 vm.runInContext(src + '\nthis.SIM = SIM; this.Lockstep = Lockstep; this.RNG = RNG;', ctx);
 const S = ctx.SIM;
