@@ -1149,11 +1149,17 @@ class Renderer {
     this.tmp.m.set(sx * w, yx * L, zx * d, (ax + bx) / 2, sy * w, yy * L, zy * d, (ay + by) / 2, sz * w, yz * L, zz * d, (az + bz) / 2, 0, 0, 0, 1);
     mesh.setMatrixAt(idx, this.tmp.m);
   }
-  drawGear(slot, u, fr, G, B, noHat) {
+  // the dead man's joints for the gear that hangs on his limbs (robe flaps, leggings): hips at the pelvis, knees between hip and foot
+  ragJoints(rag, xx, xy, xz, cx, cy, cz, px, py, pz) { const p = rag.p, G = this._RG || (this._RG = new Float64Array(36));
+    const put = (o, x, y, z) => { G[o] = x; G[o + 1] = y; G[o + 2] = z; };
+    for (const [h, k, f, sd, fi] of [[0, 3, 6, 1, 15], [9, 12, 15, -1, 18]]) { const hx = px + xx * 0.1 * sd, hy = py + xy * 0.1 * sd, hz = pz + xz * 0.1 * sd; put(h, hx, hy, hz); put(f, p[fi], p[fi + 1], p[fi + 2]); put(k, (hx + p[fi]) / 2, (hy + p[fi + 1]) / 2 + 0.04, (hz + p[fi + 2]) / 2); }
+    for (const [s0, e, hn, sd, hi] of [[18, 21, 24, 1, 9], [27, 30, 33, -1, 12]]) { const sx = cx + xx * 0.2 * sd, sy = cy + xy * 0.2 * sd, sz = cz + xz * 0.2 * sd; put(s0, sx, sy, sz); put(hn, p[hi], p[hi + 1], p[hi + 2]); put(e, (sx + p[hi]) / 2, (sy + p[hi + 1]) / 2, (sz + p[hi + 2]) / 2); }
+    return G; }
+  drawGear(slot, u, fr, G, B, noHat, dead) {
     const f = this.fig, T = this.tmp, g = gearFor(u);
     for (const p of g.parts) {
       if (p.idx === undefined) continue; const mesh = f['g' + p.m], idx = slot * GEAR_K[p.m] + p.idx;
-      if (noHat && p.hat) { mesh.setMatrixAt(idx, T.zero); continue; }
+      if ((noHat && p.hat) || (dead && p.f !== 'seg' && Math.max(p.s[0], p.s[1], p.s[2]) > 0.85)) { mesh.setMatrixAt(idx, T.zero); continue; } /* a fallen man's banner pole and other long kit don't stand up out of the body */
       if (p.f === 'seg') { if (!G) { mesh.setMatrixAt(idx, T.zero); continue; } const a = GJ[p.a], z = GJ[p.z]; const ax = G[a] + (G[z] - G[a]) * p.t0, ay = G[a + 1] + (G[z + 1] - G[a + 1]) * p.t0, az = G[a + 2] + (G[z + 2] - G[a + 2]) * p.t0; const bx = G[a] + (G[z] - G[a]) * p.t1, by = G[a + 1] + (G[z + 1] - G[a + 1]) * p.t1, bz = G[a + 2] + (G[z + 2] - G[a + 2]) * p.t1; this.seg(mesh, idx, ax, ay, az, bx, by, bz, p.w, p.d); continue; }
       const F = fr[p.f]; if (!F) { mesh.setMatrixAt(idx, T.zero); continue; }
       // cloth and plates that hang from a joint follow the limb under them (no knee through the skirt, no arm through the pauldron)
@@ -2200,7 +2206,7 @@ class Renderer {
     this.boxB(f.head, slot, p[0], p[1], p[2], B, 0.26, 0.28, 0.26);
     const hat = u.def.hat; const hatM = (mesh, on, oy, s1, s2, s3) => { if (!on) { mesh.setMatrixAt(slot, T.zero); return; } this.boxB(mesh, slot, p[0] + yx * oy, p[1] + yy * oy, p[2] + yz * oy, B, s1, s2, s3); };
     hatM(f.jingasa, false); hatM(f.kabuto, false); hatM(f.cap, false); hatM(f.kepi, false); hatM(f.band, false);
-    { const cmx = (cx + px) / 2 + yx * 0.04, cmy = (cy + py) / 2 + yy * 0.04, cmz = (cz + pz) / 2 + yz * 0.04; this.drawGear(slot, u, { c: [cmx, cmy, cmz, B], h: [p[0], p[1], p[2], B], p: [px, py, pz, B], sl: [cx + xx * 0.2, cy + xy * 0.2, cz + xz * 0.2, B], sr: [cx - xx * 0.2, cy - xy * 0.2, cz - xz * 0.2, B] }, null, B, rag.hatOff); }
+    { const cmx = (cx + px) / 2 + yx * 0.04, cmy = (cy + py) / 2 + yy * 0.04, cmz = (cz + pz) / 2 + yz * 0.04; this.drawGear(slot, u, { c: [cmx, cmy, cmz, B], h: [p[0], p[1], p[2], B], p: [px, py, pz, B], sl: [cx + xx * 0.2, cy + xy * 0.2, cz + xz * 0.2, B], sr: [cx - xx * 0.2, cy - xy * 0.2, cz - xz * 0.2, B] }, this.ragJoints(rag, xx, xy, xz, cx, cy, cz, px, py, pz), B, rag.hatOff, true); }
     const limb2 = (m1, m2, ax, ay, az, bx, by, bz, w1, w2, bendx, bendy, bendz) => { const mx = (ax + bx) / 2 + bendx, my = (ay + by) / 2 + bendy, mz = (az + bz) / 2 + bendz; this.seg(m1, slot, ax, ay, az, mx, my, mz, w1, w1); this.seg(m2, slot, mx, my, mz, bx, by, bz, w2, w2); };
     limb2(f.uarmL, f.farmL, cx + xx * 0.2, cy + xy * 0.2, cz + xz * 0.2, p[9], p[10], p[11], 0.13, 0.11, -yx * 0.05, -yy * 0.05, -yz * 0.05);
     limb2(f.uarmR, f.farmR, cx - xx * 0.2, cy - xy * 0.2, cz - xz * 0.2, p[12], p[13], p[14], 0.13, 0.11, -yx * 0.05, -yy * 0.05, -yz * 0.05);
