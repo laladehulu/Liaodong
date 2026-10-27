@@ -159,7 +159,7 @@ P.amResolve = function (u, v, h, M) {
   const k = u.amK, dx = v.x - u.x, dz = v.z - u.z, d = len(dx, dz) || 1, nx = dx / d, nz = dz / d, hx = v.x - nx * v.def.r, hy = v.y + 1.2, hz = v.z - nz * v.def.r;
   const facing = Math.abs(wrap(Math.atan2(u.x - v.x, u.z - v.z) - v.yaw)) < 1.4; u.amHitAny = 1;
   if (v.iframe > 0 || (v.dodgeT || 0) > 0) { this.events.push({ t: 'amcounter', how: 'dodge', id: u.id, by: v.id, k, x: hx, y: hy, z: hz }); if (M.big) { this.amEnd(u, 1.3); u.st = ST_STUN; u.stT = 0; u.stunDur = 0.9; } return; }
-  const canBlock = v.blocking && facing && v.flinchT <= 0 && (v.downT || 0) <= 0;
+  const canBlock = v.blocking && facing && (v.flinchT <= 0 || (v.ctrlActive && v.flinchT < 0.3)) && (v.downT || 0) <= 0;
   if (canBlock) {
     if (v.def.shield && h.thrust) { // the shield meets the point and shoves: he goes back off his feet, open
       u.vx = -nx * 6.5; u.vz = -nz * 6.5; this.amEnd(u, 1.4); u.st = ST_STUN; u.stT = 0; u.stunDur = 1.2; this.posture(u, 45, v);

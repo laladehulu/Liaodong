@@ -1862,7 +1862,7 @@ class Renderer {
         let G, D;
         const rv = uhash(u.id, 17); // which way this man carries his weapon at the run
         if (w === 'katana') { const st2 = charge && runH > 0.35 ? 1 : [0, 2, 3, 4][Math.floor(rv * 4)];
-          if (st2 === 0) { two = false; G = [-0.27, -0.3 + 0.04 * sw2, -0.02 - 0.24 * sw]; D = N3(-0.12, -0.38 - 0.25 * sw, -1); } // blade trailing low behind, sword arm swinging
+          if (st2 === 0) { two = false; G = [-0.3, -0.44 + 0.03 * sw2, -0.44 - 0.04 * sw]; D = N3(-0.14, 0.22 + 0.22 * sw, -1); } /* the trailing run: sword arm thrown straight back behind him, the blade streaming out behind and bobbing with the stride */
           else if (st2 === 1) { two = false; G = [-0.25, 0.14 + 0.03 * sw2, 0.08]; D = N3(0.12, 0.78, -0.62); } // blade cocked back over the shoulder for the first cut
           else if (st2 === 2) { G = [-0.1, -0.32 + 0.04 * sw2, 0.3 + 0.04 * sw]; D = N3(0.3, 0.42, 0.85); } // both hands, blade slanted across the body
           else if (st2 === 3) { G = [-0.12, -0.04 + 0.03 * sw2, 0.26 + 0.03 * sw]; D = N3(0.12, 0.93, 0.25); } // both hands, blade held upright before the face
@@ -2336,11 +2336,11 @@ class Renderer {
       // the draw: the bow comes up to the eye, the string comes back toward the cheek; a long-held full draw trembles
       const d = Math.min(1, (hero.drawT || 0) / 0.8), k = this.vmBowK = (this.vmBowK || 0) + (d - (this.vmBowK || 0)) * Math.min(1, dt * 16), tr = Math.max(0, (hero.drawT || 0) - 2.5) * 0.004;
       const sh = tr ? Math.sin(performance.now() / 23) * tr : 0;
-      this.vmBow.position.set(-0.05 + dr * 0.04 + sh, -0.12 + dr * 0.08 + sh * 0.7, -0.55 + k * 0.05); this.vmBow.rotation.set(0, 0, 0.2 - dr * 0.15 - k * 0.05);
+      this.vmBow.position.set(-0.22 + dr * 0.1 + sh, -0.15 + dr * 0.07 + sh * 0.7, -0.55 + k * 0.05); this.vmBow.rotation.set(0, -0.06 + dr * 0.04, 0.55 - dr * 0.2 - k * 0.05); /* held off to the left and canted, as an archer holds it, so the centre of the view stays clear to aim */
       if (this.vmBowS) { const nz = 0.07 + k * 0.34, tips = [[0.4, -0.02], [-0.4, -0.02]]; this.vmBowS.forEach((s, i) => { const ty = tips[i][0], tz = tips[i][1], dy = 0 - ty, dz = nz - tz, L = Math.hypot(dy, dz); s.position.set(0, ty + dy / 2, tz + dz / 2); s.scale.set(1, L, 1); s.rotation.set(Math.atan2(dz, dy), 0, 0); });
         const nocked = hero.ammo > 0 || (hero.st === ST_RELOAD && hero.stT > (hero.reloadT || 0.8) * 0.6); this.vmBowA.visible = nocked; this.vmBowA.position.set(0.012, 0, nz); } }
     { const arm = hero.def.arm, K = this.vmKatana.scale; if (arm === 'guandao') K.set(1.1, 1.8, 2.2); else if (arm === 'mace') K.set(3, 0.72, 1.3); else if (arm === 'jian') K.set(0.75, 1.15, 0.6); else K.set(1, 1, 1); }
-    { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * 14); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
+    { const sv = hero.def.shield && (w === 'katana' || w === 'yari') && !mounted; this.vmShield.visible = sv; if (sv) { const up = hero.blocking ? 1 : 0; const tp = this.vmShield.position; this.vmShieldK = (this.vmShieldK || 0) + (up - (this.vmShieldK || 0)) * Math.min(1, dt * (up ? 34 : 12)); const k = this.vmShieldK; tp.set(-0.42 + k * 0.15, -0.36 + k * 0.05, -0.55 - k * 0.07); this.vmShield.rotation.set(0.1 + k * 0.12, 0.5 - k * 0.3, k * 0.12); } }
     if (this.vmBloodMat) { this.bladeBlood = Math.max(0, (this.bladeBlood || 0) - (this.fdt || 0.016) / 90); this.vmBloodMat.opacity = 0.82 * Math.sqrt(this.bladeBlood); }
     const yrole = w === 'yari' ? (hero.kitRole !== undefined ? hero.kitRole : hero.role) : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
     // a three-eyed gun model added by a campaign (vmSj) replaces the musket parts every frame, whoever you now are
@@ -2404,7 +2404,7 @@ class Renderer {
         else { target = K.idle; speed = 7; }
       }
       else if (hero.st === ST_STUN) { target = K.stun; speed = 12; camRoll = -0.04; camPitch = 0.03; }
-      else if (hero.blocking) { target = K.block[hero.blockDir]; speed = 26; }
+      else if (hero.blocking) { target = K.block[hero.blockDir]; speed = 48; } /* the guard snaps up */
       else target = K.idle;
     }
     { // at the run the weapon is carried, not presented: musket at port arms across the chest, blade swinging low with the arm, spear tipped forward

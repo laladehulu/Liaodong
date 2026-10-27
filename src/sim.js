@@ -21,6 +21,7 @@ function d2fuse(d) { return d / 13 + 0.3; }
 const FORM_LINE = 0, FORM_COLUMN = 1, FORM_WEDGE = 2, FORM_LOOSE = 3;
 const BUDGET = 1500;
 const RELEASE_T = 0.2, KICK_T = 0.45, SWAP_T = 0.5;
+const NO_GROUND_FIRE = true; // the owner's call: no burning grass or burning ground in any mode (rockets, oil, saltpeter and scripted fires light nothing on the ground)
 const XCOMBAT = typeof globalThis !== 'undefined' && !!globalThis.MING_XCOMBAT; // experimental combat build
 const DEPLOY_TICKS = 30 * 40;
 const RALLY_CD = 30 * 40;
@@ -885,7 +886,7 @@ class Sim {
     if (u.champ && atkPressed && u.sta < 8) { if (!u.tiredT || u.tiredT <= 0) { u.tiredT = 0.8; this.events.push({ t: 'tired', id: u.id }); } u.atkHeld = atk; u.blockHeld = blk; return; }
     if (atkPressed && u.flinchT <= 0 && (u.st === ST_IDLE || (u.st === ST_RECOVER && u.stT > u.def.recover * 0.6))) {
       u.blocking = false; if (u.champ) { const chain = this.tick - (u.lastSwing || -999) < 40; u.combo = chain ? (u.combo || 0) + 1 : 0; u.lastSwing = this.tick; u.sta -= 6 + u.combo * 3; u.staT = 0; } this.startWindup(u, u.weapon === 'rifle' && u.club ? ad : weaponDir(u.weapon, ad));
-    } else if (blk && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_KICK && u.st !== ST_SWAP && u.flinchT <= 0 && (u.st === ST_IDLE || u.st === ST_RECOVER || u.st === ST_RELOAD)) {
+    } else if (blk && u.st !== ST_WINDUP && u.st !== ST_RELEASE && u.st !== ST_KICK && u.st !== ST_SWAP && (u.flinchT <= 0 || (u.ctrlActive && u.flinchT < 0.3)) && (u.st === ST_IDLE || u.st === ST_RECOVER || u.st === ST_RELOAD)) { /* a player can get his guard back up while still shaken from a blow */
       if (!u.blocking) { u.blocking = true; u.blockT = 0; u.blockDir = bd; }
       if (u.st === ST_RECOVER) { u.st = ST_IDLE; u.stT = 0; }
     } else if (!blk) u.blocking = false;
@@ -1720,7 +1721,7 @@ class Sim {
     if (def_.entT > 0 && att.weapon === 'yari' && !att.def.brush) { dmg *= 2.0; q = 'pinned'; }
     if (def_.openT > 0) { dmg *= 2.2; def_.openT = 0; q = 'deathblow'; }
     const behind = Math.abs(wrap(atan2(att.x - def_.x, att.z - def_.z) - def_.yaw)) > 2.0;
-    const canBlock = def_.blocking && def_.entT <= 0 && def_.flinchT <= 0 && def_.downT <= 0 && def_.type !== 'horse' && !behind;
+    const canBlock = def_.blocking && def_.entT <= 0 && (def_.flinchT <= 0 || (def_.ctrlActive && def_.flinchT < 0.3)) && def_.downT <= 0 && def_.type !== 'horse' && !behind;
     const shieldBlock = canBlock && def_.def.shield && dir !== DIR_DOWN;
     const omni = def_.ctrlActive; // human players hold one block that covers the front; AI still has to read the direction
     if (canBlock && att.def.brush && def_.type !== 'horse' && (omni || def_.blockDir === counterDir(dir) || shieldBlock)) { // branches can't be parried clean: they wrap the guard
@@ -2336,7 +2337,7 @@ class Sim {
     for (const sp of spots) { if (this.countNear(sp[0], sp[1], 5, 1) < 4 || this.countNear(sp[2], sp[3], 10, 0) < 1) continue;
       const x = sp[0] + (this.rng.next() - 0.5) * 3, z = sp[1] + (this.rng.next() - 0.5) * 2; const nn = this.gatherNear(x, z, 4.5); const ids = []; for (let i = 0; i < nn; i++) ids.push(this.nearBuf[i]); ids.sort((a, b) => a - b);
       for (const id of ids) { const v = this.units[id]; if (v.dead || v.team !== 1 || v.type === 'horse') continue; const dd = len(v.x - x, v.z - z); if (dd > 4.5) continue; this.applyDamage(v, (v.champ ? 30 : 55) * (1 - dd / 6), -1, 0, 0, 0, 'fire'); if (v.squad >= 0 && !this.squads[v.squad].def.fearless) this.squads[v.squad].morale = Math.max(0, this.squads[v.squad].morale - 4); }
-      if (!this.rain) { this.fireState[this.fireCell(x, z)] = 1; this.burnT[this.fireCell(x, z)] = 240; }
+      { const fc = this.fireCell(x, z); if (!this.rain && fc >= 0) { this.fireState[fc] = 1; this.burnT[fc] = 240; } }
       this.events.push({ t: 'oil', x, z }); break; }
   }
   ramThink() {
@@ -2422,7 +2423,7 @@ class Sim {
       this.fuel[j * W + i] = f;
     }
   }
-  fireCell(x, z) { const i = Math.floor((x + HALF) / FIRE_CS), j = Math.floor((z + HALF) / FIRE_CS); if (i < 0 || j < 0 || i >= this.fireW || j >= this.fireW) return -1; return j * this.fireW + i; }
+  fireCell(x, z) { if (NO_GROUND_FIRE) return -1; const i = Math.floor((x + HALF) / FIRE_CS), j = Math.floor((z + HALF) / FIRE_CS); if (i < 0 || j < 0 || i >= this.fireW || j >= this.fireW) return -1; return j * this.fireW + i; }
   ignite(x, z, chance) {
     if (this.rain) return; const c = this.fireCell(x, z); if (c < 0 || this.fireState[c] !== 0 || this.fuel[c] <= 0) return;
     if (this.rng.next() < chance * Math.min(1, this.fuel[c])) { this.fireState[c] = 1; this.burnT[c] = Math.round(330 * Math.min(this.fuel[c], 1.6)) + 150; this.events.push({ t: 'ignite', c, x, z }); }
