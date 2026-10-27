@@ -1373,9 +1373,10 @@ class Renderer {
     this.VM.club = {
       /* the side swings turn the shaft flat (rz = ±90°) and sweep it round with ry, so the head travels across the view, never straight out */
       idle: P(0.28, -0.36, -0.5, -1.05, 0.25, -0.25),
-      windup: [P(0.2, 0.06, -0.3, 0.5, 0.05, 0.12), P(0.4, -0.14, -0.26, 0.35, -0.6, -1.57), null, P(-0.32, -0.14, -0.26, 0.35, 0.6, 1.57)],
-      mid: [P(0.1, 0.02, -0.45, -0.6, 0.04, 0.06), P(0.12, -0.24, -0.42, 0.15, 1.4, -1.57), null, P(0.0, -0.24, -0.42, 0.15, -1.4, 1.57)],
-      release: [P(0.06, -0.2, -0.6, -1.8, 0.02, 0.02), P(-0.32, -0.3, -0.3, 0.05, 3.4, -1.57), null, P(0.42, -0.3, -0.3, 0.05, -3.4, 1.57)],
+      /* the overhead smash is carried by the arms and body: the fists go up and back over the head, then the whole shaft comes down and forward through a long arc, the wrists stay locked */
+      windup: [P(0.18, 0.32, -0.08, 0.95, 0.05, 0.1), P(0.4, -0.14, -0.26, 0.35, -0.6, -1.57), null, P(-0.32, -0.14, -0.26, 0.35, 0.6, 1.57)],
+      mid: [P(0.12, 0.16, -0.5, -0.2, 0.04, 0.05), P(0.12, -0.24, -0.42, 0.15, 1.4, -1.57), null, P(0.0, -0.24, -0.42, 0.15, -1.4, 1.57)],
+      release: [P(0.06, -0.42, -0.72, -1.15, 0.02, 0.02), P(-0.32, -0.3, -0.3, 0.05, 3.4, -1.57), null, P(0.42, -0.3, -0.3, 0.05, -3.4, 1.57)],
       block: this.VM.katana.block, stun: this.VM.katana.stun,
       R: L(0, 0, 0), Lh: L(0, -0.14, 0),
     };
@@ -2029,13 +2030,13 @@ class Renderer {
     const dirRoot = (v, out, o) => { out[o] = C[0] * v[0] + C[3] * v[1] + C[6] * v[2]; out[o + 1] = C[1] * v[0] + C[4] * v[1] + C[7] * v[2]; out[o + 2] = C[2] * v[0] + C[5] * v[1] + C[8] * v[2]; };
     const J = this._J || (this._J = new Float64Array(60));
     // J layout: 0 shoulderL, 3 elbowL, 6 handL, 9 shoulderR, 12 elbowR, 15 handR, 18 weapon grip, 21 weapon dir, 24 chest centre, 27 head
-    toRoot([0.2, 0, 0], J, 0); toRoot([-0.2, 0, 0], J, 9);
+    toRoot([0.255, 0, 0], J, 0); toRoot([-0.255, 0, 0], J, 9); /* shoulders out at the edge of the torso, so the arms hang clear of the body */
     toRoot([0, -0.22, 0], J, 24); toRoot([0, 0.25, 0.01], J, 27);
     const ik = (so, ho, tx, ty, tz, side) => {
       const sx = J[so], sy2 = J[so + 1], sz = J[so + 2]; let dx = (tx - sx) * ARM_REACH, dy = (ty - sy2) * ARM_REACH, dz = (tz - sz) * ARM_REACH; let d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-4; dx /= d; dy /= d; dz /= d;
       const A1 = ARM_U, A2 = ARM_F; d = clamp(d, 0.08, A1 + A2 - 0.002);
       const ca = (A1 * A1 + d * d - A2 * A2) / (2 * A1 * d), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
-      let px = C[0] * side * 0.7 - C[3] * 1 - C[6] * 0.35, py = C[1] * side * 0.7 - C[4] - C[7] * 0.35, pz2 = C[2] * side * 0.7 - C[5] - C[8] * 0.35;
+      let px = C[0] * side * 1.0 - C[3] * 1 - C[6] * 0.35, py = C[1] * side * 1.0 - C[4] - C[7] * 0.35, pz2 = C[2] * side * 1.0 - C[5] - C[8] * 0.35; /* elbows bend out, away from the ribs */
       const dp = px * dx + py * dy + pz2 * dz; px -= dx * dp; py -= dy * dp; pz2 -= dz * dp; const pl = Math.sqrt(px * px + py * py + pz2 * pz2) || 1; px /= pl; py /= pl; pz2 /= pl;
       J[ho - 3] = sx + A1 * (dx * ca + px * sa); J[ho - 2] = sy2 + A1 * (dy * ca + py * sa); J[ho - 1] = sz + A1 * (dz * ca + pz2 * sa);
       J[ho] = sx + dx * d; J[ho + 1] = sy2 + dy * d; J[ho + 2] = sz + dz * d;
@@ -2209,8 +2210,8 @@ class Renderer {
     hatM(f.jingasa, false); hatM(f.kabuto, false); hatM(f.cap, false); hatM(f.kepi, false); hatM(f.band, false);
     { const cmx = (cx + px) / 2 + yx * 0.04, cmy = (cy + py) / 2 + yy * 0.04, cmz = (cz + pz) / 2 + yz * 0.04; this.drawGear(slot, u, { c: [cmx, cmy, cmz, B], h: [p[0], p[1], p[2], B], p: [px, py, pz, B], sl: [cx + xx * 0.2, cy + xy * 0.2, cz + xz * 0.2, B], sr: [cx - xx * 0.2, cy - xy * 0.2, cz - xz * 0.2, B] }, this.ragJoints(rag, xx, xy, xz, cx, cy, cz, px, py, pz), B, rag.hatOff, true); }
     const limb2 = (m1, m2, ax, ay, az, bx, by, bz, w1, w2, bendx, bendy, bendz) => { const mx = (ax + bx) / 2 + bendx, my = (ay + by) / 2 + bendy, mz = (az + bz) / 2 + bendz; this.seg(m1, slot, ax, ay, az, mx, my, mz, w1, w1); this.seg(m2, slot, mx, my, mz, bx, by, bz, w2, w2); };
-    limb2(f.uarmL, f.farmL, cx + xx * 0.2, cy + xy * 0.2, cz + xz * 0.2, p[9], p[10], p[11], 0.13, 0.11, -yx * 0.05, -yy * 0.05, -yz * 0.05);
-    limb2(f.uarmR, f.farmR, cx - xx * 0.2, cy - xy * 0.2, cz - xz * 0.2, p[12], p[13], p[14], 0.13, 0.11, -yx * 0.05, -yy * 0.05, -yz * 0.05);
+    limb2(f.uarmL, f.farmL, cx + xx * 0.255, cy + xy * 0.255, cz + xz * 0.255, p[9], p[10], p[11], 0.13, 0.11, -yx * 0.05, -yy * 0.05, -yz * 0.05);
+    limb2(f.uarmR, f.farmR, cx - xx * 0.255, cy - xy * 0.255, cz - xz * 0.255, p[12], p[13], p[14], 0.13, 0.11, -yx * 0.05, -yy * 0.05, -yz * 0.05);
     limb2(f.thighL, f.shinL, px + xx * 0.1, py + xy * 0.1, pz + xz * 0.1, p[15], p[16], p[17], 0.17, 0.14, zx * 0.06, zy * 0.06, zz * 0.06);
     limb2(f.thighR, f.shinR, px - xx * 0.1, py - xy * 0.1, pz - xz * 0.1, p[18], p[19], p[20], 0.17, 0.14, zx * 0.06, zy * 0.06, zz * 0.06);
     this.boxB(f.hand, slot * 2, p[9], p[10], p[11], B, 0.09, 0.09, 0.1); this.boxB(f.hand, slot * 2 + 1, p[12], p[13], p[14], B, 0.09, 0.09, 0.1);

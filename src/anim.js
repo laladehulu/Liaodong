@@ -145,7 +145,7 @@ const ANIM = (function () {
     for (let f = 0; f < 2; f++) { const side = f ? -1 : 1, hx = x + side * 0.1 * cy * vsc, hz = z - side * 0.1 * sy * vsc, gy = tH(F.px[f], F.pz[f]) + hy[f];
       FT[f * 3 + 1] = gy; if (F.t[f] >= 0) continue;
       const dh = Math.hypot(F.px[f] - hx, F.pz[f] - hz), L = (LT + LS) * 0.985 * vsc; const top = gy + Math.sqrt(Math.max(0, L * L - dh * dh)); const pmax = (top - y) / vsc; if (pmax < pelOut) pelOut = pmax; }
-    pelOut = Math.max(pelOut, pel - 0.32);
+    pelOut = Math.max(pelOut, pel - 0.14); /* the hips sink only a little onto a planted foot: deeper and the bent thigh folds up into the coat */
     // solve the legs to the feet (root-local, relative to the pelvis), and blend with the cycle by the near weight
     const w = a.fpW * (1 - runW);
     for (let f = 0; f < 2; f++) { const o = f * 9, side = f ? -1 : 1, dX = (F.px[f] - x) / vsc, dZ = (F.pz[f] - z) / vsc;
