@@ -79,7 +79,7 @@
   function drive(r, m, u, x, y, z, yaw, dt) {
     const A = m.anim; m.root.position.set(x, y, z); m.root.rotation.y = yaw;
     const vx = (x - m.px) / Math.max(dt, 1e-3), vz = (z - m.pz) / Math.max(dt, 1e-3); m.px = x; m.pz = z; const sp = Math.min(9, Math.hypot(vx, vz)); m.sp += (sp - m.sp) * Math.min(1, dt * 8);
-    A.speed = m.sp; if (sp > 0.15) { const fx = Math.sin(yaw), fz = Math.cos(yaw), lx = Math.cos(yaw), lz = -Math.sin(yaw); A.ang = Math.atan2(vx * lx + vz * lz, vx * fx + vz * fz); }
+    A.speed = m.sp; if (sp > 0.6) { /* the way he moves is only trusted once he is really moving: at a creep it is noise */ const fx = Math.sin(yaw), fz = Math.cos(yaw), lx = Math.cos(yaw), lz = -Math.sin(yaw); A.ang = Math.atan2(vx * lx + vz * lz, vx * fx + vz * fz); }
     const sq = u.squad >= 0 ? r.sim.squads[u.squad] : null, routing = !!(sq && sq.routing);
     // down and up again; the man who hauls him up kneels to it
     if (u.downed && !A.down) A.wound(); else if (!u.downed && A.down) A.rise();
