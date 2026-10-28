@@ -8,7 +8,7 @@ const pre = process.argv[2] || 'test/out/nrduel', port = process.argv[3] || 8766
   await page.addInitScript(() => { window.NM_NOWARM = 1; });
   await page.goto(`http://localhost:${port}/dist/test-newreal.html`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.NEWMODEL && window.NEWMODEL.ok, null, { timeout: 60000 }).catch(() => errors.push('new model never loaded'));
-  await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; const st = window.__boshin.state; st.mode = 'standard'; st.battle = 'field'; document.getElementById('btnSolo').click(); });
+  await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; const st = window.__boshin.state; st.army = ['samurai', 'ashigaru']; st.mode = 'standard'; st.battle = 'field'; document.getElementById('btnSolo').click(); });
   await page.waitForTimeout(2500); console.log('started', Date.now());
   const setup = await page.evaluate(() => { const d = window.__boshin, st = d.state, sim = st.sim, r = st.renderer, S = SIM; st.screen = 'pause';
     for (const id of ['hud', 'pause', 'cmdui', 'toast', 'storycard', 'feed', 'vitals', 'hudmarks', 'status', 'zgrid', 'comms', 'help']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
