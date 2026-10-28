@@ -4,7 +4,7 @@ const { chromium } = require('/opt/npm-tools/node_modules/playwright-core'); con
 const pre = process.argv[2] || 'test/out/nrduel', port = process.argv[3] || 8766;
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
-  const page = await browser.newPage({ viewport: { width: 900, height: 540 } }); const errors = []; page.on('pageerror', e => errors.push(e.message + ' | ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
+  const page = await browser.newPage({ viewport: { width: 480, height: 300 } }); const errors = []; page.on('pageerror', e => errors.push(e.message + ' | ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
   await page.goto(`http://localhost:${port}/dist/test-newreal.html`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.NEWMODEL && window.NEWMODEL.ok, null, { timeout: 60000 }).catch(() => errors.push('new model never loaded'));
   await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; const st = window.__boshin.state; st.mode = 'standard'; st.battle = 'field'; document.getElementById('btnSolo').click(); });
@@ -20,10 +20,10 @@ const pre = process.argv[2] || 'test/out/nrduel', port = process.argv[3] || 8766
     for (const q of sim.squads) { q.order = S.ORD_CHARGE; q.tx = X; q.tz = Z; }
     window.__cam = { X, Z, gy: gy(X, Z) }; return { A: A.map(u => u.weapon), B: B.map(u => u.weapon) }; });
   const frames = [];
-  for (let k = 0; k < 6; k++) { const r = await page.evaluate((k) => { const st = window.__boshin.state, sim = st.sim, r = st.renderer, C = window.__cam;
-      const cam = r._tcam || (r._tcam = new THREE.PerspectiveCamera(40, 900 / 540, 0.1, 800)); cam.position.set(C.X + 6.5, C.gy + 2.4, C.Z + 3.5); cam.lookAt(C.X, C.gy + 0.9, C.Z);
+  for (let k = 0; k < 4; k++) { const r = await page.evaluate((k) => { const st = window.__boshin.state, sim = st.sim, r = st.renderer, C = window.__cam;
+      const cam = r._tcam || (r._tcam = new THREE.PerspectiveCamera(40, 480 / 300, 0.1, 800)); r.renderer.setPixelRatio(1); r.renderer.setSize(160, 100, false); cam.position.set(C.X + 6.5, C.gy + 2.4, C.Z + 3.5); cam.lookAt(C.X, C.gy + 0.9, C.Z);
       for (let t = 0; t < 14; t++) { sim.step([[0, 0, 0, 0, 0, 0, [], 0]]); r.processEvents(sim.events); r.camera.position.copy(cam.position); r.camera.quaternion.copy(cam.quaternion); r.fdt = 1 / 30; r.render(1, 1 / 30, { mode: 'cmd', yaw: 0, pitch: 0, selected: [] }); }
-      r.present(cam); const N = window.NEWMODEL; return [r.renderer.domElement.toDataURL('image/png'), N.men.size, N.ragMen.size, sim.units.filter(u => u.dead).length]; }, k);
+      r.renderer.setSize(480, 300, false); r.present(cam); const N = window.NEWMODEL; return [r.renderer.domElement.toDataURL('image/png'), N.men.size, N.ragMen.size, sim.units.filter(u => u.dead).length]; }, k);
     fs.writeFileSync(`${pre}_${k}.png`, Buffer.from(r[0].split(',')[1], 'base64')); frames.push(r.slice(1)); }
   console.log(JSON.stringify({ setup, frames }), 'errors', JSON.stringify(errors.slice(0, 6))); await browser.close();
 })();
