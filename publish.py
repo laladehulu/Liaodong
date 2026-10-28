@@ -9,6 +9,12 @@ for src, dst, name in [('index.html', 'regular', 'Regular'), ('real-index.html',
     s = open(D + src).read()
     i = s.index('<title>'); pre, body = s[:i], s[i:]   # pre = the edition's flag script + corner tag
     open(R + dst + '/index.html', 'w').write(head + badge(name) + pre + '\n' + body + '\n</body></html>\n')
+# the model lab (model/): the blocky rig and its armor, copied whole; Model/ points at it
+import shutil
+M = os.path.join(here, 'model'); os.makedirs(R + 'model', exist_ok=True)
+for f in ['lab.js', 'man.glb', 'three.min.js', 'GLTFLoader.js', 'SkeletonUtils.js', 'OrbitControls.js']: shutil.copy(os.path.join(M, f), R + 'model/' + f)
+ms = open(os.path.join(M, 'index.html')).read(); open(R + 'model/index.html', 'w').write(ms.replace('<body>', '<body>\n' + badge('Model lab'), 1))
+os.makedirs(R + 'Model', exist_ok=True); open(R + 'Model/index.html', 'w').write('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../model/"><a href="../model/">Model lab</a>\n')
 p = R + 'index.html'; s = open(p).read()
 s = re.sub(r'<span class="seal">v\d+</span>', '<span class="seal">%s</span>' % v, s)
 s = s.replace('<span>Film-style lighting, smoke and dust, natural trees. F7 quality · F8 HDR.</span>', '<span>Film-style lighting, smoke and dust, natural trees, with the experimental combat. F7 quality · F8 HDR.</span>')
