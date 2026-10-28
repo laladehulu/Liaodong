@@ -5,3 +5,4 @@
 - maps (agent, branch agent/maps): sim.js BATTLES/planTerrain/genMap/TERR (setTerrain, waterAt, terrainHExact), render.js buildStructures/buildSpecialStructures/buildWater/buildTerrain colours, new Renderer.prototype.buildWallBackdrop; main.js battle picker; test/map_shot.js
 - coop-phases (agent, branch agent/coop-phases): sim_coop.js, test/zcoop.js
 - anim (agent, branch agent/anim): render.js KF/POSES/HR_POSE/drawFigure/viewmodel/locomotion, anim.js
+- publishing v135 (melee-feel agent)

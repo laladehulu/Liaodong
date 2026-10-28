@@ -1853,7 +1853,8 @@ class Sim {
     if (canBlock && (omni || def_.blockDir === counterDir(dir) || shieldBlock)) {
       const perfect = def_.blockT < (def_.def.parry || 0.16) * (omni ? 1.15 : 1) && (omni || def_.blockDir === counterDir(dir));
       if (perfect) { // a true parry: the attacker's balance is wrecked and the defender gets the initiative
-        att.st = ST_STUN; att.stT = 0; att.stunDur = heavy ? 1.0 : 0.8; def_.counterT = 0.9; this.posture(att, heavy ? 55 : 38, def_);
+        if (att.ctrl >= 0) { att.st = ST_IDLE; att.stT = 0; att.relQ = false; } else { att.st = ST_STUN; att.stT = 0; att.stunDur = heavy ? 1.0 : 0.8; } /* the player is not frozen when parried (owner: no pause): his cut is simply turned and he acts at once; a parried AI man still reels */
+        def_.counterT = 0.9; this.posture(att, heavy ? 55 : 38, def_);
         this.events.push({ t: 'block', x: hx, y: hy, z: hz, perfect, by: def_.id, att: att.id, heavy }); att.heavy = false; return; }
       if (heavy && !def_.def.shield) { // a heavy blow crushes an ordinary guard: half comes through and the defender reels
         this.posture(def_, dmg * 1.4, att); def_.blocking = false; def_.flinchT = 0.45; this.events.push({ t: 'guardcrush', x: hx, y: hy, z: hz, by: def_.id, att: att.id });
