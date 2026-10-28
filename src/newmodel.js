@@ -173,7 +173,7 @@
   const rag0 = R.drawRagdoll;
   R.drawRagdoll = function (rag) {
     if (NM.ok && rag.unit) { let m = NM.ragMen.get(rag); if (!m && NM.dying.has(rag.unit.id)) { m = NM.dying.get(rag.unit.id); NM.dying.delete(rag.unit.id); bindRag(rag, m, { ix: 0, iy: 0, iz: 0 }); }
-      if (m) { this.hideFigure(rag.slot); m.root.visible = true; RIG.poseRag(m, rag.p); return; } }
+      if (m) { this.hideFigure(rag.slot); m.root.visible = true; RIG.poseRag(m, rag.p, this._nmDt); return; } }
     return rag0.call(this, rag); };
   const dying0 = R.dyingDraw;
   if (dying0) R.dyingDraw = function (i, u, dt) { const m = NM.ok && NM.dying.get(u.id); if (m) { this.hideFigure(i); m.root.position.set(u.x, u.y, u.z); m.update(clampDt(dt)); return; } return dying0.call(this, i, u, dt); };
