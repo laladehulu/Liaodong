@@ -21,7 +21,7 @@ PY
   echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>'
   echo '<script>if (typeof THREE === "undefined") document.write("<script src=\"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js\"><\/script>");</script>'
   echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>'
-  for f in dmath sim sim_coop sim_maps beacon snd_data voice_data audio voice music net render anim realism stylized real_gear action _mainfull; do
+  for f in dmath sim sim_coop sim_maps beacon snd_data voice_data audio voice music net render anim realism stylized real_gear action newmodel _mainfull; do
     echo "<script>"
     cat "src/$f.js"
     echo "</script>"
@@ -35,14 +35,14 @@ PY
   echo '</body></html>'
 } > dist/ming-dynasty-1619.html
 # syntax check every script
-for f in dmath sim sim_coop sim_maps beacon snd_data voice_data audio voice music net render anim realism stylized real_gear action _mainfull; do node --check "src/$f.js"; done
+for f in dmath sim sim_coop sim_maps beacon snd_data voice_data audio voice music net render anim realism stylized real_gear action newmodel _mainfull; do node --check "src/$f.js"; done
 echo "built: $(wc -c < dist/index.html) bytes"
 # local test build (no CDN)
 {
   echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
   cat src/01_head.html | grep -v 'fonts.googleapis'
   echo '<script src="../test/libs/three.min.js"></script>'
-  for f in dmath sim sim_coop sim_maps beacon snd_data voice_data audio voice music net render anim realism stylized real_gear action _mainfull; do echo "<script>"; cat "src/$f.js"; echo "</script>"; done
+  for f in dmath sim sim_coop sim_maps beacon snd_data voice_data audio voice music net render anim realism stylized real_gear action newmodel _mainfull; do echo "<script>"; cat "src/$f.js"; echo "</script>"; done
   echo '</body></html>'
 } > dist/test.html
 # experimental combat build: same game with the swept-blade melee, attack tokens and crowd damage cap switched on
@@ -90,3 +90,15 @@ t = open('dist/test.html').read()
 open('dist/test-act.html', 'w').write(t.replace('<body>', '<body><script>window.MING_REAL = 1; window.MING_XCOMBAT = 1; window.MING_ACTION = 1;</script>', 1))
 PY
 echo "action: $(wc -c < dist/act-index.html) bytes"
+# new realism edition: the realism edition's game with the new soldier (model/rig.js) for the men near the camera
+python3 - <<'PY'
+libs = ''.join('<script src="../model/%s"></script>' % f for f in ['GLTFLoader.js', 'SkeletonUtils.js', 'rig.js'])
+tag = '<script>window.MING_REAL = 1; window.MING_XCOMBAT = 1; window.MING_NEWMODEL = 1;</script><div style="position:fixed;right:10px;bottom:8px;z-index:99;font:600 11px sans-serif;color:#f0e2c4;background:#2a2016cc;border:1px solid #7a6444;border-radius:4px;padding:3px 8px;pointer-events:none">New Realism · new soldier model (F6 grime)</div>'
+s = open('dist/index.html').read()
+s = s.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs', libs + '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs', 1)
+open('dist/newreal-index.html', 'w').write(tag + s.replace('<title>', '<title>New Realism · ', 1))
+t = open('dist/test.html').read()
+t = t.replace('<script src="../test/libs/three.min.js"></script>', '<script src="../test/libs/three.min.js"></script>' + libs, 1)
+open('dist/test-newreal.html', 'w').write(t.replace('<body>', '<body><script>window.MING_REAL = 1; window.MING_XCOMBAT = 1; window.MING_NEWMODEL = 1;</script>', 1))
+PY
+echo "new realism: $(wc -c < dist/newreal-index.html) bytes"
