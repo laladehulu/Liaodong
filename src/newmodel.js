@@ -115,7 +115,7 @@
   // ---- the frame
   // men made ahead of need, two a frame, for the kits on this field, and every material compiled once: a man walking into the
   // near field, a helmet knocked off, a first block, never stall a frame
-  function warm(r) { if (NM.warmDone) return; if (!NM.warmList) { const seen = new Map(); for (const u of r.sim.units) if (eligible(u)) { const k = kitOf(u, r.sim), key = k.set + '|' + k.wpn; seen.set(key, (seen.get(key) || 0) + 1); }
+  function warm(r) { if (NM.warmDone) return; if (window.NM_NOWARM) { NM.warmDone = true; return; } /* (tests on software rendering skip it) */ if (!NM.warmList) { const seen = new Map(); for (const u of r.sim.units) if (eligible(u)) { const k = kitOf(u, r.sim), key = k.set + '|' + k.wpn; seen.set(key, (seen.get(key) || 0) + 1); }
       NM.warmList = []; for (const [key, n] of [...seen].sort((a, b) => b[1] - a[1])) for (let i = 0; i < Math.min(6, Math.ceil(n / 4)); i++) NM.warmList.push(key); NM.warmList = NM.warmList.slice(0, CAP); }
     for (let i = 0; i < 2 && NM.warmList.length; i++) { const key = NM.warmList.shift(), [set, wpn] = key.split('|'); const m = new RIG.Man(set, wpn, r.scene); m.key = key; for (const s of m.meshes) s.castShadow = false; lit(r, m); m.root.visible = false; m.unit = -1; NM.pool.push(m);
       if (!NM.compiled) NM.compiled = new Set(); if (!NM.compiled.has(set)) { NM.compiled.add(set); m.root.visible = true; m.root.position.set(0, -50, 0); try { r.renderer.compile(r.scene, r.camera); } catch (e) {} m.root.visible = false; } }

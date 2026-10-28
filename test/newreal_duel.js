@@ -5,10 +5,11 @@ const pre = process.argv[2] || 'test/out/nrduel', port = process.argv[3] || 8766
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 480, height: 300 } }); const errors = []; page.on('crash', () => console.log('PAGE CRASHED')); page.on('console', m => { if (/error|warn|lost/i.test(m.type() + m.text())) console.log('console:', m.text().slice(0, 200)); }); page.on('pageerror', e => errors.push(e.message + ' | ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
+  await page.addInitScript(() => { window.NM_NOWARM = 1; });
   await page.goto(`http://localhost:${port}/dist/test-newreal.html`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.NEWMODEL && window.NEWMODEL.ok, null, { timeout: 60000 }).catch(() => errors.push('new model never loaded'));
   await page.evaluate(() => { AUDIO.init = () => {}; Element.prototype.requestPointerLock = function () {}; const st = window.__boshin.state; st.mode = 'standard'; st.battle = 'field'; document.getElementById('btnSolo').click(); });
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(2500); console.log('started', Date.now());
   const setup = await page.evaluate(() => { const d = window.__boshin, st = d.state, sim = st.sim, r = st.renderer, S = SIM; st.screen = 'pause';
     for (const id of ['hud', 'pause', 'cmdui', 'toast', 'storycard', 'feed', 'vitals', 'hudmarks', 'status', 'zgrid', 'comms', 'help']) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
     sim.phase = 1; sim.battleTick = sim.tick; for (const p of sim.players) p.ready = true;
