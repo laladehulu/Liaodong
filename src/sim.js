@@ -50,14 +50,17 @@ const DEFS = {
 };
 DEFS.cannon = DEFS.armstrong;
 DEFS.samurai.shield = true;
+// a dao's reach (owner: blows landed beyond a man's reach): an arm and a 75 cm blade carry about 2 m with a step; every foot
+// soldier whose arm is the dao loses 0.2 m (spears and horsemen keep theirs; the AI's spacing reads the same number)
+for (const k in DEFS) { const d = DEFS[k]; if (d.weapons && d.weapons[0] === 'katana' && d.reach > 0 && d.reach <= 2.4) d.reach = Math.round((d.reach - 0.2) * 100) / 100; }
 // roles in a mandarin duck team: leader, 2 rattan shields, 2 wolf-brushes, 4 long spears, 2 tridents, 1 cook
 const YY_ROLE = ['lead', 'shield', 'shield', 'brush', 'brush', 'spear', 'spear', 'spear', 'spear', 'trident', 'trident', 'cook'];
 const YY_SLOT = [[0, 1.4], [-0.9, 0.9], [0.9, 0.9], [-0.9, -0.6], [0.9, -0.6], [-0.9, -2.0], [0.9, -2.0], [-0.9, -3.3], [0.9, -3.3], [-1.9, -2.6], [1.9, -2.6], [0, -4.6]];
 const YYDEF = {};
 const YY_PLAY = { brush: ['Wolf-brush (Langxian)', '狼筅手'], shield: ['Rattan Shield', '藤牌手'], spear: ['Duck-team Long Spear', '長槍手'], trident: ['Trident', '鏜鈀手'] }; // the trades a soldier can take up in assault
 { const b = DEFS.yuanyang; const mk = (o) => Object.assign({}, b, o);
-  YYDEF.lead = mk({ weapons: ['katana'], reach: 2.2, dmg: [54, 44, 36, 44], block: 0.5, windup: 0.4 });
-  YYDEF.shield = mk({ weapons: ['katana'], reach: 2.0, dmg: [40, 34, 30, 34], block: 0.85, shield: true, hp: 150, windup: 0.4 });
+  YYDEF.lead = mk({ weapons: ['katana'], reach: 2.0, dmg: [54, 44, 36, 44], block: 0.5, windup: 0.4 });
+  YYDEF.shield = mk({ weapons: ['katana'], reach: 1.8, dmg: [40, 34, 30, 34], block: 0.85, shield: true, hp: 150, windup: 0.4 });
   YYDEF.brush = mk({ weapons: ['yari'], reach: 5.0, dmg: [16, 0, 18, 0], block: 0.35, brush: true, windup: 0.4 });
   YYDEF.spear = mk({ weapons: ['yari'], reach: 4.4, dmg: [46, 0, 52, 0], block: 0.15 });
   YYDEF.trident = mk({ weapons: ['yari'], reach: 2.9, dmg: [44, 0, 42, 0], block: 0.4, trident: true });

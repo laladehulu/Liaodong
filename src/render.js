@@ -2562,7 +2562,7 @@ class Renderer {
       else if (hero.st === ST_STUN) target = P(0.25, -0.4, -0.3, 0.4, -0.5, 0.3);
       else if (hero.aiming) { target = ads; speed = 18; } else target = hip;
       if (hero.st === ST_RELOAD && !reloading) { const t = clamp(stT / Math.max(0.1, hero.reloadT), 0, 1); rhT.y += 0.012 * Math.sin(t * PI); }
-      this.fovTarget = (hero.aiming && !reloading) ? 58 : 75;
+      this.fovTarget = (hero.aiming && !reloading) ? 58 : 81;
       if (cart) this.vmCart.position.copy(lhT).add(T.v.set(0.01, 0.02, 0));
     } else if (w === 'rifle' && !hero.club) {
       const R = this.VMR; const hip = P(0.22, -0.23, -0.42, 0.03, -0.12, 0.04), ads = P(0, -0.026, -0.28, 0, 0, 0);
@@ -2585,9 +2585,9 @@ class Renderer {
       else if (hero.aiming) { target = ads; speed = 16; }
       else target = hip;
       if (hero.st === ST_RELOAD && style === 'lever') { const t = clamp(stT / Math.max(0.2, hero.reloadT), 0, 1); rhT.y -= 0.08 * Math.sin(t * PI); rhT.z += 0.03 * Math.sin(t * PI); }
-      this.fovTarget = (hero.aiming && hero.st !== ST_RELOAD && !hero.blocking) ? 42 : (hero.aiming && style === 'lever' ? 42 : 75);
+      this.fovTarget = (hero.aiming && hero.st !== ST_RELOAD && !hero.blocking) ? 42 : (hero.aiming && style === 'lever' ? 42 : 81);
     } else {
-      { let near = 99; const sim = this.sim; for (const v of sim.teamAlive[1 - hero.team] || []) { const d = Math.abs(v.x - hero.x) + Math.abs(v.z - hero.z); if (d < near) near = d; } this.fovTarget = near < 7 ? 86 : near < 12 ? 80 : 75; } // see more of the melee around you
+      { let near = 99; const sim = this.sim; for (const v of sim.teamAlive[1 - hero.team] || []) { const d = Math.abs(v.x - hero.x) + Math.abs(v.z - hero.z); if (d < near) near = d; } this.fovTarget = near < 7 ? 92 : near < 12 ? 86 : 81; } // see more of the melee around you (wider, owner: so a man at sword's reach looks at sword's reach)
       const K = (hero.club && w === 'rifle' ? this.VM.club : (w === 'yari' && yrole === 'brush') ? this.VM.brush : this.VM[w]) || this.VM.katana; // turned round, a gun is swung like a club: the blade's cuts and smashes, not a bayonet
       rhT.copy(K.R); lhT.copy(K.Lh);
       const d = hero.atkDir; const W = K.windup[d] || K.windup[2] || K.idle, M = K.mid[d] || K.mid[2] || W, R = K.release[d] || K.release[2] || K.idle;
