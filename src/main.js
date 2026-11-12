@@ -196,14 +196,15 @@ $('btnHost').onclick = () => {
 };
 // the connection check: what this network can reach, in plain words, for a player whose games will not connect
 $('btnNetCheck').onclick = () => {
-  if (typeof RTCPeerConnection === 'undefined') { $('menuMsg').textContent = 'This browser or viewer has no WebRTC, so peer-to-peer play cannot work here.'; return; }
+  if (typeof RTCPeerConnection === 'undefined' && !Net.relay()) { $('menuMsg').textContent = 'This browser or viewer has no WebRTC, so peer-to-peer play cannot work here.'; return; }
   const out = $('menuMsg'), lines = [typeof Peer === 'undefined' ? 'PeerJS did not load (its CDN is blocked here)' : 'Checking your connection…']; const show = () => { out.textContent = lines.join('  ·  '); };
   show(); $('btnNetCheck').disabled = true;
   Net.check((r) => {
-    if (r.step === 'stun') { lines[0] = r.ok ? 'Public address found (STUN works)' : (r.local ? 'Could not find your public address: STUN is blocked' : 'WebRTC is not working in this browser'); }
+    if (r.step === 'server') lines.splice(1, 0, r.ok ? 'Game server reachable' : 'Game server NOT reachable (falling back to peer-to-peer)');
+    else if (r.step === 'stun') { lines[0] = r.ok ? 'Public address found (STUN works)' : (r.local ? 'Could not find your public address: STUN is blocked' : 'WebRTC is not working in this browser'); }
     else if (r.step === 'relay') lines.push((r.ok ? 'Relay OK: ' : 'Relay not reachable: ') + r.host);
     else if (r.step === 'done') { $('btnNetCheck').disabled = false;
-      lines.push(r.relay ? 'Verdict: you should be able to connect to anyone (a relay answered).' : r.stun ? 'Verdict: no relay answered. You can connect to many players, but not across strict routers (carrier, campus, office). Tell the developer: the free relays may be down.' : 'Verdict: this network blocks WebRTC. Try another network or a phone hotspot.');
+      lines.push(r.server ? 'Verdict: the game server answered, so you can play with anyone on any network.' : r.relay ? 'Verdict: you should be able to connect to anyone (a relay answered).' : r.stun ? 'Verdict: no relay answered. You can connect to many players, but not across strict routers (carrier, campus, office). Tell the developer: the free relays may be down.' : 'Verdict: this network blocks WebRTC. Try another network or a phone hotspot.');
       console.log('[net check]', lines.join(' | ')); }
     show(); });
 };
