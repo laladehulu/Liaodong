@@ -611,6 +611,8 @@ class Sim {
         const pl = { idx: this.players.length, name: AI_NAMES[t][k++ % 5], team: t, heroId: -1, horseId: -1, commanderId: -1, auto: true, ai: true, squads: [], kills: 0, army: this.randomArmy(t, 1700), mounted: false, ready: true, rallyT: 0, bombs: BOMBS, fury: 0, directive: { kind: DIR_ATTACK, x: 0, z: 0, by: -1 } };
         this.players.push(pl); teams[t].push({ player: pl, army: pl.army }); } }
     }
+    // AI generals added in the war council (room): each brings an army of his own, as an ally or an opponent of the players
+    if (Array.isArray(this.cfg.ai) && /^(standard|grand|chaos|officers)$/.test(this.mode)) for (const a of this.cfg.ai.slice(0, 12)) { const t = a && a.team ? 1 : 0; aiPl(t, AI_NAMES[t][teams[t].length % 5], this.randomArmy(t, this.mode === 'officers' ? 1500 : undefined)); }
     for (let t = 0; t < 2; t++) if (!teams[t].length) teams[t].push({ ai: true, army: this.randomArmy(t) });
     const dz = this.chaos ? 42 : 100, sp = this.mode === 'standard' || this.chaos ? 75 : 62;
     for (let t = 0; t < 2; t++) {
