@@ -180,6 +180,19 @@ $('btnHost').onclick = () => {
   const net = new Net(); state.net = net; wireLobby(net);
   net.host(myCfg(), (err, code) => { if (err) { $('menuMsg').textContent = 'Could not open a room: ' + (err.message || err.type || err); return; } $('menuMsg').textContent = ''; $('codeOut').textContent = code; $('lobbySub').textContent = 'Share this room code. Friends enter it under Join on the main screen.'; $('btnStart').hidden = false; $('lobbyWait').hidden = true; show('lobby'); renderLobby(); });
 };
+// the connection check: what this network can reach, in plain words, for a player whose games will not connect
+$('btnNetCheck').onclick = () => {
+  if (typeof RTCPeerConnection === 'undefined') { $('menuMsg').textContent = 'This browser or viewer has no WebRTC, so peer-to-peer play cannot work here.'; return; }
+  const out = $('menuMsg'), lines = [typeof Peer === 'undefined' ? 'PeerJS did not load (its CDN is blocked here)' : 'Checking your connection…']; const show = () => { out.textContent = lines.join('  ·  '); };
+  show(); $('btnNetCheck').disabled = true;
+  Net.check((r) => {
+    if (r.step === 'stun') { lines[0] = r.ok ? 'Public address found (STUN works)' : (r.local ? 'Could not find your public address: STUN is blocked' : 'WebRTC is not working in this browser'); }
+    else if (r.step === 'relay') lines.push((r.ok ? 'Relay OK: ' : 'Relay not reachable: ') + r.host);
+    else if (r.step === 'done') { $('btnNetCheck').disabled = false;
+      lines.push(r.relay ? 'Verdict: you should be able to connect to anyone (a relay answered).' : r.stun ? 'Verdict: no relay answered. You can connect to many players, but not across strict routers (carrier, campus, office). Tell the developer: the free relays may be down.' : 'Verdict: this network blocks WebRTC. Try another network or a phone hotspot.');
+      console.log('[net check]', lines.join(' | ')); }
+    show(); });
+};
 $('btnJoin').onclick = () => {
   if (!Net.available()) { $('menuMsg').textContent = 'Multiplayer is not available in this viewer. Open the downloaded .html file in a desktop browser to join.'; return; }
   const code = $('codeIn').value.trim().toUpperCase(); if (code.length < 5) { $('menuMsg').textContent = 'Enter the 5-character room code.'; return; }

@@ -19,6 +19,21 @@ async function iceServers() {
   } catch (e) { console.warn('relay credentials', e); }
   return out;
 }
+// ---- the connection check (lobby button): asks every server on the list for a route and reports what came back, so a player
+// whose router fails can see why. A STUN reply means his public address was found (a direct link may still be blocked); a relay
+// reply means a TURN server answered, which gets through almost any network; with no relay, strict routers cannot connect.
+async function checkNetwork(report) {
+  const ice = await iceServers(), named = [];
+  for (const e of ice) { const u = [].concat(e.urls)[0], host = u.replace(/^(stun|turns?):/, '').split(/[:?]/)[0]; named.push({ e, kind: /^stun/.test(u) ? 'stun' : 'relay', host }); }
+  const probe = (servers, relayOnly) => new Promise((res) => { let pc; const got = new Set(); try { pc = new RTCPeerConnection({ iceServers: servers, iceTransportPolicy: relayOnly ? 'relay' : 'all' }); } catch (err) { res(got); return; }
+    const end = () => { try { pc.close(); } catch (_) { } res(got); }, t = setTimeout(end, 7000);
+    pc.onicecandidate = (ev) => { if (!ev.candidate) { clearTimeout(t); end(); return; } const m = / typ (\w+)/.exec(ev.candidate.candidate); if (m) got.add(m[1]); };
+    pc.createDataChannel('probe'); pc.createOffer().then(o => pc.setLocalDescription(o)).catch(end); });
+  const stun = named.filter(n => n.kind === 'stun'), relays = named.filter(n => n.kind === 'relay');
+  const s0 = await probe(stun.map(n => n.e), false); report({ step: 'stun', ok: s0.has('srflx'), local: s0.has('host') });
+  let anyRelay = false; for (const r of relays) { const g = await probe([r.e], true), ok = g.has('relay'); anyRelay = anyRelay || ok; report({ step: 'relay', host: r.host, ok }); }
+  report({ step: 'done', stun: s0.has('srflx'), relay: anyRelay });
+}
 function peerOpts(ice) { return { debug: 0, config: { iceServers: ice, sdpSemantics: 'unified-plan' } }; }
 function genCode() { let s = ''; for (let i = 0; i < 5; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return s; }
 
@@ -29,6 +44,7 @@ class Net {
     this.onLobby = null; this.onStart = null; this.onInput = null; this.onHash = null; this.onPeerLeft = null; this.onFail = null; this.onChat = null;
   }
   static available() { return typeof Peer !== 'undefined' && typeof RTCPeerConnection !== 'undefined'; }
+  static check(report) { return checkNetwork(report); }
   host(cfg, cb) {
     const code = genCode(); this.code = code; this.isHost = true; this.myIdx = 0; this.myCfg = cfg;
     this.players = [{ id: 'self', idx: 0, cfg, connected: true }];
