@@ -24,7 +24,7 @@ const BCN = { open: false, sim: null, fires: -1, stage: '', log: 0, vis: null, t
 // ---- menu ----
 function beaconMenu(on) {
   let el = $('beaconPanel');
-  if (!el) { el = document.createElement('div'); el.id = 'beaconPanel'; el.hidden = true; const after = $('missionPanel'); after.parentNode.insertBefore(el, after.nextSibling); }
+  if (!el) { el = document.createElement('div'); el.id = 'beaconPanel'; el.hidden = true; $('personal').appendChild(el); } /* with your side: it is your troops, and it goes into the room */
   el.hidden = !on; if (!on) return;
   if (!ROLE_INFO.some(r => r[0] === state.role)) state.role = ROLE_INFO[0][0];
   el.innerHTML = `<h3 class="sect">烽火 · Hold the Beacon · 1618</h3>

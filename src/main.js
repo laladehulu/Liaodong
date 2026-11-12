@@ -120,8 +120,20 @@ function renderBattles() {
     box.appendChild(el);
   }
 }
+// ---- the menu by mode: only what this mode uses is shown. The mode's own setup (battlefield, mission, siege, chapter) sits
+// under the mode; "Your side" holds the player's own choices (faction, squads, post, troops, champion, arms), and moves into the
+// room when he hosts or joins, so every player picks there, for the host's mode
+const MP_MODES = { standard: 1, duel: 1, grand: 1, chaos: 1, officers: 1, heroes: 1, soldier: 1, campaign: 1, assault: 1, siege: 1, beacon: 1 };
+const SOLO_LABEL = { standard: 'Battle vs AI', duel: 'Duel a swordsman', grand: 'Grand battle vs AI', chaos: 'Start the chaos', officers: 'Lead a squad vs AI', heroes: 'Start the siege', soldier: 'Quick battle', campaign: 'Start the mission', assault: 'Start the assault', siege: 'Start the siege', beacon: 'Hold the beacon', story: 'Play this chapter' };
+function menuLayout(field, soldier, mis, heroes, story, duel) {
+  const m = state.mode, beacon = m === 'beacon';
+  $('builderBox').hidden = !field; $('roleBox').hidden = !soldier; $('mroleBox').hidden = !mis; $('hcBox').hidden = !heroes;
+  $('mountedWrap').hidden = !(field || story); $('armsRow').hidden = heroes || beacon;
+  $('btnSolo').textContent = SOLO_LABEL[m] || 'Practice vs AI'; $('btnHost').hidden = !MP_MODES[m]; $('btnHost').textContent = /^(officers|heroes|soldier|campaign|beacon)$/.test(m) ? 'Host a co-op room' : 'Host a room';
+  const inRoom = state.screen === 'lobby'; $('btnSolo').parentElement.hidden = inRoom; $('personalHead').textContent = inRoom ? 'Your side · ' + (({ standard: 'Field battle', duel: 'Duel', grand: 'Grand battle', chaos: 'Chaos', officers: 'Officers', heroes: 'Heroes', soldier: 'Path of a Soldier', campaign: 'Co-op campaign', assault: 'Assault', siege: 'Siege', beacon: 'Hold the Beacon' })[m] || m) : 'Your side';
+}
 function renderMenu() {
-  renderBattles(); renderStory(); renderScen(); const story = state.mode === 'story', heroes = state.mode === 'heroes', duel = state.mode === 'duel', soldier = state.mode === 'soldier' || duel, mis = state.mode === 'campaign' || state.mode === 'assault' || state.mode === 'siege'; $('missionPanel').hidden = !mis; if (mis && typeof renderMissions === 'function') renderMissions(); $('storyPanel').hidden = !story; $('heroPanel').hidden = !heroes; $('soldierPanel').hidden = !soldier; $('armsRow').hidden = heroes; $('fieldPanel').hidden = story || heroes || soldier || mis || state.mode === 'beacon'; if (typeof beaconMenu === 'function') beaconMenu(state.mode === 'beacon'); { const sp = $('soldierPanel'); const cta = sp && sp.querySelector('.career-cta'), oi = $('officerIn'); if (cta) cta.hidden = duel; if (oi && oi.parentElement) oi.parentElement.hidden = duel; const hd = sp && sp.querySelector('h3.sect'); if (hd) hd.textContent = duel ? 'Duel · your arms' : 'Quick battle or co-op · your post'; } if (soldier && typeof renderRoles === 'function') renderRoles(); $('modeNote').textContent = state.mode === 'officers' ? 'Officers: you lead a single squad in person (the first one in your army) beside AI generals. Host a room so friends can each lead a squad too.' : state.mode === 'grand' ? 'Grand battle: AI generals fill out both sides. Command your allies from the command view.' : state.mode === 'chaos' ? 'Chaos: no orders and no fear, and the gods take a hand.' : story ? 'Story: seven battles of the Ming–Jin war. Your faction choice sets which side you fight for.' : heroes ? 'Heroes: you are a lone champion; AI armies fight a phased siege. Faction sets your side. Host a room so each friend plays a champion.' : '';
+  renderBattles(); renderStory(); renderScen(); const story = state.mode === 'story', heroes = state.mode === 'heroes', duel = state.mode === 'duel', soldier = state.mode === 'soldier' || duel, mis = state.mode === 'campaign' || state.mode === 'assault' || state.mode === 'siege'; $('missionPanel').hidden = !mis; if (mis && typeof renderMissions === 'function') renderMissions(); $('storyPanel').hidden = !story; $('heroPanel').hidden = !heroes; $('soldierPanel').hidden = !soldier; const field = !(story || heroes || soldier || mis || state.mode === 'beacon'); $('fieldPanel').hidden = !field; menuLayout(field, soldier, mis, heroes, story, duel); if (typeof beaconMenu === 'function') beaconMenu(state.mode === 'beacon'); { const sp = $('soldierPanel'); const cta = sp && sp.querySelector('.career-cta'), oi = $('officerIn'); if (cta) cta.hidden = duel; if (sp) sp.hidden = !soldier || duel; if (oi && oi.parentElement) oi.parentElement.hidden = duel; const hd = $('roleHead'); if (hd) hd.textContent = duel ? 'Duel · your arms' : 'Your post'; } if (soldier && typeof renderRoles === 'function') renderRoles(); $('modeNote').textContent = state.mode === 'officers' ? 'Officers: you lead a single squad in person (the first one in your army) beside AI generals. Host a room so friends can each lead a squad too.' : state.mode === 'grand' ? 'Grand battle: AI generals fill out both sides. Command your allies from the command view.' : state.mode === 'chaos' ? 'Chaos: no orders and no fear, and the gods take a hand.' : story ? 'Story: seven battles of the Ming–Jin war. Your faction choice sets which side you fight for.' : heroes ? 'Heroes: you are a lone champion; AI armies fight a phased siege. Faction sets your side. Host a room so each friend plays a champion.' : '';
   $('modeSeg').querySelectorAll('button').forEach(bt => bt.classList.toggle('on', bt.dataset.m === state.mode));
   const ros = S.ROSTER[state.faction]; const cost = armyCost(state.army), left = S.BUDGET - cost;
   const b = $('budget'); b.textContent = `${left} / ${S.BUDGET} taels`; b.classList.toggle('over', left < 0);
@@ -159,11 +171,12 @@ function renderScen() { renderHClass(); $('scenList').innerHTML = Object.keys(S.
 $('scenList').addEventListener('click', (e) => { const bt = e.target.closest('button'); if (!bt) return; state.scen = bt.dataset.s; AUDIO.init(); AUDIO.play('ui'); renderScen(); });
 $('storyList').addEventListener('click', (e) => { const bt = e.target.closest('button'); if (!bt || bt.disabled) return; state.chapter = +bt.dataset.c; AUDIO.init(); AUDIO.play('ui'); renderStory(); });
 $('modeSeg').addEventListener('click', (e) => { const bt = e.target.closest('button'); if (!bt) return; state.mode = bt.dataset.m; AUDIO.init(); AUDIO.play('ui'); renderMenu(); });
-function myCfg() { return { name: ($('nameIn').value.trim() || 'Commander').slice(0, 16), team: state.faction, army: state.army.slice(), mounted: $('mountedIn').checked, battle: state.battle, hclass: state.hclass, role: state.role, command: state.officer ? 3 : 0, arms: myArms(), kit: state.mode === 'soldier' ? { arms: myArms() } : undefined }; }
+function myCfg() { return { mode: state.mode, name: ($('nameIn').value.trim() || 'Commander').slice(0, 16), team: state.faction, army: state.army.slice(), mounted: $('mountedIn').checked, battle: state.battle, hclass: state.hclass, role: state.role, command: state.officer ? 3 : 0, arms: myArms(), kit: state.mode === 'soldier' ? { arms: myArms() } : undefined }; }
 function myArms() { const a = { melee: $('armMelee').value, ranged: $('armRanged').value, shield: $('armShield').checked }; return a.melee || a.ranged || a.shield ? a : null; }
 function show(screen) {
   state.screen = screen;
   $('menu').hidden = screen !== 'menu'; $('lobby').hidden = screen !== 'lobby';
+  { const P = $('personal'), home = screen === 'lobby' ? $('lobbyPersonal') : $('personalHome'); if (P && home && P.parentElement !== home) home.appendChild(P); if (screen === 'lobby' || screen === 'menu') try { renderMenu(); } catch (e) { } } /* your side is chosen in the room */
   $('hud').hidden = screen !== 'game'; $('cmdui').hidden = screen !== 'game' || !Input.cmdMode;
   if (screen !== 'game') { $('pause').hidden = true; $('result').hidden = true; }
 }
@@ -200,6 +213,8 @@ $('btnJoin').onclick = () => {
   const net = new Net(); state.net = net; wireLobby(net);
   net.join(code, myCfg(), (err) => { if (err) { $('menuMsg').textContent = err.message || String(err); net.destroy(); state.net = null; return; } $('menuMsg').textContent = ''; $('codeOut').textContent = code; $('lobbySub').textContent = 'You are in. The host begins the battle when everyone has arrived.'; $('btnStart').hidden = true; $('lobbyWait').hidden = false; show('lobby'); renderLobby(); });
 };
+// a choice made in the room goes to everyone at once
+for (const ev of ['click', 'change']) $('personal').addEventListener(ev, () => setTimeout(() => { if (state.screen === 'lobby' && state.net && state.net.myIdx >= 0) { state.net.sendCfg(myCfg()); renderLobby(); } }, 0));
 $('btnCopy').onclick = () => { const code = $('codeOut').textContent; navigator.clipboard && navigator.clipboard.writeText(code).then(() => { $('copyMsg').textContent = 'Copied'; }, () => { $('copyMsg').textContent = 'Select the code and copy it.'; }); };
 $('btnLeave').onclick = () => { if (state.net) state.net.destroy(); state.net = null; show('menu'); };
 $('btnMenu').onclick = () => { location.reload(); };
@@ -218,12 +233,14 @@ function renderLobby() {
   for (const p of sorted) {
     const el = document.createElement('div'); el.className = 'pl';
     const cfg = p.cfg; const team = cfg ? cfg.team : 0;
-    el.innerHTML = `<span class="tag t${team}">${cfg ? S.FACTION[team].short : '…'}</span><span><b>${cfg ? escapeHtml(cfg.name) : 'joining…'}</b>${p.idx === 0 ? ' <small>host</small>' : ''}${p.idx === net.myIdx ? ' <small>(you)</small>' : ''}${p.connected ? '' : ' <small style="color:var(--danger)">disconnected</small>'}<div class="squads">${cfg ? cfg.army.map(k => S.DEFS[k].name).join(', ') || 'no squads' : ''}${cfg && cfg.mounted ? ' · mounted' : ''}</div></span><span class="squads">${p.rtt ? p.rtt + ' ms' : ''}</span>`;
+    const pick = !cfg ? '' : /^(soldier|duel|campaign|assault|siege|beacon)$/.test(state.mode) ? 'post: ' + escapeHtml(String(cfg.role || '—')) : state.mode === 'heroes' ? 'champion: ' + escapeHtml(String((S.HCLASS[cfg.hclass | 0] || {}).name || cfg.hclass)) : (cfg.army.map(k => S.DEFS[k].name).join(', ') || 'no squads') + (cfg.mounted ? ' · mounted' : '');
+    el.innerHTML = `<span class="tag t${team}">${cfg ? S.FACTION[team].short : '…'}</span><span><b>${cfg ? escapeHtml(cfg.name) : 'joining…'}</b>${p.idx === 0 ? ' <small>host</small>' : ''}${p.idx === net.myIdx ? ' <small>(you)</small>' : ''}${p.connected ? '' : ' <small style="color:var(--danger)">disconnected</small>'}<div class="squads">${pick}</div></span><span class="squads">${p.rtt ? p.rtt + ' ms' : ''}</span>`;
     list.appendChild(el);
   }
   if (net.isHost) { const ready = net.players.every(p => p.cfg || !p.connected); $('btnStart').disabled = !ready; }
   const hostCfg = net.players.find(p => p.idx === 0); const bk = hostCfg && hostCfg.cfg && hostCfg.cfg.battle; const bd = S.BATTLES[bk] || S.BATTLES.field;
-  $('lobbyBattle').textContent = `Battlefield: ${bd.name} ${bd.jp} · ${bd.when}`;
+  if (!net.isHost && hostCfg && hostCfg.cfg && hostCfg.cfg.mode && hostCfg.cfg.mode !== state.mode) { state.mode = hostCfg.cfg.mode; if (bk) state.battle = bk; renderMenu(); net.sendCfg(myCfg()); } /* the room plays the host's mode: your side follows it */
+  { const MN = { standard: 'Field battle', duel: 'Duel', grand: 'Grand battle', chaos: 'Chaos', officers: 'Officers co-op', heroes: 'Heroes', soldier: 'Path of a Soldier', campaign: 'Co-op campaign', assault: 'Assault', siege: 'Siege', beacon: 'Hold the Beacon' }; const fieldish = /^(standard|grand|chaos|officers|soldier)$/.test(state.mode); $('lobbyBattle').textContent = (MN[state.mode] || state.mode) + (fieldish ? ` · ${bd.name} ${bd.jp} · ${bd.when}` : ''); }
 }
 $('btnStart').onclick = () => {
   const net = state.net; if (!net || !net.isHost) return;
