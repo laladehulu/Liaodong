@@ -3937,7 +3937,7 @@ Sim.prototype.mThreat = function () {
   return false;
 };
 Sim.prototype.mQuietDone = function (el) {
-  const mv = this.mv, P = this.mission.phases[mv.ph]; if (el < 5) return false;
+  const mv = this.mv, P = this.mission.phases[mv.ph]; if (el < 5 || P.scene) return false; /* a scene (people talking, no fight) plays its length */
   for (const [t] of (P.waves || []).concat(P.at || [])) if (t > el) return false; /* beats still to come (brought forward in missionThink) */
   return mv.quietPh === mv.ph && this.tick - mv.quietT >= 30 * 3;
 };
@@ -3950,7 +3950,7 @@ Sim.prototype.missionThink = function () {
   const P0 = M.phases[mv.ph]; if (P0 && !M.camp && this.mode !== 'assault') { // quiet: bring the next scripted beat forward (never in a timed phase)
     if (this.mThreat()) mv.quietPh = -1; else if (mv.quietPh !== mv.ph) { mv.quietPh = mv.ph; mv.quietT = this.tick; }
     const el0 = (this.tick - mv.t0) / 30;
-    if (!P0.limit && mv.quietPh === mv.ph && this.tick - mv.quietT >= 30 * 3 && el0 >= 5 && P0.obj && JSON.stringify(P0.obj).indexOf('survive') >= 0) { let nx = 1e9; for (const [t] of (P0.waves || []).concat(P0.at || [])) if (t > el0 && t < nx) nx = t;
+    if (!P0.limit && !P0.scene && mv.quietPh === mv.ph && this.tick - mv.quietT >= 30 * 3 && el0 >= 5 && P0.obj && JSON.stringify(P0.obj).indexOf('survive') >= 0) { let nx = 1e9; for (const [t] of (P0.waves || []).concat(P0.at || [])) if (t > el0 && t < nx) nx = t;
       if (nx < 1e9) { mv.t0 -= Math.round((nx - el0) * 30); for (const sy of P0.say || []) if (sy[0] < nx - 0.5) mv.said[mv.ph + ':' + sy[0]] = 1; mv.quietT = this.tick; } } }
   const P = M.phases[mv.ph], el = (this.tick - mv.t0) / 30;
   for (const [t, gid, dir] of P.waves || []) { const k = mv.ph + ':' + gid; if (!mv.waves[k] && el >= t) { mv.waves[k] = 1; this.mRelease(gid); if (dir) this.mDir(gid, dir); } }

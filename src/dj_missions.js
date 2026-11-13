@@ -421,6 +421,48 @@ const DJ_MISSIONS = (() => { const PI = Math.PI;
     ],
     win: 'They came onto Sinmi island in the dark, two thousand and some hundreds, and lit fires in the snow.',
   },
+
+  // ========== Act Four: the general ==========
+  // ----- 十三 · 雙島 · Shuangdao, the fifth day of the sixth month, 1629 -----
+  dj13: {
+    title: '雙島 · Shuangdao', year: 'The sixth month of 1629', battle: 'djshuang', side: 0, soldier: { group: 'file' }, hidden: true, ch: 'dj13', soft: true,
+    brief: 'The new Supreme Commander, Yuan Chonghuan, has sailed to Shuangdao to review the East River. Mao Wenlong has brought his guard to meet him. You are in the guard.',
+    start: [72, -66, PI],
+    zones: [{ key: 'beach', x: 70, z: -64, r: 12, name: 'The beach' }, { key: 'field', x: 0, z: 12, r: 14, name: 'The review field' }, { key: 'tent', x: -10, z: 58, r: 9, name: 'Before the command tent' }],
+    groups: {
+      file: { team: 0, name: 'Sergeant Chen Shou', zh: '陳壽', army: ['ronin'], at: [72, -62, PI], dir: ['support'], stay: true },
+      mao: { team: 0, name: 'Mao Wenlong', zh: '毛文龍', army: ['samurai'], at: [64, -56, PI], dir: ['hold', 2, 14], stay: true, n: 4, keepHero: true },
+      yguard: { team: 1, name: 'The Supreme Commander\'s guard', zh: '督師親兵', army: ['samurai', 'rifle_imp', 'samurai', 'cavalry'], at: [-10, 46, 0], dir: ['hold', -10, 48], stay: true, n: 34 },
+      yuan: { team: 1, name: 'Yuan Chonghuan', zh: '袁崇煥', army: ['samurai'], at: [-10, 70, 0], dir: ['hold', -10, 70], stay: true, n: 3, keepHero: true },
+    },
+    choices: { 1: [[['calm', 'yguard', 0], ['dir', 'yguard', 'attack']], [['calm', 'yguard', 999]]] },
+    phases: [
+      { title: '一 · 上岸 · Ashore', goal: 'Walk up from the boats behind the general', text: 'Mao Wenlong goes up from the beach in his best armour, with his guard behind him. Yuan Chonghuan\'s banners are on the hill.', show: ['field'],
+        start: [['calm', 'yguard', 999], ['calm', 'yuan', 999]], obj: { reach: 'field' },
+        say: [[2, 'mao', 'Chests out! Let the Supreme Commander see what the East River looks like!', '挺起胸來！讓督師看看東江的兵是什麼樣子！'],
+          [8, 'qian', 'Yuan Chonghuan held Ningyuan against the old Khan. The Emperor gave him the imperial sword: the power of life and death.', '袁崇煥在寧遠擋住了老汗。皇上賜了他尚方寶劍：生殺予奪。'],
+          [16, 'liu', 'Then why does he need so many guards on a little island?', '那他在這麼個小島上要這麼多親兵幹什麼？'],
+          [24, 'zhao', 'Keep your eyes front. Keep your hands where they can see them.', '眼睛看前面。手放在他們看得見的地方。']] },
+      { title: '二 · 射 · The archery', goal: 'Go up to the command tent with the general', text: 'On the review field the Supreme Commander\'s officers are shooting at the butts. Yuan sends word: let the general come up to his tent and talk. His guard may come as far as the tent.', show: ['tent'], hide: ['field'],
+        start: [['dir', 'mao', 'hold', -8, 62], ['dir', 'file', 'hold', -4, 56]], obj: { reach: 'tent' },
+        say: [[3, 'qian', 'They are shooting well. Too well, for a show.', '他們射得很好。作秀的話，太好了。'],
+          [10, 'kim', 'Look how many of them there are around the tent. Look at their hands.', '你看帳篷周圍有多少人。看他們的手。'],
+          [18, 'mao', 'Wait here. The Supreme Commander and I have accounts to settle.', '在這兒等著。督師跟我有賬要算。']] },
+      { title: '三 · 帳 · The tent', goal: 'Wait outside the command tent', text: 'The general has gone into the tent. The Supreme Commander\'s guard closes in around the door. Voices inside, then shouting.', show: ['tent'],
+        start: [['dir', 'mao', 'hold', -10, 70]], obj: { survive: 31 }, scene: true, at: [[24, ['say', 'yuan', 'Twelve crimes deserving death! Hear them!', '當斬之罪十二！聽著！']], [29, ['kill', 'mao']]],
+        say: [[3, 'yuan', 'You have eaten the court\'s silver and fed the court lies for eight years!', '八年來，你吃朝廷的銀子，給朝廷報假數！'],
+          [9, 'mao', 'I held the islands when there was no one else! Who are you to judge me?', '沒人的時候是我守著這些島！你算什麼，來審我？'],
+          [15, 'yuan', 'I hold the imperial sword. That is who I am.', '我手裡有尚方寶劍。這就是我。'],
+          [20, 'qian', 'He means to kill him. He means to kill him here.', '他要殺他。就在這兒殺他。']] },
+      { title: '四 · 十二罪 · Twelve crimes', goal: 'Go back down to the boats', text: 'Mao Wenlong is dead, beheaded with the imperial sword in front of his own guard. Yuan Chonghuan has given the East River to Chen Jisheng and sent its men back to their boats with four months\' pay.', show: ['beach'], hide: ['tent'],
+        start: [['dir', 'file', 'hold', 70, -60]], obj: { reach: 'beach' },
+        say: [[3, 'zhao', 'Walk. Don\'t run. Don\'t look back. Walk.', '走。別跑。別回頭。走。'],
+          [10, 'liu', 'Eight years. Eight years he fed us.', '八年。他養了我們八年。'],
+          [18, 'qian', 'He also lied for eight years. I wrote the lies.', '他也騙了八年。那些謊話是我寫的。'],
+          [26, 'hu', 'In the banners, when a general falls, his men go to whoever killed him. Is it different here?', '在旗下，一個將軍倒了，他的人就歸殺他的人。這裡不一樣嗎？']] },
+    ],
+    win: 'You went back down to the boats in silence, four months\' pay in your sleeve, and sailed home to an island without its general.',
+  },
   };
 })();
 if (typeof SIM !== 'undefined') Object.assign(SIM.MISSIONS, DJ_MISSIONS);

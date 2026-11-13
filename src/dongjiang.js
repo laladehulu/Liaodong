@@ -249,7 +249,7 @@ function dCampCfg(n) {
   for (const k of dDead().map(r => r.k).slice(0, 4)) { const a = Math.PI * (1.6 + beds.length * 0.07); const p = P(Math.sin(a) * 6.3, Math.cos(a) * 6.3); beds.push([p[0], p[1], +(a + Math.PI).toFixed(3), true]); } // empty bedrolls for the dead
   file.forEach((r, i) => { const a = (i / Math.max(1, file.length)) * Math.PI * 2 + 0.4, rr = i % 3 === 2 ? 3.4 : 2.5; const x = Math.sin(a) * rr, z = Math.cos(a) * rr; const p = P(x, z);
     npcs.push({ role: 'spear', x: p[0], z: p[1], yaw: +Math.atan2(-x, -z).toFixed(3), ci: dIdx(r.k), pose: i % 3 === 2 ? 'stand' : 'squat' }); });
-  (K.guests || []).forEach((k, i) => { const p = P(7 - i * 1.5, -2.6); npcs.push({ role: 'spear', x: p[0], z: p[1], yaw: 2.6, ci: dIdx(k), pose: 'stand' }); });
+  (typeof K.guests === 'function' ? K.guests() : (K.guests || [])).forEach((k, i) => { const p = P(7 - i * 1.5, -2.6); npcs.push({ role: 'spear', x: p[0], z: p[1], yaw: 2.6, ci: dIdx(k), pose: 'stand' }); });
   ZC = { bed: [beds[0][0], beds[0][1]], dj: true, R: DR, map: {}, night: n };
   const off = (L) => L.map(a => { const c = a.slice(); c[0] = +(c[0] + ox).toFixed(2); c[1] = +(c[1] + oz).toFixed(2); return c; }), offP = (L) => L.map(a => { const c = a.slice(); c[1] = +(c[1] + ox).toFixed(2); c[2] = +(c[2] + oz).toFixed(2); return c; });
   const me = P(0.6, -6.6);
@@ -292,7 +292,8 @@ function dLook() {
 }
 function dKeyE() {
   if (state.zheDlg) return true; const t = dLook(); if (!t) return true;
-  if (t.bed) { const n = ZC.night, C = DCH[n]; const go = () => { DS.stage = 'b' + n; dSave(); if (C.dawn) zCards(dCards([C.dawn]), () => dGo('b' + n)); else dGo('b' + n); };
+  if (t.bed) { const n = ZC.night, C = DCH[n]; const go = () => { if (!C.mission) { /* a chapter with no battle: the night is the chapter */ const nx = typeof C.next === 'function' ? C.next() : C.next; DS.stage = 'c' + nx; dSave(); return zCards(dCards(C.after ? C.after(true, '', 0) : []), () => DCH[nx] ? dGo('c' + nx) : dEnd()); }
+      DS.stage = 'b' + n; dSave(); if (C.dawn) zCards(dCards([C.dawn]), () => dGo('b' + n)); else dGo('b' + n); };
     const chId = typeof C.camp.choice === 'function' ? C.camp.choice() : C.camp.choice;
     if (chId && typeof CHD !== 'undefined' && CHD[chId] && chGot(chCtx(), chId) < 0) { chDecide(CHD[chId].build(chCtx()), () => go()); return true; }
     if (false) { chDecide(CHD[C.camp.choice].build(chCtx()), () => go()); return true; }
@@ -388,7 +389,7 @@ function dMenu() {
   let el = $('djCta'); const z = $('zheCta'); if (!z) return;
   if (!el) { const st = document.createElement('style'); st.textContent = '#djCta { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 16px; margin: -6px 0 16px; border: 1px solid #3a6a6a; background: linear-gradient(100deg, rgba(40,90,100,.16), rgba(220,210,190,.08)); flex-wrap: wrap } #djCta b { font-size: 19px; letter-spacing: .04em } #djCta small { display: block; color: var(--ink2); margin-top: 4px; max-width: 640px; line-height: 1.5 } #djCta .btns { display: flex; gap: 8px }';
     document.head.appendChild(st); el = document.createElement('div'); el.id = 'djCta';
-    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One to Three are ready (eleven chapters); more are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
+    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One to Four are ready (thirteen chapters); more are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
     const after = $('jinCta') || z; after.after(el); }
   const s = dLoad(), b = $('btnDj'), nb = $('btnDjNew'); const cont = s && s.stage && s.stage !== 'done';
   const waiting = cont && /^c(\d+)$/.test(s.stage) && !DCH[+s.stage.slice(1)]; /* finished every chapter written so far */

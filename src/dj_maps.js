@@ -217,4 +217,30 @@
   // Tieshan fell the refugees who had not reached the boats walked out over the sea ice. The mainland shore is +z, the island -z.
   B.djice = Object.assign({}, B.juehua, { name: 'The sea ice off Sinmi', jp: '身彌島 · 冰上', when: 'February 1627', hidden: true, desc: 'The frozen strait between the Korean shore and the island of Sinmi, the refugees walking out over the ice with the riders behind them.' });
   M.djice = M.juehua;
+
+  // ========== Act Four: the general ==========
+  // ---------- 皮島 by day: the drill ground above the fishing village, 1628 (the same island) ----------
+  B.djpidaod = Object.assign({}, B.djpidao, { when: 'Autumn 1628', biome: 'autumn', fog: 0.12, desc: 'Pidao at its height: the drill ground above the fishing village, the East River\'s banners on the hill, the grain ships at anchor.' });
+  M.djpidaod = M.djpidao;
+
+  // ---------- 雙島 Shuangdao, the fifth and sixth months of 1629 ----------
+  // 《明史》袁崇煥傳, 毛文龍傳; 《崇禎長編》崇禎二年六月: Yuan Chonghuan, Supreme Commander, sailed to the small island of
+  // Shuangdao off Lüshun to review the East River; on the fifth day of the sixth month he invited Mao Wenlong to watch an archery
+  // contest, had him seized in his tent, read out twelve capital crimes, and had him beheaded with the imperial sword. The
+  // island is small and bare: Yuan's camp on the hill (+z) with his command tent, the review field below it, Mao's tents and
+  // boats on the beach (-z), the sea along the east edge.
+  B.djshuang = { name: 'Shuangdao', jp: '雙島', when: 'July 1629', biome: 'summer', fog: 0.2, terrain: 0.45, features: [], hidden: true, horizon: { lo: 0.6, nokarst: true, open: [0.6, 2.6] },
+    desc: 'A small bare island off Lüshun: the Supreme Commander\'s camp and command tent on the hill, the review field below, the East River\'s boats on the beach.' };
+  M.djshuang = { trees: 30, rocks: 30, nomant: true,
+    terrain(L, r) { L.sea = { x0: 104, depth: 7, islands: [{ x: 150, z: -100, r: 18 }] }; L.plateaus.push({ x: -10, z: 70, r0: 26, r1: 50, h: 8 }); L.hills.push({ x: -120, z: 0, r: 60, h: 10 }); },
+    objectives: [{ x: 70, z: -70, r: 12, name: 'The beach' }, { x: 0, z: 10, r: 14, name: 'The review field' }, { x: -10, z: 70, r: 10, name: 'The Supreme Commander\'s tent' }],
+    noTree(x, z) { return x > -60; },
+    build(sim, r, keep, clear) {
+      for (const [z, b] of [[-96, 1], [-80, -1], [-62, 1]]) junkZ(sim, keep, 108, z, 14, b, { wy: 0, furled: true });
+      junk(sim, keep, 128, -30, 20, -1, { wy: 0 }); /* Yuan's flagship at anchor */
+      for (const [x, z] of [[60, -50], [72, -44], [56, -36], [80, -60]]) sim.boxes.push({ x, z, hw: 2.4, hd: 2.4, h: 2.2, kind: 'tent' }); /* Mao's tents */
+      sim.boxes.push({ x: -10, z: 74, hw: 6, hd: 4, h: 3.4, kind: 'tent' }); /* the command tent */
+      for (const [x, z] of [[-30, 60], [10, 60], [-30, 84], [10, 84], [-20, 50], [0, 50]]) sim.boxes.push({ x, z, hw: 2.2, hd: 2.2, h: 2.1, kind: 'tent' });
+      /* the archery butts on the review field */ for (const x of [-16, -8, 0, 8]) sim.boxes.push({ x, z: 28, hw: 1, hd: 0.4, h: 1.8, kind: 'fence' });
+      trees(sim, r, clear, 24, -145, -60, -145, 145, 1); rocks(sim, r, clear, 26, -145, 100, -145, 145); } };
 })();
