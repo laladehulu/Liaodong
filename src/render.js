@@ -1,3 +1,5 @@
+// a three-eyed gun in his hands (the Three-Eyed Gunners' own, one picked up from the field, or chosen as your arms): the only gun with several barrels
+const isTri = (u) => !!(u && u.weapon === 'rifle' && u.def && u.def.rifle && u.def.rifle.mag > 1);
 // ===== Renderer: three.js scene, instanced figures, ragdolls, effects =====
 const RENDER = (() => {
 'use strict';
@@ -442,7 +444,7 @@ function reloadStyle(u) {
   if (u.weapon === 'revolver') return 'revolver';
   if (u.weapon === 'bow') return u.def.bow && u.def.bow.xbow ? 'lever' : 'bow';
   const r = u.def.rifle; if (!r) return 'none';
-  if (u.type === 'rifle_spencer') return u.reloadFill ? 'sj' : 'lever'; /* the three-eyed gun: each barrel loaded from the muzzle in turn */
+  if (isTri(u)) return u.reloadFill ? 'sj' : 'lever'; /* the three-eyed gun: each barrel loaded from the muzzle in turn */
   if (r.mag > 1) return u.reloadFill ? 'spencer' : 'lever';
   return 'muzzle'; // every long gun of the age is a muzzle-loader
   return 'breech';
@@ -1188,7 +1190,7 @@ class Renderer {
     for (const k of ['thighL', 'thighR', 'hips']) f[k].setColorAt(slot, this.grime(c.set(lc), u, 2, 0.06)); for (const k of ['shinL', 'shinR']) f[k].setColorAt(slot, this.grime(c.set(lc), u, 3, 0.22)); /* mud to the knee */
     { this.skinOf(u, c); f.head.setColorAt(slot, c); f.hand.setColorAt(slot * 2, c); f.hand.setColorAt(slot * 2 + 1, c); }
     if (u.type === 'hero') f.kabuto.setColorAt(slot, c.set(PAL.gold));
-    f.hilt.setColorAt(slot, c.set(u.weapon === 'yari' ? 0xc8281e : 0x5a1a1a)); f.pistol.setColorAt(slot, c.set(0x5a4a2a)); f.barrel.setColorAt(slot, c.set(u.type === 'rifle_spencer' ? 0x3a3a3a : 0x55595e));
+    f.hilt.setColorAt(slot, c.set(u.weapon === 'yari' ? 0xc8281e : 0x5a1a1a)); f.pistol.setColorAt(slot, c.set(0x5a4a2a)); f.barrel.setColorAt(slot, c.set(isTri(u) ? 0x3a3a3a : 0x55595e));
     for (const k of ['torso', 'hips', 'uarmL', 'uarmR', 'farmL', 'farmR', 'thighL', 'thighR', 'shinL', 'shinR', 'head', 'kabuto', 'hand', 'hilt', 'pistol', 'barrel']) f[k].instanceColor.needsUpdate = true;
   }
   // realism: men and horses throw no shadow-map shade (the ink wash there is for houses, walls, trees and rocks, which
@@ -1378,6 +1380,13 @@ class Renderer {
     const breech = new THREE.Group(); breech.position.set(0.026, 0.004, -0.13); breech.add(bx(0.03, 0.006, 0.03, brass, 0, 0.006, 0)); rifle.add(breech); this.vmBreech = breech;
     const xbar = new THREE.Group(); xbar.add(bx(0.74, 0.024, 0.034, wood, 0, -0.005, -0.92)); xbar.add(bx(0.006, 0.006, 0.5, new THREE.MeshLambertMaterial({ color: 0xe8e2cc }), 0.19, 0, -0.72, 0, 0.72)); xbar.add(bx(0.006, 0.006, 0.5, new THREE.MeshLambertMaterial({ color: 0xe8e2cc }), -0.19, 0, -0.72, 0, -0.72)); xbar.visible = false; rifle.add(xbar); this.vmXbar = xbar;
     vm.add(rifle); this.vmRifle = rifle;
+    // the three-eyed gun (三眼銃): three short barrels bound round the end of a wooden pole, no stock; shown in place of the
+    // musket's parts whenever the gun in your hands has three barrels (see isTri)
+    { const g = new THREE.Group(), iron = new THREE.MeshLambertMaterial({ color: 0x3e4044 }), pole = new THREE.MeshLambertMaterial({ color: 0x5a3a20 }), band = new THREE.MeshLambertMaterial({ color: 0x8a7a5a });
+      for (let k = 0; k < 3; k++) { const a = k * 2.094 + 0.5; const b = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.022, 0.4, 7), iron); b.rotation.x = Math.PI / 2; b.position.set(Math.cos(a) * 0.026, Math.sin(a) * 0.026, -0.5); g.add(b); }
+      for (const z of [-0.33, -0.5, -0.67]) { const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.022, 9), band); ring.rotation.x = Math.PI / 2; ring.position.z = z; g.add(ring); }
+      g.add(bx(0.034, 0.034, 0.95, pole, 0, -0.004, 0.15)); g.add(bx(0.012, 0.012, 0.012, glow, 0.03, 0.03, -0.3));
+      g.visible = false; rifle.add(g); this.vmSj = g; }
     // horn bow held out at arm's length, and a rattan shield on the left arm
     const vb = new THREE.Group(); const bw2 = new THREE.MeshLambertMaterial({ color: 0x5a3b1e });
     vb.add(bx(0.03, 0.42, 0.035, bw2, 0, 0.2, -0.02, -0.25)); vb.add(bx(0.03, 0.42, 0.035, bw2, 0, -0.2, -0.02, 0.25));
@@ -1503,7 +1512,7 @@ class Renderer {
   }
   tracer(from, to, bright) {
     const i = this.tracerNext; this.tracerNext = (this.tracerNext + 1) % this.tracerN;
-    const t = this.tracers[i]; t.from.set(from[0], from[1], from[2]); t.to.set(to[0], to[1], to[2]); t.len = Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]); t.life = t.max = Math.min(0.9, Math.max(0.12, t.len / 150)) + 0.06; t.bright = bright; // a visible ball, flying at a readable speed
+    const t = this.tracers[i]; t.from.set(from[0], from[1], from[2]); t.to.set(to[0], to[1], to[2]); t.len = Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]); t.life = t.max = Math.min(0.4, Math.max(0.045, t.len / 420)) + 0.03; t.bright = bright; // a musket ball flies at some 400 m/s: a brief streak, gone before the man it hits has fallen
   }
   decal(x, y, z, size, col) {
     const i = this.decalNext; this.decalNext = (this.decalNext + 1) % this.decalN;
@@ -1648,14 +1657,21 @@ class Renderer {
             const cp = this.camera.position; const sx = to[0] - f[0], sy = to[1] - f[1], sz = to[2] - f[2]; const L2 = sx * sx + sy * sy + sz * sz || 1; let k = ((cp.x - f[0]) * sx + (cp.y - f[1]) * sy + (cp.z - f[2]) * sz) / L2; k = clamp(k, 0, 1);
             const qx = f[0] + sx * k - cp.x, qy = f[1] + sy * k - cp.y, qz = f[2] + sz * k - cp.z; const dd = Math.sqrt(qx * qx + qy * qy + qz * qz);
             if (dd < 3.5 && k > 0.05) { AUDIO.play('whiz', cp.x + qx, cp.y + qy, cp.z + qz, 1.2 - dd * 0.25); this.suppress = Math.min(1, this.suppress + 0.35 * (1 - dd / 3.5)); this.shake = Math.max(this.shake, 0.12); }
+            if (dd < 7 && k > 0.05) { const I = this.incoming || (this.incoming = { t: -9, n: 0, hit: -9 }); if (this.time - I.t > 0.45) I.n = 0; I.t = this.time; I.n++;
+              if (I.n >= 3 && this.time - I.hit > 1.2) { I.hit = this.time; /* the volley arrives: balls crack past on every side, the ground jumps, you flinch */
+                this.shake = Math.max(this.shake, 0.95); this.suppress = Math.min(1.3, (this.suppress || 0) + 0.7); this.hitFlash = Math.max(this.hitFlash || 0, 0.12);
+                for (let q = 0; q < 5; q++) { const a = Math.random() * 6.283, r = 1.5 + Math.random() * 5, gx = cp.x + Math.cos(a) * r, gz = cp.z + Math.sin(a) * r, gy = terrainH(gx, gz);
+                  this.timers.push({ t: q * 0.035, fn: () => { this.dust(gx, gy + 0.05, gz, 9, 0, 2.2, 0, 1.2, 0.9, 0.2, 1.1); AUDIO.play(q % 2 ? 'whiz' : 'dirt', gx, gy + 1, gz, 1.1); } }); } } }
           }
           break;
         }
         case 'volley': {
           const sq = sim.squads[ev.sq]; if (!sq) break;
-          if (!ev.bow) AUDIO.play('volley', ev.x, ev.y, ev.z, 0.25 + Math.min(1, ev.n / 10) * 0.25); // each man's own shot brings its smoke; this is only the distant roll of the line
+          if (!ev.bow) AUDIO.play('volley', ev.x, ev.y, ev.z, 0.55 + Math.min(1, ev.n / 8) * 0.6); // the roll of the whole line on top of each man's own shot
           else AUDIO.play('twang', ev.x, ev.y, ev.z, 1.6);
-          const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z); if (dc < 70 && !ev.bow) this.shake = Math.max(this.shake, 0.35 * (1 - dc / 70));
+          const dc = Math.hypot(ev.x - this.camera.position.x, ev.z - this.camera.position.z);
+          if (dc < 130 && !ev.bow) { const near = 1 - dc / 130, big = Math.min(1, ev.n / 8); this.shake = Math.max(this.shake, (0.25 + 0.85 * near * near) * (0.5 + 0.5 * big)); if (dc < 45) this.suppress = Math.min(1.2, (this.suppress || 0) + 0.25 * near * big);
+            if (dc < 60) this.lightFlash = Math.max(this.lightFlash || 0, 0.16 * near * big); } /* the line's flame lights the field for a blink */
           break;
         }
         case 'cannon': { if (this.reveal && ev.id >= 0) this.reveal[ev.id] = this.time + 5;
@@ -2312,9 +2328,9 @@ class Renderer {
       for (let k = n; k < 9; k++) f.twig.setMatrixAt(slot * 9 + k, Z); }
     if (xb) { segW(f.rifle, -0.3, 0.75, 0.05, 0.07); f.barrel.setMatrixAt(slot, Z); }
     else if (w === 'rifle') { const cl = u.club || (u.ctrl < 0 && u.st >= 1 && u.st <= 3); // clubbing: held by the barrel, the stock swung forward
-      if (u.type === 'rifle_spencer') { if (cl) { segW(f.rifle, -0.15, 1.0, 0.045, 0.045); segW(f.barrel, 1.0, 1.5, 0.1, 0.1); } /* the three-eyed gun as a club: hold the end of the pole, the iron barrels are the head */ else { segW(f.rifle, -0.7, 0.45, 0.045, 0.045); segW(f.barrel, 0.45, 0.95, 0.1, 0.1); } }
+      if (isTri(u)) { if (cl) { segW(f.rifle, -0.15, 1.0, 0.045, 0.045); segW(f.barrel, 1.0, 1.5, 0.1, 0.1); } /* the three-eyed gun as a club: hold the end of the pole, the iron barrels are the head */ else { segW(f.rifle, -0.7, 0.45, 0.045, 0.045); segW(f.barrel, 0.45, 0.95, 0.1, 0.1); } }
       else if (cl) { segW(f.rifle, 0.35, 1.45, 0.05, 0.075); segW(f.barrel, -0.1, 1.05, 0.026, 0.026); } else { segW(f.rifle, -0.3, 0.8, 0.05, 0.075); segW(f.barrel, 0.1, 1.25, 0.026, 0.026); }
-      if (!cl) { const mL = u.type === 'rifle_spencer' ? 0.95 : 1.25; a.muz = [P(mL, 0), P(mL, 1), P(mL, 2)]; a.muzT = this.time; } } /* where the muzzle really is, for the shot's flash, smoke and ball */ else { f.rifle.setMatrixAt(slot, Z); f.barrel.setMatrixAt(slot, Z); }
+      if (!cl) { const mL = isTri(u) ? 0.95 : 1.25; a.muz = [P(mL, 0), P(mL, 1), P(mL, 2)]; a.muzT = this.time; } } /* where the muzzle really is, for the shot's flash, smoke and ball */ else { f.rifle.setMatrixAt(slot, Z); f.barrel.setMatrixAt(slot, Z); }
     if (w === 'revolver') segW(f.pistol, -0.25, 0.3, 0.08, 0.08); else f.pistol.setMatrixAt(slot, Z);
     if (rod > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; const rl = rod === 1 ? 0.95 : rod; this.seg(f.rod, slot, hx2, hy2, hz2, hx2 - dx * rl, hy2 - dy * rl, hz2 - dz * rl, rod === 1 ? 0.012 : 0.022, rod === 1 ? 0.012 : 0.022); } else f.rod.setMatrixAt(slot, Z);
     if (sjFl > 0) { const hx2 = G[o + 15], hy2 = G[o + 16], hz2 = G[o + 17]; this.seg(f.flask, slot, hx2, hy2 + 0.02, hz2, hx2 - dz * 0.03, hy2 + 0.19, hz2 + dx * 0.03, 0.1, 0.075); } else f.flask.setMatrixAt(slot, Z);
@@ -2547,8 +2563,8 @@ class Renderer {
     const yrole = w === 'yari' ? (hero.kitRole !== undefined ? hero.kitRole : hero.role) : null; this.vmYari.scale.y = yrole === 'spear' ? 1.75 : 1; this.vmRifle.visible = w === 'rifle'; this.vmKatana.visible = w === 'katana'; this.vmYari.visible = w === 'yari' && yrole !== 'brush' && yrole !== 'trident'; this.vmBrush.visible = w === 'yari' && yrole === 'brush'; this.vmFork.visible = w === 'yari' && yrole === 'trident'; this.vmRevolver.visible = w === 'revolver';
     // a three-eyed gun model added by a campaign (vmSj) replaces the musket parts every frame, whoever you now are
     /* swung as a club the gun is stood on end in the hands: the three-eyed gun by the end of its pole with the barrels up as the head, a musket by the muzzle with the butt up */
-    { const cl = !!hero.club && w === 'rifle', sj = hero.type === 'rifle_spencer'; this.vmRifle.rotation.set(cl ? (sj ? Math.PI / 2 : -Math.PI / 2) : 0, 0, 0); this.vmRifle.position.set(0, cl ? (sj ? 0.4 : 0.66) : 0, 0); }
-    if (this.vmSj) { const on = hero.type === 'rifle_spencer'; this.vmSj.visible = on; for (const c of this.vmRifle.children) { if (c === this.vmSj) continue; if (c === this.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; } }
+    { const cl = !!hero.club && w === 'rifle', sj = isTri(hero); this.vmRifle.rotation.set(cl ? (sj ? Math.PI / 2 : -Math.PI / 2) : 0, 0, 0); this.vmRifle.position.set(0, cl ? (sj ? 0.4 : 0.66) : 0, 0); }
+    if (this.vmSj) { const on = isTri(hero); this.vmSj.visible = on; for (const c of this.vmRifle.children) { if (c === this.vmSj) continue; if (c === this.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; } }
     this.sleeveMat.color.setHex(torsoColor(hero));
     let target, speed = 14, two = true, cart = false, rod = false, breechOpen = 0, cylOut = 0, shake = 0;
     let camRoll = 0, camPitch = 0, camPush = 0;
@@ -2943,12 +2959,13 @@ class Renderer {
       const f = clamp(t.life / t.max, 0, 1);
       const dir = T.v.subVectors(t.to, t.from); const L = dir.length(); if (L < 0.01) { t.life = 0; continue; }
       dir.multiplyScalar(1 / L);
-      const prog = (t.max - t.life) / Math.max(0.01, t.max - 0.06); const headT = clamp(prog, 0, 1), tailT = clamp(prog - 13 / L, 0, 1);
+      const prog = (t.max - t.life) / Math.max(0.01, t.max - 0.06); const headT = clamp(prog, 0, 1), tailT = clamp(prog - 4.5 / L, 0, 1);
       const a = T.v2.copy(t.from).addScaledVector(dir, L * tailT), b = T.v3.copy(t.from).addScaledVector(dir, L * headT);
       const seg = b.distanceTo(a); T.v4.addVectors(a, b).multiplyScalar(0.5);
       T.q.setFromUnitVectors(T.v.set(0, 0, 1), dir);
-      const wd = prog < 1 ? 0.065 : 0.03 * f; T.m.compose(T.v4, T.q, T.v.set(wd, wd, Math.max(0.25, seg))); this.tracerMesh.setMatrixAt(i, T.m);
-      if (prog < 1 && Math.random() < dt * 30) this.smoke.spawn(b.x, b.y, b.z, 0, 0.1, 0, 0.6, 0.05, 0.35, 0.82, 0.8, 0.78, 0.18, 0.5, 0);
+      if (prog >= 1) { this.tracerMesh.setMatrixAt(i, T.zero); continue; } /* it has struck: nothing lingers to slide along the line */
+      const wd = 0.03; T.m.compose(T.v4, T.q, T.v.set(wd, wd, Math.max(0.25, seg))); this.tracerMesh.setMatrixAt(i, T.m);
+      if (prog < 1 && Math.random() < dt * 12) this.smoke.spawn(b.x, b.y, b.z, 0, 0.1, 0, 0.6, 0.05, 0.35, 0.82, 0.8, 0.78, 0.18, 0.5, 0);
       const br = (prog < 1 ? 1.25 : f * 2.5) * (t.bright || 1); this.tracerMesh.setColorAt(i, T.c.setRGB(br, br * 0.82, br * 0.5));
     }
     this.tracerMesh.instanceMatrix.needsUpdate = true; this.tracerMesh.instanceColor.needsUpdate = true;

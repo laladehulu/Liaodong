@@ -110,7 +110,8 @@ const ARMS = {
 };
 const RANGED = {
   niaochong: { w: 'rifle', zh: '鳥銃', en: 'Niaochong musket', p: { rifle: { dmg: 95, reload: 2.4, range: 170, spread: 0.014, ads: 0.0035, aim: 0, mag: 1 } }, desc: 'Long, accurate matchlock.' },
-  sanyan: { w: 'revolver', zh: '三眼銃', en: 'Three-eyed gun', p: { revolver: { dmg: 58, mag: 3, cycle: 0.35, reload: 4.2, range: 45, spread: 0.035, ads: 0.014 } }, desc: 'Three quick shots at close range, then a long reload.' },
+  /* the three-eyed gun is a long gun like the Three-Eyed Gunners' own (three barrels, one after another, then turned round as a club with X) */
+  sanyan: { w: 'rifle', zh: '三眼銃', en: 'Three-eyed gun', p: { rifle: Object.assign({}, DEFS.rifle_spencer.rifle, { dmg: 58, spread: 0.045, ads: 0.014 }) }, desc: 'Three quick shots at close range, then a long reload.' },
   xbow: { w: 'bow', zh: '弩', en: 'Crossbow', p: { bow: { dmg: 92, reload: 3.0, range: 110, speed: 74, aim: 0, xbow: true, mag: 1 } }, desc: 'A flat, heavy bolt. Rain does not wet it; armor barely stops it.' },
   bow: { w: 'bow', zh: '弓', en: 'Horn bow', p: { bow: { dmg: 58, reload: 1.1, range: 90, speed: 52, aim: 0, mag: 1 } }, desc: 'Fast shooting. Lead your target and arc the arrow.' },
 };
@@ -2086,7 +2087,7 @@ class Sim {
       let dmS = dmg * f;
       /* your own musket ball drops a common soldier outright; the three-eyed gun's shorter, cruder barrels kill four times in five and otherwise leave him badly hurt */
       if (u.ctrl >= 0 && !(this.players[u.ctrl] && this.players[u.ctrl].ai) && !causeOverride && u.weapon === 'rifle' && victim.team !== u.team && !victim.champ && victim.type !== 'hero' && victim.type !== 'horse' && victim.def.ai !== 'cannon') {
-        const tri = u.def.rifle === DEFS.rifle_spencer.rifle;
+        const tri = (u.def.rifle.mag | 0) > 1; /* any three-eyed gun: his own, one picked up, or chosen as his arms */
         if (!tri || head || this.rng.next() < 0.8) dmS = Math.max(dmS, victim.hp * 4 + 300); else dmS = Math.max(dmS, victim.hp * 0.7);
       }
       this.applyDamage(victim, dmS, u.id, dx * 2.5, 0.3, dz * 2.5, causeOverride === 'gatling' ? 'gatling' : head ? 'headshot' : 'shot', hx, hy, hz);

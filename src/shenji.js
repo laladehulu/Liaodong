@@ -507,7 +507,7 @@ function sjVM() {
     for (const z of [-0.33, -0.5, -0.67]) { const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.022, 9), band); ring.rotation.x = Math.PI / 2; ring.position.z = z; g.add(ring); }
     g.add(bx(0.034, 0.034, 0.95, wood, 0, -0.004, 0.15)); g.add(bx(0.012, 0.012, 0.012, new THREE.MeshBasicMaterial({ color: 0xff8a3a }), 0.03, 0.03, -0.3));
     g.visible = false; r.vmRifle.add(g); r.vmSj = g; }
-  const on = !!(h && h.type === 'rifle_spencer'); r.vmSj.visible = on; for (const c of r.vmRifle.children) { if (c === r.vmSj) continue; if (c === r.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; }
+  const on = !!(h && h.weapon === 'rifle' && h.def && h.def.rifle && h.def.rifle.mag > 1); r.vmSj.visible = on; for (const c of r.vmRifle.children) { if (c === r.vmSj) continue; if (c === r.vmXbar) { if (on) c.visible = false; continue; } c.visible = !on; }
 }
 // what the boxes of the sim stand for: mantlets in a 神機營 mission are side-box carts (偏廂車), the board toward the
 // enemy, two wheels and the shafts behind; in the drill, straw butts stand where the zone 'butts' is
