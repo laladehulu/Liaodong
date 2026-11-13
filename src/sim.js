@@ -945,7 +945,7 @@ class Sim {
     const gun = gunOf(u.def, u.weapon);
     if (gun && this.phase === 1 && u.weapon === 'bow' && !(gun.xbow)) this.heroBow(u, a, gun);
     else if (gun && this.phase === 1) {
-      u.aiming = !!(a & A_AIM) && (u.st === ST_IDLE || u.st === ST_RELOAD) && !(a & A_BLOCK); u.aimHold = u.aiming && u.st === ST_IDLE ? (u.aimHold || 0) + DT : 0;
+      u.aiming = !!(a & A_AIM) && (u.st === ST_IDLE || (u.st === ST_RELOAD && !(u.reloadT > 0.8))) && !(a & A_BLOCK); /* no sights while reloading: holding aim through a reload no longer slows the walk to aiming pace; it takes hold the moment the gun is loaded */ u.aimHold = u.aiming && u.st === ST_IDLE ? (u.aimHold || 0) + DT : 0;
       const have = u.weapon === 'revolver' ? u.ammoR : u.ammo;
       if ((a & A_RELOAD) && u.club) { u.club = false; this.events.push({ t: 'grip', id: u.id, club: false }); }
       if ((a & A_FIRE) && !u.club) u.fireQ = 0.45;
