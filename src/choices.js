@@ -8,6 +8,7 @@
 const CH = { el: null, urg: null, live: null, zc: null, zb: null, objs: [], talkWrapped: new Set(), lines: null, fired: {}, initSent: null };
 const chL = (zh, en) => [zh, en];
 function chCtx() {
+  if (((ZB && ZB.dj) || (ZC && ZC.dj)) && typeof DS !== 'undefined' && DS) return { c: 'dj', S: DS, save: () => dSave(), R: DR };
   if (((ZB && ZB.jin) || (ZC && ZC.jin)) && typeof JS !== 'undefined' && JS) return { c: 'jin', S: JS, save: () => jSave(), R: JR };
   if (ZS) return { c: ZS.sj ? 'sj' : 'zhe', S: ZS, save: () => zSave(), R: ZS.sj && typeof SR !== 'undefined' ? SR : ZR };
   return null;

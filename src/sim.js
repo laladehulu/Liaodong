@@ -285,12 +285,12 @@ class Sim {
   constructor(cfg) {
     this.cfg = cfg; this.seed = cfg.seed | 0; this.rng = new RNG(this.seed);
     this.scen = cfg.mode === 'heroes' ? (SCEN[cfg.scen] || SCEN.ningyuan) : null; this.heroMode = !!this.scen;
-    this.battle = cfg.mode === 'campaign' ? (MISSIONS[cfg.mission] || MISSIONS.taizhou).battle : cfg.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang).battle : this.scen ? this.scen.battle : cfg.mode === 'story' ? STORY[clamp(cfg.chapter | 0, 0, STORY.length - 1)].battle : BATTLES[cfg.battle] ? cfg.battle : 'field'; this.bdef = BATTLES[this.battle];
+    this.battle = cfg.mode === 'campaign' ? ((cfg.camp && cfg.camp.map && BATTLES[cfg.camp.map]) ? cfg.camp.map : (MISSIONS[cfg.mission] || MISSIONS.taizhou).battle) : cfg.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang).battle : this.scen ? this.scen.battle : cfg.mode === 'story' ? STORY[clamp(cfg.chapter | 0, 0, STORY.length - 1)].battle : BATTLES[cfg.battle] ? cfg.battle : 'field'; this.bdef = BATTLES[this.battle];
     this.diff = clamp(cfg.diff === undefined ? 1 : cfg.diff | 0, 0, 3); /* 0 recruit · 1 soldier · 2 veteran · 3 lone banner */
     this.solo = (cfg.players || []).length === 1; this.xc = XCOMBAT || !!cfg.xcombat; this.noRout = true; // nobody routs: squads fight on (and beaten mission groups withdraw by script)
     this.mode = MODES[cfg.mode] ? cfg.mode : 'standard'; this.chaos = this.mode === 'chaos'; this.real = this.mode === 'soldier' || this.mode === 'assault'; this.lethal = this.mode === 'soldier';
     this.mission = this.mode === 'campaign' ? (MISSIONS[cfg.mission] || MISSIONS.taizhou) : this.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang) : null;
-    if (this.mission && this.mission.bdef) this.bdef = Object.assign({}, this.bdef, this.mission.bdef); // a story mission can re-dress a map: another season, rain, another name
+    if (this.mission && this.mission.bdef) this.bdef = Object.assign({}, this.bdef, this.mission.bdef); if (cfg.camp && cfg.camp.biome) this.bdef = Object.assign({}, this.bdef, { biome: cfg.camp.biome, fog: cfg.camp.fog !== undefined ? cfg.camp.fog : this.bdef.fog }); /* a camp on a real field, at night */ // a story mission can re-dress a map: another season, rain, another name
     this.layout = this.planTerrain(); setTerrain(this.layout);
     this.rangeMul = 1 - 0.35 * this.bdef.fog;
     this.tick = 0; this.events = []; this.units = []; this.squads = []; this.players = []; this.generals = [];
@@ -3403,7 +3403,7 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   for (const p of this.players) if (p.ai) { const g = this.mg[p.gid], G = g.G; this.placeArmy({ player: p, army: p.army }, G.team, G.at[0], G.at[1], G.at[2]);
     const lab = G.team === 1 && M.labels; if (lab) for (const id of p.squads) { const q = this.squads[id], L = lab[q.type]; if (!L) continue; const nd = Object.assign({}, q.def, { name: L[0], jp: L[1] }); q.def = nd; for (const uid of q.unitIds) { const u = this.units[uid]; u.def = Object.assign({}, u.def, { name: L[0], jp: L[1] }); } }
     const h = this.units[p.heroId]; if (h && G.officer) { h.def = Object.assign({}, h.def, { hp: h.def.hp * G.officer, name: G.name, dmg: h.def.dmg.map(x => x * 1.4) }); h.hp = h.def.hp; h.officer = true; }
-    if (G.n) this.mTrim(p, G.n);
+    if (G.n) this.mTrim(p, G.n, !!(G.wound || G.officer || G.keepHero)); /* a trimmed group keeps its general when the story needs the man (one to be taken alive, a named officer) */
     if (G.reserve) { p.inactive = true; for (const id of p.squads) { const q = this.squads[id]; q.inactive = true; for (const uid of q.unitIds) this.units[uid].inactive = true; } for (const uid of [p.heroId, p.horseId]) if (uid >= 0) this.units[uid].inactive = true; }
     this.mDir(p.gid, G.dir); }
   if (M.soldier) { const cache = new Map(); const tune = (d, k, m) => { if (!cache.has(d)) cache.set(d, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return cache.get(d); }; // a story chapter: the Jin at near full strength, their generals no one-man armies

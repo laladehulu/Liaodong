@@ -89,6 +89,9 @@ function lookGear(L, b, c, y, hatOn, part) {
     case 'band': b('h', [0, 0.13, -0.01], [0.27, 0.06, 0.27], hair); b('h', [0, 0.18, -0.02], [0.09, 0.08, 0.09], hair); b('h', [0, 0.065, 0], [0.295, 0.05, 0.295], L.bandCol || red); b('h', [0.04, 0.04, -0.17], [0.035, 0.035, 0.16], L.bandCol || red, [0.7, 0, 0.2]); break;
     case 'scholar': b('h', [0, 0.15, 0], [0.29, 0.17, 0.29], 0x18161a); b('h', [0, 0.25, 0], [0.31, 0.03, 0.31], 0x18161a); b('h', [0, 0.1, -0.16], [0.13, 0.13, 0.02], 0x18161a); break;
     case 'felt': y('h', [0, 0.12, 0], [0.33, 0.13, 0.33], 0x6a4a2c); y('h', [0, 0.06, 0], [0.38, 0.03, 0.38], 0x4a3220); b('h', [0, 0.2, 0], [0.06, 0.05, 0.06], red); break;
+    case 'kerchief': { const k = L.kerch || 0x3a5a7a; b('h', [0, 0.11, -0.01], [0.3, 0.13, 0.3], k); b('h', [0, 0.06, -0.17], [0.2, 0.12, 0.04], k); b('h', [0, 0.02, -0.21], [0.1, 0.1, 0.06], hair); break; } /* a headcloth knotted at the back over the bun */
+    case 'gat': b('h', [0, 0.17, 0], [0.17, 0.16, 0.17], 0x141414); y('h', [0, 0.1, 0], [0.62, 0.012, 0.62], 0x1a1a1a); b('h', [0.13, -0.12, 0.09], [0.01, 0.2, 0.01], 0x2a2a2a); b('h', [-0.13, -0.12, 0.09], [0.01, 0.2, 0.01], 0x2a2a2a); break; /* the Korean horsehair hat: a tall crown, a wide flat brim, the chin strings */
+    case 'shaved': b('h', [0, 0.12, -0.08], [0.24, 0.07, 0.14], hair); b('h', [0, -0.05, -0.2], [0.05, 0.32, 0.04], hair); break; /* the queue: the forehead shaved, a braid down the back */
     case 'cookcap': b('h', [0, 0.12, 0], [0.3, 0.12, 0.3], 0xe8e2d0); b('h', [0, 0.19, 0], [0.25, 0.07, 0.25], 0xe8e2d0); break;
     default: { const tall = L.hat === 'rattanTall' ? 1.35 : 1; c('h', [0, 0.17 * tall, 0], [0.4, 0.2 * tall, 0.4], 0xb8964e); y('h', [0, 0.07, 0], [0.4, 0.045, 0.4], 0x8a6a30); b('h', [0, 0.27 * tall + 0.03, 0], [0.07, L.plume ? 0.12 : 0.05, 0.07], L.plume || red); if (L.band) y('h', [0, 0.11, 0], [0.37, 0.035, 0.37], L.band); }
   } });
