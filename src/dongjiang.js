@@ -51,7 +51,7 @@ function dSave() { try { localStorage.setItem(DKEY, JSON.stringify(DS)); } catch
 function dFresh() { const s = { v: 1, dj: true, stage: 'c1', name: { zh: '李鐵', en: 'Li Tie' }, alive: {}, fate: {}, bond: {}, talked: {}, flags: {}, seen: {}, me: 'me' };
   for (const r of DR) if (!r.guest && !r.joins && !r.only) s.alive[r.k] = true; return s; }
 function dMeRow() { const r = dRow('me'), nm = DS.me === 'me' ? DS.name : (DS.meName || { zh: '', en: '' }); r.zh = nm.zh; r.en = nm.en; }
-function dDress(u, i) { const r = DR[i]; if (!u || !r) return; u.look = Object.assign({ id: 'd:' + r.k }, DLOOK[r.k] || {}); if (state.renderer) state.renderer.colorFigure(u.id, u); }
+function dDress(u, i) { const r = DR[i]; if (!u || !r) return; u.look = Object.assign({ id: 'd:' + r.k }, DLOOK[r.k] || {}, u.team === 1 ? { ming: true } : {}); /* your file in its Ming coat whichever side of the battle it is on */ if (state.renderer) state.renderer.colorFigure(u.id, u); }
 function dGo(scene) { try { localStorage.setItem(DGO, scene); } catch (e) { } location.reload(); }
 const dAge = (k, year) => { const r = dRow(k); return r && r.born ? year - r.born : 0; };
 // who comes into the file at this chapter, and who is with it (the chapter's cast; by default everyone alive)
@@ -273,7 +273,9 @@ function dStart(scene) {
     const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq];
     ZB = { map: {}, sq: q.id, first: me.heroId, cur: dMeK(n), fell: false, R: DR, dj: true, ch: n, deadMe: [] };
     const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = dIdx(dMeK(n));
-    for (const gid of C.mingFoes || []) { const g = sim.mg[gid]; if (!g) continue; const pl = sim.players[g.p]; for (const sid of pl.squads) for (const uid of sim.squads[sid].unitIds) { const u = sim.units[uid]; u.look = { id: 'mut:' + (uid % 6), ming: true, hat: ['band', 'wrap', 'straw', 'felt'][uid % 4], brows: 'knit', beard: uid % 3 ? 'stubble' : undefined }; if (state.renderer) state.renderer.colorFigure(uid, u); } } /* men in Ming coats on the other side */
+    { const M = SIM.MISSIONS[C.mission], dressG = (gid, L) => { const g = sim.mg[gid]; if (!g) return; const pl = sim.players[g.p]; for (const uid of [pl.heroId].concat(...pl.squads.map(sid => sim.squads[sid].unitIds))) { const u = uid >= 0 && sim.units[uid]; if (!u || ZB.map[uid] !== undefined) continue; u.look = L(uid); if (state.renderer) state.renderer.colorFigure(uid, u); } };
+      const mingL = (uid) => ({ id: 'mut:' + (uid % 6), ming: true, hat: ['band', 'wrap', 'straw', 'felt'][uid % 4], brows: 'knit', beard: uid % 3 ? 'stubble' : undefined });
+      for (const gid in M.groups || {}) { const G = M.groups[gid]; if (G.jinKit) dressG(gid, (uid) => ({ id: 'jside:' + (uid % 4), jinside: true })); else if (G.ming || (G.team === 1 && (M.mingAll || M.side === 1)) || (C.mingFoes || []).includes(gid)) dressG(gid, mingL); } } /* Ming men on both sides of the civil war; Jin men on yours at Lüshun */
     const file = dFile(n), order = (C.order || []).filter(k => file.some(r => r.k === k)).concat(file.map(r => r.k).filter(k => !(C.order || []).includes(k)));
     // the men a scripted wound is meant for take that place in the squad (the sim wounds by place)
     for (const kk in (C.wounds || {})) { const k = C.wounds[kk], uid = q.unitIds[+kk]; if (uid === undefined || used[uid] || !file.some(r => r.k === k)) continue; used[uid] = 1; ZB.map[uid] = dIdx(k); }
@@ -389,7 +391,7 @@ function dMenu() {
   let el = $('djCta'); const z = $('zheCta'); if (!z) return;
   if (!el) { const st = document.createElement('style'); st.textContent = '#djCta { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 16px; margin: -6px 0 16px; border: 1px solid #3a6a6a; background: linear-gradient(100deg, rgba(40,90,100,.16), rgba(220,210,190,.08)); flex-wrap: wrap } #djCta b { font-size: 19px; letter-spacing: .04em } #djCta small { display: block; color: var(--ink2); margin-top: 4px; max-width: 640px; line-height: 1.5 } #djCta .btns { display: flex; gap: 8px }';
     document.head.appendChild(st); el = document.createElement('div'); el.id = 'djCta';
-    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One to Four are ready (thirteen chapters); more are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
+    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One to Five are ready (eighteen chapters, and the fifth act forks); the last act is coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
     const after = $('jinCta') || z; after.after(el); }
   const s = dLoad(), b = $('btnDj'), nb = $('btnDjNew'); const cont = s && s.stage && s.stage !== 'done';
   const waiting = cont && /^c(\d+)$/.test(s.stage) && !DCH[+s.stage.slice(1)]; /* finished every chapter written so far */

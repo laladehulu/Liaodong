@@ -243,4 +243,52 @@
       for (const [x, z] of [[-30, 60], [10, 60], [-30, 84], [10, 84], [-20, 50], [0, 50]]) sim.boxes.push({ x, z, hw: 2.2, hd: 2.2, h: 2.1, kind: 'tent' });
       /* the archery butts on the review field */ for (const x of [-16, -8, 0, 8]) sim.boxes.push({ x, z: 28, hw: 1, hd: 0.4, h: 1.8, kind: 'fence' });
       trees(sim, r, clear, 24, -145, -60, -145, 145, 1); rocks(sim, r, clear, 26, -145, 100, -145, 145); } };
+
+  // ========== Act Five: the mutiny ==========
+  // ---------- 登州 Dengzhou, 1632–1633 ----------
+  // 《明史》孫元化傳, 孔有德傳; 《崇禎長編》崇禎五年–六年; 《登州府志》: Dengzhou (Penglai) on the north coast of Shandong, seat of
+  // Sun Yuanhua's Western-trained artillery (cannon and gunners from Macao), and beside it the walled harbour of the water city
+  // (水城), whose water gate opens on the sea. The mutineers took the city in the first month of 1632 with help from inside;
+  // besieged for a year, they broke out by sea in the second month of 1633. Here the city lies across the field, its south
+  // gate toward the land (-z); the water city is on the east, its wall at x = 92 with the water gate, the sea beyond.
+  B.djdeng = { name: 'Dengzhou', jp: '登州 · 水城', when: 'February 1632', biome: 'winter', fog: 0.25, terrain: 0.2, features: [], hidden: true, horizon: { lo: 0.4, nokarst: true, open: [0.5, 2.4] },
+    desc: 'Dengzhou on the Shandong coast, Sun Yuanhua\'s artillery town, and the walled harbour of the water city beside it with its water gate to the sea.' };
+  M.djdeng = { trees: 10, rocks: 8, nomant: true,
+    terrain(L, r) { L.sea = { x0: 104, depth: 7, islands: [{ x: 150, z: 110, r: 14 }] }; L.hills.push({ x: -130, z: 120, r: 50, h: 12 }); },
+    objectives: [{ x: 0, z: -48, r: 10, name: 'The south gate' }, { x: -10, z: 30, r: 12, name: 'The arsenal' }, { x: 40, z: 10, r: 11, name: 'The yamen' }, { x: 96, z: 20, r: 10, name: 'The water gate' }],
+    noTree(x, z) { return z > -70; },
+    build(sim, r, keep, clear) {
+      cityWall(sim, { axis: 'x', at: -56, from: -90, to: 92, h: 8, hd: 2.5, out: -1, gx: 0, gw: 3.8, name: '登州', nobast: true });
+      cityWall(sim, { axis: 'x', at: 110, from: -90, to: 92, h: 8, hd: 2.5, out: 1, nobast: true, notower: true });
+      cityWall(sim, { axis: 'z', at: -90, from: -56, to: 110, h: 8, hd: 2.5, out: -1, nobast: true, notower: true });
+      cityWall(sim, { axis: 'z', at: 92, from: -56, to: 110, h: 7, hd: 2.2, out: 1, gx: 20, gw: 6, name: '水門', nobast: true, notower: true }); /* the water gate into the harbour */
+      keep.push({ x: 0, z: 26, r: 90 });
+      sim.boxes.push({ x: -10, z: 34, hw: 9, hd: 6, h: 4.6, kind: 'hall' }); /* the arsenal: Sun Yuanhua's foundry and gun sheds */
+      sim.boxes.push({ x: 40, z: 16, hw: 8, hd: 5, h: 5, kind: 'hall' }); /* the yamen */
+      for (let z = -40; z <= 96; z += 22) for (let x = -80; x <= 80; x += 18) { if (Math.abs(x) < 8 || (Math.abs(x + 10) < 18 && Math.abs(z - 34) < 14) || (Math.abs(x - 40) < 16 && Math.abs(z - 16) < 12)) continue; if (r.next() < 0.18) continue; house(sim, keep, x, z, 3.6, 3, r.next() < 0.12, 3.2); }
+      sim.deco.push({ kind: 'road', x: 0, w: 7 });
+      for (const [z, b] of [[4, 1], [20, -1], [36, 1]]) junkZ(sim, keep, 118, z, 16, b, { wy: 0 }); /* the ships in the water city */
+      for (const [z, b] of [[-60, 1], [70, -1]]) junkZ(sim, keep, 124, z, 14, b, { wy: 0, furled: true });
+      rocks(sim, r, clear, 8, -145, 100, -145, -70); } };
+
+  // ---------- 旅順 Lüshun, the seventh month of 1633 ----------
+  // 《明史》黃龍傳; 《清太宗實錄》天聰七年七月: Huang Long, the East River commander, held Lüshun at the tip of the Liaodong peninsula
+  // with a few thousand men. Kong Youde and Geng Zhongming, newly come over to the Jin with their ships and guns, came against it by
+  // sea while the Jin came by land; when the town fell Huang Long cut his own throat. A harbour fort on a hill above the anchorage:
+  // the land approach from the north (+z), the harbour and the sea along the east edge where the turncoats' ships come in.
+  B.djlushun = { name: 'Lüshun', jp: '旅順', when: 'August 1633', biome: 'summer', fog: 0.18, terrain: 0.55, features: [], hidden: true, horizon: { lo: 0.8, nokarst: true, open: [0.6, 2.5] },
+    desc: 'The harbour fort at the tip of the Liaodong peninsula: the walled town on its hill above the anchorage, the land road from the north, the sea on the east.' };
+  M.djlushun = { trees: 50, rocks: 30,
+    terrain(L, r) { L.sea = { x0: 100, depth: 7, islands: [{ x: 140, z: -120, r: 20 }] }; L.plateaus.push({ x: 0, z: -20, r0: 40, r1: 66, h: 12 }); L.hills.push({ x: -120, z: 60, r: 50, h: 16 }); L.hills.push({ x: -40, z: 140, rx: 100, rz: 30, rot: 0, h: 10 }); },
+    objectives: [{ x: 0, z: 24, r: 10, name: 'The north gate' }, { x: 0, z: -20, r: 12, name: 'Huang Long\'s yamen' }, { x: 38, z: -30, r: 10, name: 'The harbour stair' }, { x: 94, z: -40, r: 12, name: 'The quay' }],
+    noTree(x, z) { return Math.hypot(x, z + 20) < 70 || x > 60; },
+    build(sim, r, keep, clear) {
+      cityWall(sim, { axis: 'x', at: 20, from: -34, to: 34, h: 6, hd: 2, out: 1, gx: 0, gw: 3.5, name: '旅順', nobast: true }); cityWall(sim, { axis: 'x', at: -60, from: -34, to: 34, h: 6, hd: 2, out: -1, nobast: true, notower: true });
+      cityWall(sim, { axis: 'z', at: -34, from: -60, to: 20, h: 6, hd: 2, out: -1, nobast: true, notower: true }); cityWall(sim, { axis: 'z', at: 34, from: -60, to: 20, h: 6, hd: 2, out: 1, gx: -30, gw: 4, nobast: true, notower: true }); /* the east wall's stair gate down to the harbour */
+      keep.push({ x: 0, z: -20, r: 46 });
+      sim.boxes.push({ x: 0, z: -24, hw: 7, hd: 4.5, h: 4.4, kind: 'hall' });
+      for (const [x, z] of [[-22, 4], [-22, -14], [-22, -42], [20, 6], [22, -46], [-6, 8], [8, -48]]) house(sim, keep, x, z, 3.2, 2.6, false, 3);
+      for (const [z, b] of [[-60, 1], [-40, -1], [-20, 1]]) junkZ(sim, keep, 104, z, 13, b, { wy: 0, furled: true });
+      trees(sim, r, clear, 40, -145, 60, -145, 145, 1); rocks(sim, r, clear, 26, -145, 100, -145, 145); } };
+  B.djlaizhou = Object.assign({}, B.siegecity, { name: 'Laizhou', jp: '萊州', when: 'May 1632', biome: 'spring', hidden: true, desc: 'Laizhou in Shandong, its walls held by its townsmen and a handful of soldiers against the Dengzhou mutineers and their Western guns.' });
 })();
