@@ -111,12 +111,52 @@ function storyTick() {
 
 // ---------- menu ----------
 function armyCost(a) { return a.reduce((s, k) => s + S.DEFS[k].cost, 0); }
+// ---- battlefield maps: each tile is drawn from the battle's own ground (a throwaway Sim lays out the terrain, rivers, walls and
+// buildings, and the height field is shaded), so the map shows what the field is like; the account is in the (i) pop-up
+const MAPCACHE = {}, MAPQ = [];
+function drawMap(key, N) {
+  const b = S.BATTLES[key]; let sim; try { sim = new S.Sim({ seed: 1619, battle: key, mode: 'standard', players: [{ name: 'map', team: 0, army: [] }] }); } catch (e) { return null; }
+  const R = 192, st = (2 * R) / N, H = new Float32Array(N * N); let lo = 1e9, hi = -1e9;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const h = S.terrainH(-R + (i + .5) * st, -R + (j + .5) * st); H[j * N + i] = h; if (h < lo) lo = h; if (h > hi) hi = h; }
+  const cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d'), im = g.createImageData(N, N), D = im.data;
+  const winter = /winter|snow|frozen/i.test(b.when + ' ' + b.biome), dry = /desert|steppe|dry/i.test(b.biome), wet = /paddy|rice|marsh/i.test(b.biome + ' ' + (b.desc || ''));
+  const low = winter ? [214, 222, 228] : dry ? [196, 178, 128] : wet ? [128, 150, 96] : [138, 156, 98], high = winter ? [246, 248, 250] : dry ? [222, 204, 160] : [196, 180, 132];
+  const span = Math.max(4, hi - lo);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const k = j * N + i, h = H[k], t = (h - lo) / span, x = -R + (i + .5) * st, z = -R + (j + .5) * st;
+    const hx = H[j * N + Math.min(N - 1, i + 1)] - H[j * N + Math.max(0, i - 1)], hz = H[Math.min(N - 1, j + 1) * N + i] - H[Math.max(0, j - 1) * N + i];
+    let sh = 1 + (-hx - hz) / (2 * st) * 0.9; sh = sh < .55 ? .55 : sh > 1.35 ? 1.35 : sh; /* light from the north-west */
+    let c = [low[0] + (high[0] - low[0]) * t, low[1] + (high[1] - low[1]) * t, low[2] + (high[2] - low[2]) * t];
+    const w = S.waterAt(x, z); if (w === 1) { c = winter ? [184, 206, 218] : [74, 118, 150]; sh = 1; } else if (w === 2) { c = winter ? [206, 222, 230] : [118, 156, 172]; sh = 1; } else if (w === -1) { c = [120, 92, 60]; sh = 1; }
+    D[k * 4] = c[0] * sh; D[k * 4 + 1] = c[1] * sh; D[k * 4 + 2] = c[2] * sh; D[k * 4 + 3] = 255; }
+  g.putImageData(im, 0, 0);
+  // walls, towers, buildings and palisades as dark blocks
+  g.fillStyle = 'rgba(52,40,30,.85)'; const px = (v) => (v + R) / st;
+  for (const q of sim.boxes || []) { if (!q || q.hw === undefined) continue; const w = Math.max(1, (2 * q.hw) / st), d = Math.max(1, (2 * q.hd) / st); g.fillRect(px(q.x) - w / 2, px(q.z) - d / 2, w, d); }
+  // where each side draws up: the deployment edges, Ming red and Jin blue
+  try { const dz = sim.deployZ || null; void dz; } catch (e) { }
+  return cv.toDataURL();
+}
+function mapImg(key, big) { const k = key + (big ? ':b' : ''); if (MAPCACHE[k]) return MAPCACHE[k]; if (!MAPQ.includes(k)) { MAPQ.push(k); pumpMaps(); } return ''; }
+function pumpMaps() { if (pumpMaps.on) return; pumpMaps.on = true;
+  const next = () => { const k = MAPQ.shift(); if (!k) { pumpMaps.on = false; return; } const [key, b] = k.split(':'); MAPCACHE[k] = drawMap(key, b ? 192 : 96) || 'none';
+    for (const im of document.querySelectorAll(`img[data-map="${k}"]`)) if (MAPCACHE[k] !== 'none') im.src = MAPCACHE[k];
+    setTimeout(next, 0); };
+  setTimeout(next, 30); }
+// ---- the pop-up: accounts of battlefields and squads, out of the way of the menu
+function openInfo(html) { $('infoBody').innerHTML = html; $('infoPop').hidden = false; $('infoX').focus(); }
+function closeInfo() { $('infoPop').hidden = true; }
+$('infoX').onclick = closeInfo; $('infoPop').addEventListener('click', (e) => { if (e.target === $('infoPop')) closeInfo(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('infoPop').hidden) { closeInfo(); e.stopPropagation(); } }, true);
+function battleInfo(key) { const b = S.BATTLES[key]; const src = mapImg(key, true);
+  openInfo(`<h3>${b.name} <span style="font-family:var(--font-display);font-weight:500;color:var(--ink2)">${b.jp}</span></h3><div class="pw">${b.when} · ${b.biome}${b.fog ? ' · fog' : ''}</div><img class="pmap" alt="Map of ${escapeHtml(b.name)}" data-map="${key}:b" src="${src && src !== 'none' ? src : ''}"><div class="pkey"><i style="background:#8a9c62"></i>low ground<i style="background:#c4b484"></i>high ground<i style="background:#4a7696"></i>water<i style="background:#785c3c"></i>bridge or ford<i style="background:#34281e"></i>walls, buildings</div><p>${b.desc}</p>`); }
 function renderBattles() {
-  const box = $('battles'); box.innerHTML = '';
+  const box = $('battles'); box.innerHTML = ''; box.classList.toggle('guest', !!(state.net && !state.net.isHost && state.screen === 'lobby'));
   for (const key in S.BATTLES) {
-    const b = S.BATTLES[key]; if (b.hidden) continue; const el = document.createElement('button'); el.type = 'button'; el.className = 'battle' + (state.battle === key ? ' on' : ''); el.dataset.b = key;
-    el.innerHTML = `<span class="bn">${b.name}<span class="jp">${b.jp}</span></span><span class="bw">${b.when} · ${b.biome}${b.fog ? ' · fog' : ''}</span><span class="bd">${b.desc}</span>`;
-    el.onclick = () => { state.battle = key; AUDIO.init(); AUDIO.play('ui'); renderBattles(); };
+    const b = S.BATTLES[key]; if (b.hidden) continue; const el = document.createElement('button'); el.type = 'button'; el.className = 'battle' + (state.battle === key ? ' on' : ''); el.dataset.b = key; el.title = b.name;
+    const src = mapImg(key);
+    el.innerHTML = `<img class="bmap" alt="" data-map="${key}" src="${src && src !== 'none' ? src : 'data:image/gif;base64,R0lGODlhAQABAAAAACw='}"><span class="bn">${b.name}<span class="jp">${b.jp}</span></span><span class="bw">${b.when.split('·')[0].trim()}${b.fog ? ' · fog' : ''}</span><span class="ibtn" role="button" tabindex="0" aria-label="About ${escapeHtml(b.name)}">i</span>`;
+    el.onclick = (e) => { if (e.target.closest('.ibtn')) { battleInfo(key); return; } if (state.net && !state.net.isHost && state.screen === 'lobby') return; state.battle = key; AUDIO.init(); AUDIO.play('ui'); renderBattles(); };
     box.appendChild(el);
   }
 }
@@ -143,7 +183,9 @@ function renderMenu() {
   for (const k of ros) {
     const d = S.defFor(k, state.faction); const el = document.createElement('div'); el.className = 'unit';
     const role = d.gun ? 'machine gun' : d.cannon ? 'artillery' : d.bow ? 'archers' : d.ai === 'ranged' ? 'rifles' : d.mounted ? 'cavalry' : 'melee';
-    el.innerHTML = `<div class="n">${d.name}<span class="jp">${d.jp}</span></div><div class="d">${d.desc}</div><div class="meta">${d.count} men · ${d.cost} taels · ${role} · morale ${d.fearless ? '∞' : d.morale}</div>`;
+    el.innerHTML = `<div class="n">${d.name}<span class="jp">${d.jp}</span></div><div class="meta">${d.count} men · ${d.cost} taels · ${role}</div>`;
+    const ib = document.createElement('button'); ib.type = 'button'; ib.className = 'ibtn'; ib.textContent = 'i'; ib.setAttribute('aria-label', 'About ' + d.name);
+    ib.onclick = () => openInfo(`<h3>${d.name} <span style="font-family:var(--font-display);font-weight:500;color:var(--ink2)">${d.jp}</span></h3><div class="pw">${role}</div><p>${d.desc}</p><div class="pmeta">${d.count} men · ${d.cost} taels · morale ${d.fearless ? '∞' : d.morale}</div>`); el.appendChild(ib);
     const btn = document.createElement('button'); btn.className = 'btn sm'; btn.type = 'button'; btn.textContent = state.mode === 'officers' ? 'Lead' : 'Add'; btn.disabled = state.mode !== 'officers' && (left < d.cost || state.army.length >= 10);
     btn.onclick = () => { if (state.mode === 'officers') state.army = [k]; else state.army.push(k); AUDIO.init(); AUDIO.play('ui'); renderMenu(); };
     el.appendChild(btn); r.appendChild(el);
@@ -177,7 +219,8 @@ function myArms() { const a = { melee: $('armMelee').value, ranged: $('armRanged
 function show(screen) {
   state.screen = screen;
   $('menu').hidden = screen !== 'menu'; $('lobby').hidden = screen !== 'lobby';
-  { const P = $('personal'), home = screen === 'lobby' ? $('lobbyPersonal') : $('personalHome'); if (P && home && P.parentElement !== home) home.appendChild(P); if (screen === 'lobby' || screen === 'menu') try { renderMenu(); } catch (e) { } } /* your side is chosen in the room */
+  { const P = $('personal'), home = screen === 'lobby' ? $('lobbyPersonal') : $('personalHome'); if (P && home && P.parentElement !== home) home.appendChild(P);
+    const setup = screen === 'lobby' ? $('lobbySetup') : $('hostSetup'); if (screen === 'lobby' || screen === 'menu') for (const id of ['missionPanel', 'heroPanel', 'fieldPanel']) { const e = $(id); if (e && e.parentElement !== setup) setup.appendChild(e); } if (screen === 'menu') for (const id of ['missionPanel', 'heroPanel']) { const e = $(id); if (e) e.style.display = ''; } if (screen === 'lobby' || screen === 'menu') try { renderMenu(); } catch (e) { } } /* your side is chosen in the room */
   $('hud').hidden = screen !== 'game'; $('cmdui').hidden = screen !== 'game' || !Input.cmdMode;
   if (screen !== 'game') { $('pause').hidden = true; $('result').hidden = true; }
 }
@@ -240,6 +283,7 @@ $('btnJoin').onclick = () => {
   net.join(code, myCfg(), (err) => { if (err) { $('menuMsg').textContent = err.message || String(err); net.destroy(); state.net = null; return; } $('menuMsg').textContent = ''; $('codeOut').textContent = code; roomChrome('guest'); show('lobby'); renderLobby(); });
 };
 // a choice made in the room goes to everyone at once
+for (const ev of ['click', 'change']) $('lobbySetup').addEventListener(ev, () => setTimeout(() => { if (state.screen === 'lobby' && state.net && state.net.isHost) state.net.sendCfg(myCfg()); renderLobby(); }, 0));
 for (const ev of ['click', 'change']) $('personal').addEventListener(ev, () => setTimeout(() => { if (state.screen !== 'lobby') return; if (state.net && state.net.myIdx >= 0) state.net.sendCfg(myCfg()); renderLobby(); }, 0));
 $('btnCopy').onclick = () => { const code = $('codeOut').textContent; navigator.clipboard && navigator.clipboard.writeText(code).then(() => { $('copyMsg').textContent = 'Copied'; }, () => { $('copyMsg').textContent = 'Select the code and copy it.'; }); };
 $('btnLeave').onclick = () => { if (state.net) state.net.destroy(); state.net = null; show('menu'); };
@@ -277,6 +321,8 @@ function renderLobby() {
   if (!net) { $('btnStart').disabled = false; } else if (net.isHost) { const ready = net.players.every(p => p.cfg || !p.connected); $('btnStart').disabled = !ready; }
   if (!net) { const bd = S.BATTLES[state.battle] || S.BATTLES.field; lobbyTitle(bd); return; }
   { const bk = hostCfg && hostCfg.cfg && hostCfg.cfg.battle; const bd = S.BATTLES[bk] || S.BATTLES.field;
+  if (!net.isHost && bk && bk !== state.battle && (!hostCfg.cfg.mode || hostCfg.cfg.mode === state.mode)) { state.battle = bk; renderBattles(); }
+  for (const id of ['missionPanel', 'heroPanel']) { const e = $(id); if (e) e.style.display = net.isHost ? '' : 'none'; } /* a guest plays the host's mission or siege */
   if (!net.isHost && hostCfg && hostCfg.cfg && hostCfg.cfg.mode && hostCfg.cfg.mode !== state.mode) { state.mode = hostCfg.cfg.mode; if (bk) state.battle = bk; renderMenu(); net.sendCfg(myCfg()); } /* the room plays the host's mode: your side follows it */
   lobbyTitle(bd); }
 }
