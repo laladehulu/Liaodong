@@ -92,4 +92,96 @@
       for (const [x, z] of [[-30, 40], [-16, 56], [-38, 64], [18, 44], [34, 58], [16, 70], [-4, 80], [40, 36], [-48, 50]]) house(sim, keep, x, z, 3.4, 2.6, false, 2.8);
       palZ(sim, -56, 30, 74, 1.2); palZ(sim, 52, 30, 74, 1.2); /* the low brushwood fences of the yards */
       trees(sim, r, clear, 140, -145, 145, -145, 145, 1); rocks(sim, r, clear, 24, -145, 145, -145, 145); } };
+
+  // ========== Act Two: the island ==========
+  const junk = (sim, keep, x, z, len, bow, o) => { sim.boxes.push(Object.assign({ x, z, hw: len / 2, hd: 1.9, h: 2.2, kind: 'junk', bow: bow || 1 }, o || {})); keep.push({ x, z, r: len / 2 + 3 }); };
+  const junkZ = (sim, keep, x, z, len, bow, o) => { sim.boxes.push(Object.assign({ x, z, hw: 1.9, hd: len / 2, h: 2.2, kind: 'junk', bow: bow || 1 }, o || {})); keep.push({ x, z, r: len / 2 + 3 }); };
+  const racks = (sim, x0, z0, n) => { for (let i = 0; i < n; i++) sim.boxes.push({ x: x0 + (i % 4) * 4, z: z0 + Math.floor(i / 4) * 3.5, hw: 1.6, hd: 0.3, h: 1.6, kind: 'fence' }); }; /* fish-drying racks */
+
+  // ---------- 沿海 A village of the Liaodong coast, 1622 ----------
+  // A composite of the landings the East River men made on the Jin-held coast (《明史》毛文龍傳: 數遣兵襲擾, 招集遼民; the Korean
+  // records of 1622–1623 count boatloads of Liaodong people brought out). The sea lies along the east edge; the beach with the
+  // boats drawn up, a fishing village behind it, the Jin tax granary in its stockade inland, and the fields where the Han
+  // bondservants work under guard. The Jin outposts are inland (+z) and to the west.
+  B.djcoast = { name: 'The Liaodong coast', jp: '遼東沿海', when: 'Spring 1622', biome: 'spring', fog: 0.35, terrain: 0.4, features: [], hidden: true, horizon: { lo: 0.6, nokarst: true, open: [0.7, 2.4] },
+    desc: 'A fishing village on the Jin-held coast of Liaodong: the boats drawn up on the beach, the bondservants in the fields, the tax granary in its stockade.' };
+  M.djcoast = { trees: 70, rocks: 18,
+    terrain(L, r) { L.sea = { x0: 112, depth: 6, islands: [] }; L.hills.push({ x: -110, z: 100, rx: 70, rz: 60, rot: 0.2, h: 14 }); L.hills.push({ x: -60, z: -120, rx: 90, rz: 34, rot: 0, h: 9 }); L.hills.push({ x: 40, z: 140, r: 50, h: 10 }); },
+    objectives: [{ x: 106, z: -40, r: 12, name: 'The boats' }, { x: -10, z: 30, r: 12, name: 'The bondservants\' field' }, { x: 40, z: 78, r: 12, name: 'The granary' }],
+    noTree(x, z) { return x > 60 || (Math.abs(x + 10) < 40 && Math.abs(z - 30) < 30) || (Math.abs(x - 40) < 30 && Math.abs(z - 78) < 26); },
+    build(sim, r, keep, clear) {
+      for (const [z, b] of [[-60, 1], [-40, 1], [-22, 1], [-4, 1]]) junkZ(sim, keep, 114, z, 13, b, { wy: 0, furled: true });
+      for (const [x, z] of [[78, -30], [70, -14], [84, -4], [74, 12], [64, -46], [88, -56]]) house(sim, keep, x, z, 3.2, 2.6, false, 2.8);
+      racks(sim, 92, -24, 8);
+      /* the tax granary: three storehouses in a palisade with its gate toward the village */
+      for (let x = 22; x < 58; x += 3) sim.boxes.push({ x: x + 1.5, z: 62, hw: 1.5, hd: 0.5, h: 2, kind: 'palisade' }); for (let x = 22; x < 58; x += 3) if (Math.abs(x + 1.5 - 40) > 4) sim.boxes.push({ x: x + 1.5, z: 94, hw: 1.5, hd: 0.5, h: 2, kind: 'palisade' });
+      for (let z = 62; z < 94; z += 3) { sim.boxes.push({ x: 22, z: z + 1.5, hw: 0.5, hd: 1.5, h: 2, kind: 'palisade' }); sim.boxes.push({ x: 58, z: z + 1.5, hw: 0.5, hd: 1.5, h: 2, kind: 'palisade' }); }
+      for (const x of [30, 40, 50]) house(sim, keep, x, 82, 3.4, 4, false, 3.6); keep.push({ x: 40, z: 78, r: 24 });
+      /* the guard huts by the field */ house(sim, keep, -34, 46, 3, 2.4, false); house(sim, keep, -40, 34, 3, 2.4, false);
+      trees(sim, r, clear, 60, -145, 60, -145, 145, undefined); rocks(sim, r, clear, 16, -145, 60, -145, 145); } };
+
+  // ---------- 皮島 Pidao (Gado), the fishing village under the hills, 1623 ----------
+  // 《明史》毛文龍傳: 島中商賈輻輳, 遼民歸者日眾; 《朝鮮王朝實錄》仁祖元年–二年 on the famine on the islands and the soldiers who
+  // came ashore to take grain. Gado lies off the Korean coast at Cheolsan: a hilly island, the fishing village and the East River
+  // grain store on the sheltered shore, the sea along the east edge. Here the village and the granary sit low by the beach (-z);
+  // the hills and the soldiers' camps are inland (+z).
+  B.djpidao = { name: 'Pidao', jp: '皮島 · 椵島', when: 'Autumn 1623', biome: 'autumn', fog: 0.25, terrain: 0.6, features: [], hidden: true, horizon: { lo: 0.7, nokarst: true, open: [0.6, 2.5] },
+    desc: 'The East River\'s island off the Korean coast: the fishing village and the grain store on the sheltered beach, the soldiers\' camps in the hills.' };
+  M.djpidao = { trees: 90, rocks: 30,
+    terrain(L, r) { L.sea = { x0: 108, depth: 7, islands: [{ x: 150, z: 90, r: 16 }] }; L.hills.push({ x: -40, z: 100, rx: 110, rz: 60, rot: 0.1, h: 22 }); L.hills.push({ x: -120, z: -40, r: 50, h: 14 }); L.hills.push({ x: 60, z: 130, r: 40, h: 12 }); },
+    objectives: [{ x: 30, z: -40, r: 11, name: 'The grain store' }, { x: 70, z: -60, r: 12, name: 'The fishing village' }, { x: 0, z: 40, r: 12, name: 'The hill path' }],
+    noTree(x, z) { return (x > 0 && z < 0) || Math.abs(x) < 8; },
+    build(sim, r, keep, clear) {
+      for (const [z, b] of [[-90, -1], [-72, 1], [-54, 1], [-30, -1]]) junkZ(sim, keep, 112, z, 12, b, { wy: 0, furled: true });
+      junk(sim, keep, 128, -120, 18, 1, { wy: 0 }); /* a grain ship from Dengzhou at anchor */
+      for (const [x, z] of [[60, -48], [72, -66], [84, -52], [62, -78], [80, -86], [94, -70], [50, -66]]) house(sim, keep, x, z, 3, 2.4, false, 2.7);
+      racks(sim, 88, -40, 12);
+      for (const [x, z] of [[24, -40], [36, -40], [30, -28]]) house(sim, keep, x, z, 4, 3.2, false, 3.4); /* the grain store */
+      for (let x = 14; x < 46; x += 3) if (Math.abs(x + 1.5 - 30) > 4) sim.boxes.push({ x: x + 1.5, z: -16, hw: 1.5, hd: 0.5, h: 1.6, kind: 'palisade' });
+      sim.deco.push({ kind: 'road', x: 0, w: 4 }); sim.roadX = 0;
+      trees(sim, r, clear, 90, -145, 145, -145, 145, 1); rocks(sim, r, clear, 26, -145, 100, -145, 145); } };
+
+  // ---------- 鐵山 Tieshan, the hill fort on the Korean coast, 1624 ----------
+  // 《朝鮮王朝實錄》仁祖二年; 《明史》毛文龍傳: the East River's mainland posts at Tieshan (鐵山) and Sinmi island, from which it
+  // ran its raids. A palisaded camp on a low hill above the shore, half built; the sea and the boats to the east; the plain to
+  // the north (+z) over which the Jin come from the Yalu.
+  B.djtieshan = { name: 'Tieshan', jp: '鐵山', when: 'Summer 1624', biome: 'summer', fog: 0.15, terrain: 0.6, features: [], hidden: true, horizon: { lo: 0.8, nokarst: true, open: [0.7, 2.3] },
+    desc: 'The East River\'s hill fort on the Korean shore, its palisade half built, the boats below, and the plain to the north where the Jin come from the Yalu.' };
+  M.djtieshan = { trees: 80, rocks: 26,
+    terrain(L, r) { L.sea = { x0: 118, depth: 6, islands: [] }; L.plateaus.push({ x: 20, z: -30, r0: 30, r1: 44, h: 9 }); L.hills.push({ x: -110, z: -90, r: 50, h: 12 }); L.hills.push({ x: -120, z: 110, r: 40, h: 8 }); },
+    objectives: [{ x: 20, z: -30, r: 14, name: 'The fort' }, { x: 20, z: -5, r: 9, name: 'The north gate' }, { x: 112, z: -70, r: 11, name: 'The boats' }],
+    noTree(x, z) { return Math.hypot(x - 20, z + 30) < 58 || x > 90; },
+    build(sim, r, keep, clear) {
+      /* the palisade on the plateau's rim; the gaps of the unfinished stretch on the north-east are marked by logs on the ground */
+      const cx = 20, cz = -30, x0 = cx - 24, x1 = cx + 24, z0 = cz - 22, z1 = cz + 22;
+      pal(sim, x0, cx - 4, z1, 2.2); pal(sim, cx + 4, cx + 9, z1, 2.2); /* the north face: the gate, and east of it the stretch not built yet (cx + 9 .. x1) */
+      pal(sim, x0, x1, z0, 2.2); palZ(sim, x0, z0, z1, 2.2); palZ(sim, x1, z0, cz - 4, 2.2); /* the east face is open at its north end too */
+      for (let x = cx + 11; x < x1; x += 4) sim.boxes.push({ x, z: z1 + 2, hw: 1.6, hd: 0.25, h: 0.35, kind: 'log' }); /* the stakes for it, lying on the ground */
+      keep.push({ x: cx, z: cz, r: 34 });
+      for (const [x, z] of [[8, -36], [28, -40], [14, -22], [32, -24]]) sim.boxes.push({ x, z, hw: 2.4, hd: 2.4, h: 2.2, kind: 'tent' });
+      house(sim, keep, 20, -44, 4, 3, false, 3.2); /* the commander's hut */
+      for (const [z, b] of [[-90, 1], [-74, 1], [-56, -1]]) junkZ(sim, keep, 120, z, 13, b, { wy: 0, furled: true });
+      trees(sim, r, clear, 70, -145, 90, -145, 145, undefined); rocks(sim, r, clear, 20, -145, 90, -145, 145); } };
+
+  // ---------- 鞍山 A Jin manor farm near Anshan, autumn 1626 ----------
+  // After Ningyuan and the death of Nurhaci (the eighth month of 1626) the East River raided far inland: 《明熹宗實錄》天啟六年
+  // 七月–八月, 毛文龍 襲鞍山驛, 薩爾滸 (the Jin had to send banners back from the west). A walled farm (拖克索, a bannerman's
+  // estate worked by Han bondservants) in the hills south of Anshan: an earth-walled compound with its gate, the bondservants'
+  // huts, the river ford, and the long valley back south (-z) toward the coast and the boats.
+  B.djanshan = { name: 'A manor near Anshan', jp: '鞍山 · 拖克索', when: 'Autumn 1626', biome: 'autumn', fog: 0.2, terrain: 0.7, features: [], hidden: true, horizon: { lo: 1.0, nokarst: true },
+    desc: 'A bannerman\'s walled farm in the hills south of Anshan, worked by Han bondservants; a ford below it, and the long valley south toward the sea.' };
+  M.djanshan = { trees: 130, rocks: 34,
+    terrain(L, r) { L.river = { axis: 'x', c0: -20, amp: 6, freq: 0.02, ph: 0.7, w: 10, depth: 2.4, bridges: [{ at: 0, hw: 8, ford: true }] };
+      L.hills.push({ x: -120, z: 20, rx: 50, rz: 120, rot: 0, h: 20 }); L.hills.push({ x: 120, z: 30, rx: 50, rz: 110, rot: 0, h: 18 }); L.hills.push({ x: 0, z: 150, rx: 120, rz: 30, rot: 0, h: 14 }); },
+    objectives: [{ x: 0, z: 60, r: 13, name: 'The manor' }, { x: 0, z: -20, r: 10, name: 'The ford' }, { x: 0, z: -138, r: 12, name: 'The valley south' }],
+    noTree(x, z) { return (Math.abs(x) < 46 && z > 30 && z < 96) || Math.abs(x) < 7; },
+    build(sim, r, keep, clear) {
+      sim.deco.push({ kind: 'road', x: 0, w: 5 }); sim.roadX = 0;
+      cityWall(sim, { axis: 'x', at: 34, from: -30, to: 30, h: 4, hd: 1.2, out: -1, gx: 0, gw: 3.5, nobast: true, notower: true }); cityWall(sim, { axis: 'x', at: 90, from: -30, to: 30, h: 4, hd: 1.2, out: 1, nobast: true, notower: true });
+      cityWall(sim, { axis: 'z', at: -30, from: 34, to: 90, h: 4, hd: 1.2, out: -1, nobast: true, notower: true }); cityWall(sim, { axis: 'z', at: 30, from: 34, to: 90, h: 4, hd: 1.2, out: 1, nobast: true, notower: true });
+      keep.push({ x: 0, z: 62, r: 40 });
+      sim.boxes.push({ x: 0, z: 74, hw: 8, hd: 4.5, h: 4.4, kind: 'hall' }); /* the bannerman's house */
+      for (const [x, z] of [[-20, 50], [-20, 62], [20, 50], [20, 62], [-16, 84], [16, 84]]) house(sim, keep, x, z, 3, 2.4, false, 2.6); /* storehouses and stables */
+      for (const [x, z] of [[-44, 40], [-52, 52], [-40, 60], [46, 44], [54, 58]]) house(sim, keep, x, z, 2.6, 2.2, false, 2.3); /* the bondservants' huts outside the wall */
+      trees(sim, r, clear, 120, -145, 145, -145, 145, undefined); rocks(sim, r, clear, 30, -145, 145, -145, 145); } };
 })();

@@ -49,14 +49,17 @@ const dIdx = (k) => DR.findIndex(r => r.k === k);
 function dLoad() { try { return JSON.parse(localStorage.getItem(DKEY) || 'null'); } catch (e) { return null; } }
 function dSave() { try { localStorage.setItem(DKEY, JSON.stringify(DS)); } catch (e) { } }
 function dFresh() { const s = { v: 1, dj: true, stage: 'c1', name: { zh: '李鐵', en: 'Li Tie' }, alive: {}, fate: {}, bond: {}, talked: {}, flags: {}, seen: {}, me: 'me' };
-  for (const r of DR) if (!r.guest && !r.joins) s.alive[r.k] = true; return s; }
+  for (const r of DR) if (!r.guest && !r.joins && !r.only) s.alive[r.k] = true; return s; }
 function dMeRow() { const r = dRow('me'), nm = DS.me === 'me' ? DS.name : (DS.meName || { zh: '', en: '' }); r.zh = nm.zh; r.en = nm.en; }
 function dDress(u, i) { const r = DR[i]; if (!u || !r) return; u.look = Object.assign({ id: 'd:' + r.k }, DLOOK[r.k] || {}); if (state.renderer) state.renderer.colorFigure(u.id, u); }
 function dGo(scene) { try { localStorage.setItem(DGO, scene); } catch (e) { } location.reload(); }
 const dAge = (k, year) => { const r = dRow(k); return r && r.born ? year - r.born : 0; };
 // who comes into the file at this chapter, and who is with it (the chapter's cast; by default everyone alive)
-function dJoin(n) { for (const r of DR) if (r.joins === n && DS.alive[r.k] === undefined) DS.alive[r.k] = true; }
-function dFile(n) { const C = DCH[n]; const cast = C && C.cast; return DR.filter(r => !r.guest && r.k !== DS.me && DS.alive[r.k] && (!cast || cast.includes(r.k))); }
+function dJoin(n) { for (const r of DR) if ((r.joins === n || (r.only && r.only.includes(n))) && DS.alive[r.k] === undefined) DS.alive[r.k] = true; }
+const dMeK = (n) => { const P = DCH[n] && DCH[n].playAs; return (typeof P === 'function' ? P() : P) || DS.me; }; // whom you play in this chapter
+// cards may carry fields worked out when they are shown (ages, what was chosen): resolve them
+const dCards = (L) => (typeof L === 'function' ? L() : L).filter(Boolean).map(c => { const o = Object.assign({}, c); for (const f of ['p', 'year', 'title', 'html']) if (typeof o[f] === 'function') o[f] = o[f](); return o; });
+function dFile(n) { const C = DCH[n] || {}, cast = C.cast, me = dMeK(n); return DR.filter(r => !r.guest && r.k !== me && r.k !== DS.me && DS.alive[r.k] && (!cast || cast.includes(r.k)) && (!C.away || !C.away.includes(r.k)) && (!r.only || r.only.includes(n)) && !(r.k === 'erniu' && !C.withErniu && !C.playAs)); }
 const dDead = () => DR.filter(r => !r.guest && r.k !== DS.me && DS.alive[r.k] === false && (DS.fate[r.k] === 'dead' || DS.fate[r.k] === 'lost'));
 const dName = (k) => k === DS.me ? DS.name : dRow(k);
 
@@ -68,7 +71,7 @@ const DCH = {};
 
 // ========== 第一幕 · 遼陽 · Act One: the fall ==========
 DCH[1] = {
-  year: 1621, mission: 'dj1', act: '第一幕 · 遼陽 · Act One: the fall',
+  year: 1621, withErniu: true, mission: 'dj1', act: '第一幕 · 遼陽 · Act One: the fall',
   intro: [
     { title: '遼東 · Liaodong', year: 'Spring 1621 · 天啟元年', p: ['Liaodong is the Ming empire\'s corner beyond the Great Wall: a plain of farms and walled towns between the Liao River and the Yalu, held for two hundred years against the steppe and the forest peoples.',
       'Three years ago the Jurchen Khan Nurhaci declared war on the Ming. Two years ago he destroyed four Ming armies at Sarhu. This spring he has taken Shenyang. Liaoyang, the capital of Liaodong, is next.'], zh: '天啟元年三月，努爾哈赤陷瀋陽，進圍遼陽。' },
@@ -94,7 +97,7 @@ DCH[1] = {
 };
 
 DCH[2] = {
-  year: 1621, mission: 'dj2',
+  year: 1621, withErniu: true, mission: 'dj2',
   intro: [
     { title: '東行 · East', year: 'The fourth month of 1621', p: ['You walked for ten days. Behind you the smoke of Liaoyang, then the smoke of the villages, then nothing. Around you more people every day: farmers with their ploughs on their backs, soldiers without officers, monks, a magistrate in a cart with his books.',
       'No one knows where the road goes in the end. East is the Yalu, and over it Korea; somewhere south is the sea. The Khan\'s riders come down the road every few days to take what they want: carts, horses, girls.'], zh: '遼民渡江者，不可勝數。' },
@@ -146,7 +149,7 @@ DCH[2] = {
 };
 
 DCH[3] = {
-  year: 1621, mission: 'dj3',
+  year: 1621, withErniu: true, mission: 'dj3',
   intro: [
     { title: '毛文龍 · Mao Wenlong', year: 'Summer 1621', p: ['Mao Wenlong is a Hangzhou man who came to Liaodong as an officer and has never in his life done what he was told. When Liaoyang fell he took a few hundred men down the coast in fishing boats and began to take in every Liaodong refugee who could hold a blade.',
       'He calls them his sons. His enemies say he calls them his sons so he can draw pay for them.'], zh: '毛文龍，字振南，仁和人。' },
@@ -194,7 +197,7 @@ DCH[3] = {
 };
 
 DCH[4] = {
-  year: 1621, mission: 'dj4',
+  year: 1621, withErniu: true, mission: 'dj4',
   intro: [
     { title: '過江 · Over the river', year: 'Autumn 1621', p: ['Mao Wenlong crossed the Yalu with his refugees and set up his camp among the Korean villages around Yongcheon. The Korean king had not asked for him and did not want him: the Khan had warned Korea what would happen if it sheltered Ming soldiers.',
       'But the farmers of Yongcheon took you in. Your file sleeps in the barn of a headman called Kim, whose nephew Kim Sun speaks some Chinese because his father ferried the Ming envoys over the Yalu.'], zh: '毛文龍屯龍川、彌串堡。' },
@@ -241,7 +244,7 @@ const DCAMP = { fires: [[0, 0], [8, -5]], tents: [[-10, 4, 1.7, 2.5, 2.1], [-4.5
   props: [['pot', 8, -5, 0], ['rack', -7.5, -3.5, 0.9], ['log', 0, 2.9, 0], ['log', -2.6, -1.4, 1.1], ['log', 2.7, -1.2, -1.1]] };
 function dCampCfg(n) {
   const C = DCH[n], K = C.camp, ox = K.at ? K.at[0] : 0, oz = K.at ? K.at[1] : 0, P = (x, z) => [+(x + ox).toFixed(2), +(z + oz).toFixed(2)];
-  const npcs = [], beds = [], file = dFile(n), rows = [{ k: DS.me }].concat(file), N = rows.length;
+  const npcs = [], beds = [], file = dFile(n), rows = [{ k: dMeK(n) }].concat(file), N = rows.length;
   rows.forEach((r, i) => { const a = -0.5 + (i / Math.max(8, N)) * Math.PI * 1.55 + Math.PI * 0.55; const p = P(Math.sin(a) * 6.3, Math.cos(a) * 6.3); beds.push([p[0], p[1], +(a + Math.PI).toFixed(3), false]); });
   for (const k of dDead().map(r => r.k).slice(0, 4)) { const a = Math.PI * (1.6 + beds.length * 0.07); const p = P(Math.sin(a) * 6.3, Math.cos(a) * 6.3); beds.push([p[0], p[1], +(a + Math.PI).toFixed(3), true]); } // empty bedrolls for the dead
   file.forEach((r, i) => { const a = (i / Math.max(1, file.length)) * Math.PI * 2 + 0.4, rr = i % 3 === 2 ? 3.4 : 2.5; const x = Math.sin(a) * rr, z = Math.cos(a) * rr; const p = P(x, z);
@@ -258,18 +261,19 @@ function dStart(scene) {
   const n = +m[2], C = DCH[n]; if (!C) { $('menu').hidden = false; return; }
   const seed = (Math.random() * 0x7fffffff) | 0, pl = [{ name: DS.name.zh || 'You', team: 0, connected: true }];
   if (m[1] === 'c') {
-    if (!DS.seen['i' + n]) { dJoin(n); return zCards(typeof C.intro === 'function' ? C.intro() : C.intro, () => { DS.seen['i' + n] = 1; DS.stage = 'c' + n; dSave(); dStart('c' + n); }); }
+    if (!DS.seen['i' + n]) { dJoin(n); return zCards(dCards(C.intro), () => { DS.seen['i' + n] = 1; DS.stage = 'c' + n; dSave(); dStart('c' + n); }); }
     if (!C.camp) { DS.stage = 'b' + n; dSave(); return dStart('b' + n); } // straight into the battle
     const camp = dCampCfg(n); ZB = null;
     startGame({ seed, battle: camp.map || 'zcamp', mode: 'campaign', mission: 'zcamp', camp, players: pl }, 0, null, 1);
-    for (const u of state.sim.units) if (u.camp) { ZC.map[u.id] = u.ci; dDress(u, u.ci); } { const me = state.sim.units[state.sim.players[0].heroId]; dDress(me, dIdx(DS.me)); } ZC.chatT = 6;
+    for (const u of state.sim.units) if (u.camp) { ZC.map[u.id] = u.ci; dDress(u, u.ci); } { const me = state.sim.units[state.sim.players[0].heroId]; dDress(me, dIdx(dMeK(n))); } ZC.chatT = 6;
     MUSIC.play('menu'); MUSIC.setIntensity(0.15); AUDIO.setFire(0.6); $('army').hidden = true;
     setTimeout(() => storyCard(C.camp.card, C.camp.title), 900);
   } else {
     ZC = null; startGame({ seed, battle: SIM.MISSIONS[C.mission].battle, mode: 'campaign', mission: C.mission, players: pl }, 0, null, 1);
     const sim = state.sim, me = sim.players[0], q = sim.squads[me.soldierSq];
-    ZB = { map: {}, sq: q.id, first: me.heroId, cur: DS.me, fell: false, R: DR, dj: true, ch: n, deadMe: [] };
-    const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = dIdx(DS.me);
+    ZB = { map: {}, sq: q.id, first: me.heroId, cur: dMeK(n), fell: false, R: DR, dj: true, ch: n, deadMe: [] };
+    const used = {}; used[me.heroId] = 1; ZB.map[me.heroId] = dIdx(dMeK(n));
+    for (const gid of C.mingFoes || []) { const g = sim.mg[gid]; if (!g) continue; const pl = sim.players[g.p]; for (const sid of pl.squads) for (const uid of sim.squads[sid].unitIds) { const u = sim.units[uid]; u.look = { id: 'mut:' + (uid % 6), ming: true, hat: ['band', 'wrap', 'straw', 'felt'][uid % 4], brows: 'knit', beard: uid % 3 ? 'stubble' : undefined }; if (state.renderer) state.renderer.colorFigure(uid, u); } } /* men in Ming coats on the other side */
     const file = dFile(n), order = (C.order || []).filter(k => file.some(r => r.k === k)).concat(file.map(r => r.k).filter(k => !(C.order || []).includes(k)));
     // the men a scripted wound is meant for take that place in the squad (the sim wounds by place)
     for (const kk in (C.wounds || {})) { const k = C.wounds[kk], uid = q.unitIds[+kk]; if (uid === undefined || used[uid] || !file.some(r => r.k === k)) continue; used[uid] = 1; ZB.map[uid] = dIdx(k); }
@@ -288,14 +292,16 @@ function dLook() {
 }
 function dKeyE() {
   if (state.zheDlg) return true; const t = dLook(); if (!t) return true;
-  if (t.bed) { const n = ZC.night, C = DCH[n]; const go = () => { DS.stage = 'b' + n; dSave(); if (C.dawn) zCards([C.dawn], () => dGo('b' + n)); else dGo('b' + n); };
-    if (C.camp.choice && typeof CHD !== 'undefined' && CHD[C.camp.choice] && chGot(chCtx(), C.camp.choice) < 0) { chDecide(CHD[C.camp.choice].build(chCtx()), () => go()); return true; }
+  if (t.bed) { const n = ZC.night, C = DCH[n]; const go = () => { DS.stage = 'b' + n; dSave(); if (C.dawn) zCards(dCards([C.dawn]), () => dGo('b' + n)); else dGo('b' + n); };
+    const chId = typeof C.camp.choice === 'function' ? C.camp.choice() : C.camp.choice;
+    if (chId && typeof CHD !== 'undefined' && CHD[chId] && chGot(chCtx(), chId) < 0) { chDecide(CHD[chId].build(chCtx()), () => go()); return true; }
+    if (false) { chDecide(CHD[C.camp.choice].build(chCtx()), () => go()); return true; }
     go(); return true; }
   dDialog(t.k, t.u); return true;
 }
 // talk: the same panel and keys as the Zhejiang camp (#zheDlg, state.zheDlg)
 function dDialog(k, u) {
-  const n = ZC.night, D = (DCH[n].talk && DCH[n].talk(k)) || dTalkAny(k, n); if (!D) return; const r = dRow(k); state.zheDlg = { k };
+  const n = ZC.night, D = (DCH[n].talk && DCH[n].talk(k)) || dTalkAny(k, n); if (!D) return; const r = dRow(k); state.zheDlg = { k }; if (typeof D.g === 'function') D.g = D.g(); if (!D.g || !D.g[0]) D.g = ['……', '...'];
   if (document.pointerLockElement) document.exitPointerLock(); Input.keys = 0; $('pause').hidden = true;
   let box = $('zheDlg'); if (!box) { box = document.createElement('div'); box.id = 'zheDlg'; document.body.appendChild(box); box.addEventListener('mousedown', (e) => e.stopPropagation()); }
   const h = localHero(); if (h && u) Input.yaw = Math.atan2(u.x - h.x, u.z - h.z);
@@ -327,7 +333,7 @@ function dHUD(dt) {
 function dSay(ev) {
   const sim = state.sim, h = localHero(), C = DCH[ZB.ch]; const W = (C.who || {})[ev.who] || ['', ev.who];
   let id = -1, who = W.slice(); const ji = DR.findIndex(r => r.k === ev.who && !r.guest);
-  if (ji >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === ji && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded && +uid !== (h && h.id)) id = +uid; if (id >= 0) who = [DR[ji].zh, DR[ji].en]; else return true; } // a man's own words are not spoken by someone else: if he is gone, the line goes with him
+  if (ji >= 0) { for (const uid in ZB.map) if (ZB.map[uid] === ji && sim.units[uid] && !sim.units[uid].dead && !sim.units[uid].wounded) id = +uid; if (id >= 0) who = [DR[ji].zh, DR[ji].en]; else return true; } // a man's own words are not spoken by someone else: if he is gone, the line goes with him
   else if (sim.mg[ev.who]) { const g = sim.mg[ev.who]; id = sim.players[g.p].heroId; }
   if (id >= 0 && sim.units[id] && sim.units[id].dead) id = -1;
   if (id < 0 && h) { const cand = sim.teamAlive[h.team].filter(u => u.id !== h.id && !u.wounded && u.type !== 'horse' && Math.hypot(u.x - h.x, u.z - h.z) < 22); if (cand.length) id = cand[Math.floor(Math.random() * cand.length)].id; }
@@ -352,19 +358,19 @@ function dFinish(winner) {
   for (const uid in ZB.map) { const r = DR[ZB.map[uid]]; if (!r) continue; const u = sim.units[uid];
     fate[r.k] = u.dead ? 'dead' : (!won && u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 4)) ? 'lost' : (u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 6) && M.phases.some(P => P.obj && P.obj.extract)) ? 'lost' : 'out'; }
   for (const k of ZB.deadMe) fate[k] = 'dead';
-  const meK = DS.me, alive = h && !h.dead, oldName = Object.assign({}, DS.name);
+  const meK = dMeK(n), alive = h && !h.dead, oldName = Object.assign({}, DS.name), other = !!C.playAs;
   if (ZB.cur === meK || ZB.cur === 'stranger') fate[meK] = alive ? 'out' : 'dead'; else fate[meK] = 'dead';
-  if (ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && alive) { const nk = ZB.cur, r = dRow(nk); if (meK === 'me') DS.meName = oldName; DS.me = nk; DS.name = { zh: r.zh, en: r.en }; fate[nk] = 'out'; }
+  if (!other && ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && alive) { const nk = ZB.cur, r = dRow(nk); if (meK === 'me') DS.meName = oldName; DS.me = nk; DS.name = { zh: r.zh, en: r.en }; fate[nk] = 'out'; }
   const list = Object.keys(fate);
   for (const k of list) { DS.fate[k] = fate[k]; DS.alive[k] = fate[k] === 'out'; }
   DS.stage = 'e' + n; DS.lastWon = won; dSave();
-  const ft = C.fateText, rows = list.map(k => { const r = dRow(k), f = fate[k]; const nm = k === DS.me ? `${DS.name.zh} ${DS.name.en} (you)` : k === meK && DS.me !== meK ? `${oldName.zh} ${oldName.en} (you, until you fell)` : `${r.zh} ${r.en}`; return `<li class="${f === 'out' ? 'out' : f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${nm} — ${ft[f] || ft.out}</li>`; }).join('');
+  const ft = C.fateText, rows = list.map(k => { const r = dRow(k), f = fate[k]; const nm = other ? `${r.zh} ${r.en}${k === meK ? ' (you)' : ''}` : k === DS.me ? `${DS.name.zh} ${DS.name.en} (you)` : k === meK && DS.me !== meK ? `${oldName.zh} ${oldName.en} (you, until you fell)` : `${r.zh} ${r.en}`; return `<li class="${f === 'out' ? 'out' : f}">${f === 'out' ? '<b>✓</b>' : f === 'dead' ? '✝' : '?'} ${nm} — ${ft[f] || ft.out}</li>`; }).join('');
   const outN = list.filter(k => fate[k] === 'out').length;
   $('resultTitle').textContent = won ? (C.resultTitle || '過 · Through') : '敗 · Beaten back'; $('resultTitle').className = won ? 'win' : 'lose';
   const head = outN <= 1 ? (won ? 'You came through, and almost no one with you.' : 'You came back alone.') : won ? M.win : (M.loseText || 'You were beaten back.');
   $('resultText').innerHTML = `${head} ${outN} of ${list.length} of your people came through.`;
   $('btnNext').hidden = false; $('btnNext').textContent = 'What happened →';
-  $('btnNext').onclick = () => { $('result').hidden = true; const nx = typeof C.next === 'function' ? C.next() : C.next; DS.stage = nx === 'done' ? 'done' : 'c' + nx; dSave(); zCards(C.after(won, rows, outN), () => DCH[nx] ? dGo('c' + nx) : dEnd()); }; /* a chapter not written yet: the save waits at its door */
+  $('btnNext').onclick = () => { $('result').hidden = true; const nx = typeof C.next === 'function' ? C.next() : C.next; DS.stage = nx === 'done' ? 'done' : 'c' + nx; dSave(); zCards(dCards(C.after(won, rows, outN)), () => DCH[nx] ? dGo('c' + nx) : dEnd()); }; /* a chapter not written yet: the save waits at its door */
 }
 function dEnd() { if (!DS.stage || DS.stage === 'done') DS.stage = 'done'; dSave(); location.reload(); }
 
@@ -381,7 +387,7 @@ function dMenu() {
   let el = $('djCta'); const z = $('zheCta'); if (!z) return;
   if (!el) { const st = document.createElement('style'); st.textContent = '#djCta { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 16px; margin: -6px 0 16px; border: 1px solid #3a6a6a; background: linear-gradient(100deg, rgba(40,90,100,.16), rgba(220,210,190,.08)); flex-wrap: wrap } #djCta b { font-size: 19px; letter-spacing: .04em } #djCta small { display: block; color: var(--ink2); margin-top: 4px; max-width: 640px; line-height: 1.5 } #djCta .btns { display: flex; gap: 8px }';
     document.head.appendChild(st); el = document.createElement('div'); el.id = 'djCta';
-    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Act One is ready; more acts are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
+    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One and Two are ready; more acts are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
     const after = $('jinCta') || z; after.after(el); }
   const s = dLoad(), b = $('btnDj'), nb = $('btnDjNew'); const cont = s && s.stage && s.stage !== 'done';
   const waiting = cont && /^c(\d+)$/.test(s.stage) && !DCH[+s.stage.slice(1)]; /* finished every chapter written so far */

@@ -1074,6 +1074,21 @@ class Renderer {
       const mb = (geo, m, x, yy, z, rx, rz) => { const o = new THREE.Mesh(geo, m); o.position.set(x, yy, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; o.castShadow = true; g.add(o); };
       mb(new THREE.BoxGeometry(L, 0.18, W * 0.8), wood, 0, 0.95, 0); mb(new THREE.BoxGeometry(L, b.h, 0.1), dark, 0, 0.95 + b.h / 2, (b.z > 0 ? -1 : 1) * W * 0.42); for (const sx of [-1, 1]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.14, 10), wood); wh.rotation.x = HPI; wh.position.set(sx * L * 0.3, 0.62, 0); g.add(wh); }
       mb(new THREE.BoxGeometry(0.12, 0.12, 2.4), wood, L / 2 + 1, 0.9, 0, 0, 0); this.scene.add(g); }
+    // 沙船 junks (the East River fleet, the fishing boats of the islands): a flat-bottomed hull with a raised square stern, a deck
+    // house aft, a tall main mast with a battened brown sail and a small fore mast; drawn along the collider's long side,
+    // bow toward b.bow (+1 / -1), sitting on the sand or in the shallows (b.wy: the water's surface, if it floats)
+    for (const b of boxes.filter(q => q.kind === 'junk')) { const ax = b.hw >= b.hd, L = Math.max(b.hw, b.hd) * 2, W = Math.min(b.hw, b.hd) * 2; const y = b.wy !== undefined ? Math.max(b.wy - 0.6, terrainH(b.x, b.z)) : terrainH(b.x, b.z);
+      const g = new THREE.Group(); g.position.set(b.x, y, b.z); g.rotation.y = (ax ? 0 : HPI) + ((b.bow || 1) < 0 ? PI : 0) + (b.tilt ? 0 : 0); if (b.list) g.rotation.z = b.list;
+      const hullM = new THREE.MeshLambertMaterial({ color: 0x5a3e26 }), dark = new THREE.MeshLambertMaterial({ color: 0x2e2218 }), sailM = new THREE.MeshLambertMaterial({ color: b.sail || 0x8a5a34, side: THREE.DoubleSide }), batt = new THREE.MeshLambertMaterial({ color: 0x3a2a1a }), red = new THREE.MeshLambertMaterial({ color: 0x9a2a22 });
+      const mb = (geo, m, x, yy, z, rx, ry, rz) => { const o = new THREE.Mesh(geo, m); o.position.set(x, yy, z); o.rotation.set(rx || 0, ry || 0, rz || 0); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
+      mb(new THREE.BoxGeometry(L * 0.82, 1.1, W), hullM, -L * 0.03, 0.75, 0); /* the hull */ mb(new THREE.BoxGeometry(L * 0.22, 0.9, W * 0.86), hullM, L * 0.46, 1.0, 0, 0, 0, 0.32); /* the bow, swept up */
+      mb(new THREE.BoxGeometry(L * 0.14, 1.9, W * 1.02), hullM, -L * 0.45, 1.3, 0); /* the high square stern */ mb(new THREE.BoxGeometry(L * 0.14, 0.24, W * 1.04), red, -L * 0.45, 2.3, 0);
+      mb(new THREE.BoxGeometry(L * 0.86, 0.1, W * 1.04), dark, -L * 0.02, 1.32, 0); /* the gunwale */ mb(new THREE.BoxGeometry(L * 0.2, 1.0, W * 0.7), dark, -L * 0.3, 1.85, 0); /* the deck house */
+      if (!b.wreck) { const mh = L * 0.95; mb(new THREE.CylinderGeometry(0.1, 0.14, mh, 6), batt, L * 0.06, 1.3 + mh / 2, 0); /* main mast */ mb(new THREE.CylinderGeometry(0.07, 0.09, mh * 0.6, 6), batt, L * 0.36, 1.3 + mh * 0.3, 0); /* fore mast */
+        if (!b.furled) { const sw = L * 0.48, sh = mh * 0.72; mb(new THREE.PlaneGeometry(sw, sh), sailM, L * 0.04, 1.6 + mh * 0.2 + sh / 2, 0.16, 0, HPI, 0); for (let k = 0; k <= 5; k++) mb(new THREE.BoxGeometry(0.06, 0.06, sw * 1.04), batt, L * 0.04, 1.6 + mh * 0.2 + sh * k / 5, 0.2, 0, 0, 0).rotation.y = 0; /* the battens across the sail */
+          mb(new THREE.PlaneGeometry(sw * 0.45, sh * 0.5), sailM, L * 0.35, 1.6 + sh * 0.3, 0.12, 0, HPI, 0); }
+        else mb(new THREE.CylinderGeometry(0.22, 0.22, L * 0.4, 6), sailM, L * 0.05, 2.6, 0, 0, 0, HPI); /* the sail lowered and lashed */ }
+      this.scene.add(g); }
     // earthen ramparts with a grass cap; palisades of sharpened stakes
     const ramp = boxes.filter(q => q.kind === 'rampart'), pal = boxes.filter(q => q.kind === 'palisade');
     if (ramp.length) { const em = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0x8a867e }), ramp.length), gm = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: snow ? 0xe8ebee : 0x6a6660 }), ramp.length);
