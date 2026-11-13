@@ -22,7 +22,7 @@ Object.assign(DLOOK, {
 
 // ========== 第二幕 · 皮島 · Act Two: the island ==========
 DCH[5] = {
-  year: 1622, mission: 'dj5', act: '第二幕 · 皮島 · Act Two: the island', away: ['erniu'],
+  year: 1622, mission: 'dj5', act: '第二幕 · 皮島 · Act Two: the island', away: ['erniu', 'zheng'],
   intro: [
     { title: '第二幕 · 皮島', year: 'Act Two · The island · 1622', p: ['Gado, the Chinese call it Pidao: a hilly island of fishermen and goats off the Korean coast, twenty li from the mouth of the Yalu. In the spring of 1622 Mao Wenlong brought his people out to it in fishing boats, and by summer there were thirty thousand on an island that had fed three hundred.',
       'The court in Beijing made him Regional Commander of the East River, sent him silver and grain by sea from Dengzhou, and told him to raid the Jin from behind. Mao reported that he had a hundred thousand men. Nobody could count them, out on the islands.'], zh: '毛文龍開鎮皮島，號東江。' },
@@ -116,7 +116,7 @@ DCH[6] = {
 };
 
 DCH[7] = {
-  year: 1624, mission: 'dj7', away: ['erniu'],
+  year: 1624, mission: 'dj7', away: ['erniu', 'zheng'],
   intro: [
     { title: '鐵山 · Tieshan', year: 'Summer 1624', p: ['Mao Wenlong has posts all along the Korean shore opposite his islands, and the one at Tieshan is to be a real fort: a palisade on the hill above the beach, a gate, huts for a garrison. From Tieshan his raiders can cross the Yalu at night and be back before the Jin know they came.',
       'The Koreans of Tieshan don\'t like it. Their king likes it less. But some of their musketeers have started drilling with the East River men, and Kim Sun\'s cousin Kim Yong is one of them.'], zh: '毛文龍屯兵鐵山、雲從、宣川。' },
@@ -158,7 +158,7 @@ DCH[7] = {
 };
 
 DCH[8] = {
-  year: 1626, mission: 'dj8', away: ['erniu'],
+  year: 1626, mission: 'dj8', away: ['erniu', 'zheng'],
   intro: [
     { title: '汗死了 · The Khan is dead', year: 'The eighth month of 1626', p: ['Nurhaci died on the road back from the hot springs at Qinghe, sixty-seven years old, seven months after Ningyuan. His eighth son Hong Taiji was chosen Khan over his brothers. For a few weeks, while the banners mourned and the beile watched each other, the Jin rear lay open.',
       'Mao Wenlong sent his raiders deep inland. His adopted son Mao Chenglu took a column up the valleys toward Anshan, to burn the bannermen\'s farms and bring out the Han who worked them.'], zh: '天啟六年秋，毛文龍遣將襲鞍山。' },

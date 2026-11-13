@@ -21,7 +21,7 @@ for (const id of Object.keys(ctx.DJ)) { if (only && id !== only) continue;
     const h = sim.units[p.heroId]; if (h && h.hp < h.def.hp * 0.5) h.hp = h.def.hp; // the hero does not die in the harness
     sim.step([[0, 0, 0, 0, 0, 0, []]]);
     if (sim.mwin !== undefined && sim.mwin >= 0) break; if (sim.winner >= 0) break;
-    if (phT > 30 * 60 * 4) { stuck = true; break; } }
+    if (phT > 30 * 60 * 4) { stuck = true; const O = M.phases[sim.mv.ph].obj; if (process.env.DBG) { for (const sub of (O.all || [O])) console.log('  sub', JSON.stringify(sub), '->', sim.mObj(sub, 999)); const h = sim.units[p.heroId]; console.log('  hero', h && h.x.toFixed(0), h && h.z.toFixed(0), h && h.dead); } break; } }
   const res = sim.mwin !== undefined && sim.mwin >= 0 ? sim.mwin : sim.winner;
   const ok = res === (M.side | 0) && !stuck; if (!ok) bad++;
   console.log(`${ok ? 'OK  ' : 'FAIL'} ${id.padEnd(8)} phases ${log.join(' ')}  result ${res}${stuck ? ' STUCK in phase ' + sim.mv.ph + ' (' + M.phases[sim.mv.ph].title + ')' : ''}  ${Date.now() - t0} ms`);

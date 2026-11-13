@@ -358,6 +358,7 @@ function dFinish(winner) {
   for (const uid in ZB.map) { const r = DR[ZB.map[uid]]; if (!r) continue; const u = sim.units[uid];
     fate[r.k] = u.dead ? 'dead' : (!won && u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 4)) ? 'lost' : (u.wounded && !u.aided && u.helpedBy < 0 && !near(u, 6) && M.phases.some(P => P.obj && P.obj.extract)) ? 'lost' : 'out'; }
   for (const k of ZB.deadMe) fate[k] = 'dead';
+  { const L = DS.chLost || {}; for (const k in L) if (fate[k] !== undefined && L[k].ch === n) fate[k] = L[k].how === 'dead' ? 'dead' : 'lost'; } /* a man a choice took out of this fight is gone, whatever his body did after */
   const meK = dMeK(n), alive = h && !h.dead, oldName = Object.assign({}, DS.name), other = !!C.playAs;
   if (ZB.cur === meK || ZB.cur === 'stranger') fate[meK] = alive ? 'out' : 'dead'; else fate[meK] = 'dead';
   if (!other && ZB.cur && ZB.cur !== meK && ZB.cur !== 'stranger' && alive) { const nk = ZB.cur, r = dRow(nk); if (meK === 'me') DS.meName = oldName; DS.me = nk; DS.name = { zh: r.zh, en: r.en }; fate[nk] = 'out'; }
@@ -387,7 +388,7 @@ function dMenu() {
   let el = $('djCta'); const z = $('zheCta'); if (!z) return;
   if (!el) { const st = document.createElement('style'); st.textContent = '#djCta { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 16px; margin: -6px 0 16px; border: 1px solid #3a6a6a; background: linear-gradient(100deg, rgba(40,90,100,.16), rgba(220,210,190,.08)); flex-wrap: wrap } #djCta b { font-size: 19px; letter-spacing: .04em } #djCta small { display: block; color: var(--ink2); margin-top: 4px; max-width: 640px; line-height: 1.5 } #djCta .btns { display: flex; gap: 8px }';
     document.head.appendChild(st); el = document.createElement('div'); el.id = 'djCta';
-    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One and Two are ready; more acts are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
+    el.innerHTML = '<div><b>東江 · The East River</b><small>A story campaign, 1621–1637. A smith\'s son of Liaoyang and the people who ran with him: refugees, Mao Wenlong\'s island army off Korea, raids behind the Jin lines, two invasions of Korea, a mutiny, and the fall of the island. <i>Acts One to Three are ready (eleven chapters); more are coming.</i></small></div><div class="btns"><button class="btn primary" id="btnDj" type="button">Begin</button><button class="btn" id="btnDjNew" type="button" hidden>New</button></div>';
     const after = $('jinCta') || z; after.after(el); }
   const s = dLoad(), b = $('btnDj'), nb = $('btnDjNew'); const cont = s && s.stage && s.stage !== 'done';
   const waiting = cont && /^c(\d+)$/.test(s.stage) && !DCH[+s.stage.slice(1)]; /* finished every chapter written so far */

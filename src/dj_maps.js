@@ -184,4 +184,37 @@
       for (const [x, z] of [[-20, 50], [-20, 62], [20, 50], [20, 62], [-16, 84], [16, 84]]) house(sim, keep, x, z, 3, 2.4, false, 2.6); /* storehouses and stables */
       for (const [x, z] of [[-44, 40], [-52, 52], [-40, 60], [46, 44], [54, 58]]) house(sim, keep, x, z, 2.6, 2.2, false, 2.3); /* the bondservants' huts outside the wall */
       trees(sim, r, clear, 120, -145, 145, -145, 145, undefined); rocks(sim, r, clear, 30, -145, 145, -145, 145); } };
+
+  // ========== Act Three: 1627 ==========
+  // ---------- 鐵山 in winter: the first month of 1627 (the same fort, the shallows frozen, snow on the plain) ----------
+  B.djtieshanw = Object.assign({}, B.djtieshan, { when: 'February 1627', biome: 'winter', fog: 0.3, desc: 'The Tieshan fort in the snow, the morning the Jin came over the frozen Yalu into Korea with thirty thousand men.' });
+  M.djtieshanw = Object.assign({}, M.djtieshan, { terrain(L, r) { M.djtieshan.terrain(L, r); L.sea.ice = true; L.sea.x0 = 126; } });
+
+  // ---------- 龍骨山城 Yonggol mountain fortress, spring 1627 ----------
+  // 《朝鮮王朝實錄》仁祖五年: 鄭鳳壽 (Jeong Bong-su), a minor officer, gathered the people of Yongcheon and Cheolsan into the old
+  // mountain fortress of Yonggol and held it against repeated Jin assaults through the spring, one of the few places in the
+  // north-west the Jin never took. The fortress rings the flat top of a steep hill with a stone wall; the main gate faces the
+  // valley path (+z, where the Jin come up), a postern faces south; the hillside below is bare and steep.
+  B.djyonggol = { name: 'Yonggol mountain fortress', jp: '龍骨山城', when: 'April 1627', biome: 'spring', fog: 0.2, terrain: 0.6, features: [], hidden: true, horizon: { lo: 1.2, nokarst: true },
+    desc: 'An old Korean mountain fortress on a steep hill above Yongcheon: a ring of stone wall round the summit, a gate over the valley path, and below it the Jin camps.' };
+  M.djyonggol = { trees: 110, rocks: 50,
+    terrain(L, r) { L.plateaus.push({ x: 0, z: -10, r0: 46, r1: 88, h: 24 }); L.hills.push({ x: 0, z: 150, rx: 150, rz: 30, rot: 0, h: 8 }); L.hills.push({ x: -130, z: -80, r: 50, h: 18 }); L.hills.push({ x: 130, z: -90, r: 46, h: 16 }); },
+    objectives: [{ x: 0, z: 34, r: 10, name: 'The main gate' }, { x: -40, z: -10, r: 10, name: 'The west wall' }, { x: 0, z: -10, r: 12, name: 'The summit' }, { x: 0, z: 110, r: 14, name: 'The Jin siege camp' }],
+    noTree(x, z) { return Math.hypot(x, z + 10) < 60 || (Math.abs(x) < 30 && z > 90 && z < 130); },
+    build(sim, r, keep, clear) {
+      /* the stone ring: four walls on the summit's edge, the main gate in the north wall, a postern in the south */
+      cityWall(sim, { axis: 'x', at: 30, from: -40, to: 40, h: 5, hd: 1.6, out: 1, gx: 0, gw: 3.2, nobast: true, name: '龍骨' }); cityWall(sim, { axis: 'x', at: -50, from: -40, to: 40, h: 5, hd: 1.6, out: -1, gx: 0, gw: 2, nobast: true, notower: true });
+      cityWall(sim, { axis: 'z', at: -40, from: -50, to: 30, h: 5, hd: 1.6, out: -1, nobast: true, notower: true }); cityWall(sim, { axis: 'z', at: 40, from: -50, to: 30, h: 5, hd: 1.6, out: 1, nobast: true, notower: true });
+      keep.push({ x: 0, z: -10, r: 56 });
+      sim.boxes.push({ x: 0, z: -22, hw: 7, hd: 4, h: 4.5, kind: 'temple' }); /* the fortress temple, where the monks keep the powder */
+      for (const [x, z] of [[-24, 8], [-26, -30], [24, -30], [26, 10], [-10, -38], [12, 16]]) sim.boxes.push({ x, z, hw: 2.4, hd: 2.4, h: 2.2, kind: 'tent' });
+      /* the Jin siege camp in the valley below the gate */
+      for (const [x, z] of [[-18, 104], [0, 112], [18, 104], [-10, 124], [12, 126]]) sim.boxes.push({ x, z, hw: 2.6, hd: 2.6, h: 2.4, kind: 'tent' }); keep.push({ x: 0, z: 112, r: 28 });
+      trees(sim, r, clear, 100, -145, 145, -145, 145, 1); rocks(sim, r, clear, 44, -145, 145, -145, 145); } };
+
+  // ---------- 冰上 The sea ice off Sinmi island, the second month of 1627 ----------
+  // The Juehua field (sim_maps.js) dressed as the frozen strait between the Korean shore and Mao Wenlong's island of Sinmi: after
+  // Tieshan fell the refugees who had not reached the boats walked out over the sea ice. The mainland shore is +z, the island -z.
+  B.djice = Object.assign({}, B.juehua, { name: 'The sea ice off Sinmi', jp: '身彌島 · 冰上', when: 'February 1627', hidden: true, desc: 'The frozen strait between the Korean shore and the island of Sinmi, the refugees walking out over the ice with the riders behind them.' });
+  M.djice = M.juehua;
 })();
