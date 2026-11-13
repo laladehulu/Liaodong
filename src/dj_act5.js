@@ -246,7 +246,6 @@ DCH[38] = {
     huanglong: { g: ['你們是從萊州來的？好。萊州守住了。', 'You came from Laizhou? Good. Laizhou held.'], t: [{ q: 'Will Lüshun hold, sir?', bond: 1, a: [['不會。', 'No.'], ['可是它會守到他們付出代價。守到皇上知道，東江還有人。', 'But it will hold until they pay for it. Until the Emperor knows there were still East River men.']] }] },
   })[k],
 };
-DCH[19] = null; DCH[39] = null; // Act Six is being written
 
 // ---------- the choices of Act Five ----------
 // 一 · the night at Wuqiao: the fork of the campaign (a full stop in the middle of the battle)

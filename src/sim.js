@@ -3909,7 +3909,7 @@ Sim.prototype.mObj = function (o, el) {
   if (o.all) { let ok = 1; for (const s of o.all) { const r = this.mObj(s, el); if (r < 0) return -1; if (r === 0) ok = 0; } if (ok && o.keep === undefined && !o.reach) return 1; if (!ok) return 0; }
   if (o.keep) { const z = this.missionZone(o.keep); if (z && z.owner === 1 - this.mission.side) return -1; }
   if (o.reach) { const z = this.missionZone(o.reach); if (!(z && this.humansIn(z))) return 0; }
-  if (o.hold) { const z = this.missionZone(o.hold); const k = 'hold:' + o.hold; if (z.n0 > 0 && z.n1 === 0) this.mv[k] = (this.mv[k] || 0) + 0.5; if ((this.mv[k] || 0) < Math.min(o.t, 12)) return 0; } /* take it and clear it: no long hold-outs */
+  if (o.hold) { const z = this.missionZone(o.hold); const k = 'hold:' + o.hold; const S1 = this.mission.side === 1; if ((S1 ? z.n1 : z.n0) > 0 && (S1 ? z.n0 : z.n1) === 0) this.mv[k] = (this.mv[k] || 0) + 0.5; if ((this.mv[k] || 0) < Math.min(o.t, 12)) return 0; } /* take it and clear it: no long hold-outs */
   if (o.capture) { for (const k of o.capture) { const z = this.missionZone(k); if (z.owner !== this.mission.side) return 0; } }
   if (o.defeat) { for (const gid of o.defeat) { const g = this.mg[gid]; if (!g || (!g.released && !g.broken)) return 0; if (!g.broken && this.mGroupFrac(gid) > 1 - (o.frac || 0.8)) return 0; } for (const gid of o.defeat) this.mBreak(gid); }
   if (o.officer) { const g = this.mg[o.officer]; if (!g || !g.released) return 0; const h = this.units[this.players[g.p].heroId]; const wound = g.G.wound; if (h && !h.dead && !(wound && h.hp < h.def.hp * wound)) return 0; if (!g.broken) { this.events.push({ t: 'mofficer', name: g.G.name, zh: g.G.zh || '', gid: o.officer, wounded: !!(h && !h.dead) }); this.mBreak(o.officer); } }

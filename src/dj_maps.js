@@ -291,4 +291,42 @@
       for (const [z, b] of [[-60, 1], [-40, -1], [-20, 1]]) junkZ(sim, keep, 104, z, 13, b, { wy: 0, furled: true });
       trees(sim, r, clear, 40, -145, 60, -145, 145, 1); rocks(sim, r, clear, 26, -145, 100, -145, 145); } };
   B.djlaizhou = Object.assign({}, B.siegecity, { name: 'Laizhou', jp: '萊州', when: 'May 1632', biome: 'spring', hidden: true, desc: 'Laizhou in Shandong, its walls held by its townsmen and a handful of soldiers against the Dengzhou mutineers and their Western guns.' });
+
+  // ========== Act Six: 丙子 the end ==========
+  // ---------- 光教山 Gwanggyo mountain, by Suwon: the first month of 1637 ----------
+  // 《仁祖實錄》十五年正月; 《清太宗實錄》崇德二年正月. In the second Manchu invasion of Korea (丙子胡亂) King Injo was shut in
+  // Namhan fortress; the provincial armies marched to relieve him and were beaten one by one. Kim Jun-ryong (金俊龍) with the
+  // Jeolla army dug in on Gwanggyo mountain, forty li south of Namhan; the Qing attacked, and Yangguli (揚古利), one of Hong
+  // Taiji's senior generals, was shot dead there by a Korean musketeer hidden in the rocks. With no powder or food the Jeolla army
+  // went down the mountain in the night. The field: the Korean stockade on the shoulder (-z), the valley road up from the north
+  // (+z), the crag above the road where the musketeers hid, pine ridges either side.
+  B.djgwang = { name: 'Gwanggyo mountain', jp: '光教山 · 광교산', when: 'February 1637', biome: 'winter', fog: 0.3, terrain: 0.7, features: [], hidden: true, horizon: { lo: 1.1, nokarst: true },
+    desc: 'A pine mountain south of Namhan in deep snow: the Korean stockade on its shoulder, the valley road below, and a crag of rocks above the road.' };
+  M.djgwang = { trees: 120, rocks: 50,
+    terrain(L, r) { L.plateaus.push({ x: 0, z: -56, r0: 44, r1: 74, h: 18 }); L.hills.push({ x: -112, z: 0, rx: 40, rz: 140, rot: 0, h: 26 }); L.hills.push({ x: 112, z: 10, rx: 40, rz: 130, rot: 0, h: 24 }); L.hills.push({ x: -46, z: 30, r: 20, h: 9 }); },
+    objectives: [{ x: 0, z: 60, r: 12, name: 'The valley road' }, { x: -44, z: 30, r: 10, name: 'The crag' }, { x: 0, z: -28, r: 11, name: 'The stockade gate' }, { x: 0, z: -60, r: 12, name: 'The camp on the shoulder' }, { x: 0, z: -132, r: 12, name: 'The south path' }],
+    noTree(x, z) { return Math.hypot(x, z + 56) < 48 || Math.abs(x) < 9 || Math.hypot(x + 44, z - 30) < 9; },
+    build(sim, r, keep, clear) {
+      /* the stockade: a square of stakes on the shoulder, a gate in the north face over the road, a postern in the south */
+      for (let x = -26; x < 26; x += 3) { if (Math.abs(x + 1.5) > 3.5) sim.boxes.push({ x: x + 1.5, z: -30, hw: 1.5, hd: 0.5, h: 1.8, kind: 'palisade' }); if (Math.abs(x + 1.5) > 2.5) sim.boxes.push({ x: x + 1.5, z: -82, hw: 1.5, hd: 0.5, h: 1.8, kind: 'palisade' }); }
+      palZ(sim, -26, -82, -30, 1.8); palZ(sim, 26, -82, -30, 1.8); keep.push({ x: 0, z: -56, r: 40 });
+      for (const [x, z] of [[-14, -46], [12, -44], [-16, -68], [14, -68], [0, -76], [-18, -56]]) sim.boxes.push({ x, z, hw: 2.4, hd: 2.4, h: 2.2, kind: 'tent' });
+      wagons(sim, keep, [[-6, -38, false], [18, -56, true]]);
+      /* the crag above the road */ for (const [x, z, rr] of [[-50, 34, 2.4], [-40, 26, 2], [-46, 22, 1.8], [-52, 26, 2.2], [-38, 36, 1.6]]) sim.obstacles.push({ x, z, r: rr, kind: 1, rot: x * 0.7 });
+      sim.deco.push({ kind: 'road', x: 0, w: 4 }); sim.roadX = 0;
+      trees(sim, r, clear, 150, -145, 145, -145, 145, 1); rocks(sim, r, clear, 30, -145, 145, -145, 145); } };
+
+  // ---------- 皮島 Pidao falls: the fourth month of 1637 ----------
+  // 《清太宗實錄》崇德二年四月; 《明史》沈世魁傳. After Korea's surrender Hong Taiji sent Ajige with Kong Youde, Geng Zhongming
+  // and Shang Kexi, and Korean warships under Yu Rim, against Pidao. The Qing crossed in small boats by night while the ships
+  // drew the garrison to the other shore; the island fell in a day. Shen Shikui was taken and, refusing to kneel, beheaded;
+  // his nephew Shen Zhixiang got away with some boats to the Shiwei islands. The same island as Act Two, nine years on.
+  B.djpidaof = Object.assign({}, B.djpidao, { when: 'May 1637', biome: 'spring', fog: 0.38, desc: 'Pidao on the day it fell: the Qing boats on the north beach, the Korean warships offshore, the fishing village, the grain store and the hill camp of the last East River garrison.' });
+  M.djpidaof = Object.assign({}, M.djpidao, {
+    objectives: [{ x: 96, z: 8, r: 12, name: 'The north beach' }, { x: 70, z: -60, r: 12, name: 'The fishing village' }, { x: 30, z: -40, r: 11, name: 'The grain store' }, { x: 104, z: -112, r: 11, name: 'The south jetty' }, { x: 0, z: 40, r: 12, name: 'The hill camp' }],
+    build(sim, r, keep, clear) {
+      for (const [x, z, b] of [[116, 14, -1], [118, 0, -1], [114, 26, -1], [120, -8, -1]]) junk(sim, keep, x, z, 11, b, { wy: 0, furled: true }); /* the Qing boats run up on the north beach */
+      for (const [x, z] of [[140, 40], [142, -20]]) junk(sim, keep, x, z, 20, -1, { wy: 0 }); /* Yu Rim's Korean warships offshore */
+      M.djpidao.build(sim, r, keep, clear);
+      for (const [x, z] of [[-5, 34], [5, 34], [-5, 48], [5, 48]]) sim.boxes.push({ x, z, hw: 2.4, hd: 2.4, h: 2.2, kind: 'tent' }); /* Shen Shikui's camp on the hill path */ } });
 })();
