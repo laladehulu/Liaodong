@@ -1581,8 +1581,9 @@ class Sim {
         const tsd = leash < 1e9 ? len(tgt.x - u.slotX, tgt.z - u.slotZ) : 0;
         const yy = !isHero && !u.mounted && u.role && sq && !sq.routing && sq.def.yuanyang && this.yyAI(u, sq, tgt, d, reach);
         const xl = (!yy && this.xc && !isHero && !u.mounted && !u.champ && u.ctrl < 0 && tsd <= leash + reach) ? this.xcLine(u, sq, tgt, d, reach) : 0; // 1: waiting or breathing, 2: spear keeping his distance
+        if (leash < 1e9 && !(tsd > (u.lOut ? leash + 3 : leash - 1) + reach)) u.lOut = true;
         if (yy) { }
-        else if (tsd > leash + reach) { this.goSlot(u, sq, ang); if (u.spaceOf >= 0) u.spaceOf = -1; } // hold the formation: step out only for a foe who comes to the line, rear ranks wait their turn
+        else if (leash < 1e9 && tsd > (u.lOut ? leash + 3 : leash - 1) + reach) { u.lOut = false; this.goSlot(u, sq, ang); if (u.spaceOf >= 0) u.spaceOf = -1; } // hold the formation: step out only for a foe who comes to the line, rear ranks wait their turn (with a margin either way, so a man does not shuttle out and back as the foe sways about the line)
         else if (xl) { }
         else if (u.mounted) {
           if (u.ctrl < 0) this.cavCharge(u, tgt, d); // shock cavalry: run up, ride through, wheel, come again
@@ -1638,8 +1639,12 @@ class Sim {
       if (d > 1.5) { this.cavSteer(u, u.slotX, u.slotZ, Math.min(u.def.speed, d * 1.2)); return u.hyaw; }
       this.cavSteer(u, u.x, u.z, 0); u.hyaw = sq.facing; return sq.facing;
     }
-    if (d > 0.45) return this.steerFoot(u, u.slotX, u.slotZ, u.def.speed * (sq.order === ORD_FOLLOW && d > 2.5 ? 1.45 : 1)); /* a man left behind his leader runs for his place (the pace cap below keeps it to the leader's own speed) */
-    u.mx = 0; u.mz = 0; return sq.facing;
+    // a man in his place stays put: once there (or as near as the crowd lets him, making no headway) he stands until his place
+    // really moves, instead of shoving for the last half pace against his neighbours and being pushed back, over and over
+    if (u.setl && d < 1.4) { u.mx = 0; u.mz = 0; return sq.facing; }
+    u.setl = false; if ((this.tick + u.id) % 20 === 0) { if (d < 1.4 && u.setlD !== undefined && d > u.setlD - 0.12) u.setl = true; u.setlD = d; }
+    if (d > 0.45 && !u.setl) return this.steerFoot(u, u.slotX, u.slotZ, u.def.speed * (sq.order === ORD_FOLLOW && d > 2.5 ? 1.45 : 1)); /* a man left behind his leader runs for his place (the pace cap below keeps it to the leader's own speed) */
+    u.setl = true; u.mx = 0; u.mz = 0; return sq.facing;
   }
   horseIdle(u) {
     if (u.rider >= 0 && this.units[u.rider].ctrlActive) return;

@@ -115,7 +115,12 @@ function armyCost(a) { return a.reduce((s, k) => s + S.DEFS[k].cost, 0); }
 // buildings, and the height field is shaded), so the map shows what the field is like; the account is in the (i) pop-up
 const MAPCACHE = {}, MAPQ = [];
 function drawMap(key, N) {
-  const b = S.BATTLES[key]; let sim; try { sim = new S.Sim({ seed: 1619, battle: key, mode: 'standard', players: [{ name: 'map', team: 0, army: [] }] }); } catch (e) { return null; }
+  // the ground is one shared height field (terrainH): a throwaway Sim lays out this map's ground over it, so the live game's
+  // ground is put back afterwards. Never drawn during a game at all (see pumpMaps): it would move hills under the men's feet
+  const live = state.sim && state.sim.layout; const back = () => { if (live && state.sim && state.sim.layout === live) S.setTerrain(live); };
+  const b = S.BATTLES[key]; let sim; try { sim = new S.Sim({ seed: 1619, battle: key, mode: 'standard', players: [{ name: 'map', team: 0, army: [] }] }); } catch (e) { back(); return null; }
+  try { return drawMapOf(key, N, b, sim); } finally { back(); } }
+function drawMapOf(key, N, b, sim) {
   const R = 192, st = (2 * R) / N, H = new Float32Array(N * N); let lo = 1e9, hi = -1e9;
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const h = S.terrainH(-R + (i + .5) * st, -R + (j + .5) * st); H[j * N + i] = h; if (h < lo) lo = h; if (h > hi) hi = h; }
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d'), im = g.createImageData(N, N), D = im.data;
@@ -139,7 +144,7 @@ function drawMap(key, N) {
 }
 function mapImg(key, big) { const k = key + (big ? ':b' : ''); if (MAPCACHE[k]) return MAPCACHE[k]; if (!MAPQ.includes(k)) { MAPQ.push(k); pumpMaps(); } return ''; }
 function pumpMaps() { if (pumpMaps.on) return; pumpMaps.on = true;
-  const next = () => { const k = MAPQ.shift(); if (!k) { pumpMaps.on = false; return; } const [key, b] = k.split(':'); MAPCACHE[k] = drawMap(key, b ? 192 : 96) || 'none';
+  const next = () => { if (state.sim && $('menu') && $('menu').hidden) { setTimeout(next, 1500); return; } /* not while a battle is on */ const k = MAPQ.shift(); if (!k) { pumpMaps.on = false; return; } const [key, b] = k.split(':'); MAPCACHE[k] = drawMap(key, b ? 192 : 96) || 'none';
     for (const im of document.querySelectorAll(`img[data-map="${k}"]`)) if (MAPCACHE[k] !== 'none') im.src = MAPCACHE[k];
     setTimeout(next, 0); };
   setTimeout(next, 30); }
