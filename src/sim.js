@@ -1910,6 +1910,7 @@ class Sim {
   applyDamage(u, dmg, attackerId, ix, iy, iz, cause, hx, hy, hz) {
     if (u.dead || u.inactive) return false; if (dmg > 0) u.hurtTk = this.tick;
     if (u.ctrl >= 0 && this.players[u.ctrl] && this.players[u.ctrl].god) return false; // debug mode: the tester cannot be hurt
+    if (this.storyEase && dmg > 0) { if (u.ctrl >= 0 && !this.players[u.ctrl].ai) dmg *= this.storyEase.take; else if (u.team === this.mission.side) dmg *= this.storyEase.ally; } // a story chapter at the chosen difficulty
     if (this.xc && u.ctrl >= 0 && !this.players[u.ctrl].ai && (cause === 'melee' || cause === 'trample' || cause === 'spear' || cause === 'counter' || cause === 'arrow' || cause === 'shot')) { // no instant deaths in a crowd or under a whole company's volley
       const dec = (this.tick - (u.xcT === undefined ? this.tick : u.xcT)) * DT * 0.3 * u.def.hp; u.xcB = Math.max(0, (u.xcB || 0) - dec); u.xcT = this.tick;
       const room = Math.max(0, u.def.hp * 0.4 - u.xcB); if (dmg > room) dmg = room + (dmg - room) * 0.15;
@@ -3395,6 +3396,10 @@ Sim.prototype.setupMission = function (teams, aiPl) {
     (M.defRes || []).forEach((d, i) => mk('r' + i, { team: D, name: 'Reserve ' + (i + 1), army: d[0], at: [d[1], d[2], A === 1 ? PI : 0], reserve: true, sector: d[3] }));
     M.att.concat(M.att, M.att).forEach((a, i) => mk('a' + i, { team: A, name: AI_NAMES[A][i % 5], army: a, at: [M.attAt[0] + ((i % 3) - 1) * 40, M.attAt[1], M.attAt[2]], reserve: i >= 3 }));
   } else { // difficulty (co-op): 0 recruit, 1 soldier, 2 veteran, 3 lone banner — no AI companies on your side, only what the players bring
+    // a story chapter (you are one man in a file) follows the same setting: fewer and softer enemies, the blows that reach you
+    // lighter, your wounds closing when you get out of the fight, and objectives that a few stragglers no longer hold up
+    if (M.soldier) this.storyEase = [{ foe: 0.62, n: 0.6, take: 0.45, ally: 0.75, frac: 0.4, tol: 3, ht: 6, regen: 0.05 }, { foe: 0.74, n: 0.75, take: 0.62, ally: 0.85, frac: 0.5, tol: 2, ht: 8, regen: 0.035 },
+      { foe: 0.85, n: 0.9, take: 0.85, ally: 1, frac: 0.6, tol: 1, ht: 10, regen: 0.015 }, { foe: 0.9, n: 1, take: 1, ally: 1, frac: 1, tol: 0, ht: 12, regen: 0 }][this.diff];
     const D = this.diff, need = new Set(); for (const P of M.phases || []) { const walk = (o) => { if (!o) return; if (o.arrive) need.add(o.arrive); if (o.officer) need.add(o.officer); (o.all || []).forEach(walk); }; walk(P.obj); }
     if (M.soldier) need.add(M.soldier.group);
     for (const gid in M.groups) { const G = M.groups[gid];
@@ -3403,11 +3408,12 @@ Sim.prototype.setupMission = function (teams, aiPl) {
   for (const p of this.players) if (p.ai) { const g = this.mg[p.gid], G = g.G; this.placeArmy({ player: p, army: p.army }, G.team, G.at[0], G.at[1], G.at[2]);
     const lab = G.team === 1 && M.labels; if (lab) for (const id of p.squads) { const q = this.squads[id], L = lab[q.type]; if (!L) continue; const nd = Object.assign({}, q.def, { name: L[0], jp: L[1] }); q.def = nd; for (const uid of q.unitIds) { const u = this.units[uid]; u.def = Object.assign({}, u.def, { name: L[0], jp: L[1] }); } }
     const h = this.units[p.heroId]; if (h && G.officer) { h.def = Object.assign({}, h.def, { hp: h.def.hp * G.officer, name: G.name, dmg: h.def.dmg.map(x => x * 1.4) }); h.hp = h.def.hp; h.officer = true; }
-    if (G.n) this.mTrim(p, G.n, !!(G.wound || G.officer || G.keepHero)); /* a trimmed group keeps its general when the story needs the man (one to be taken alive, a named officer) */
+    { const E = this.storyEase; let n = G.n; if (E && G.team !== M.side && E.n < 1) { let c = 0; for (const id of p.squads) c += this.squads[id].unitIds.length; n = Math.max(4, Math.round(Math.min(n || c, c) * E.n)); }
+      if (n) this.mTrim(p, n, !!(G.wound || G.officer || G.keepHero || (this.storyEase && !G.n))); } /* a trimmed group keeps its general when the story needs the man (one to be taken alive, a named officer) */
     if (G.reserve) { p.inactive = true; for (const id of p.squads) { const q = this.squads[id]; q.inactive = true; for (const uid of q.unitIds) this.units[uid].inactive = true; } for (const uid of [p.heroId, p.horseId]) if (uid >= 0) this.units[uid].inactive = true; }
     this.mDir(p.gid, G.dir); }
   if (M.soldier) { const cache = new Map(); const tune = (d, k, m) => { if (!cache.has(d)) cache.set(d, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return cache.get(d); }; // a story chapter: the Jin at near full strength, their generals no one-man armies
-    for (const u of this.units) { if (u.type === 'horse' || u.def.ai === 'cannon' || u.team === M.side) continue; u.def = u.type === 'hero' ? tune(u.def, 0.75, 0.5) : tune(u.def, 0.85, 0.85); u.hp = u.def.hp; } }
+    for (const u of this.units) { if (u.type === 'horse' || u.def.ai === 'cannon' || u.team === M.side) continue; const fk = this.storyEase ? this.storyEase.foe : 0.85; u.def = u.type === 'hero' ? tune(u.def, 0.75, 0.5) : tune(u.def, fk, fk); u.hp = u.def.hp; } }
   if (!ass && !M.soldier) { // campaign balance: the enemy rank and file are a little softer, your allies a little harder (officers excepted)
     const cache = new Map(); const tune = (d, k, m) => { const key = d; if (!cache.has(key)) cache.set(key, new Map()); const c = cache.get(key); if (!c.has(k)) c.set(k, Object.assign({}, d, { hp: d.hp * k, dmg: d.dmg ? d.dmg.map(x => x * m) : d.dmg })); return c.get(k); };
     const FK = [0.68, 0.82, 0.95, 1.0][this.diff], AK = [1.25, 1.12, 1.0, 1.0][this.diff];
@@ -3909,13 +3915,13 @@ Sim.prototype.mObj = function (o, el) {
   if (o.all) { let ok = 1; for (const s of o.all) { const r = this.mObj(s, el); if (r < 0) return -1; if (r === 0) ok = 0; } if (ok && o.keep === undefined && !o.reach) return 1; if (!ok) return 0; }
   if (o.keep) { const z = this.missionZone(o.keep); if (z && z.owner === 1 - this.mission.side) return -1; }
   if (o.reach) { const z = this.missionZone(o.reach); if (!(z && this.humansIn(z))) return 0; }
-  if (o.hold) { const z = this.missionZone(o.hold); const k = 'hold:' + o.hold; const S1 = this.mission.side === 1; if ((S1 ? z.n1 : z.n0) > 0 && (S1 ? z.n0 : z.n1) === 0) this.mv[k] = (this.mv[k] || 0) + 0.5; if ((this.mv[k] || 0) < Math.min(o.t, 12)) return 0; } /* take it and clear it: no long hold-outs */
+  if (o.hold) { const z = this.missionZone(o.hold); const k = 'hold:' + o.hold; const S1 = this.mission.side === 1; const E = this.storyEase, mine = S1 ? z.n1 : z.n0, theirs = S1 ? z.n0 : z.n1; if (mine > 0 && theirs <= (E ? E.tol : 0) && mine > theirs * 2) this.mv[k] = (this.mv[k] || 0) + 0.5; if ((this.mv[k] || 0) < Math.min(o.t, E ? E.ht : 12)) return 0; } /* take it and clear it: no long hold-outs */
   if (o.capture) { for (const k of o.capture) { const z = this.missionZone(k); if (z.owner !== this.mission.side) return 0; } }
-  if (o.defeat) { for (const gid of o.defeat) { const g = this.mg[gid]; if (!g || (!g.released && !g.broken)) return 0; if (!g.broken && this.mGroupFrac(gid) > 1 - (o.frac || 0.8)) return 0; } for (const gid of o.defeat) this.mBreak(gid); }
+  if (o.defeat) { for (const gid of o.defeat) { const g = this.mg[gid]; if (!g || (!g.released && !g.broken)) return 0; if (!g.broken && this.mGroupFrac(gid) > 1 - Math.min(o.frac || 0.8, this.storyEase ? this.storyEase.frac : 1)) return 0; } for (const gid of o.defeat) this.mBreak(gid); }
   if (o.officer) { const g = this.mg[o.officer]; if (!g || !g.released) return 0; const h = this.units[this.players[g.p].heroId]; const wound = g.G.wound; if (h && !h.dead && !(wound && h.hp < h.def.hp * wound)) return 0; if (!g.broken) { this.events.push({ t: 'mofficer', name: g.G.name, zh: g.G.zh || '', gid: o.officer, wounded: !!(h && !h.dead) }); this.mBreak(o.officer); } }
   if (o.arrive) { const z = this.missionZone(o.zone), p = this.players[this.mg[o.arrive].p]; let n = 0, a = 0; for (const id of p.squads) { const q = this.squads[id]; if (!q.alive) continue; a++; if (len(q.cx - z.x, q.cz - z.z) < z.r + 8) n++; }
     if (a === 0) { const gh = this.units[p.heroId]; if (!(o.general && gh && !gh.dead)) return -1; if (len(gh.x - z.x, gh.z - z.z) >= z.r + 8) return 0; } /* arrive + general: his companies may all be gone as long as he himself gets through */
-    else if (n < a) return 0; }
+    else if (n < (this.storyEase && this.diff < 3 ? Math.max(1, Math.ceil(a * 0.66)) : a)) return 0; } /* a story chapter: most of the column through is enough (one company caught up in a fight does not hold it up) */
   if (o.survive) { if (el < o.survive && !this.mQuietDone(el)) return 0; } /* 'hold out' only while there is something to hold against */
   if (o.never) return 0;
   if (o.rescue && this.mFallen() > 0) return 0; /* a man of yours is still down: get him up (he dies of it in a minute, and then the phase goes on without him) */
@@ -3946,7 +3952,7 @@ Sim.prototype.missionThink = function () {
   if (M.beacon && this.beaconTick) { this.beaconTick(); if (this.mwin !== undefined) return; }
   const mv = this.mv;
   if (mv.ph < 0) { mv.ph = 0; mv.t0 = this.tick; this.mStart(); }
-  if (M.soldier && this.tick % 15 === 0) this.aidPost();
+  if (M.soldier && this.tick % 15 === 0) { this.aidPost(); const E = this.storyEase; if (E && E.regen) for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && h.hp > 0 && h.hp < h.def.hp && this.tick - (h.hurtTk || 0) > 30 * 5) h.hp = Math.min(h.def.hp, h.hp + h.def.hp * E.regen * 0.5); } }
   const P0 = M.phases[mv.ph]; if (P0 && !M.camp && this.mode !== 'assault') { // quiet: bring the next scripted beat forward (never in a timed phase)
     if (this.mThreat()) mv.quietPh = -1; else if (mv.quietPh !== mv.ph) { mv.quietPh = mv.ph; mv.quietT = this.tick; }
     const el0 = (this.tick - mv.t0) / 30;

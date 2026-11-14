@@ -113,8 +113,8 @@
       for (const [z, b] of [[-60, 1], [-40, 1], [-22, 1], [-4, 1]]) junkZ(sim, keep, 114, z, 13, b, { wy: 0, furled: true });
       for (const [x, z] of [[78, -30], [70, -14], [84, -4], [74, 12], [64, -46], [88, -56]]) house(sim, keep, x, z, 3.2, 2.6, false, 2.8);
       racks(sim, 92, -24, 8);
-      /* the tax granary: three storehouses in a palisade with its gate toward the village */
-      for (let x = 22; x < 58; x += 3) sim.boxes.push({ x: x + 1.5, z: 62, hw: 1.5, hd: 0.5, h: 2, kind: 'palisade' }); for (let x = 22; x < 58; x += 3) if (Math.abs(x + 1.5 - 40) > 4) sim.boxes.push({ x: x + 1.5, z: 94, hw: 1.5, hd: 0.5, h: 2, kind: 'palisade' });
+      /* the tax granary: three storehouses in a palisade, a gate toward the village (south) and one to the fields (north) */
+      for (let x = 22; x < 58; x += 3) if (Math.abs(x + 1.5 - 44) > 4) sim.boxes.push({ x: x + 1.5, z: 62, hw: 1.5, hd: 0.5, h: 2, kind: 'palisade' }); for (let x = 22; x < 58; x += 3) if (Math.abs(x + 1.5 - 40) > 4) sim.boxes.push({ x: x + 1.5, z: 94, hw: 1.5, hd: 0.5, h: 2, kind: 'palisade' });
       for (let z = 62; z < 94; z += 3) { sim.boxes.push({ x: 22, z: z + 1.5, hw: 0.5, hd: 1.5, h: 2, kind: 'palisade' }); sim.boxes.push({ x: 58, z: z + 1.5, hw: 0.5, hd: 1.5, h: 2, kind: 'palisade' }); }
       for (const x of [30, 40, 50]) house(sim, keep, x, 82, 3.4, 4, false, 3.6); keep.push({ x: 40, z: 78, r: 24 });
       /* the guard huts by the field */ house(sim, keep, -34, 46, 3, 2.4, false); house(sim, keep, -40, 34, 3, 2.4, false);
