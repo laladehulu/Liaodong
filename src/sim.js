@@ -3912,8 +3912,52 @@ Sim.prototype.woundedAI = function (u) {
   if (d > 0.5) { const y = this.steerFoot(u, bx, bz, u.def.speed * (d > 4 ? 0.8 : 0.62)); this.turnTo(u, y, 4 * DT); } else { u.mx = 0; u.mz = 0; this.turnTo(u, h.yaw, 3 * DT); }
 };
 // a night camp: you, your file around the fire, and the tents
+// a night camp laid out on a battle map must be on clear ground: every bedroll, the fire, the tents, the people and the ground
+// between them away from the map's houses, walls, boats, rocks and trees, and out of the water. If anything is in the way the
+// whole camp slides to the nearest clear ground (rings out to 80 paces) and campShift says by how much (the campaigns move
+// your bed with it). Every campaign's camp goes through here.
+Sim.prototype.campFit = function (C) {
+  // what matters: the beds, the fire, the people and the ground between them. Tents and props are dressing: one that stands on
+  // a house or a rock is simply left out, rather than the whole camp walking off to an empty field
+  const pts = []; // [x, z, clearance]
+  for (const b of C.bedrolls || []) pts.push([b[0], b[1], 1.1]);
+  for (const f of C.fires || []) pts.push([f[0], f[1], 1.4]);
+  for (const n of C.npcs || []) pts.push([n.x, n.z, 0.7]);
+  if (C.me) pts.push([C.me.x, C.me.z, 0.9]);
+  if (!pts.length) return;
+  let cx = 0, cz = 0; { const L = C.bedrolls && C.bedrolls.length ? C.bedrolls.map(b => [b[0], b[1]]) : pts; for (const q of L) { cx += q[0]; cz += q[1]; } cx /= L.length; cz /= L.length; } /* the middle of the beds */
+  let R = 0; for (const b of (C.bedrolls && C.bedrolls.length ? C.bedrolls : [])) R = Math.max(R, len(b[0] - cx, b[1] - cz)); if (C.me) R = Math.max(R, len(C.me.x - cx, C.me.z - cz)); R = Math.min(R + 0.6, 10); /* the ring of beds and the walk to yours */
+  for (let r = 1.5; r <= R; r += 1.8) for (let k = 0, n = Math.max(6, Math.round(r * 2.4)); k < n; k++) { const a = k / n * TAU; pts.push([cx + sin(a) * r, cz + cos(a) * r, 0.45]); } // the ground between (a bed can be clear and still walled off from the fire)
+  const boxes = this.boxes, obs = this.obstacles, sea = TERR.sea, LIGHT = { tent: 1, mantlet: 1, wagon: 1, fence: 1, log: 1 }; /* the map's own dressing: may be cleared off a camp */
+  const boxHit = (b, x, z, m) => b.rot ? len(x - b.x, z - b.z) < len(b.hw, b.hd) + m : Math.abs(x - b.x) < b.hw + m && Math.abs(z - b.z) < b.hd + m;
+  const hit = (x, z, m, soft) => { if (Math.abs(x) > HALF - 10 || Math.abs(z) > HALF - 10) return true;
+    for (const b of boxes) { if (soft && LIGHT[b.kind]) continue; if (boxHit(b, x, z, m)) return true; }
+    for (const o of obs) if (len(x - o.x, z - o.z) < (o.r || 0.5) + m) return true;
+    const w = waterAt(x, z); if (w === 1 || w === 2) return true; if (sea && x > sea.x0 - 4) return true; return false; };
+  const bad = (dx, dz, soft) => { for (const q of pts) if (hit(q[0] + dx, q[1] + dz, q[2], soft)) { if (this.cfg.campDebug && !dx && !dz) this.campWhy = (this.campWhy || []).concat([[+q[0].toFixed(1), +q[1].toFixed(1), q[2]]]); return true; }
+    let lo = 1e9, hi = -1e9; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, h = terrainH(cx + dx + sin(a) * R, cz + dz + cos(a) * R); if (h < lo) lo = h; if (h > hi) hi = h; } return hi - lo > 2.4; }; /* and not on a cliff */
+  const ring = (r0, r1, soft) => { for (let r = r0; r <= r1; r += 2) for (let k = 0, n = Math.max(8, Math.round(r * 1.4)); k < n; k++) { const a = k / n * TAU, dx = sin(a) * r, dz = cos(a) * r; if (!bad(dx, dz, soft)) return [dx, dz]; } return null; };
+  // where the camp goes: where it was put; else a step or two over; else where it was put, with the dressing in the way cleared
+  // off; else the nearest clear ground out to 80 paces; and if there is none, where it was put (cleared as far as it can be)
+  let sx = 0, sz = 0, clear = false;
+  if (bad(0, 0, false)) { const near = ring(2, 8, false);
+    if (near) { sx = near[0]; sz = near[1]; }
+    else if (!bad(0, 0, true)) clear = true;
+    else { const far = ring(10, 80, false); if (far) { sx = far[0]; sz = far[1]; } else clear = true; } }
+  if (clear || true) { const core = pts.map(q => [q[0] + sx, q[1] + sz, q[2]]); const gone = new Set(); for (const b of boxes) if (LIGHT[b.kind] && core.some(q => boxHit(b, q[0], q[1], q[2]))) gone.add(b);
+    if (gone.size) { const keep = boxes.filter(b => !gone.has(b)); boxes.length = 0; boxes.push(...keep); this.campCleared = gone.size; } }
+  sx = Math.round(sx * 100) / 100; sz = Math.round(sz * 100) / 100;
+  if (sx || sz) { this.campShift = [sx, sz];
+    for (const b of C.bedrolls || []) { b[0] += sx; b[1] += sz; } for (const f of C.fires || []) { f[0] += sx; f[1] += sz; } for (const t of C.tents || []) { t[0] += sx; t[1] += sz; }
+    for (const n of C.npcs || []) { n.x += sx; n.z += sz; } for (const q of C.props || []) { q[1] += sx; q[2] += sz; } if (C.me) { C.me.x += sx; C.me.z += sz; } }
+  // dressing that would stand in a house, on a rock or across a bedroll is left out
+  const nearBed = (x, z, m) => (C.bedrolls || []).some(b => len(b[0] - x, b[1] - z) < m * 0.8 + 0.5); /* a tent standing on a bedroll, not merely beside it */
+  if (C.tents) { const keep = C.tents.filter(t => !hit(t[0], t[1], 0.2) && !nearBed(t[0], t[1], Math.min(t[2], t[3]))); this.campDropped = C.tents.length - keep.length; C.tents.length = 0; C.tents.push(...keep); }
+  if (C.props) { const keep = C.props.filter(q => !hit(q[1], q[2], 0.5) && !nearBed(q[1], q[2], 0.3)); C.props.length = 0; C.props.push(...keep); }
+};
 Sim.prototype.setupCamp = function (humans) {
   const C = this.cfg.camp || { npcs: [], tents: [], me: { x: 0, z: 6, yaw: PI, role: 'shield' } };
+  if (this.cfg.camp) this.campFit(C);
   for (const t of C.tents || []) this.boxes.push({ x: t[0], z: t[1], hw: t[2], hd: t[3], h: t[4], kind: 'tent' });
   const CT = C.type || 'yuanyang', CTm = C.team | 0; // another campaign's camp: its own unit type and side (jin.js, shenji.js)
   const mk = (role, x, z, yaw) => { const u = this.addUnit(CT, CTm, -1, -1, x, z, yaw); if (CT === 'yuanyang') { u.role = role; u.def = YYDEF[role] || YYDEF.spear; u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } else { u.def = defFor(CT, CTm); u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } return u; };

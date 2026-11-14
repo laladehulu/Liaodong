@@ -817,6 +817,8 @@ function startGame(msg, me, net, delay) {
   $('cmdui').classList.toggle('chaos', state.sim.chaos); $('fporders').classList.toggle('chaos', state.sim.chaos);
   if (state.renderer) { try { state.renderer.renderer.dispose(); } catch (e) { } }
   state.renderer = new RENDER.Renderer(canvas, state.sim, me);
+  // a night camp: the sim may have moved the camp onto clear ground (campFit); your bed goes with it, and is marked
+  if (cfg.camp && typeof ZC !== 'undefined' && ZC && ZC.bed) { const sh = state.sim.campShift; if (sh) ZC.bed = [ZC.bed[0] + sh[0], ZC.bed[1] + sh[1]]; if (state.renderer.markBed) state.renderer.markBed(ZC.bed[0], ZC.bed[1]); }
   state.ls = new Lockstep(msg.players.length, me, delay);
   msg.players.forEach((p, i) => { if (p.connected === false) state.ls.disconnect(i); });
   for (const [p, k, d] of state.pendingInputs) state.ls.onRemote(p, k, d); state.pendingInputs = [];

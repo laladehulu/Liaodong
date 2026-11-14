@@ -775,8 +775,9 @@ class Renderer {
       const lt = new THREE.PointLight(0xff9a4a, 2.4, 30, 1.6); lt.position.set(x, y + 1.3, z); sc.add(lt);
       this.campFires.push({ x, y, z, fl, lt, t: Math.random() * 10 }); }
     for (const b of C.bedrolls || []) { const [x, z, yaw, empty] = b, y = terrainH(x, z); const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.y = yaw; sc.add(grp);
-      const mat = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.09, 1.85), L(empty ? 0x343a44 : 0x46505e)); mat.position.y = 0.05; grp.add(mat);
-      const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.66, 8), L(0x6a5a44)); roll.rotation.z = Math.PI / 2; roll.position.set(0, 0.13, -0.8); grp.add(roll);
+      const mat = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.09, 1.9), L(empty ? 0x5a5446 : 0x9a8a62)); mat.position.y = 0.05; grp.add(mat); /* a straw mat: it reads against the dark ground by firelight */
+      const quilt = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.07, 1.25), L(empty ? 0x3a3e48 : 0x4e6490)); quilt.position.set(0, 0.13, 0.25); grp.add(quilt);
+      const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.66, 8), L(empty ? 0x6a5a44 : 0xd8c8a0)); roll.rotation.z = Math.PI / 2; roll.position.set(0, 0.15, -0.78); grp.add(roll);
       if (empty) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 2.1), L(0x6b5232)); sp.position.set(0.48, 0.04, 0.1); sp.rotation.y = 0.05; grp.add(sp); const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.05, 0.07, 8), L(0x7a6a50)); cup.position.set(-0.2, 0.13, -0.45); grp.add(cup);
         const hat = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.12, 10), L(0x2c2a26)); hat.position.set(0.12, 0.15, -0.3); grp.add(hat); } }
     for (const p of C.props || []) { const [kind, x, z, yaw] = p, y = terrainH(x, z); const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.y = yaw || 0; sc.add(grp);
@@ -924,7 +925,20 @@ class Renderer {
       const Dt = SIM.TERR.sditch, per = Math.round(F.f.hw * 2 / 0.9); for (let i = 0; i < F.n; i++) { if (i >= show) { F.m.setMatrixAt(i, T.zero); continue; } const col = i % per, lay = Math.floor(i / per); const x = F.f.x - F.f.hw + 0.45 + col * 0.9; T.m.compose(T.v.set(x, SIM.terrainH(x, Dt.zc) + 0.35 + lay * 0.6, Dt.zc + ((col * 7) % 3 - 1) * 0.6), T.q.setFromEuler(T.e.set(HPI, 0, 0)), T.v2.set(1, Dt.w * 1.1, 1)); F.m.setMatrixAt(i, T.m); }
       F.m.instanceMatrix.needsUpdate = true; }
   }
+  // your own bedroll in a night camp: where you lie down (E) to end the night. The campaigns call this with its place
+  markBed(x, z) {
+    if (this.bedMark) { this.scene.remove(this.bedMark.grp); this.bedMark = null; } const y = terrainH(x, z), grp = new THREE.Group(); grp.position.set(x, y, z); this.scene.add(grp);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.32, 40), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.06; grp.add(ring);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 4.2, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xffc860, transparent: true, opacity: 0.1, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false })); beam.position.y = 2.1; grp.add(beam);
+    const lt = new THREE.PointLight(0xffc070, 1.1, 7, 1.8); lt.position.y = 1.1; grp.add(lt);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const g = cv.getContext('2d'); g.fillStyle = 'rgba(16,12,8,0.78)'; g.fillRect(8, 22, 496, 84); g.strokeStyle = '#d2a94c'; g.lineWidth = 4; g.strokeRect(8, 22, 496, 84);
+    g.fillStyle = '#f2cf6a'; g.font = 'bold 44px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('床 · Your bedroll · E', 256, 66);
+    const tex = new THREE.CanvasTexture(cv); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, fog: false })); sp.scale.set(2.6, 0.65, 1); sp.position.y = 2.5; sp.renderOrder = 20; grp.add(sp);
+    this.bedMark = { grp, ring, beam, lt, sp, t: 0 };
+  }
   updateCamp(dt) {
+    if (this.bedMark) { const B = this.bedMark; B.t += dt; const k = 0.5 + 0.5 * Math.sin(B.t * 2.4); B.ring.material.opacity = 0.45 + 0.4 * k; B.ring.scale.setScalar(1 + 0.06 * k); B.beam.material.opacity = 0.06 + 0.07 * k; B.sp.position.y = 2.5 + 0.08 * Math.sin(B.t * 1.6);
+      const cam = this.camera.position, d = Math.hypot(cam.x - B.grp.position.x, cam.z - B.grp.position.z); B.sp.visible = d > 2.2; /* the label is for finding it; standing on it you see the prompt */ }
     for (const f of this.campFires) { f.t += dt; const k = 0.82 + 0.18 * Math.sin(f.t * 11) * Math.sin(f.t * 7.3 + 1) + 0.08 * Math.sin(f.t * 23); f.lt.intensity = 2.3 * k;
       f.fl.forEach((m, i) => { const s = 0.85 + 0.25 * Math.sin(f.t * (9 + i * 3) + i); m.scale.set(1, s, 1); m.rotation.y = f.t * (0.6 + i * 0.3); });
       if (Math.random() < dt * 9) this.sparks.spawn(f.x + rnd(-0.2, 0.2), f.y + 0.6, f.z + rnd(-0.2, 0.2), rnd(-0.3, 0.3), rnd(1.5, 3.2), rnd(-0.3, 0.3), rnd(0.8, 1.6), 0.05, 0.015, 1, 0.65, 0.25, 1, 0.4, 0.1, 0.9, -0.3, 0.2);
