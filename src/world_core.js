@@ -200,6 +200,24 @@ const WCORE = (() => {
   DIL.push({ k: 'maocall', when: (S) => S.place === 'shanhai' && S.day >= D(1621, 4, 10) && S.day < D(1621, 5, 15), title: ['毛文龍招兵', 'Mao Wenlong is raising men'],
       text: [['毛文龍：遼東還有幾十萬漢人在韃子手裡。我帶二百人從海上回去，打鎮江。誰跟我走？', 'Mao Wenlong: There are hundreds of thousands of Han people in Liaodong in Jin hands. I am going back by sea with two hundred men, to take Zhenjiang. Who comes with me?']],
       opts: [['Go with him (the East River campaign continues your life)', 'You go down to the boats.', (S) => { S.flags.toMao = 1; }], ['Stay inside the Wall', 'He finds his two hundred without you.', () => { }]] });
+  // ---------------- the family's own turning points ----------------
+  const atHome = (S) => S.place === (S.home || 'lijia') && S.home !== 'jin';
+  DIL.push({ k: 'feet', when: (S) => atHome(S) && S.day >= D(1618, 6, 1) && S.day < D(1619, 6, 1) && !(S.dead && S.dead.erniu), title: ['纏足', 'Erniu\'s feet'],
+      text: [['你娘：二妞七歲了，再不纏腳就晚了。大腳的姑娘，誰家要？', 'Your mother: Erniu is seven. If we don\'t bind her feet now it will be too late. Who will marry a girl with big feet?'], ['（二妞躲在你身後。）', '(Erniu hides behind you.)']],
+      opts: [['Let your mother bind them', 'For a year Erniu cannot walk without crying. Then she learns to walk the way the other girls walk.', (S) => { S.flags.erniuBound = 1; S.xiao = (S.xiao | 0) + 1; }],
+        ['Stand against your mother: "Let her keep her feet"', 'Your mother does not speak to you for three days. Erniu runs to the fields with the boys.', (S) => { S.flags.erniuFree = 1; S.xiao = (S.xiao | 0) - 1; S.karma = (S.karma | 0) + 1; }]] });
+  DIL.push({ k: 'erniuwed', when: (S) => atHome(S) && S.day >= D(1626, 3, 1) && !(S.dead && S.dead.erniu) && !(S.flags.erniuWait && S.day - S.flags.erniuWait < 360), title: ['二妞出嫁', 'Erniu marries'],
+      text: [['', 'Erniu is fifteen. ' + 'The match must be made this year.']],
+      opts: [['Marry her into a good family, with a proper dowry (3000 wen)', 'She goes in a red sedan chair, crying as a bride must. She is happy, you think.', (S) => { S.cash -= 3000; S.flags.erniuWed = 1; S.karma = (S.karma | 0) + 1; }],
+        ['Marry her to whoever asks with no dowry', 'She goes to a farmer twice her age. She does not cry.', (S) => { S.flags.erniuWed = 1; S.karma = (S.karma | 0) - 1; }],
+        ['Keep her at home another year', 'People begin to talk.', (S) => { S.dil.erniuwed = 0; S.flags.erniuWait = S.day; }]] });
+  DIL.push({ k: 'school', when: (S) => atHome(S) && S.kids && S.kids.some(k => k.boy && DT(S.day).y - k.born >= 6), title: ['送兒子讀書', 'Your son\'s schooling'],
+      text: [['', 'Your son is six. The village schoolmaster takes boys for 500 wen a year and a gift at the festivals.']],
+      opts: [['Send him to school (500 wen)', 'He comes home the first day able to write 人 and 大 and 天.', (S) => { S.cash -= 500; S.flags.sonSchool = 1; }], ['Keep him at home to help', 'He is a good help.', () => { }]] });
+  DIL.push({ k: 'mourn', when: (S) => S.office && S.flags.parentDied > (S.office.since | 0) && S.flags.parentDied > (S.flags.mournFor | 0), title: ['丁憂', 'A parent\'s death and the law of mourning'],
+      text: [['', 'An official whose parent dies must leave office and mourn for twenty-seven months (丁憂). There is no exception without an imperial order. To hide the death (匿喪) is a crime.']],
+      opts: [['Report it and go home to mourn', 'You hand in your seal and go home in coarse hemp. In twenty-seven months you may ask the Ministry for a new post.', (S) => { S.flags.mournFor = S.flags.parentDied; delete S.dil.mourn; S.flags.mourning = S.day + 810; S.flags.wasOffice = S.office; S.office = null; S.xiao = (S.xiao | 0) + 4; }],
+        ['Hide it, and stay in office', (S) => S.flags.hidMourn === 2 ? 'A censor finds out. You are dismissed, and your name is a byword for an unfilial son.' : 'Nobody finds out. Yet.', (S) => { S.flags.mournFor = S.flags.parentDied; delete S.dil.mourn; S.xiao = (S.xiao | 0) - 6; if (Math.random() < 0.35) { S.flags.hidMourn = 2; S.office = null; } else S.flags.hidMourn = 1; }]] });
   function dilemmaNow(S) { for (const d of DIL) if (!(S.dil && S.dil[d.k]) && d.when(S)) return d; return null; }
   function dilemmaChoose(S, d, i) { S.dil = S.dil || {}; S.dil[d.k] = i + 1; const o = d.opts[i]; o[2](S); S.cash = Math.max(0, S.cash); return typeof o[1] === 'function' ? o[1](S) : o[1]; }
 
@@ -249,7 +267,7 @@ const WCORE = (() => {
   function judge(S, c, i) { const o = c[3][i]; S.office.repute = (S.office.repute | 0) + o[1]; S.office.favor = (S.office.favor | 0) + o[2]; S.cash += o[3]; S.karma = (S.karma | 0) + Math.sign(o[1]); return o[4]; }
   // a year in office: the evaluation (考滿): promotion, a stay, or dismissal
   const LADDER = [['知縣', 'County Magistrate', 43], ['知州', 'Department Magistrate', 44], ['知府', 'Prefect', 46], ['按察副使', 'Surveillance Vice Commissioner', 47], ['布政使', 'Provincial Administration Commissioner', 48]];
-  function evaluate(S) { const o = S.office; const sc = (o.favor | 0) * 1.2 + (o.repute | 0) * 0.6 + (S.karma | 0) * 0.2 + (S.flags.eunuchFaction && S.day >= D(1624, 6, 1) && S.day < D(1627, 9, 1) ? 4 : 0) + (S.flags.donglin && S.day >= D(1625, 1, 1) && S.day < D(1628, 1, 1) ? -5 : 0);
+  function evaluate(S) { const o = S.office; const sc = (o.favor | 0) * 1.2 + (o.repute | 0) * 0.6 + (S.karma | 0) * 0.2 + (S.xiao | 0) * 0.3 + (S.flags.eunuchFaction && S.day >= D(1624, 6, 1) && S.day < D(1627, 9, 1) ? 4 : 0) + (S.flags.donglin && S.day >= D(1625, 1, 1) && S.day < D(1628, 1, 1) ? -5 : 0);
     o.repute = 0; o.favor = 0; const i = LADDER.findIndex(l => l[0] === o.zh);
     if (sc >= 6 && i < LADDER.length - 1) { const L = LADDER[i + 1]; o.zh = L[0]; o.en = L[1]; o.rank = L[2]; return `Your evaluation is excellent. You are promoted ${L[1]} (${L[0]}).`; }
     if (sc <= -6) { S.office = null; return 'Your evaluation is "incompetent". You are dismissed and go home.'; }

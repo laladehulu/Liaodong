@@ -52,7 +52,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 33. Xiong Tingbi's inspection (1619/8): drilled men rewarded, the rest beaten.
 34. Garrison at the Pass after 1621 (Shanhai): a soldier's life on the wall.
 
-## R3: family
+## R3 (done, v166): family
 35. Mother ages; she needs money each month (a letter with silver: filial standing).
 36. Erniu grows: at 15 she marries (the Suns if betrothed, or a match you arrange); her dowry is yours to find.
 37. Your children grow: a son can be sent to school (cost per year), a daughter's feet bound or not (a real, hard choice).

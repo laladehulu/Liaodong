@@ -28,11 +28,12 @@ const wKnows = (f) => f.place === WS.place || WCORE.relOf(WS, f.k) > 4;
 function wLifeDay() {
   for (const [f, zh, en] of WCORE.folkDay(WS)) if (wKnows(f)) wNote(zh, en);
   const F = WS.flags;
-  if (F.fatherDies && WS.day >= F.fatherDies && !WS.dead.father) { WS.dead.father = 1; F.fatherDies = 0; wNote('你爹去世了。', 'Your father has died. You bury him on the hill behind the village. The forge is yours now.'); }
+  if (F.fatherDies && WS.day >= F.fatherDies && !WS.dead.father) { WS.dead.father = 1; F.parentDied = WS.day; F.fatherDies = 0; wNote('你爹去世了。', 'Your father has died. You bury him on the hill behind the village. The forge is yours now.'); }
   if (F.hoard && WS.day === D(1619, 4, 1)) { if (Math.random() < 0.55) { WS.cash += 2500; wNote('糧商還了錢。', 'The grain dealer pays out: 2,500 wen. People are eating bark in Liaoyang.'); } else wNote('糧商跑了。', 'The grain dealer has vanished with everyone\'s money.'); F.hoard = 0; }
   if (WS.spouse && !F.kidDue && WS.day - WS.spouse.since > 300 && Math.random() < 0.004) F.kidDue = WS.day + 270;
   if (F.kidDue && WS.day >= F.kidDue) { F.kidDue = 0; const boy = Math.random() < 0.5; const nm = boy ? [['大寶', 'Dabao'], ['小鐵', 'Xiaotie'], ['繼祖', 'Jizu']] : [['大妞', 'Daniu'], ['小翠', 'Xiaocui'], ['招弟', 'Zhaodi']]; const n = nm[Math.floor(Math.random() * 3)];
-    WS.kids = (WS.kids || []).concat([{ zh: n[0], en: n[1], born: WCORE.DT(WS.day).y, boy }]); wNote(`${boy ? '生了個兒子' : '生了個女兒'}，叫${n[0]}。`, `${WS.spouse.en} has given birth: a ${boy ? 'son' : 'daughter'}. You call ${boy ? 'him' : 'her'} ${n[1]}.`); }
+    if (Math.random() < 0.04) { const w = WS.spouse.en; WS.spouse = null; WS.flags.widower = WS.day; wNote('妻子難產死了。', `${w} died in childbirth. The midwife could do nothing. The child lived.`); }
+    WS.kids = (WS.kids || []).concat([{ zh: n[0], en: n[1], born: WCORE.DT(WS.day).y, boy }]); wNote(`${boy ? '生了個兒子' : '生了個女兒'}，叫${n[0]}。`, `${WS.spouse ? WS.spouse.en : 'She'} has given birth: a ${boy ? 'son' : 'daughter'}. You call ${boy ? 'him' : 'her'} ${n[1]}.`); }
   if (WS.office) { const o = WS.office; if (o.since !== undefined && WS.day > o.since && (WS.day - o.since) % 360 === 0) { const w = WCORE.evaluate(WS); wNote('考滿。', w); if (!WS.office) WS.flags.dismissed = WS.day; }
     const p = WCORE.purge(WS); if (p) wNote('錦衣衛來了。', p); }
   { const T = WCORE.DT(WS.day); if (WS.status === 'shengyuan' && T.m === 9 && T.d === 1) { const L = WS.learning;
@@ -41,7 +42,7 @@ function wLifeDay() {
       else if (L >= 34) { WS.health -= 10; wNote('歲考四等，挨了板子。', 'The licentiates\' yearly test: fourth grade. The Director of Studies has you beaten ten strokes for idleness.'); }
       else { WS.status = 'none'; wNote('歲考六等，革了功名。', 'The licentiates\' yearly test: sixth grade. You are stripped of your licentiate\'s degree.'); } }
     if (WS.flags.linsheng && WS.status === 'shengyuan' && T.d === 1) WS.cash += 600; }
-  wXuArmy(); wArmyDay();
+  wXuArmy(); wArmyDay(); wFamilyDay();
   if (WS.health < 30 && Math.random() < 0.02) wNote('你病了。', 'You are running a fever. A physician could help (Liaoyang, Beijing).');
   if (WS.health < 30) WS.health -= 0.6; else if (WS.health < 100) WS.health = Math.min(100, WS.health + 0.6);
   if (WS.health <= 0 && WS.alive) { WS.alive = false; WS.flags.diedOf = 'fever'; }
@@ -50,7 +51,7 @@ function wLifeHistory(k) {
   const known = WCORE.folkHistory(WS, k); for (const [f, zh, en] of known) if (wKnows(f) || f.place === WS.place) wNote(zh, en);
   const F = WS.flags;
   if (k === 'liuting') {
-    if (F.fatherDrafted && !F.fatherBack) { if (Math.random() < 0.55) { WS.dead.father = 1; wNote('你爹沒有回來。', 'Your father did not come back from the east road. A man of his company says he was at Abudali.'); } else { F.fatherBack = 1; wNote('你爹回來了。', 'Your father came back from Abudali, thin as a rake, two fingers gone. He does not speak of it.'); } }
+    if (F.fatherDrafted && !F.fatherBack) { if (Math.random() < 0.55) { WS.dead.father = 1; F.parentDied = WS.day; wNote('你爹沒有回來。', 'Your father did not come back from the east road. A man of his company says he was at Abudali.'); } else { F.fatherBack = 1; wNote('你爹回來了。', 'Your father came back from Abudali, thin as a rake, two fingers gone. He does not speak of it.'); } }
     if (F.gouGoes && !WS.dead.boy1) { WS.dead.boy1 = 1; wNote('狗兒死了。', 'Gou\'er died at Abudali. He was the drummer of his company. He was thirteen.'); }
   }
   if (k === 'liaoyangfall' && WS.home === 'lijia' && !F.stayJin && !(WS.place === 'lijia' || WS.place === 'liaoyang')) {
@@ -105,7 +106,7 @@ function wTalkFolk(p, u) {
       for (const bet of [20, 100]) say(`Dice in the back room: bet ${bet} wen on big or small`, () => { const r = WCORE.dice(WS, bet); return { lines: [['', r[1] + ` You have ${WS.cash} wen.`]], opts: mk() }; }, WS.cash < bet); }
     if (f.trade === 'doctor') say(`Be treated (150 wen)${WS.health < 70 ? '' : ': you are well'}`, () => { if (WS.cash < 150) return wSays('', 'You have not got 150 wen.'); WS.cash -= 150; WS.health = Math.min(100, WS.health + 40); return { lines: [['伸手來。', 'He takes your pulse at three places on each wrist, looks at your tongue, and writes a prescription: ginseng, angelica, licorice. Your health is ' + Math.round(WS.health) + '.']], opts: mk() }; }, WS.cash < 150);
     if (f.trade === 'scribe') say('Have a letter written home (20 wen)', () => { if (WS.cash < 20) return wSays('', 'No money.'); WS.cash -= 20; WS.flags.wroteHome = WS.day; return { lines: [['', '"Father, mother: I am well..." He writes it in a fine hand and promises it will go with the next carter east.']], opts: mk() }; });
-    if (f.trade === 'matchmaker' && !WS.spouse) { const o = WCORE.matchOffer(WS); if (o) say('"Find me a wife"', () => ({ lines: [['', `"There is ${o.en}, of ${o.from}. Good hips, a good worker, can embroider. Betrothal gifts: ${o.gifts} wen, and my fee ${o.fee}."`]], opts: [{ q: `Agree (${o.gifts + o.fee} wen)`, off: WS.cash < o.gifts + o.fee, fx: () => { const r = WCORE.marry(WS, o); if (r[0]) { WS.spouse.home = WS.home; wNote('成親了。', r[1]); } return { lines: [['', r[1]]], opts: [] }; } }, { q: 'Not yet', fx: () => wSays('', '"Don\'t leave it too long, young man."') }] })); }
+    if (f.trade === 'matchmaker' && !WS.spouse) { const o = WCORE.matchOffer(WS); if (o) say('"Find me a wife"', () => ({ lines: [['', `"There is ${o.en}, of ${o.from}. Good hips, a good worker, can embroider. Betrothal gifts: ${o.gifts} wen, and my fee ${o.fee}."`]], opts: [{ q: `Agree (${o.gifts + o.fee} wen)`, off: WS.cash < o.gifts + o.fee, fx: () => { const r = WCORE.marry(WS, o); if (r[0]) { WS.spouse.home = WS.home; WS.spouse.temper = ['thrifty', 'sharp', 'gentle'][Math.floor(Math.random() * 3)]; wNote('成親了。', r[1] + ` She is ${({ thrifty: 'thrifty: the house money goes further in her hands', sharp: 'sharp-tongued and quick', gentle: 'gentle; the house is quieter for her' })[WS.spouse.temper]}.`); } return { lines: [['', r[1]]], opts: [] }; } }, { q: 'Not yet', fx: () => wSays('', '"Don\'t leave it too long, young man."') }] })); }
     if (f.trade === 'beggar' || f.trade === 'refugee') say('Give him 5 wen', () => { if (WS.cash < 5) return wSays('', 'You have nothing to give.'); WS.cash -= 5; WS.karma = (WS.karma | 0) + 1; WCORE.addRel(WS, f.k, 2); return { lines: [['好人有好報。', 'May good come to the good.']], opts: mk() }; });
     if (f.trade === 'candidate') say('Talk about the classics (an hour)', () => { WS.hour += 1; const g = WS.learning < 50 ? 0.8 : 0.3; WS.learning = Math.min(100, WS.learning + g); WCORE.addRel(WS, f.k, 2); return { lines: [['', WS.learning < 40 ? 'He is kind about how little you know, and lends you his notes on the Doctrine of the Mean.' : 'You argue about whether 格物 means investigating things or rectifying the mind, until the lamp oil runs out.']], opts: mk() }; });
     if (f.trade === 'soldier') say('"What is it like, the army?"', () => wSays('', WS.day < D(1619, 3, 2) ? '"Bad food, no pay, and the officers sell our rations. But they say the four armies will finish Nurhaci in a month."' : '"I was at Sarhu. Don\'t join. Or join, and run at the right moment."'));
@@ -119,7 +120,7 @@ function wTalkFolk(p, u) {
 function wForge() {
   const fa = !WS.dead.father && wWhere(wPerson('father'), WS.day) && WS.home === 'lijia';
   const mk = () => { const O = [];
-    if (fa) O.push({ q: 'Work the forge with your father (four hours, +60 wen)', fx: () => { wPass(4, () => { WS.cash += 60; WS.arms += 0.6; WS.smith = Math.min(100, (WS.smith || 0) + 0.8); wLog('跟父親打了一下午鐵。', 'An afternoon at the forge with your father.'); toast(`Four hours at the anvil. +60 wen. Smithing ${Math.round(WS.smith)}.`); }); } });
+    if (fa) O.push({ q: 'Work the forge with your father (four hours, +60 wen)', fx: () => { wPass(4, () => { WS.cash += 60; WS.arms += 0.6; WS.smith = Math.min(100, (WS.smith || 0) + 1.5); wLog('跟父親打了一下午鐵。', 'An afternoon at the forge with your father.'); toast(`Four hours at the anvil. +60 wen. Smithing ${Math.round(WS.smith)}.`); }); } });
     else O.push({ q: 'Do the village\'s repair work (four hours, +45 wen)', fx: () => { wPass(4, () => { WS.cash += 45; WS.smith = Math.min(100, (WS.smith || 0) + 0.8); toast(`Mended a plough-share and two pots. +45 wen. Smithing ${Math.round(WS.smith)}.`); }); } });
     const ip = WCORE.price(WS, WS.place, 'iron') * 3; O.push({ q: `Buy 3 jin of pig iron from the stock (${ip} wen)`, off: WS.cash < ip, fx: () => { const r = WCORE.buy(WS, WS.place, 'iron', 3); return { lines: [['', r[1] + ` Iron: ${WCORE.inv(WS, 'iron')} jin.`]], opts: mk() }; } });
     for (const w in WCORE.RECIPES) { const R = WCORE.RECIPES[w]; O.push({ q: `Make ${WCORE.GOODS[w][1]} (${R[0]} iron, ${R[1]} hours${R[2] > (WS.smith || 0) ? `, needs smithing ${R[2]}` : ''})`, off: R[2] > (WS.smith || 0) || WCORE.inv(WS, 'iron') < R[0], fx: () => { const r = WCORE.craft(WS, w); if (!r[0]) return { lines: [['', r[1]]], opts: mk() }; wPass(r[2], () => toast(r[1] + ' Sell it to the ironmonger in Liaoyang.')); } }); }
@@ -162,7 +163,7 @@ function wChoice(d) {
     if (WS.day > day0) { const n = WS.day - day0; WS.day = day0; wTurnDays(n); }
     wLog(d.title[0], `${d.title[1]}: ${o[0]}.`);
     const moved = WS.place !== place0 || WS.day !== day0;
-    return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { if (WS.flags.toMao) return wToMao(); if (moved) wScene(place0); } }] }; } }; }), { noLeave: true });
+    return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { if (WS.flags.toMao) return wToMao(); if (moved) return wScene(place0); const nx = WCORE.dilemmaNow(WS) || WCORE.festNow(WS, WS.home); if (nx) wChoice(nx); } }] }; } }; }), { noLeave: true });
 }
 function wAfterScene() { if (state.zheDlg || !WS.alive) return; if (WS.flags.toMao) return wToMao(); if (wArmyMoment()) return; const d = WCORE.dilemmaNow(WS) || WCORE.festNow(WS, WS.home); if (d) wChoice(d); }
 // the road's length: a horse cuts it by a third, winter adds two-fifths
@@ -286,3 +287,19 @@ function wArmyMoment() {
     return wChoice({ k: 'seen' + WS.day, title: ['被認出來了', 'Recognised'], text: [['', 'A soldier from your old company stops in the street and stares at you. "You! You ran!"']],
       opts: [['Slip him 500 wen (500 wen)', 'He looks at the silver, then at you, and walks on.', (S) => { S.cash -= 500; }], ['Run', (S) => S.flags.caught ? 'They catch you at the corner. Forty strokes, and back to the company.' : 'You lose him in the market.', (S) => { if (Math.random() < 0.4) { S.flags.caught = 1; S.health = Math.max(10, S.health - 35); S.army = { r: 0, col: 'liu', unit: 'Liaoyang levy (returned deserter)', since: S.day }; S.flags.deserter = 0; } }]] }), true; }
   return false; }
+
+// ===================== R3: the family =====================
+function wFamilyDay() {
+  const T = WCORE.DT(WS.day), F = WS.flags, y = T.y, home = WS.home;
+  // the old die: your parents age like everyone else, faster in a hungry winter
+  if (home !== 'jin') for (const [k, born, nm] of [['father', 1572, 'Your father'], ['mother', 1578, 'Your mother']]) { if (WS.dead[k] || (k === 'father' && F.fatherDrafted && !F.fatherBack)) continue; const a = y - born;
+    const p = (a > 62 ? 0.0006 : a > 52 ? 0.00022 : 0.00006) * (WCORE.season(WS.day) === 'winter' ? 2 : 1) * ((F.famHungry | 0) > 2 ? 3 : 1);
+    if (Math.random() < p) { WS.dead[k] = 1; F.parentDied = WS.day; wNote(k === 'father' ? '你爹去世了。' : '你娘去世了。', `${nm} has died${WS.place === home ? ' in the night' : ' at home; the letter took a month to find you'}. ${a} years old.`); } }
+  if (T.d !== 1) return;
+  // the house needs money once the father cannot earn it: 300 wen a month, taken from your purse if you have it
+  const needs = home !== 'jin' && (!WS.dead.mother || !WS.dead.erniu) && (WS.dead.father || (F.fatherDrafted && !F.fatherBack) || home !== 'lijia');
+  if (needs) { if (WS.cash >= 300) { WS.cash -= 300; F.famHungry = 0; WS.xiao = (WS.xiao | 0) + 0.2; } else { F.famHungry = (F.famHungry | 0) + 1; WS.xiao = (WS.xiao | 0) - 1; wNote('家裡斷糧了。', `There was no money for the house this month. Your mother is eating bran.`); } }
+  if (WS.spouse && WS.spouse.temper === 'thrifty') WS.cash += 150;
+  if (F.sonSchool && T.m === 1) { if (WS.cash >= 500) WS.cash -= 500; else { F.sonSchool = 0; wNote('兒子退學了。', 'There was no money for your son\'s school this year. He comes home.'); } }
+  if (F.mourning && WS.day >= F.mourning) { F.mourning = 0; wNote('服滿。', 'The twenty-seven months of mourning are over. You may go to the Ministry of Personnel in Beijing and ask for a new post.'); }
+}
