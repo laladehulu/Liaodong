@@ -81,7 +81,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 56. Price shocks: the 1619 defeat doubles grain; Beijing grain falls when the canal fleet arrives (autumn).
 57. Silver vs copper: prices in wen, salaries in taels (800 wen).
 
-## R6: law, crime, standing
+## R6 (done, v169): law, crime, standing
 58. Theft at a market stall (a chance to be caught: beaten, or worse).
 59. A petition to the magistrate when wronged (a land grab against your family).
 60. Repute (名聲) by place: kindness and violence are remembered.
