@@ -38,7 +38,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 21. Yuan Chonghuan is a candidate at the 1619 metropolitan exam (historically he passed): meet him at the lodging house; if befriended, a letter later.
 22. Epitaph (墓誌): when a life ends, a page sums it up: the offices, the children, the dead you buried, what you did on the hard days.
 
-## R2: the army
+## R2 (done, v165): the army
 23. Guard duty at night: a choice when a shadow moves (shout, shoot, go look).
 24. Rations sold by the officers: report it (the officer hates you), steal back, or say nothing.
 25. Pay that doesn't come after Sarhu: three months in arrears; the company talks mutiny.

@@ -192,6 +192,14 @@ const WCORE = (() => {
         ['Stay and fight for Liaoyang', 'You go to the walls.', (S) => { S.flags.fallHere = 1; S.place = 'liaoyang'; }],
         ['Stay home and keep your head down', 'You bury the silver under the forge.', (S) => { S.flags.stayJin = 1; }]] },
   ];
+  DIL.push({ k: 'xiong', when: (S) => S.army && S.place === 'liaoyang' && S.day >= D(1619, 8, 5) && S.day < D(1619, 9, 1), title: ['熊經略閱兵', 'Commissioner Xiong reviews the troops'],
+      text: [['（熊廷弼騎馬從隊列前走過，一個一個看。他在一個沒有刀的兵前面停下來。）', '(Xiong Tingbi rides down the ranks, looking at every man. He stops in front of a soldier who has no sword.)'], ['熊廷弼：刀呢？', 'Xiong Tingbi: Where is your sword?'], ['那兵：……賣了。三個月沒發餉。', 'The soldier: ...Sold it. No pay for three months.']],
+      opts: [['Step out and say the officers sell the rations', 'Xiong has the company commander flogged in front of the ranks and pays the company from his own baggage. Your officers will not forget you.', (S) => { S.karma = (S.karma | 0) + 2; S.cash += 1440; S.flags.officerHates = 1; }],
+        ['Stand straight and show your own blade', (S) => S.arms >= 30 ? 'He looks at your blade and your stance and gives you a tael with his own hand.' : 'He looks at your stance and moves on without a word.', (S) => { if (S.arms >= 30) S.cash += 800; }],
+        ['Keep your eyes front', 'The soldier with no sword gets forty strokes.', () => { }]] });
+  DIL.push({ k: 'maocall', when: (S) => S.place === 'shanhai' && S.day >= D(1621, 4, 10) && S.day < D(1621, 5, 15), title: ['毛文龍招兵', 'Mao Wenlong is raising men'],
+      text: [['毛文龍：遼東還有幾十萬漢人在韃子手裡。我帶二百人從海上回去，打鎮江。誰跟我走？', 'Mao Wenlong: There are hundreds of thousands of Han people in Liaodong in Jin hands. I am going back by sea with two hundred men, to take Zhenjiang. Who comes with me?']],
+      opts: [['Go with him (the East River campaign continues your life)', 'You go down to the boats.', (S) => { S.flags.toMao = 1; }], ['Stay inside the Wall', 'He finds his two hundred without you.', () => { }]] });
   function dilemmaNow(S) { for (const d of DIL) if (!(S.dil && S.dil[d.k]) && d.when(S)) return d; return null; }
   function dilemmaChoose(S, d, i) { S.dil = S.dil || {}; S.dil[d.k] = i + 1; const o = d.opts[i]; o[2](S); S.cash = Math.max(0, S.cash); return typeof o[1] === 'function' ? o[1](S) : o[1]; }
 
@@ -305,7 +313,21 @@ const WCORE = (() => {
     const k = S.karma | 0, x = S.xiao | 0; L.push(k >= 5 ? 'The people of his place remembered him as a kind man.' : k <= -4 ? 'Not many came to his funeral.' : 'He was neither better nor worse than most.');
     if (x >= 6) L.push('He was known as a filial son.'); if (S.cash > 50000) L.push(`He left ${Math.round(S.cash / 800)} taels of silver.`);
     return L; }
-  return { festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
+  // ---------------- the army: nights in the barracks ----------------
+  const NIGHT = [
+    { k: 'shadow', title: ['夜哨', 'Night watch'], text: [['', 'You have the third watch on the wall. Something moves in the dark beyond the ditch.']], opts: [['Shout the challenge', 'A wild dog runs off. The sergeant curses you for waking the company.', () => { }], ['Shoot', 'You shoot into the dark. In the morning there is a dead Jurchen scout in the ditch. The company commander gives you a tael.', (S) => { S.cash += 800; S.army.heads = (S.army.heads | 0) + 1; }], ['Go and look alone', 'Nothing there. You come back with your heart in your mouth.', (S) => { S.arms += 0.5; }]] },
+    { k: 'rations', title: ['糧', 'The rations'], text: [['', 'You see the quartermaster loading the company\'s rice onto a merchant\'s cart at night.']], opts: [['Report it to the company commander', 'The company commander has a share of it. You are given the worst duties for a month.', (S) => { S.health -= 5; S.karma = (S.karma | 0) + 1; }], ['Steal a sack back for the squad', 'The squad eats well for a week and calls you brother.', (S) => { S.health += 5; S.flags.squadLoves = 1; }], ['Say nothing', 'You say nothing.', () => { }]] },
+    { k: 'cards', title: ['葉子戲', 'Cards'], text: [['', 'The squad is playing leaf cards by the fire for a few wen a hand.']], opts: [['Play (stake 50)', (S) => S.lastWin ? 'You win 50 wen and a reputation as a sharp.' : 'You lose 50 wen to the corporal.', (S) => { S.lastWin = Math.random() < 0.45; S.cash += S.lastWin ? 50 : -50; }], ['Sleep', 'You sleep.', (S) => { S.health += 2; }]] },
+    { k: 'letter', title: ['家信', 'A letter home'], text: [['', 'Your squadmate cannot write. He asks you to write to his mother in Shandong for him.']], opts: [['Write it for him', 'He tells you what to say; you make it sound braver than he is.', (S) => { S.karma = (S.karma | 0) + 1; S.learning += 0.2; }], ['Tell him you\'re too tired', 'He asks someone else.', () => { }]], need: (S) => S.learning >= 30 },
+    { k: 'bully', title: ['老兵油子', 'The old hand'], text: [['', 'A veteran who has been in the army twenty years wants your boots.']], opts: [['Give him the boots', 'He gives you his, which have holes.', (S) => { S.health -= 3; }], ['Fight him', (S) => S.arms >= 25 ? 'You put him on the ground. Nobody asks for your boots again.' : 'He beats you badly and takes the boots anyway.', (S) => { if (S.arms >= 25) S.arms += 1; else S.health -= 15; }]] },
+    { k: 'dream', title: ['夢', 'A dream'], text: [['', 'You dream of the forge at home: your father\'s hammer, the smell of the coal.']], opts: [['Wake', 'You wake before dawn with the smell still in your nose.', () => { }]] },
+  ];
+  function nightEvent(S) { const r = rngFor(S, 91); if (r() > 0.4) return null; const ok = NIGHT.filter(n => !n.need || n.need(S)); return pick(r, ok); }
+  // the men of your squad: generated soldiers who live and die with the company
+  function makeMates(S, place) { const r = rngFor(S, 93), out = []; S.folk = S.folk || {}; for (let i = 0; i < 5; i++) { const s = pick(r, SUR), g = pick(r, GM), k = 'm' + S.day + '_' + i;
+      S.folk[k] = { k, zh: s[0] + g[0], en: `${s[1]} ${g[1]}`, born: 1590 + Math.floor(r() * 14), trade: 'soldier', place, work: pick(r, ['barracks', 'yard', 'drill']), alive: 1, rel: 0, temper: r(), wealth: 1, mate: 1, look: { h: 0.96 + r() * 0.1, hat: pick(r, ['band', 'wrap', 'kerchief']), beard: r() < 0.4 ? 'mous' : undefined } }; out.push(k); }
+    return out; }
+  return { NIGHT, nightEvent, makeMates, festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
     DIL, dilemmaNow, dilemmaChoose, ROAD, roadDay, STICKS, drawStick, TALES, tale, dice, CASES, caseNow, judge, LADDER, evaluate, MEMOS, memosNow, memo, purge, journal, rngFor, age };
 })();
 if (typeof module !== 'undefined') module.exports = WCORE;

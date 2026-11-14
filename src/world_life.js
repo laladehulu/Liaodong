@@ -41,7 +41,7 @@ function wLifeDay() {
       else if (L >= 34) { WS.health -= 10; wNote('歲考四等，挨了板子。', 'The licentiates\' yearly test: fourth grade. The Director of Studies has you beaten ten strokes for idleness.'); }
       else { WS.status = 'none'; wNote('歲考六等，革了功名。', 'The licentiates\' yearly test: sixth grade. You are stripped of your licentiate\'s degree.'); } }
     if (WS.flags.linsheng && WS.status === 'shengyuan' && T.d === 1) WS.cash += 600; }
-  wXuArmy();
+  wXuArmy(); wArmyDay();
   if (WS.health < 30 && Math.random() < 0.02) wNote('你病了。', 'You are running a fever. A physician could help (Liaoyang, Beijing).');
   if (WS.health < 30) WS.health -= 0.6; else if (WS.health < 100) WS.health = Math.min(100, WS.health + 0.6);
   if (WS.health <= 0 && WS.alive) { WS.alive = false; WS.flags.diedOf = 'fever'; }
@@ -131,6 +131,7 @@ function wForge() {
 Object.assign(W_THING, { bench: ['Sit on the magistrate\'s bench and hear the day\'s case', '升堂'], desk: ['Write a memorial to the throne', '上疏'], shrine: ['Pray at the shrine of the Earth God (土地)', '拜'], ledger: ['Your journal (J)', '記'] });
 function wMoreThings(P) { const T = [], S2 = P.spots;
   if (WS.place === 'lijia') T.push({ k: 'shrine', x: S2.well[0] + 3, z: S2.well[1] + 2, prop: 'rack' });
+  if (WS.army && W_ARMYAT[WS.army.col] === WS.place && WS.place !== 'liaoyang') { const q = S2.yard || S2.gate || Object.values(S2)[0]; T.push({ k: 'bunk', x: q[0] + 4, z: q[1] + 3 }); }
   if (WS.place === 'county' && WS.office) T.push({ k: 'bench', x: S2.yamen[0], z: S2.yamen[1] - 2, prop: 'rack' }, { k: 'desk', x: S2.yamen[0] + 4, z: S2.yamen[1], prop: 'pot' }, { k: 'bed', x: S2.yamen[0] - 5, z: S2.yamen[1] + 3 });
   return T; }
 function wThingUse(T) {
@@ -161,9 +162,9 @@ function wChoice(d) {
     if (WS.day > day0) { const n = WS.day - day0; WS.day = day0; wTurnDays(n); }
     wLog(d.title[0], `${d.title[1]}: ${o[0]}.`);
     const moved = WS.place !== place0 || WS.day !== day0;
-    return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { if (moved) wScene(place0); } }] }; } }; }), { noLeave: true });
+    return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { if (WS.flags.toMao) return wToMao(); if (moved) wScene(place0); } }] }; } }; }), { noLeave: true });
 }
-function wAfterScene() { if (state.zheDlg || !WS.alive) return; const d = WCORE.dilemmaNow(WS) || WCORE.festNow(WS, WS.home); if (d) wChoice(d); }
+function wAfterScene() { if (state.zheDlg || !WS.alive) return; if (WS.flags.toMao) return wToMao(); if (wArmyMoment()) return; const d = WCORE.dilemmaNow(WS) || WCORE.festNow(WS, WS.home); if (d) wChoice(d); }
 // the road's length: a horse cuts it by a third, winter adds two-fifths
 function wDays(ex) { if (!ex.days) return 0; let d = ex.days; if (WCORE.inv(WS, 'horse')) d = Math.max(1, Math.ceil(d * 2 / 3)); if (WCORE.season(WS.day) === 'winter') d = Math.ceil(d * 1.4); return d; }
 // roads that are shut: the Jin hold the east after their cities fall; only the magistrate goes to his county
@@ -211,6 +212,8 @@ function wHallHtml() { try { const H = JSON.parse(localStorage.getItem('mingLive
 // ---------------- history's people: more to say to some of them ----------------
 WPP.push({ k: 'yuancz', zh: '袁崇煥', en: 'Yuan Chonghuan', t: 'a provincial graduate from Guangdong, up for the metropolitan exam; he talks of nothing but Liaodong', born: 1584, hist: true, look: { h: 1.0, hat: 'scholar', beard: 'mous', brows: 'knit' }, rank: 20, where: [[D(1619, 1, 20), D(1619, 3, 20), 'beijing', 'inn', 20, true], [D(1622, 2, 1), D(1622, 9, 1), 'shanhai', 'wall', 10]], role: 'yuancz' });
 function wTalkMore(p, say, me) {
+  if (p.k === 'passguard' && !WS.army && WS.flags.fled && WS.day < D(1627, 1, 1)) say('Join the Pass garrison', [['遼東來的？當過兵？好，關上缺人。', 'From Liaodong? Served before? Good: the Pass is short of men.']], () => { WS.army = { r: 0, col: 'pass', unit: 'the Shanhai Pass garrison', since: WS.day }; wLog('投山海關守軍。', 'Joined the Shanhai Pass garrison.'); banner('守關 · The Pass garrison', 'You stand guard on the First Pass Under Heaven', 4); wScene(); });
+  if ((p.k === 'maowl' || p.k === 'lirubai') && WS.army && !WS.army.retainer && WS.arms >= 40) say('Ask to serve among his household men (家丁)', [['讓我看看你的刀法。', 'Show me your swordwork.'], ['……好。從今天起你吃我的飯。', '...Good. From today you eat at my table.']], () => { WS.army.retainer = 1; WS.army.unit = `household men (家丁) of ${p.en}`; wLog('入家丁。', `Taken among the household men of ${p.en}.`); toast('Double pay, better armour, and you go where he goes.'); });
   if (p.k === 'xugq') {
     say('Ask him about Western learning', [['利瑪竇先生教我的。幾何之學，一步一步，無一字可疑。', 'Master Ricci taught me. The learning of geometry: step by step, not one word open to doubt.'], ['你看這個：《幾何原本》。三角形的內角之和……', 'Look at this: the Elements of Euclid. The angles of a triangle together...']], () => { WS.learning = Math.min(100, WS.learning + 1.2); WS.flags.xixue = (WS.flags.xixue | 0) + 1; WCORE.addRel(WS, 'xugq', 3); toast('An afternoon of Euclid. Learning ' + Math.round(WS.learning) + '.'); });
     say('Ask him about the war in Liaodong', [['遼事壞在兵不練，器不精。', 'Liaodong is lost through untrained men and bad weapons.'], ['要用西洋大炮，紅夷炮。澳門有，要去買。', 'We need the Western cannon, the red barbarian guns. Macao has them; we must buy them.']]);
@@ -229,3 +232,57 @@ function wGrievances() {
 }
 // Xu Guangqi's new army starves for pay and is disbanded when he resigns (early 1621)
 function wXuArmy() { if (WS.army && WS.army.col === 'xu' && WS.day >= D(1621, 1, 1)) { WS.army = null; wNote('徐光啟辭官，新兵散了。', 'Xu Guangqi has resigned, sick and unpaid; his new army at Tongzhou is disbanded. You are a free man again.'); } }
+
+// ===================== R2: the army =====================
+const W_ARMYAT = { liu: 'liaoyang', xu: 'tongzhou', pass: 'shanhai' };
+// your squad: five men who live where the company lives, and die in its battles
+function wArmyDay() { const A = WS.army; if (!A) return; if (!A.mates) A.mates = WCORE.makeMates(WS, W_ARMYAT[A.col] || 'liaoyang');
+  for (const k of A.mates) { const f = WS.folk[k]; if (f && f.alive) f.place = W_ARMYAT[A.col] || f.place; } }
+function wMatesFall(p) { const A = WS.army; if (!A || !A.mates) return []; const dead = []; for (const k of A.mates) { const f = WS.folk[k]; if (f && f.alive && Math.random() < p) { f.alive = 0; f.died = WS.day; f.how = 'in battle'; dead.push(f.en); } } if (dead.length) wNote('戰友陣亡。', `Of your squad, ${dead.join(', ')} did not come back.`); return dead; }
+// pay: a soldier's tael and eight a month, a squad leader's two and a half; after Sarhu the Liaodong pay comes late or not at all
+function wPayDay() { const A = WS.army, amt = (W_ARMY[A.r][0] >= 6 ? 2000 : 1440) * (A.retainer ? 2 : 1);
+  if ((A.col === 'liu' && WS.day >= D(1619, 3, 5) && Math.random() < 0.45) || (A.col === 'xu' && Math.random() < 0.6)) { A.arrears = (A.arrears | 0) + amt; wLog('欠餉。', 'No pay this month.'); if (A.arrears >= amt * 3 && !WS.flags.mutinyAsked) WS.flags.mutinyDue = 1; return; }
+  WS.cash += amt; wLog('發了月餉。', 'Pay day.'); }
+// heads taken in a battle: the Ming paid for heads in silver or in rank
+function wHeads(k) { if (!WS.army || !k) return 0; const A = WS.army; A.heads = (A.heads | 0) + k; const steps = Math.floor(A.heads / 4) - (A.headSteps | 0);
+  if (steps > 0 && A.r < W_ARMY.length - 2) { A.headSteps = (A.headSteps | 0) + steps; A.r = Math.min(W_ARMY.length - 2, A.r + steps); wNote('以首功升。', `Your heads are counted (${A.heads} in all): you are made ${W_ARMY[A.r][2]}.`); }
+  else { WS.cash += k * 400; wNote('首級賞銀。', `${k} head${k > 1 ? 's' : ''} counted: ${k * 400} wen of reward silver (after the officers took their share).`); } return k; }
+function wBattleCards(m) { const F = wFmt(WS.day).en;
+  return ({ roadA: [{ title: '東路 · The east road', year: F, p: ['General Liu Ting\'s column marches from Kuandian toward Hetu Ala: the Zhejiang men, the Sichuan men, the Korean allies, and the Liaoyang levy, you among them. The snow is still on the passes.'] }],
+    abudali: [{ title: '阿布達里岡 · Abudali', year: F, p: ['The column has come out of the hills at Abudali. There is no word from the other columns.'] }],
+    hunw: [{ title: '渾河 · The Hun River', year: F, p: ['Shenyang has fallen. The Sichuan and Zhejiang men under Chen Ce and Tong Zhongkui have crossed the Hun River to try to retake it. Your company is with them, on the north bank, with the river at your backs.'] }],
+    ningyuan: [{ title: '寧遠 · Ningyuan', year: F, p: ['Nurhaci has come with his whole army across the frozen plain. Every fort beyond the Pass has been abandoned except this one. Yuan Chonghuan has burned the suburbs, brought the people inside, and mounted the red barbarian cannon on the walls.'] }] })[m]
+    || [{ title: '遼陽 · Liaoyang', year: F, p: ['The Jin are in the city. Get your family out.'] }]; }
+function wFinishMore(m, heads) {
+  if (m === 'hunw') { wMatesFall(0.5); const d = D(1621, 3, 18); if (WS.day < d) wTurnDays(d - WS.day); WS.place = 'liaoyang'; WS.from = 'west'; WS.hour = 9; wSave();
+    zCards([{ title: '渾河 · The Hun River', year: wFmt(WS.day).en, p: ['The north bank was lost. The Sichuan men fought until there were none of them left; the Zhejiang men on the south bank were overrun the next day. You swam the river at dusk.', 'You are back in Liaoyang. The Jin are three days behind you.'] }], () => wScene('west')); return true; }
+  if (m === 'ningyuan') { wMatesFall(0.15); if (WS.army) WS.army.r = Math.min(W_ARMY.length - 1, WS.army.r + 1); wSave();
+    zCards([{ title: '寧遠大捷 · Victory at Ningyuan', year: wFmt(WS.day).en, p: ['The Jin assault broke on the walls of Ningyuan under the fire of the red barbarian cannon. It was the first defeat of Nurhaci\'s life; by the summer he was dead.', WS.army ? `You are made ${W_ARMY[WS.army.r][2]}.` : ''] }], () => wScene()); return true; }
+  return false; }
+// after Liaoyang: west to the Pass with the refugees, or east to the coast with Mao Wenlong (the East River campaign)
+function wAfterFall() {
+  wPanel({ zh: '遼陽陷', en: 'Liaoyang has fallen', t: wFmt(WS.day).en }, [['', 'You are out of the city, in the crowd on the roads. West, twelve days to the Shanhai Pass and inside the Wall. East, they say Mao Wenlong is gathering men on the coast to fight on.']],
+    [{ q: 'West, to the Pass, with the refugees', fx: () => { WS.place = 'shanhai'; WS.from = 'liaoyang'; if (WS.army) WS.army = Object.assign(WS.army, { col: 'pass', unit: 'the Shanhai Pass garrison' }); WS.home = 'shanhai'; WS.flags.fled = 1; wTurnDays(12); wSave();
+      zCards([{ title: '逃難 · West', year: wFmt(WS.day).en, p: ['Liaoyang is lost. You go west with the refugees, twelve days to the Shanhai Pass.'] }], () => wScene('liaoyang')); } },
+      { q: 'East, to the coast, to Mao Wenlong (your life goes on in the East River campaign)', fx: () => { wToMao(); } }], { noLeave: true });
+}
+function wToMao() { WS.alive = false; WS.flags.toMao = 1; wHall(WCORE.epitaph(WS, 'beyond the sea with Mao Wenlong (his story goes on in the East River campaign)').slice(0, 2)); wSave();
+  zCards([{ title: '東江 · To the East River', year: wFmt(WS.day).en, p: ['You go east, toward the sea, with the people who will not live under the Jin. Your life goes on in the East River campaign.'] }], () => { try { DS = dFresh(); DS.fromWorld = 1; dSave(); dStart('c2'); } catch (e) { location.reload(); } }); }
+// the bunk: sleep (a night in the barracks may bring something), or walk away from the army
+function wBunk() { const A = WS.army; if (!A) return wSleep();
+  const sleep = () => { const ev = WCORE.nightEvent(WS); if (!ev) return wSleep(); wPanel({ zh: ev.title[0], en: ev.title[1], t: 'Night, in the barracks' }, ev.text, ev.opts.map(o => ({ q: o[0], fx: () => { o[2](WS); WS.cash = Math.max(0, WS.cash); WS.health = Math.max(5, Math.min(100, WS.health)); const w = typeof o[1] === 'function' ? o[1](WS) : o[1]; return { lines: [['', w]], opts: [{ q: 'Sleep', fx: () => { wSleep(); } }] }; } })), { noLeave: true }); };
+  const O = [{ q: 'Sleep', fx: () => { sleep(); } }];
+  if (A.arrears) O.push({ q: `Ask the company clerk for your back pay (${A.arrears} wen owed)`, fx: () => Math.random() < 0.25 ? (WS.cash += Math.floor(A.arrears / 2), A.arrears = Math.ceil(A.arrears / 2), wSays('', 'He pays you half, and makes you sign for all of it.')) : wSays('', '"When the silver comes from Beijing. Next month."') });
+  O.push({ q: 'Desert: take your things and walk away tonight', fx: () => { wNote('開小差。', 'You deserted from the army.'); WS.flags.deserter = WS.day; WS.army = null; WS.place = WS.home === 'lijia' ? 'lijia' : WS.place; WS.from = 'liaoyang'; wTurnDays(1); WS.hour = 7; wSave(); wScene(); } });
+  wPanel({ zh: '營房', en: 'Your bunk', t: `${W_ARMY[A.r][2]}, ${A.unit}${A.heads ? `; ${A.heads} heads taken` : ''}` }, [['', 'A plank bed, a straw quilt, ten men snoring.']], O);
+}
+// the army's other moments: a mutiny over pay; a deserter recognised in town
+function wArmyMoment() {
+  const A = WS.army;
+  if (A && WS.flags.mutinyDue && !WS.flags.mutinyAsked && WS.place === W_ARMYAT[A.col]) { WS.flags.mutinyAsked = 1;
+    return wChoice({ k: 'mutiny' + WS.day, title: ['鼓譟', 'The company will not march'], text: [['', `Three months without pay. Tonight the company has barred the gate of the yard and is shouting for the paymaster. Your squad looks at you.`]],
+      opts: [['Join them', 'The paymaster comes out with half the arrears. Next week two of the ringleaders are beheaded; you are not among them.', (S) => { S.cash += Math.floor((A.arrears | 0) / 2); A.arrears = 0; if (Math.random() < 0.15) S.health = Math.max(10, S.health - 40); }], ['Stay in your bunk', 'It passes over you.', () => { }], ['Go to the officers', 'You are made a squad leader for your loyalty. Your squad will not speak to you.', (S) => { A.r = Math.max(A.r, 1); S.karma = (S.karma | 0) - 1; }]] }), true; }
+  if (!A && WS.flags.deserter && WS.place === 'liaoyang' && WS.day < D(1621, 3, 21) && WS.flags.seenDay !== WS.day && Math.random() < 0.3) { WS.flags.seenDay = WS.day;
+    return wChoice({ k: 'seen' + WS.day, title: ['被認出來了', 'Recognised'], text: [['', 'A soldier from your old company stops in the street and stares at you. "You! You ran!"']],
+      opts: [['Slip him 500 wen (500 wen)', 'He looks at the silver, then at you, and walks on.', (S) => { S.cash -= 500; }], ['Run', (S) => S.flags.caught ? 'They catch you at the corner. Forty strokes, and back to the company.' : 'You lose him in the market.', (S) => { if (Math.random() < 0.4) { S.flags.caught = 1; S.health = Math.max(10, S.health - 35); S.army = { r: 0, col: 'liu', unit: 'Liaoyang levy (returned deserter)', since: S.day }; S.flags.deserter = 0; } }]] }), true; }
+  return false; }

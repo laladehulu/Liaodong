@@ -165,7 +165,7 @@ function wTurnDays(n) {
     // the fallen of history die on their day
     if (WS.day === D(1618, 4, 21)) WS.dead.zhangcy = 1;
     // family life: your father ages; in a bad year the price of grain doubles
-    if (WS.army) { WS.army.paid = (WS.army.paid || 0) + 1; if (WS.army.paid >= 30) { WS.army.paid = 0; WS.cash += W_ARMY[WS.army.r][0] >= 6 ? 2000 : 1440; wLog('發了月餉。', 'Pay day.'); } }
+    if (WS.army) { WS.army.paid = (WS.army.paid || 0) + 1; if (WS.army.paid >= 30) { WS.army.paid = 0; wPayDay(); } }
     if (WS.office) { WS.office.paid = (WS.office.paid || 0) + 1; if (WS.office.paid >= 30) { WS.office.paid = 0; WS.cash += 4000; } }
     wArmyCheck(); wLifeDay();
   }
@@ -182,6 +182,8 @@ function wNews(place) { const delay = W_FAR[place] || 0; const out = []; for (co
 function wArmyCheck() {
   if (!WS.army || WB) return;
   if (WS.day >= D(1619, 2, 21) && !WS.flags.marched && WS.army.col === 'liu') { WS.flags.marched = 1; WS.flags.pendingBattle = 'roadA'; }
+  if (WS.day >= D(1621, 3, 10) && WS.day < D(1621, 3, 14) && !WS.flags.hun && WS.army.col === 'liu' && (WS.place === 'liaoyang' || WS.place === 'lijia')) { WS.flags.hun = 1; WS.flags.pendingBattle = 'hunw'; }
+  if (WS.day >= D(1626, 1, 20) && WS.day < D(1626, 2, 1) && !WS.flags.ningyuan && (WS.army.col === 'pass' || WS.flags.yuanMan) && (WS.place === 'shanhai')) { WS.flags.ningyuan = 1; WS.flags.pendingBattle = 'ningyuan'; }
 }
 
 // ---------------- the scene: the place you are in, its people, its things, at this hour ----------------
@@ -205,13 +207,14 @@ function wThings() {
   const P = WPL[WS.place], T = [];
   for (const ex of P.exits) T.push({ k: 'exit', to: ex.to, x: ex.x, z: ex.z, ex });
   if (WS.place === 'lijia') { const S2 = P.spots; T.push({ k: 'forge', x: S2.forge[0] + 1.4, z: S2.forge[1] - 1 }, { k: 'bed', x: S2.home[0], z: S2.home[1] }, { k: 'books', x: S2.home[0] - 2.2, z: S2.home[1] + 1.2 }); }
-  if (WS.place === 'liaoyang') { const S2 = P.spots; T.push({ k: 'inn', x: S2.inn[0] + 2, z: S2.inn[1] }, { k: 'board', x: S2.school[0] - 3, z: S2.school[1] - 2 }); if (WS.army) T.push({ k: 'bunk', x: S2.barracks[0], z: S2.barracks[1] }); }
+  if (WS.place === 'liaoyang') { const S2 = P.spots; T.push({ k: 'inn', x: S2.inn[0] + 2, z: S2.inn[1] }, { k: 'board', x: S2.school[0] - 3, z: S2.school[1] - 2 }); if (WS.army && WS.army.col === 'liu') T.push({ k: 'bunk', x: S2.barracks[0], z: S2.barracks[1] }); }
   if (WS.place === 'beijing') T.push({ k: 'inn', x: WPL.beijing.spots.inn[0] + 2, z: WPL.beijing.spots.inn[1] });
   if (WS.place === 'shanhai') T.push({ k: 'inn', x: WPL.shanhai.spots.inn[0] + 2, z: WPL.shanhai.spots.inn[1] });
   if (WS.place === 'city') T.push({ k: 'board', x: WPL.city.spots.examGate[0] + 4, z: WPL.city.spots.examGate[1] - 2 }, { k: 'inn', x: WPL.city.spots.inn[0], z: WPL.city.spots.inn[1] });
   return T.concat(wMoreThings(P));
 }
 function wScene(arriveFrom) {
+  wArmyDay();
   const P = WPL[WS.place]; const night = wNight(); const at = (arriveFrom && P.at[arriveFrom]) || P.at[WS.from] || P.at.start || Object.values(P.at)[0];
   const people = wPeopleHere(), things = wThings();
   const npcs = people.map((e, i) => ({ role: 'spear', x: e.x, z: e.z, yaw: Math.random() * 6.28, ci: i, pose: e.seat ? 'squat' : 'stand', act: e.act, rank: e.p.rank, route: e.route }));
@@ -258,7 +261,8 @@ function wKeyE() {
   if (T.k === 'forge') { wForge(); return true; }
   if (wThingUse(T)) return true;
   if (T.k === 'books' || T.k === 'desk') { wPass(3, () => { const g = Math.max(0.4, 2.6 - WS.learning / 40) * (WCORE.inv(WS, 'book') ? 1.5 : 1); WS.learning = Math.min(100, WS.learning + g); toast(`You read the Four Books for three hours. Learning ${WS.learning.toFixed(0)}.`); }); return true; }
-  if (T.k === 'bed' || T.k === 'bunk') { wSleep(); return true; }
+  if (T.k === 'bunk') { wBunk(); return true; }
+  if (T.k === 'bed') { wSleep(); return true; }
   if (T.k === 'inn') { if (WS.cash < 40) { toast('You have not got forty wen.'); return true; } WS.cash -= 40; wSleep(); return true; }
   if (T.k === 'board') { wBoard(); return true; }
   return true;
@@ -379,20 +383,19 @@ function wExam(ex) {
 function wBattle(mission) {
   const M = SIM.MISSIONS[mission]; if (!M) return wScene();
   WB = { mission }; WZ = null; ZC = null; ZB = null;
-  const cards = mission === 'roadA' ? [{ title: '東路 · The east road', year: wFmt(WS.day).en, p: ['General Liu Ting\'s column marches from Kuandian toward Hetu Ala: the Zhejiang men, the Sichuan men, the Korean allies, and the Liaoyang levy, you among them. The snow is still on the passes.'] }]
-    : mission === 'abudali' ? [{ title: '阿布達里岡 · Abudali', year: wFmt(WS.day).en, p: ['The column has come out of the hills at Abudali. There is no word from the other columns.'] }]
-    : [{ title: '遼陽 · Liaoyang', year: wFmt(WS.day).en, p: ['The Jin are in the city. Get your family out.'] }];
+  const cards = wBattleCards(mission);
   zCards(cards, () => { startGame({ seed: (Math.random() * 0x7fffffff) | 0, battle: M.battle, mode: 'campaign', mission, players: [{ name: WS.name.zh, team: M.side | 0, connected: true }] }, 0, null, 1); });
 }
 function wFinish(winner) {
   const sim = state.sim, M = sim.mission, me = sim.players[state.localIdx], h = sim.units[me.heroId]; const won = winner === (M.side | 0), alive = !!(h && !h.dead);
   const mission = WB.mission; WB = null;
   if (!alive) { wLog('死了。', 'Died.'); return wDie(`in battle at ${M.title.split(' · ').slice(-1)[0]}`); }
-  if (mission === 'roadA') { WS.flags.pendingBattle = 'abudali'; WS.day += 2; return wBattle('abudali'); }
-  if (mission === 'abudali') { WS.day = Math.max(WS.day, D(1619, 3, 12)); WS.place = 'liaoyang'; WS.from = 'west'; WS.hour = 9; WS.army.r = Math.min(W_ARMY.length - 1, WS.army.r + 1); wLog('從阿布達里岡逃回遼陽。', 'Came back from Abudali to Liaoyang.');
+  const heads = wHeads(me.kills | 0);
+  if (mission === 'roadA') { WS.flags.pendingBattle = 'abudali'; wTurnDays(2); WS.flags.pendingBattle = null; return wBattle('abudali'); }
+  if (wFinishMore(mission, heads)) return;
+  if (mission === 'abudali') { if (WS.day < D(1619, 3, 12)) wTurnDays(D(1619, 3, 12) - WS.day); wMatesFall(0.6); WS.place = 'liaoyang'; WS.from = 'west'; WS.hour = 9; WS.army.r = Math.min(W_ARMY.length - 1, WS.army.r + 1); wLog('從阿布達里岡逃回遼陽。', 'Came back from Abudali to Liaoyang.');
     wSave(); return zCards([{ title: '敗歸 · Back from Abudali', year: wFmt(WS.day).en, p: ['Liu Ting\'s column was destroyed at Abudali. You and a handful of others came back through the hills to Liaoyang, nine days on foot.', `For bringing men back you are made ${W_ARMY[WS.army.r][2]}.`] }], () => wScene('west')); }
-  WS.place = 'shanhai'; WS.from = 'liaoyang'; WS.army = null; WS.home = 'shanhai'; WS.flags.fled = 1; wTurnDays(12); wSave();
-  zCards([{ title: '逃難 · West', year: wFmt(WS.day).en, p: ['Liaoyang is lost. You go west with the refugees, twelve days to the Shanhai Pass.'] }], () => wScene('liaoyang'));
+  wAfterFall();
 }
 
 // ---------------- the clock in a place, the prompt, the talk around you ----------------
@@ -427,4 +430,4 @@ function wMenu() {
   zheHUD = function (dt) { if (WZ && WS && state.sim && state.sim.cfg.camp && state.sim.cfg.camp.world) return wHUD(dt); return hud(dt); };
   zheFinish = function (w) { if (WB) return wFinish(w); return fin(w); }; }
 setTimeout(() => { try { wMenu(); } catch (e) { } }, 400);
-window.__world = { WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks
+window.__world = { wBunk, wAfterFall, wArmyMoment, WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks
