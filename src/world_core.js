@@ -47,17 +47,18 @@ const WCORE = (() => {
     refugee: { zh: '難民', en: 'a refugee', act: 4, seat: 1, work: ['market', 'gate', 'temple'], talk: [['家沒了。什麼都沒了。', 'The house is gone. Everything is gone.'], ['韃子進城那天，我在井裡藏了一夜。', 'The day the Jurchens came into town I hid all night in a well.']] },
     jurchen: { zh: '女真商人', en: 'a Jurchen trader', act: 9, work: ['market2'], sells: ['ginseng', 'horse'], buys: ['cloth', 'iron', 'nails', 'hoe', 'knife', 'salt'], hat: 'felt', talk: [['人參，好人參。換鐵鍋，換布。', 'Ginseng, good ginseng. For iron pots, for cloth.']] },
     bannerman: { zh: '旗人', en: 'a Jurchen bannerman', act: 10, work: ['market', 'gate', 'yard', 'road'], hat: 'felt', rank: 8, sells: ['horse'], talk: [['剃了頭就是自己人。', 'Shave your head and you are one of us.'], ['尼堪，糧食藏在哪兒？', 'Nikan, where is the grain hidden?'], ['汗說了，漢人和女真是一家。', 'The Khan says Han and Jurchen are one family.']] },
+  pawnbroker: { zh: '當鋪朝奉', en: 'a pawnbroker', act: 20, work: ['market2', 'street'], rich: 1, talk: [['當什麼？', 'What are you pawning?'], ['三分利，童叟無欺。', 'Three per cent a month, the same for children and old men.']] },
   horsedealer: { zh: '馬販子', en: 'a horse dealer', act: 9, work: ['market2', 'yard', 'gate'], sells: ['horse'], buys: ['horse'], talk: [['蒙古馬，走得遠，吃得少。', 'Mongol ponies: go far, eat little.']] },
   eunuch: { zh: '太監', en: 'a palace eunuch', act: 11, work: ['street'], rank: 30, talk: [['咱家是司禮監的。', 'I am of the Directorate of Ceremonial.']] },
   };
   // who lives in each place (trade, how many); the families of your village are fixed in world.js
   const POP = {
     lijia: [['farmer', 3], ['weaver', 1], ['herd', 1], ['carter', 1]],
-    liaoyang: [['vendor', 3], ['clothier', 1], ['bookseller', 1], ['horsedealer', 1], ['ironmonger', 1], ['tea', 1], ['teller', 1], ['doctor', 1], ['scribe', 1], ['porter', 2], ['matchmaker', 1], ['monk', 1], ['beggar', 2], ['runner', 2], ['soldier', 3], ['carter', 1]],
+    liaoyang: [['vendor', 3], ['clothier', 1], ['bookseller', 1], ['horsedealer', 1], ['pawnbroker', 1], ['ironmonger', 1], ['tea', 1], ['teller', 1], ['doctor', 1], ['scribe', 1], ['porter', 2], ['matchmaker', 1], ['monk', 1], ['beggar', 2], ['runner', 2], ['soldier', 3], ['carter', 1]],
     fushun: [['vendor', 2], ['jurchen', 2], ['soldier', 3], ['runner', 1], ['beggar', 1], ['carter', 1]],
     shanhai: [['soldier', 4], ['carter', 2], ['vendor', 1], ['scribe', 1], ['beggar', 1]],
     tongzhou: [['boatman', 2], ['carter', 2], ['vendor', 2], ['porter', 1], ['beggar', 1]],
-    beijing: [['carter', 2], ['vendor', 3], ['clothier', 1], ['horsedealer', 1], ['tea', 1], ['teller', 1], ['candidate', 3], ['beggar', 2], ['doctor', 1], ['matchmaker', 1]],
+    beijing: [['carter', 2], ['vendor', 3], ['clothier', 1], ['horsedealer', 1], ['pawnbroker', 1], ['tea', 1], ['teller', 1], ['candidate', 3], ['beggar', 2], ['doctor', 1], ['matchmaker', 1]],
     city: [['runner', 2], ['candidate', 3], ['bookseller', 1], ['scribe', 1], ['vendor', 2], ['soldier', 2], ['monk', 1]],
     county: [['runner', 3], ['clerk', 2], ['vendor', 2], ['farmer', 2], ['petitioner', 2]],
   };
@@ -87,6 +88,7 @@ const WCORE = (() => {
     const food = g === 'rice' || g === 'cake' || g === 'salt';
     if (food && LIAO[place]) { const k = LIAO[place]; if (S.day >= D(1618, 4, 15)) p *= 1 + 0.3 * k; if (S.day >= D(1619, 3, 5)) p *= 1 + 0.4 * k; if (S.day >= D(1619, 7, 25)) p *= 1 + 0.3 * k; }
     if (food && season(S.day) === 'winter') p *= 1.12;
+    if (food && (place === 'beijing' || place === 'city' || place === 'tongzhou') && DT(S.day).m >= 8 && DT(S.day).m <= 10) p *= 0.85; /* the canal fleet is in */
     if (g === 'ginseng' && place !== 'fushun' && S.day >= D(1618, 4, 15)) p *= 1.6; /* the Jurchen markets are closed */
     if ((g === 'iron' || g === 'knife' || g === 'sword') && S.day >= D(1618, 5, 1) && LIAO[place]) p *= 1.25; /* the army buys all the iron */
     return Math.max(1, Math.round(p)); }
@@ -311,6 +313,8 @@ const WCORE = (() => {
     L.push(['學', 'Learning and arms', `Learning ${Math.round(S.learning)}, arms ${Math.round(S.arms)}, smithing ${Math.round(S.smith || 0)}.`]);
     const inv2 = Object.entries(S.inv || {}).filter(([, n]) => n > 0).map(([g, n]) => `${GOODS[g] ? GOODS[g][1] : g}${n > 1 ? ' ×' + n : ''}`); L.push(['囊', 'Your pack', inv2.length ? inv2.join(', ') : 'Empty.']);
     if (S.letters && S.letters.length && S.folk) L.push(['信', 'Letters to deliver', S.letters.map(x => `to ${S.folk[x.to] ? S.folk[x.to].en : '?'} in ${x.place}`).join('; ')]);
+    { const P = []; for (const pl in S.land || {}) if (S.land[pl]) P.push(`${S.land[pl]} mu at ${pl === 'lijia' ? 'Lijia' : 'Baodi county'}`); if (S.shop) P.push('a smithy rented in Liaoyang'); if (P.length) L.push(['產', 'Property', P.join('; ') + '.']); }
+    { const M = []; for (const d of S.debt || []) M.push(`a note for ${d.n} wen, due ${DT(d.due).y}/${DT(d.due).m}/${DT(d.due).d} (now ${owed(S, d)})`); for (const t of S.pawns || []) M.push(`pawned: ${GOODS[t.g][1]} (redeem by ${DT(t.day + 90).m}/${DT(t.day + 90).d})`); if (S.contract) M.push(`a contract: ${S.contract.n} knives to the ironmonger in Liaoyang by ${DT(S.contract.due).m}/${DT(S.contract.due).d}, ${S.contract.each} wen each`); if (M.length) L.push(['債', 'Debts and dealings', M.join('; ') + '.']); }
     const dead = S.folk ? Object.values(S.folk).filter(f => !f.alive && f.died && S.day - f.died < 360 && (f.place === S.place || relOf(S, f.k) > 5)).slice(-6) : []; if (dead.length) L.push(['故', 'The dead you knew', dead.map(f => `${f.en} (${f.how})`).join('; ')]);
     return L; }
 
@@ -366,7 +370,31 @@ const WCORE = (() => {
   function makeMates(S, place) { const r = rngFor(S, 93), out = []; S.folk = S.folk || {}; for (let i = 0; i < 5; i++) { const s = pick(r, SUR), g = pick(r, GM), k = 'm' + S.day + '_' + i;
       S.folk[k] = { k, zh: s[0] + g[0], en: `${s[1]} ${g[1]}`, born: 1590 + Math.floor(r() * 14), trade: 'soldier', place, work: pick(r, ['barracks', 'yard', 'drill']), alive: 1, rel: 0, temper: r(), wealth: 1, mate: 1, look: { h: 0.96 + r() * 0.1, hat: pick(r, ['band', 'wrap', 'kerchief']), beard: r() < 0.4 ? 'mous' : undefined } }; out.push(k); }
     return out; }
-  return { NIGHT, nightEvent, makeMates, festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
+  // ---------------- land, the pawnshop, debt, a shop, contracts ----------------
+  // a mu of land: cheap in Liaodong and cheaper as the war comes; dearer near the capital
+  function landPrice(S, place) { const base = place === 'lijia' ? 1400 : 2600; let p = base; if (place === 'lijia') { if (S.day >= D(1618, 4, 15)) p *= 0.8; if (S.day >= D(1619, 3, 5)) p *= 0.6; if (S.day >= D(1621, 3, 21)) p *= 0.4; } return Math.round(p); }
+  function buyLand(S, place, n) { const p = landPrice(S, place) * n; if (S.cash < p) return [false, `${n} mu costs ${p} wen.`]; S.cash -= p; S.land = S.land || {}; S.land[place] = (S.land[place] | 0) + n; return [true, `You buy ${n} mu. The deed is stamped with the county seal. You hold ${S.land[place]} mu here.`]; }
+  function sellLand(S, place, n) { if (!S.land || (S.land[place] | 0) < n) return [false, 'You have not got that much.']; const p = Math.round(landPrice(S, place) * 0.85) * n; S.land[place] -= n; S.cash += p; return [true, `You sell ${n} mu for ${p} wen.`]; }
+  // the autumn: rent in, tax out (the land tax, and the Liaodong levy that was raised three times)
+  function landYear(S) { if (!S.land) return null; let rent = 0, tax = 0, lost = 0; const levy = S.day >= D(1620, 1, 1) ? 3 : S.day >= D(1619, 1, 1) ? 2 : 1;
+    for (const pl in S.land) { const n = S.land[pl] | 0; if (!n) continue; if (pl === 'lijia' && S.day >= D(1621, 3, 21) && !S.jin) { lost += n; S.land[pl] = 0; continue; }
+      rent += n * (pl === 'lijia' ? 260 : 300) * (pl === 'lijia' && S.flags.jinManor ? 0.4 : 1); tax += n * (40 + 7 * levy); }
+    rent = Math.round(rent); S.cash += rent - tax; return { rent, tax, lost }; }
+  // the pawnshop: half the price now, the goods back for the money and three per cent a month, within three months
+  function pawn(S, place, g) { if (!inv(S, g)) return [false, 'You have none.']; const q = Math.round(price(S, place, g) * 0.5); give(S, g, -1); S.cash += q; S.pawns = (S.pawns || []).concat([{ g, q, day: S.day, place }]); return [true, `The pawnbroker writes you a ticket for ${GOODS[g][1]}: ${q} wen. Redeem it within three months.`]; }
+  function redeemCost(S, t) { return Math.round(t.q * (1 + 0.03 * Math.ceil((S.day - t.day + 1) / 30))); }
+  function redeem(S, i) { const t = S.pawns[i]; const c = redeemCost(S, t); if (S.cash < c) return [false, `It costs ${c} wen to redeem.`]; S.cash -= c; give(S, t.g, 1); S.pawns.splice(i, 1); return [true, `You redeem ${GOODS[t.g][1]} for ${c} wen.`]; }
+  function borrow(S, n) { S.debt = (S.debt || []).concat([{ n, day: S.day, due: S.day + 180 }]); S.cash += n; return [true, `You put your thumbprint on a note for ${n} wen at three per cent a month, due in six months.`]; }
+  const owed = (S, d) => Math.round(d.n * (1 + 0.03 * Math.ceil((S.day - d.day + 1) / 30)));
+  function repay(S, i) { const d = S.debt[i], c = owed(S, d); if (S.cash < c) return [false, `You owe ${c} wen.`]; S.cash -= c; S.debt.splice(i, 1); return [true, `You pay back ${c} wen and the note is torn up in front of you.`]; }
+  // each day: pawn tickets lapse, debts fall due (the collectors come)
+  function moneyDay(S) { const out = []; if (S.pawns) { const keep = []; for (const t of S.pawns) { if (S.day - t.day > 90) out.push(`Your pawn ticket for ${GOODS[t.g][1]} has lapsed; the pawnbroker has sold it.`); else keep.push(t); } S.pawns = keep; }
+    if (S.debt) for (const d of S.debt) if (S.day > d.due && !d.dunned) { d.dunned = 1; const c = owed(S, d); if (S.cash >= c) { S.cash -= c; out.push(`The moneylender's men come for the ${c} wen you owe. You pay.`); d.paid = 1; } else { const took = S.cash; S.cash = 0; for (const g of Object.keys(S.inv || {})) if (g !== 'letter') delete S.inv[g]; S.health = Math.max(5, S.health - 20); out.push(`The moneylender's men come for the ${c} wen you owe. They take your ${took} wen, everything in your pack, and beat you for the rest.`); d.paid = 1; } }
+    if (S.debt) S.debt = S.debt.filter(d => !d.paid); return out; }
+  // a contract: the Commission (or a merchant) wants blades by a date
+  function contractOffer(S) { if (S.contract || (S.smith || 0) < 25 || S.day >= D(1621, 3, 1)) return null; const r = rngFor(S, 101); const n = 5 + Math.floor(r() * 6), each = Math.round(price(S, 'liaoyang', 'knife') * (1.1 + r() * 0.3)); return { g: 'knife', n, each, due: S.day + 40 }; }
+  function contractDeliver(S) { const c = S.contract; if (!c || inv(S, c.g) < c.n) return null; give(S, c.g, -c.n); const pay = c.n * c.each; S.cash += pay; S.contract = null; S.smith = Math.min(100, (S.smith || 0) + 2); return pay; }
+  return { landPrice, buyLand, sellLand, landYear, pawn, redeemCost, redeem, borrow, owed, repay, moneyDay, contractOffer, contractDeliver, NIGHT, nightEvent, makeMates, festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
     DIL, dilemmaNow, dilemmaChoose, ROAD, roadDay, STICKS, drawStick, TALES, tale, dice, CASES, caseNow, judge, LADDER, evaluate, MEMOS, memosNow, memo, purge, journal, rngFor, age };
 })();
 if (typeof module !== 'undefined') module.exports = WCORE;

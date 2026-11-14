@@ -42,7 +42,7 @@ function wLifeDay() {
       else if (L >= 34) { WS.health -= 10; wNote('歲考四等，挨了板子。', 'The licentiates\' yearly test: fourth grade. The Director of Studies has you beaten ten strokes for idleness.'); }
       else { WS.status = 'none'; wNote('歲考六等，革了功名。', 'The licentiates\' yearly test: sixth grade. You are stripped of your licentiate\'s degree.'); } }
     if (WS.flags.linsheng && WS.status === 'shengyuan' && T.d === 1) WS.cash += 600; }
-  wXuArmy(); wArmyDay(); wFamilyDay();
+  wXuArmy(); wArmyDay(); wFamilyDay(); wMoneyDay();
   if (WS.health < 30 && Math.random() < 0.02) wNote('你病了。', 'You are running a fever. A physician could help (Liaoyang, Beijing).');
   if (WS.health < 30) WS.health -= 0.6; else if (WS.health < 100) WS.health = Math.min(100, WS.health + 0.6);
   if (WS.health <= 0 && WS.alive) { WS.alive = false; WS.flags.diedOf = 'fever'; }
@@ -112,6 +112,7 @@ function wTalkFolk(p, u) {
     if (f.trade === 'candidate') say('Talk about the classics (an hour)', () => { WS.hour += 1; const g = WS.learning < 50 ? 0.8 : 0.3; WS.learning = Math.min(100, WS.learning + g); WCORE.addRel(WS, f.k, 2); return { lines: [['', WS.learning < 40 ? 'He is kind about how little you know, and lends you his notes on the Doctrine of the Mean.' : 'You argue about whether 格物 means investigating things or rectifying the mind, until the lamp oil runs out.']], opts: mk() }; });
     if (f.trade === 'soldier') say('"What is it like, the army?"', () => wSays('', WS.day < D(1619, 3, 2) ? '"Bad food, no pay, and the officers sell our rations. But they say the four armies will finish Nurhaci in a month."' : '"I was at Sarhu. Don\'t join. Or join, and run at the right moment."'));
     if (f.trade === 'clerk' && WS.office) say('Go over the county accounts (two hours)', () => { wPass(2, () => { WS.office.favor = (WS.office.favor | 0) + 1; toast('The tax registers balance, almost. Your superiors will be pleased.'); }); });
+    wMoneyTopics(f.trade, (q, fx, off) => say(q, () => { const r = fx(); return r ? { lines: r.lines, opts: mk() } : r; }, off));
     if (f.trade === 'boatman') say('"Where does the grain go?"', () => wSays('', '"To the capital granaries, for the officials\' and soldiers\' rations. Half of it rots, a quarter is stolen, and the rest they eat."'));
     return O; };
   wPanel({ zh: f.zh, en: f.en, t: p.t }, [greet], mk());
@@ -130,16 +131,18 @@ function wForge() {
 }
 
 // ---------------- more things to use in places ----------------
-Object.assign(W_THING, { bench: ['Sit on the magistrate\'s bench and hear the day\'s case', '升堂'], desk: ['Write a memorial to the throne', '上疏'], shrine: ['Pray at the shrine of the Earth God (土地)', '拜'], ledger: ['Your journal (J)', '記'], east: ['Slip away east to the coast, to Mao Wenlong (continues in the East River campaign)', '東'] });
+Object.assign(W_THING, { bench: ['Sit on the magistrate\'s bench and hear the day\'s case', '升堂'], desk: ['Write a memorial to the throne', '上疏'], shrine: ['Pray at the shrine of the Earth God (土地)', '拜'], ledger: ['Your journal (J)', '記'], shop: ['Work your own smithy (four hours)', '鋪'], east: ['Slip away east to the coast, to Mao Wenlong (continues in the East River campaign)', '東'] });
 function wMoreThings(P) { const T = [], S2 = P.spots;
   if (WS.place === 'lijia') T.push({ k: 'shrine', x: S2.well[0] + 3, z: S2.well[1] + 2, prop: 'rack' });
   if (WS.army && W_ARMYAT[WS.army.col] === WS.place && WS.place !== 'liaoyang') { const q = S2.yard || S2.gate || Object.values(S2)[0]; T.push({ k: 'bunk', x: q[0] + 4, z: q[1] + 3 }); }
   if (WS.jin && WS.place === 'lijia' && WS.day >= D(1621, 7, 1) && WS.day < D(1627, 1, 1)) T.push({ k: 'east', x: S2.road[0] + 6, z: S2.road[1], prop: 'banner', sign: '東' });
+  if (WS.shop && WS.place === WS.shop.place && S2.smithy) T.push({ k: 'shop', x: S2.smithy[0] + 2, z: S2.smithy[1], prop: 'pot' });
   if (WS.place === 'county' && WS.office) T.push({ k: 'bench', x: S2.yamen[0], z: S2.yamen[1] - 2, prop: 'rack' }, { k: 'desk', x: S2.yamen[0] + 4, z: S2.yamen[1], prop: 'pot' }, { k: 'bed', x: S2.yamen[0] - 5, z: S2.yamen[1] + 3 });
   return T; }
 function wThingUse(T) {
   if (T.k === 'shrine') { if (WS.flags.prayed === WS.day) { toast('You have prayed today.'); return true; } WS.flags.prayed = WS.day; if (Math.random() < 0.3) { WS.luck = 1; WS.luckTo = WS.day + 10; } toast('You light a stick of incense before the little Earth God and his wife.'); return true; }
   if (T.k === 'bench') { wCourt(); return true; }
+  if (T.k === 'shop') { wShopWork(); return true; }
   if (T.k === 'east') { wToMao(); return true; }
   if (T.k === 'desk') { wMemorial(); return true; }
   return false;
@@ -216,6 +219,8 @@ function wHallHtml() { try { const H = JSON.parse(localStorage.getItem('mingLive
 // ---------------- history's people: more to say to some of them ----------------
 WPP.push({ k: 'yuancz', zh: '袁崇煥', en: 'Yuan Chonghuan', t: 'a provincial graduate from Guangdong, up for the metropolitan exam; he talks of nothing but Liaodong', born: 1584, hist: true, look: { h: 1.0, hat: 'scholar', beard: 'mous', brows: 'knit' }, rank: 20, where: [[D(1619, 1, 20), D(1619, 3, 20), 'beijing', 'inn', 20, true], [D(1622, 2, 1), D(1622, 9, 1), 'shanhai', 'wall', 10]], role: 'yuancz' });
 function wTalkMore(p, say, me) {
+  wShopTopic(p, say);
+  if (p.k === 'wu') wMoneyTopics('wu', (q, fx, off) => { if (!off) say(q, [['', '(Old Wu fetches the land register.)']], () => { const r = fx(); if (r) toast(r.lines[0][1]); }); });
   if (p.k === 'passguard' && !WS.army && WS.flags.fled && WS.day < D(1627, 1, 1)) say('Join the Pass garrison', [['遼東來的？當過兵？好，關上缺人。', 'From Liaodong? Served before? Good: the Pass is short of men.']], () => { WS.army = { r: 0, col: 'pass', unit: 'the Shanhai Pass garrison', since: WS.day }; wLog('投山海關守軍。', 'Joined the Shanhai Pass garrison.'); banner('守關 · The Pass garrison', 'You stand guard on the First Pass Under Heaven', 4); wScene(); });
   if ((p.k === 'maowl' || p.k === 'lirubai') && WS.army && !WS.army.retainer && WS.arms >= 40) say('Ask to serve among his household men (家丁)', [['讓我看看你的刀法。', 'Show me your swordwork.'], ['……好。從今天起你吃我的飯。', '...Good. From today you eat at my table.']], () => { WS.army.retainer = 1; WS.army.unit = `household men (家丁) of ${p.en}`; wLog('入家丁。', `Taken among the household men of ${p.en}.`); toast('Double pay, better armour, and you go where he goes.'); });
   if (p.k === 'xugq') {
@@ -307,3 +312,30 @@ function wFamilyDay() {
   if (F.sonSchool && T.m === 1) { if (WS.cash >= 500) WS.cash -= 500; else { F.sonSchool = 0; wNote('兒子退學了。', 'There was no money for your son\'s school this year. He comes home.'); } }
   if (F.mourning && WS.day >= F.mourning) { F.mourning = 0; wNote('服滿。', 'The twenty-seven months of mourning are over. You may go to the Ministry of Personnel in Beijing and ask for a new post.'); }
 }
+
+// ===================== R5: money and property =====================
+function wMoneyDay() { for (const w of WCORE.moneyDay(WS)) wNote('錢', w);
+  const T = WCORE.DT(WS.day);
+  if (T.m === 9 && T.d === 1) { const r = WCORE.landYear(WS); if (r && (r.rent || r.lost)) wNote('秋收。', `The autumn: your tenants pay ${r.rent} wen of rent; the land tax and the Liaodong levy take ${r.tax}.${r.lost ? ` Your ${r.lost} mu at Lijia are in Jin hands now; the deeds are worthless.` : ''}`); }
+  if (WS.shop && T.d === 1) { if (WS.cash >= 500) WS.cash -= 500; else { WS.shop = null; wNote('鋪子收回了。', 'You could not pay the rent on the smithy in Liaoyang; the landlord has let it to someone else.'); } }
+  if (WS.shop && WS.day >= D(1621, 3, 21)) { WS.shop = null; wNote('鋪子沒了。', 'Your smithy in Liaoyang is lost with the city.'); }
+  if (WS.contract && WS.day > WS.contract.due) { WS.contract = null; WCORE.addRel(WS, WS.contractFrom || '', -10); wNote('誤了期。', 'You missed the date on the blade contract. The ironmonger will not deal with you again soon.'); }
+}
+// the topics money brings: land from the headman or the county clerk, the pawnshop, a contract, a shop
+function wMoneyTopics(who, add) {
+  const land = (pl) => { const pr = WCORE.landPrice(WS, pl); for (const n of [1, 5]) add(`Buy ${n} mu of land (${pr * n} wen)`, () => { const r = WCORE.buyLand(WS, pl, n); return { lines: [['', r[1]]] }; }, WS.cash < pr * n);
+    if (WS.land && WS.land[pl]) add(`Sell a mu of your land (about ${Math.round(pr * 0.85)} wen)`, () => { const r = WCORE.sellLand(WS, pl, 1); return { lines: [['', r[1]]] }; }); };
+  if (who === 'wu' && WS.place === 'lijia' && WS.day < D(1621, 3, 21)) land('lijia');
+  if (who === 'clerk' && WS.place === 'county') land('county');
+  if (who === 'pawnbroker') {
+    for (const g of Object.keys(WS.inv || {})) if (g !== 'letter' && WCORE.GOODS[g] && WCORE.price(WS, WS.place, g) >= 40) add(`Pawn ${WCORE.GOODS[g][1]} (${Math.round(WCORE.price(WS, WS.place, g) * 0.5)} wen)`, () => { const r = WCORE.pawn(WS, WS.place, g); return { lines: [['', r[1]]] }; });
+    (WS.pawns || []).forEach((t, i) => { if (t.place === WS.place) add(`Redeem ${WCORE.GOODS[t.g][1]} (${WCORE.redeemCost(WS, t)} wen)`, () => { const r = WCORE.redeem(WS, i); return { lines: [['', r[1]]] }; }); });
+    if ((WS.debt || []).length < 2) for (const n of [1000, 5000]) add(`Borrow ${n} wen at three per cent a month`, () => { const r = WCORE.borrow(WS, n); return { lines: [['', r[1]]] }; });
+    (WS.debt || []).forEach((d, i) => add(`Repay the note for ${d.n} wen (${WCORE.owed(WS, d)} now)`, () => { const r = WCORE.repay(WS, i); return { lines: [['', r[1]]] }; }, WS.cash < WCORE.owed(WS, d)));
+  }
+  if (who === 'ironmonger') { if (WS.contract && WS.contractFrom) { add(`Deliver the ${WS.contract.n} knives`, () => { const p = WCORE.contractDeliver(WS); return { lines: [['', p ? `He checks every edge and pays ${p} wen.` : `You have ${WCORE.inv(WS, 'knife')} of ${WS.contract.n}.`]] }; }); }
+    else { const c = WCORE.contractOffer(WS); if (c) add(`"Any big orders?" (a contract: ${c.n} knives at ${c.each} wen each in 40 days)`, () => { WS.contract = c; WS.contractFrom = who; return { lines: [['兵備道要刀，我一個人打不完。你接一半。', 'The Military Defence Circuit wants blades and I can\'t make them all. Take some.']] }; }); } }
+}
+// a smithy of your own in Liaoyang, rented from Innkeeper Qian's cousin
+function wShopTopic(p, say) { if (p.k === 'innkeep' && WS.place === 'liaoyang' && WS.day < D(1621, 3, 1) && !WS.shop && (WS.smith || 0) >= 25) say('Ask about renting a shop front for a smithy (500 wen a month)', [['我表弟有間鋪面，靠著鐵匠街。一個月五百文。', 'My cousin has a shop front on the smiths\' street. Five hundred a month.']], () => { if (WS.cash < 500) return toast('You need the first month\'s rent.'); WS.cash -= 500; WS.shop = { place: 'liaoyang', since: WS.day }; wLog('租了鋪子。', 'Rented a smithy in Liaoyang.'); toast('The smithy is yours. Work it (E) when you are in Liaoyang.'); wScene(); }); }
+function wShopWork() { const inc = Math.round((30 + (WS.smith || 0) * 1.8) * (WS.flags.jinManor ? 0.5 : 1)); wPass(4, () => { WS.cash += inc; WS.smith = Math.min(100, (WS.smith || 0) + 0.6); toast(`Four hours at your own anvil: hinges, hoes, a horse's shoes. +${inc} wen.`); }); }

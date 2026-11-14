@@ -72,7 +72,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 49. The Jin examination of 1629 (Hong Taiji tested Han scholars; the passed were freed from bondage): real.
 50. A Jurchen neighbour: generated folk of the Jin, trade and friction.
 
-## R5: money and property
+## R5 (done, v168): money and property
 51. Land: buy mu in the village (price by year, falls in war); autumn rent; tax per mu including the Liaodong levy.
 52. Pawnshop: pawn goods for 50%, redeem within 3 months.
 53. Moneylender: borrow at 3% a month; collectors come.
