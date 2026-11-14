@@ -296,7 +296,7 @@ function wBoard() {
   if (!done.length) { const nx = WEX.filter(e => e[1] > WS.day && e[2] === WS.place)[0]; toast(nx ? `A notice: ${nx[9]} will be held here on ${wFmt(nx[1]).en}.` : 'Old notices, rain-streaked.'); return; }
   const e = done[0], got = WS.exams[e[0] + e[1]]; WS.exams[e[0] + e[1] + 'read'] = 1;
   if (got >= e[6]) { WS.status = e[5]; wLog(`${e[8]}中了！`, `Passed ${e[9]}.`); banner(`中了 · Your name is on the list`, `You are now ${W_STATUS[e[5]][2]}`, 5); AUDIO.play('ui');
-    if (e[5] === 'jinshi') { WS.flags.awaitPost = 1; } }
+    if (e[5] === 'jinshi') { WS.flags.awaitPost = 1; WS.flags.jinshiScore = got; wPalaceRank(got); } }
   else { wLog(`${e[8]}落榜。`, `Failed ${e[9]}.`); toast(`You read the list twice. Your name is not on it. (Your paper scored ${got}; the line was about ${e[6]}.)`); }
   wSave();
 }
@@ -326,7 +326,7 @@ function wTalk(p, u) {
     if (WS.status !== ex[4]) say(`Sit ${ex[9]}`, [[ex[4] === 'none' ? '你已經有功名了。' : '你沒有資格。', ex[4] === 'none' ? 'You already hold a degree.' : `You are not qualified: it is for ${W_STATUS[ex[4]][2]}s.`]]);
     else say(`Sit ${ex[9]}`, [['進去吧。號舍在左。', 'In you go. The cells are on the left.']], () => wExam(ex));
   }
-  if (p.role === 'libu' && WS.status === 'jinshi' && !WS.office) say('Ask about a post', [['等著吧。進士候選，總要等的。', 'Wait. Every jinshi waits for a post.'], ['……也有人送點東西，就快些。', '...Some send a little something, and it goes faster.']], () => { WS.office = { zh: '知縣', en: 'County Magistrate', rank: 43, place: 'a county of Shuntian', since: WS.day }; WS.flags.awaitPost = 0; wLog('授知縣。', 'Appointed a county magistrate.'); banner('授官 · Appointed', 'County Magistrate (知縣), rank 7a', 5); });
+  if (p.role === 'libu' && WS.status === 'jinshi' && !WS.office && !(WS.flags.mourning > WS.day) && !WS.flags.purged && !WS.flags.purged2) say('Ask about a post', [['等著吧。進士候選，總要等的。', 'Wait. Every jinshi waits for a post.'], ['……也有人送點東西，就快些。', '...Some send a little something, and it goes faster.']], () => { WS.office = wFirstPost(); WS.flags.awaitPost = 0; wLog('授官。', `Appointed ${WS.office.en}.`); banner('授官 · Appointed', `${WS.office.en} (${WS.office.zh})`, 5); });
   if (p.role === 'passguard') say('Pass through', [[me >= 10 ? '相公請。' : '路引呢？……算了，給二十文。', me >= 10 ? 'Please, sir.' : 'Your papers? ...Never mind. Twenty wen.']], () => { if (me < 10) WS.cash = Math.max(0, WS.cash - 20); });
   if (p.role === 'grandee' || p.role === 'general') { if (me < 20) say('Ask to speak with him', [['（衛兵把你推開了。）', '(The guards push you back.)']]); else say('Pay your respects', [[`${T[0]}有心了。`, `Kind of you, ${T[1]}.`]], () => { WS.rel[p.k] = (WS.rel[p.k] || 0) + 1; }); }
   wTalkMore(p, say, me);

@@ -89,7 +89,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 62. A fight in the teahouse: drunken soldier picks on you.
 63. Sworn brotherhood (結拜) at high liking: a sworn brother helps on the road and in trouble.
 
-## R7: office and factions
+## R7 (done, v170): office and factions
 64. The Hanlin path: top jinshi go to the Hanlin Academy; a slow but high road.
 65. Supervising censor: memorials matter more; impeachments.
 66. Donglin Academy (首善書院 lectures, 1622): attend, become counted as Donglin.
