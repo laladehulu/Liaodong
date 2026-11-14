@@ -349,7 +349,7 @@ function renderMissions() {
   if (as && (!L[state.op] || !!L[state.op].siege !== sgm)) state.op = Object.keys(L).find(k => !L[k].hidden && !!L[k].siege === sgm);
   const cur = as ? state.op : state.mission;
   $('missionHead').textContent = as ? 'Operation' : 'Mission';
-  $('missionList').innerHTML = Object.keys(L).filter(k => !L[k].hidden && (!as || !!L[k].siege === sgm)).map(k => { const M = L[k]; return `<button type="button" class="chap${k === cur ? ' on' : ''}" data-k="${k}"><b>${M.title}</b><small>${M.year} · ${M.brief}</small></button>`; }).join('');
+  $('missionList').innerHTML = Object.keys(L).filter(k => !L[k].hidden && (!as || !!L[k].siege === sgm)).map(k => { const M = L[k]; return `<button type="button" class="chap${k === cur ? ' on' : ''}" data-k="${k}"><b>${M.title}${medalTag(as ? 'op:' + k : k)}</b><small>${M.year} · ${M.brief}</small></button>`; }).join('');
   if (!as) { diffUI($('missionList'), 'diffRowMis'); yyUI($('missionList'), 'yyRowMis'); } else { if ($('diffRowMis')) $('diffRowMis').remove(); if ($('yyRowMis')) $('yyRowMis').remove(); }
   $('missionList').querySelectorAll('button').forEach(b => b.onclick = () => { if (as) state.op = b.dataset.k; else state.mission = b.dataset.k; AUDIO.init(); AUDIO.play('ui'); renderMissions(); });
   const side = as ? state.faction : 0; const list = side === 1 ? ROLE_INFO_JIN : ROLE_INFO; if (!list.some(r => r[0] === state.role)) state.role = list[0][0];
@@ -444,7 +444,15 @@ function missionFinish(winner) {
   const sim = state.sim, me = sim.players[state.localIdx]; const won = winner === me.team; $('mobj').hidden = true; $('radio').hidden = true;
   if (MIS && MIS.endText) $('resultText').textContent = sim.mode === 'assault' ? `${MIS.endText} ${won ? 'Your side carries the day.' : 'Your side is beaten.'} You killed ${me.kills}.` : `${MIS.endText} You killed ${me.kills}.`;
   $('resultTitle').textContent = won ? '勝 · Mission accomplished' : '敗 · Mission failed';
+  if (won) { const key = sim.mode === 'assault' ? 'op:' + (sim.cfg.op || '') : sim.cfg.mission, secs = Math.round((sim.tick - (sim.battleTick | 0)) / 30), r = medalSave(key, sim.diff | 0, secs);
+    if (r) $('resultText').textContent += ` ${r}`; }
 }
+// medals: the best difficulty each mission or operation was won at, and the fastest time, kept on this machine
+const MEDAL = ['銅 Recruit', '銀 Soldier', '金 Veteran', '玉 Lone banner'];
+function medalsAll() { try { return JSON.parse(localStorage.getItem('mingMedals') || '{}'); } catch (e) { return {}; } }
+function medalSave(key, diff, secs) { const A = medalsAll(), o = A[key] || { d: -1, t: 1e9 }; const better = diff > o.d, faster = secs < o.t; A[key] = { d: Math.max(o.d, diff), t: Math.min(o.t, secs) }; try { localStorage.setItem('mingMedals', JSON.stringify(A)); } catch (e) { }
+  const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; return better ? `New medal: ${MEDAL[diff]} (${mm(secs)}).` : faster ? `A new best time: ${mm(secs)}.` : ''; }
+function medalTag(key) { const o = medalsAll()[key]; if (!o) return ''; const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; return ` <span class="medal" title="Best: ${MEDAL[o.d]}, ${mm(o.t)}">${MEDAL[o.d].split(' ')[0]} ${mm(o.t)}</span>`; }
 // ---------- assault: deployment screen (pick a soldier from a gallery and where to enter the fight) ----------
 const DEP = { open: false, ti: 0, si: 0, el: null, por: {}, porT: {}, t: 0, key: '' };
 function depBuild() {

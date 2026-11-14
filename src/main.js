@@ -951,7 +951,19 @@ function finish(winner) {
     else if (won) $('resultTitle').textContent = '勝 · The war is yours'; }
   if (sim.real && typeof soldierFinish === 'function') soldierFinish(winner);
   if (sim.mission && typeof missionFinish === 'function') missionFinish(winner);
+  try { aarShow(sim, me); } catch (e) { }
   setTimeout(() => { $('result').hidden = false; $('btnReplay').hidden = !state.replay || state.replay.inputs.length < 60; if (document.pointerLockElement) document.exitPointerLock(); }, 3600);
+}
+// ---------- after-action report: your companies, what each did and what it cost ----------
+function aarShow(sim, me) {
+  let box = $('resultAAR'); if (!box) { box = document.createElement('div'); box.id = 'resultAAR'; $('resultText').after(box); const st = document.createElement('style');
+    st.textContent = '#resultAAR{margin:6px 0 10px;font-size:12.5px;max-height:34vh;overflow:auto}#resultAAR table{border-collapse:collapse;margin:0 auto}#resultAAR td,#resultAAR th{padding:2px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}#resultAAR th{font-weight:600;opacity:.75}#resultAAR .best{color:#e8c76a}#resultAAR p{margin:4px 0;opacity:.85}'; document.head.appendChild(st); }
+  const mine = me.squads.map(id => sim.squads[id]).filter(Boolean); if (!mine.length) { box.innerHTML = ''; return; }
+  const rows = mine.map(q => { const D = S.DEFS[q.type] || {}; const n0 = q.unitIds.length, left = q.unitIds.filter(id => { const u = sim.units[id]; return u && !u.dead; }).length; return { q, name: D.name || q.type, n0, left, k: q.kills | 0 }; });
+  const best = rows.reduce((a, r) => r.k > a.k ? r : a, rows[0]); const lost = rows.reduce((a, r) => a + r.n0 - r.left, 0), killed = rows.reduce((a, r) => a + r.k, 0) + (me.kills | 0);
+  const mins = Math.max(1, Math.round(((sim.tick - (sim.battleTick | 0)) / 30) / 60));
+  box.innerHTML = `<p>${mins} minute${mins > 1 ? 's' : ''} of battle. Your command lost ${lost} men and killed ${killed} (${me.kills | 0} by your own hand).${best.k ? ` Best company: ${best.name}, ${best.k} kills.` : ''}</p>
+<table><tr><th>Company</th><th>Men left</th><th>Kills</th></tr>${rows.map(r => `<tr${r === best && r.k ? ' class="best"' : ''}><td>${escapeHtml(r.name)}</td><td>${r.left}/${r.n0}${r.left === 0 ? ' · lost' : ''}</td><td>${r.k}</td></tr>`).join('')}</table>`;
 }
 // ---------- replay ----------
 function startReplay() {

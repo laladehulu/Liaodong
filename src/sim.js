@@ -1956,6 +1956,7 @@ class Sim {
     if (killerId >= 0 && this.units[killerId] && this.units[killerId].champ && u.team !== this.units[killerId].team && u.type !== 'horse') { const k = this.units[killerId]; k.hp = Math.min(k.def.hp, k.hp + (u.champ ? 250 : 35)); k.streak = (k.streak || 0) + 1; if (k.streak % 10 === 0) this.events.push({ t: 'streak', id: k.id, n: k.streak }); }
     if (u.champ) u.streak = 0;
     if (this.heroMode && u.type !== 'horse' && (u.champ || (u.squad >= 0 && this.squads[u.squad].unitIds[0] === u.id))) this.pickups.push({ x: u.x, z: u.z, t: this.tick + 30 * 45 });
+    if (killerId >= 0 && u.type !== 'horse') { const k = this.units[killerId]; if (k && k.team !== u.team && k.squad >= 0 && this.squads[k.squad]) this.squads[k.squad].kills = (this.squads[k.squad].kills | 0) + 1; } /* the after-action report counts each company's kills */
     if (killerId >= 0) { const k = this.units[killerId]; if (k && k.ctrl >= 0 && k.team !== u.team && u.type !== 'horse') { const pl = this.players[k.ctrl]; pl.kills++; if (k.frenzyT <= 0 || k.frenzyT === undefined) pl.fury = Math.min(FURY_MAX, pl.fury + (cause === 'melee' || cause === 'counter' ? 20 : 12)); } }
     if (this.phase === 1 && u.type !== 'horse' && !this.heroMode) { if (u.type === 'hero') { this.score[1 - u.team] += 40; this.events.push({ t: 'bounty', team: 1 - u.team, pts: 40 }); } else if (u.squad >= 0 && this.squads[u.squad].unitIds[0] === u.id) this.score[1 - u.team] += 10; }
     this.squadLoss(u, cause);
