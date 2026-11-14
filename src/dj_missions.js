@@ -109,7 +109,7 @@ const DJ_MISSIONS = (() => { const PI = Math.PI;
           [8, 'mao', 'Liaodong men! We came up the river for you. Show me the yamen.', '遼東的弟兄們！我們從江上來接你們。帶我去衙門。'],
           [16, 'zhao', 'That\'s Mao Wenlong? He\'s smaller than I thought.', '那就是毛文龍？比我想的矮。']] },
       { title: '三 · 衙門 · The yamen', goal: 'Take the yamen and seize Tong Yangzhen alive', text: 'Tong Yangzhen holds Zhenjiang for the Khan. Take him alive: a living traitor is worth more to the court than a dead one.', show: ['yamen'], hide: ['sgate'],
-        start: [['release', 'tong'], ['release', 'guard3'], ['dir', 'mao', 'hold', 0, 16], ['dir', 'file', 'hold', 0, 12]], obj: { officer: 'tong' },
+        start: [['release', 'tong'], ['release', 'guard3'], ['dir', 'mao', 'attack']], obj: { officer: 'tong' },
         say: [[3, 'mao', 'Alive! I want him alive, and his seal with him!', '要活的！人和印都要活的！'],
           [14, 'qian', 'Tong Yangzhen was a Ming officer, from a Liaodong family. He went over at Fushun.', '佟養真原本是明朝的官，遼東人家。撫順時投過去的。'],
           [24, 'liu', 'Then he gets no mercy from me.', '那我就不饒他。']] },
@@ -432,13 +432,13 @@ const DJ_MISSIONS = (() => { const PI = Math.PI;
     groups: {
       file: { team: 0, name: 'Sergeant Chen Shou', zh: '陳壽', army: ['ronin'], at: [72, -62, PI], dir: ['support'], stay: true },
       mao: { team: 0, name: 'Mao Wenlong', zh: '毛文龍', army: ['samurai'], at: [64, -56, PI], dir: ['hold', 2, 14], stay: true, n: 4, keepHero: true },
-      yguard: { team: 1, name: 'The Supreme Commander\'s guard', zh: '督師親兵', army: ['samurai', 'rifle_imp', 'samurai', 'cavalry'], at: [-10, 46, 0], dir: ['hold', -10, 48], stay: true, n: 34 },
-      yuan: { team: 1, name: 'Yuan Chonghuan', zh: '袁崇煥', army: ['samurai'], at: [-10, 70, 0], dir: ['hold', -10, 70], stay: true, n: 3, keepHero: true },
+      yguard: { team: 0, ming: true, name: 'The Supreme Commander\'s guard', zh: '督師親兵', army: ['samurai', 'rifle_imp', 'samurai', 'cavalry'], at: [-10, 46, 0], dir: ['hold', -10, 48], stay: true, n: 34 },
+      yuan: { team: 0, ming: true, name: 'Yuan Chonghuan', zh: '袁崇煥', army: ['samurai'], at: [-10, 70, 0], dir: ['hold', -10, 70], stay: true, n: 3, keepHero: true },
     },
-    choices: { 1: [[['calm', 'yguard', 0], ['dir', 'yguard', 'attack']], [['calm', 'yguard', 999]]] },
+    choices: { 1: [[], []] }, /* the guard is Ming, on your side of the field: drawing your blade outside the tent is settled in the story (they knock you down), not in a brawl */
     phases: [
       { title: '一 · 上岸 · Ashore', goal: 'Walk up from the boats behind the general', text: 'Mao Wenlong goes up from the beach in his best armour, with his guard behind him. Yuan Chonghuan\'s banners are on the hill.', show: ['field'],
-        start: [['calm', 'yguard', 999], ['calm', 'yuan', 999]], obj: { reach: 'field' },
+        start: [], obj: { reach: 'field' },
         say: [[2, 'mao', 'Chests out! Let the Supreme Commander see what the East River looks like!', '挺起胸來！讓督師看看東江的兵是什麼樣子！'],
           [8, 'qian', 'Yuan Chonghuan held Ningyuan against the old Khan. The Emperor gave him the imperial sword: the power of life and death.', '袁崇煥在寧遠擋住了老汗。皇上賜了他尚方寶劍：生殺予奪。'],
           [16, 'liu', 'Then why does he need so many guards on a little island?', '那他在這麼個小島上要這麼多親兵幹什麼？'],

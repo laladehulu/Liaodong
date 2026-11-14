@@ -3430,6 +3430,12 @@ Sim.prototype.setupMission = function (teams, aiPl) {
       const sq = gp ? gp.squads.map(id => this.squads[id]).filter(q => q.def.yuanyang)[i] || this.squads[gp.squads[0]] : null; p.soldierSq = sq ? sq.id : 0; this.possess(p, sq, c.yyRole || 'shield');
       if (sq) for (const id of sq.unitIds) { const u = this.units[id]; u.def = Object.assign({}, u.def, { hp: u.def.hp * 1.5 }); u.hp = u.def.hp; u.zfile = true; }
       if (c.wkit && c.wkit.length && p.heroId >= 0) this.kitGive(this.units[p.heroId], c.wkit); });
+    // your own squad keeps with you from the first minute: it is yours to move (follow / halt / charge / form up), not the AI's,
+    // so a scripted move for the rest of your group never walks your file away from you. A story beat that hands you the
+    // file later (its chief falls, 'lead') still says so; this is only who moves the men.
+    for (const p of humans) { const q = this.squads[p.soldierSq]; if (!q || q.owner === p.idx || p.heroId < 0) continue;
+      if (q.owner >= 0) { const o = this.players[q.owner]; o.squads = o.squads.filter(id => id !== q.id); }
+      q.owner = p.idx; for (const id of q.unitIds) this.units[id].owner = p.idx; if (!p.squads.includes(q.id)) p.squads.push(q.id); q.order = ORD_FOLLOW; p.commanderId = p.heroId; }
     this.story = true; // your file: hardened Yiwu men, and the story's heart
   } else if (!ass) {
     humans.forEach((p, i) => { const c = this.cfg.players[p.idx] || {}; const t = roleType(c.role, M.side); p.team = M.side; p.army = humans.length === 1 || this.diff >= 3 ? [t, M.soloExtra || 'ashigaru'] : [t]; /* the lone banner: two companies each, and no one else */
