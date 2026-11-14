@@ -92,7 +92,7 @@ const WPP = [
   { k: 'maowl', zh: '毛文龍', en: 'Mao Wenlong', t: 'a guerrilla commander (遊擊) under the Regional Commander', born: 1576, hist: true, look: { h: 1.04, hat: 'chief', beard: 'longmous' }, rank: 46, where: [[0, D(1621, 3, 20), 'liaoyang', 'yard', 0]], route: [['yamenGate', 0, 60], ['yard', 9, 60], ['market', 0, 40]], role: 'officer' },
   { k: 'xiongtb', zh: '熊廷弼', en: 'Xiong Tingbi', t: 'Military Commissioner for Liaodong (遼東經略)', born: 1569, hist: true, look: { h: 1.06, hat: 'chief', beard: 'full', brows: 'knit' }, rank: 48, where: [[D(1619, 8, 1), D(1620, 10, 20), 'liaoyang', 'yamen', 9]], role: 'grandee' },
   { k: 'yuanyt', zh: '袁應泰', en: 'Yuan Yingtai', t: 'Military Commissioner for Liaodong (遼東經略)', born: 1565, hist: true, look: { h: 1.0, hat: 'chief', beard: 'longmous' }, rank: 48, where: [[D(1620, 10, 20), D(1621, 3, 21), 'liaoyang', 'yamen', 9]], role: 'grandee' },
-  { k: 'xugq', zh: '徐光啟', en: 'Xu Guangqi', t: 'Hanlin academician; from the autumn of 1619 he drills new troops at Tongzhou', born: 1562, hist: true, look: { h: 1.0, hat: 'chief', beard: 'longmous', grey: true }, rank: 45, where: [[0, D(1621, 6, 1), 'city', 'street', 9]], role: 'scholar' },
+  { k: 'xugq', zh: '徐光啟', en: 'Xu Guangqi', t: 'Hanlin academician; from the autumn of 1619 he drills new troops at Tongzhou', born: 1562, hist: true, look: { h: 1.0, hat: 'chief', beard: 'longmous', grey: true }, rank: 45, where: [[0, D(1619, 9, 1), 'city', 'street', 9], [D(1619, 9, 1), D(1621, 1, 1), 'tongzhou', 'gate', 10], [D(1621, 1, 1), D(1621, 6, 1), 'city', 'street', 9]], role: 'scholar' },
   { k: 'fangcz', zh: '方從哲', en: 'Fang Congzhe', t: 'Senior Grand Secretary (首輔)', born: 1562, hist: true, look: { h: 1.0, hat: 'chief', beard: 'longmous', grey: true }, rank: 49, where: [[0, D(1620, 12, 1), 'palace', 'ranks', 0]], role: 'grandee' },
   { k: 'yanglian', zh: '楊漣', en: 'Yang Lian', t: 'a supervising secretary (給事中), outspoken', born: 1572, hist: true, look: { h: 1.04, hat: 'chief', beard: 'full' }, rank: 43, where: [[0, D(1625, 6, 1), 'palace', 'ranks', 0]], role: 'censor' },
   { k: 'sunczong', zh: '孫承宗', en: 'Sun Chengzong', t: 'a Hanlin academician, tutor to the heir', born: 1563, hist: true, look: { h: 1.08, hat: 'chief', beard: 'full', grey: true }, rank: 45, where: [[0, D(1622, 3, 1), 'palace', 'ranks', 0]], role: 'scholar' },
@@ -247,7 +247,7 @@ function wLook() {
 const W_THING = { forge: ['Work the forge with your father (four hours)', '打鐵'], bed: ['Sleep until morning', '睡覺'], bunk: ['Sleep in the barracks', '睡覺'], books: ['Read your books (three hours)', '讀書'], inn: ['Take a room for the night (40 wen)', '住店'], board: ['Read the notices', '看榜'] };
 function wPrompt(t) {
   if (t.p) return `<kbd>E</kbd>${t.p.zh} ${t.p.en}`;
-  const T = t.t; if (T.k === 'exit') { const P = WPL[T.to], ex = T.ex; return `<kbd>E</kbd>${ex.days ? `Take the road to ${P.en} (${ex.days} day${ex.days > 1 ? 's' : ''}${ex.via ? ', by ' + ex.via : ''})` : `Go through to ${P.en}`}`; }
+  const T = t.t; if (T.k === 'exit') { const P = WPL[T.to], ex = T.ex; const dd = wDays(ex); return `<kbd>E</kbd>${ex.days ? `Take the road to ${P.en} (${dd} day${dd > 1 ? 's' : ''}${ex.via ? ', by ' + ex.via : ''})` : `Go through to ${P.en}`}`; }
   const W = W_THING[T.k]; return W ? `<kbd>E</kbd>${W[0]}` : '';
 }
 function wKeyE() {
@@ -279,14 +279,15 @@ function wGo(ex) {
   const P = WPL[ex.to];
   if (ex.rank && wRank() < ex.rank) { toast(`The guards turn you back. Only men of rank pass to ${P.en}.`); return; }
   { const why = wRoadShut(ex); if (why) { toast(why); return; } }
-  const cost = ex.days * 30; if (ex.days && WS.cash < cost) { toast(`The road to ${P.en} will cost you about ${cost} wen in food and lodging. You have ${WS.cash}.`); return; }
-  const from = WS.place; WS.cash -= cost; if (ex.days) { wTurnDays(ex.days); WS.hour = 9; } WS.place = ex.to; WS.from = from; wSave();
-  if (!ex.days) return wScene(from);
+  const days = wDays(ex), cost = days * (WCORE.inv(WS, 'horse') ? 45 : 30); if (days && WS.cash < cost) { toast(`The road to ${P.en} will cost you about ${cost} wen in food and lodging${WCORE.inv(WS, 'horse') ? ' and fodder' : ''}. You have ${WS.cash}.`); return; }
+  const from = WS.place; WS.cash -= cost; if (days) { wTurnDays(days); WS.hour = 9; } WS.place = ex.to; WS.from = from; wSave();
+  if (!days) return wScene(from); ex = Object.assign({}, ex, { days });
   const F = wFmt(WS.day), N = wNews(WS.place).slice(-2).map(e => e[3]);
   const arrive = () => zCards([{ title: `${WPL[from].zh} → ${P.zh}`, year: `${ex.days} day${ex.days > 1 ? 's' : ''} on the road${ex.via ? ', by ' + ex.via : ''} · ${F.en}`, p: [`You reach ${P.en}. ${P.desc}`].concat(N.length ? ['On the road you heard: ' + N.join(' ')] : []) }], () => wScene(from));
   if (wRoadMeet(ex, arrive)) return; arrive();
 }
 function wBoard() {
+  if (WS.place === 'liaoyang' && WS.day >= D(1618, 4, 13) && !WS.flags.grievances) { WS.flags.grievances = 1; return wGrievances(); }
   const done = WEX.filter(e => e[2] === WS.place && WS.day >= e[7] && WS.exams[e[0] + e[1]] !== undefined && !WS.exams[e[0] + e[1] + 'read']);
   if (!done.length) { const nx = WEX.filter(e => e[1] > WS.day && e[2] === WS.place)[0]; toast(nx ? `A notice: ${nx[9]} will be held here on ${wFmt(nx[1]).en}.` : 'Old notices, rain-streaked.'); return; }
   const e = done[0], got = WS.exams[e[0] + e[1]]; WS.exams[e[0] + e[1] + 'read'] = 1;
@@ -324,6 +325,7 @@ function wTalk(p, u) {
   if (p.role === 'libu' && WS.status === 'jinshi' && !WS.office) say('Ask about a post', [['等著吧。進士候選，總要等的。', 'Wait. Every jinshi waits for a post.'], ['……也有人送點東西，就快些。', '...Some send a little something, and it goes faster.']], () => { WS.office = { zh: '知縣', en: 'County Magistrate', rank: 43, place: 'a county of Shuntian', since: WS.day }; WS.flags.awaitPost = 0; wLog('授知縣。', 'Appointed a county magistrate.'); banner('授官 · Appointed', 'County Magistrate (知縣), rank 7a', 5); });
   if (p.role === 'passguard') say('Pass through', [[me >= 10 ? '相公請。' : '路引呢？……算了，給二十文。', me >= 10 ? 'Please, sir.' : 'Your papers? ...Never mind. Twenty wen.']], () => { if (me < 10) WS.cash = Math.max(0, WS.cash - 20); });
   if (p.role === 'grandee' || p.role === 'general') { if (me < 20) say('Ask to speak with him', [['（衛兵把你推開了。）', '(The guards push you back.)']]); else say('Pay your respects', [[`${T[0]}有心了。`, `Kind of you, ${T[1]}.`]], () => { WS.rel[p.k] = (WS.rel[p.k] || 0) + 1; }); }
+  wTalkMore(p, say, me);
   const r = { zh: p.zh, en: p.en, t: p.t };
   wDialog(r, greet, topics, u);
 }
@@ -345,18 +347,32 @@ function wDialog(r, greet, topics, u) {
 // ---------------- the exam: a cell, a desk, a paper ----------------
 function wExam(ex) {
   WS.busy = true; if (document.pointerLockElement) document.exitPointerLock();
-  const qs = WQ.slice().sort(() => Math.random() - 0.5).slice(0, 3); let score = 0, qi = 0;
+  const qs = WQ.slice().sort(() => Math.random() - 0.5).slice(0, 3); let score = 0, qi = 0, extra = 0; const notes = [], key = ex[0] + ex[1];
   let box = $('wExam'); if (!box) { box = document.createElement('div'); box.id = 'wExam'; document.body.appendChild(box); const st = document.createElement('style'); st.textContent = `#wExam { position: fixed; inset: 0; z-index: 70; background: rgba(12,10,8,.9); display: flex; align-items: center; justify-content: center; }
 #wExam .pp { width: min(720px, 92vw); background: #efe6cf; color: #2a2018; padding: 26px 30px; border: 1px solid #8a6a3a; font: 15px/1.6 Georgia, serif; box-shadow: 0 10px 40px #000; }
 #wExam h3 { margin: 0 0 4px; font: 700 18px Georgia, serif; } #wExam .q { font: 600 22px/1.5 serif; margin: 14px 0 4px; } #wExam .qe { color: #5a4a36; font-size: 13px; margin-bottom: 12px; }
 #wExam button { display: block; width: 100%; text-align: left; margin: 6px 0; padding: 8px 12px; background: #f8f2e2; border: 1px solid #b89a6a; font: 14px/1.4 Georgia, serif; color: #2a2018; cursor: pointer; } #wExam button:hover { background: #fff8e8; }
 #wExam small { color: #6a5a46; }`; document.head.appendChild(st); }
+  const page = (h, btns, on) => { box.hidden = false; box.innerHTML = `<div class="pp"><h3>${ex[8]} · ${ex[9]}</h3>${h}${btns.map((t, i) => `<button type="button" data-i="${i}">${t}</button>`).join('')}</div>`; box.querySelectorAll('button').forEach(b => b.onclick = () => { AUDIO.play('ui'); on(+b.dataset.i); }); };
+  // the gate: every candidate is searched to the skin
+  const gate = () => { if (!WCORE.inv(WS, 'crib')) return cell(); WCORE.give(WS, 'crib', -1);
+    if (Math.random() < 0.3) { WS.exams[key] = 0; WS.flags.caughtCrib = WS.day; WS.health = Math.max(10, WS.health - 25); if (WS.status === 'shengyuan' || WS.status === 'juren') WS.status = 'none'; wLog('夾帶被搜出。', 'Caught at the gate with a crib-shirt.');
+      return page(`<small>The search at the gate (搜檢)</small><p>The searcher's fingers find the lining. He holds the shirt up to the lantern for everyone to see: the Four Books in characters the size of ants. You are dragged out, stripped of any degree you held, and put in the cangue outside the hall for three days.</p>`, ['Go'], () => { box.hidden = true; WS.busy = false; WS.hour = 18; wSave(); wScene(); }); }
+    extra += 8; notes.push('The searchers missed the crib-shirt in your lining.'); cell(); };
+  // a night in the cell
+  const cell = () => { const c = WCORE.CELL[Math.floor(Math.random() * WCORE.CELL.length)];
+    page(`<small>Your cell: a board to sit on, a board to write on, a curtain. The first night.</small><div class="q">${c[0]} · ${c[1]}</div><p>${c[2]}</p>`, c[3].map(o => o[0]), (i) => { const o = c[3][i]; extra += o[2]; WS.health = Math.max(5, WS.health + o[3]); WS.karma = (WS.karma | 0) + (o[4] | 0); WS.cash = Math.max(0, WS.cash - (o[5] | 0)); notes.push(o[1]); show(); }); };
   const show = () => { const q = qs[qi]; const opts = q[2].map((t, i) => [t, i]).sort(() => Math.random() - 0.5);
-    box.hidden = false; box.innerHTML = `<div class="pp"><h3>${ex[8]} · ${ex[9]}</h3><small>Your cell in the examination hall. Question ${qi + 1} of 3. Expound the passage.</small><div class="q">${q[0]}</div><div class="qe">${q[1]}</div>${opts.map(([t, i]) => `<button type="button" data-i="${i}">${t}</button>`).join('')}</div>`;
-    box.querySelectorAll('button').forEach(b => b.onclick = () => { const i = +b.dataset.i; const L = WS.learning; score += i === 0 ? 16 + L * 0.24 : i === 1 ? 6 + L * 0.1 : 2; qi++; AUDIO.play('ui'); if (qi < 3) show(); else finish(); }); };
-  const finish = () => { box.hidden = true; WS.busy = false; const luck = (Math.random() - 0.5) * 12, total = Math.round(score / 3 + WS.learning * 0.45 + luck); WS.exams[ex[0] + ex[1]] = total;
-    wLog(`考了${ex[8]}。`, `Sat ${ex[9]}.`); WS.hour = 18; wSave(); zCards([{ title: `${ex[8]} · ${ex[9]}`, year: wFmt(WS.day).en, p: [`You hand in your paper as the light goes. The list goes up on ${wFmt(ex[7]).en}: read it on the notice board here.`] }], () => wScene()); };
-  show();
+    box.hidden = false; box.innerHTML = `<div class="pp"><h3>${ex[8]} · ${ex[9]}</h3><small>Question ${qi + 1} of 3. Expound the passage.</small><div class="q">${q[0]}</div><div class="qe">${q[1]}</div>${opts.map(([t, i]) => `<button type="button" data-i="${i}">${t}</button>`).join('')}</div>`;
+    box.querySelectorAll('button').forEach(b => b.onclick = () => { const i = +b.dataset.i; const L = WS.learning; score += i === 0 ? 16 + L * 0.24 : i === 1 ? 6 + L * 0.1 : 2; qi++; AUDIO.play('ui'); if (qi < 3) show(); else bagu(); }); };
+  // the eight-legged form: the parts of the essay in their order
+  const bagu = () => { const B = WCORE.BAGU, have = WCORE.inv(WS, 'book') ? 2 : 0; let next = have, wrong = 0; const order = B.map((b, i) => i).sort(() => Math.random() - 0.5);
+    const draw = () => page(`<small>The essay must be written in the eight-legged form (八股). Choose its parts in their order.${have ? ' (Your model essays remind you how it opens.)' : ''}</small><p>${B.slice(0, next).map(b => `<b>${b[0]}</b>`).join(' → ') || '…'}</p>`, order.filter(i => i >= next).map(i => `${B[i][0]} · ${B[i][1]}`), (k) => { const left = order.filter(i => i >= next), i = left[k];
+      if (i === next) { next++; if (next >= B.length) { extra += Math.max(0, 6 - wrong); notes.push(wrong ? `Your essay's form had ${wrong} fault${wrong > 1 ? 's' : ''}.` : 'Your essay\'s form was faultless.'); return finish(); } } else wrong++; draw(); });
+    draw(); };
+  const finish = () => { box.hidden = true; WS.busy = false; const luck = (Math.random() - 0.5) * 12 + (WS.luck && WS.luckTo > WS.day ? WS.luck : 0), total = Math.round(score / 3 + WS.learning * 0.45 + luck + extra + (WCORE.inv(WS, 'book') ? 2 : 0)); WS.exams[key] = total;
+    wLog(`考了${ex[8]}。`, `Sat ${ex[9]}.`); WS.hour = 18; wSave(); zCards([{ title: `${ex[8]} · ${ex[9]}`, year: wFmt(WS.day).en, p: notes.concat([`You hand in your paper as the light goes. The list goes up on ${wFmt(ex[7]).en}: read it on the notice board here.`]) }], () => wScene()); };
+  gate();
 }
 
 // ---------------- battles: when history comes for your company ----------------
@@ -371,7 +387,7 @@ function wBattle(mission) {
 function wFinish(winner) {
   const sim = state.sim, M = sim.mission, me = sim.players[state.localIdx], h = sim.units[me.heroId]; const won = winner === (M.side | 0), alive = !!(h && !h.dead);
   const mission = WB.mission; WB = null;
-  if (!alive) { WS.alive = false; wLog('死了。', 'Died.'); wSave(); return zCards([{ title: '歿 · Fallen', year: wFmt(WS.day).en, p: [`${WS.name.en} died at ${M.title.split(' · ').slice(-1)[0]}, ${wDate(WS.day).y - WS.born} years old. The world went on without him.`] }], () => { location.reload(); }); }
+  if (!alive) { wLog('死了。', 'Died.'); return wDie(`in battle at ${M.title.split(' · ').slice(-1)[0]}`); }
   if (mission === 'roadA') { WS.flags.pendingBattle = 'abudali'; WS.day += 2; return wBattle('abudali'); }
   if (mission === 'abudali') { WS.day = Math.max(WS.day, D(1619, 3, 12)); WS.place = 'liaoyang'; WS.from = 'west'; WS.hour = 9; WS.army.r = Math.min(W_ARMY.length - 1, WS.army.r + 1); wLog('從阿布達里岡逃回遼陽。', 'Came back from Abudali to Liaoyang.');
     wSave(); return zCards([{ title: '敗歸 · Back from Abudali', year: wFmt(WS.day).en, p: ['Liu Ting\'s column was destroyed at Abudali. You and a handful of others came back through the hills to Liaoyang, nine days on foot.', `For bringing men back you are made ${W_ARMY[WS.army.r][2]}.`] }], () => wScene('west')); }
@@ -402,7 +418,7 @@ function wMenu() {
   let el = $('wCta'); const z = $('djCta') || $('zheCta'); if (!z) return;
   if (!el) { el = document.createElement('div'); el.id = 'wCta'; el.className = z.className; z.parentNode.insertBefore(el, z.nextSibling); }
   const s = wLoad(); WS = s;
-  el.innerHTML = `<div><b>人間 · An open world (experimental)</b><small>Liaodong and Beijing from the spring of 1618: live as Li Tie, a smith's son. Work, study for the exams, go to Beijing, enlist. Real people, real events; the world goes on without you.${s && s.alive ? ` Now: ${wFmt(s.day).en}, ${WPL[s.place].en}.` : ''}</small></div><div class="btns">${s && s.alive ? '<button type="button" class="btn primary" id="wGoOn">Continue</button>' : ''}<button type="button" class="btn${s && s.alive ? '' : ' primary'}" id="wNew">${s && s.alive ? 'New life' : 'Begin'}</button></div>`;
+  el.innerHTML = `<div><b>人間 · An open world (experimental)</b><small>Liaodong and Beijing from the spring of 1618: live as Li Tie, a smith's son. Work, study for the exams, go to Beijing, enlist. Real people, real events; the world goes on without you.${s && s.alive ? ` Now: ${wFmt(s.day).en}, ${WPL[s.place].en}.` : ''}${wHallHtml()}</small></div><div class="btns">${s && s.alive ? '<button type="button" class="btn primary" id="wGoOn">Continue</button>' : ''}<button type="button" class="btn${s && s.alive ? '' : ' primary'}" id="wNew">${s && s.alive ? 'New life' : 'Begin'}</button></div>`;
   const go = $('wGoOn'); if (go) go.onclick = () => wStart(false); $('wNew').onclick = () => { if (s && s.alive && !confirm('Start a new life? This one will be lost.')) return; wStart(true); };
 }
 // the hooks: the world's places and battles answer the shared entry points

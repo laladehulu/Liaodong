@@ -35,6 +35,13 @@ function wLifeDay() {
     WS.kids = (WS.kids || []).concat([{ zh: n[0], en: n[1], born: WCORE.DT(WS.day).y, boy }]); wNote(`${boy ? '生了個兒子' : '生了個女兒'}，叫${n[0]}。`, `${WS.spouse.en} has given birth: a ${boy ? 'son' : 'daughter'}. You call ${boy ? 'him' : 'her'} ${n[1]}.`); }
   if (WS.office) { const o = WS.office; if (o.since !== undefined && WS.day > o.since && (WS.day - o.since) % 360 === 0) { const w = WCORE.evaluate(WS); wNote('考滿。', w); if (!WS.office) WS.flags.dismissed = WS.day; }
     const p = WCORE.purge(WS); if (p) wNote('錦衣衛來了。', p); }
+  { const T = WCORE.DT(WS.day); if (WS.status === 'shengyuan' && T.m === 9 && T.d === 1) { const L = WS.learning;
+      if (L >= 60) { WS.flags.linsheng = 1; wNote('歲考一等。', 'The licentiates\' yearly test (歲考): first grade. You are made a stipend student (廩生): a monthly allowance of rice.'); }
+      else if (L >= 42) wNote('歲考二等。', 'The licentiates\' yearly test: second grade. Nothing changes.');
+      else if (L >= 34) { WS.health -= 10; wNote('歲考四等，挨了板子。', 'The licentiates\' yearly test: fourth grade. The Director of Studies has you beaten ten strokes for idleness.'); }
+      else { WS.status = 'none'; wNote('歲考六等，革了功名。', 'The licentiates\' yearly test: sixth grade. You are stripped of your licentiate\'s degree.'); } }
+    if (WS.flags.linsheng && WS.status === 'shengyuan' && T.d === 1) WS.cash += 600; }
+  wXuArmy();
   if (WS.health < 30 && Math.random() < 0.02) wNote('你病了。', 'You are running a fever. A physician could help (Liaoyang, Beijing).');
   if (WS.health < 30) WS.health -= 0.6; else if (WS.health < 100) WS.health = Math.min(100, WS.health + 0.6);
   if (WS.health <= 0 && WS.alive) { WS.alive = false; WS.flags.diedOf = 'fever'; }
@@ -156,7 +163,9 @@ function wChoice(d) {
     const moved = WS.place !== place0 || WS.day !== day0;
     return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { if (moved) wScene(place0); } }] }; } }; }), { noLeave: true });
 }
-function wAfterScene() { if (state.zheDlg || !WS.alive) return; const d = WCORE.dilemmaNow(WS); if (d) wChoice(d); }
+function wAfterScene() { if (state.zheDlg || !WS.alive) return; const d = WCORE.dilemmaNow(WS) || WCORE.festNow(WS, WS.home); if (d) wChoice(d); }
+// the road's length: a horse cuts it by a third, winter adds two-fifths
+function wDays(ex) { if (!ex.days) return 0; let d = ex.days; if (WCORE.inv(WS, 'horse')) d = Math.max(1, Math.ceil(d * 2 / 3)); if (WCORE.season(WS.day) === 'winter') d = Math.ceil(d * 1.4); return d; }
 // roads that are shut: the Jin hold the east after their cities fall; only the magistrate goes to his county
 function wRoadShut(ex) {
   const P = WPL[ex.to];
@@ -193,4 +202,30 @@ ${friends.length ? `<h4>友 · People who like you</h4><div>${friends.join(', ')
 <p><small>Press J or click to close.</small></p></div>`;
 }
 document.addEventListener('keydown', (e) => { if (e.code !== 'KeyJ' || !WS || !WZ || !state.sim || !state.sim.cfg.camp || !state.sim.cfg.camp.world || state.zheDlg) return; e.stopImmediatePropagation(); e.preventDefault(); wJournal(); }, true);
-function wDie() { WS.alive = false; wSave(); zCards([{ title: '歿 · Dead', year: wFmt(WS.day).en, p: [`${WS.name.en} died of a fever ${WS.place === 'lijia' ? 'at home' : 'at ' + WPL[WS.place].en}, ${WCORE.age(WS, WS.born)} years old.`, WS.spouse ? `${WS.spouse.en} burned paper money for him.` : 'Nobody burned paper money for him.', 'The world went on without him.'] }], () => location.reload()); }
+function wDie(how) { WS.alive = false; how = how || `of a fever ${WS.place === 'lijia' ? 'at home' : 'at ' + WPL[WS.place].en}`; const E = WCORE.epitaph(WS, how); wHall(E); wSave();
+  zCards([{ title: '墓誌 · His stone', year: wFmt(WS.day).en, p: E.concat([WS.spouse ? `${WS.spouse.en} burned paper money for him.` : 'The world went on without him.']) }], () => location.reload()); }
+// the hall of lives: the stones of the last lives lived (on the menu card)
+function wHall(E) { try { const H = JSON.parse(localStorage.getItem('mingLives') || '[]'); H.unshift({ t: Date.now(), e: E }); localStorage.setItem('mingLives', JSON.stringify(H.slice(0, 8))); } catch (e) { } }
+function wHallHtml() { try { const H = JSON.parse(localStorage.getItem('mingLives') || '[]'); if (!H.length) return ''; return `<br><i>Lives lived: ${H.slice(0, 3).map(h => h.e[0]).join(' / ')}</i>`; } catch (e) { return ''; } }
+
+// ---------------- history's people: more to say to some of them ----------------
+WPP.push({ k: 'yuancz', zh: '袁崇煥', en: 'Yuan Chonghuan', t: 'a provincial graduate from Guangdong, up for the metropolitan exam; he talks of nothing but Liaodong', born: 1584, hist: true, look: { h: 1.0, hat: 'scholar', beard: 'mous', brows: 'knit' }, rank: 20, where: [[D(1619, 1, 20), D(1619, 3, 20), 'beijing', 'inn', 20, true], [D(1622, 2, 1), D(1622, 9, 1), 'shanhai', 'wall', 10]], role: 'yuancz' });
+function wTalkMore(p, say, me) {
+  if (p.k === 'xugq') {
+    say('Ask him about Western learning', [['利瑪竇先生教我的。幾何之學，一步一步，無一字可疑。', 'Master Ricci taught me. The learning of geometry: step by step, not one word open to doubt.'], ['你看這個：《幾何原本》。三角形的內角之和……', 'Look at this: the Elements of Euclid. The angles of a triangle together...']], () => { WS.learning = Math.min(100, WS.learning + 1.2); WS.flags.xixue = (WS.flags.xixue | 0) + 1; WCORE.addRel(WS, 'xugq', 3); toast('An afternoon of Euclid. Learning ' + Math.round(WS.learning) + '.'); });
+    say('Ask him about the war in Liaodong', [['遼事壞在兵不練，器不精。', 'Liaodong is lost through untrained men and bad weapons.'], ['要用西洋大炮，紅夷炮。澳門有，要去買。', 'We need the Western cannon, the red barbarian guns. Macao has them; we must buy them.']]);
+    if (WS.day >= D(1619, 9, 1) && WS.day < D(1621, 1, 1) && !WS.army && WS.place === 'tongzhou') say('Ask to train in his new army', [['好。我這裡練的是新兵：火器，陣法，一個一個教。', 'Good. Here we train new soldiers: firearms, formations, man by man.'], ['只是……餉銀常常不到。', 'Only... the pay often does not come.']], () => { WS.army = { r: 0, col: 'xu', unit: 'Xu Guangqi\'s new army at Tongzhou', since: WS.day }; wLog('入徐光啟通州練兵。', 'Joined Xu Guangqi\'s new army at Tongzhou.'); banner('練兵 · The new army', 'You drill with firearms under Xu Guangqi', 4); });
+    if (WCORE.relOf(WS, 'xugq') >= 9 && !WS.flags.baptised) say('Ask him about his faith', [['天主，是萬物的根本。我受洗二十年了，教名保祿。', 'The Lord of Heaven is the root of all things. I was baptised twenty years ago; my name in the faith is Paul.'], ['你若願意，我可以帶你去見龍華民神父。', 'If you wish, I can take you to Father Longobardo.']], () => { WS.flags.baptised = 1; wLog('受洗。', 'Baptised a Catholic at the Jesuits\' house in Beijing.'); toast('You are baptised. Your mother would not understand; you do not tell her.'); });
+  }
+  if (p.k === 'yuancz') {
+    say('Talk with him about Liaodong', [['你是遼東人？好！撫順怎麼丟的，你給我說說。', 'You\'re from Liaodong? Good! Tell me how Fushun was lost.'], ['……給我兵馬錢糧，我一人足守此。', '...Give me men, horses, money and grain, and I alone can hold it.']], () => { WCORE.addRel(WS, 'yuancz', 6); wLog('與袁崇煥論遼事。', 'Talked of Liaodong with Yuan Chonghuan, a candidate from Guangdong.'); });
+    if (WS.place === 'shanhai') say('Remind him of the inn in Beijing', WCORE.relOf(WS, 'yuancz') >= 6 ? [['是你！我記得。我單騎出關看過了，寧遠可以守。', 'You! I remember. I rode out beyond the Pass alone to look: Ningyuan can be held.'], ['跟我去寧遠吧。', 'Come with me to Ningyuan.']] : [['我們見過？', 'Have we met?']], () => { if (WCORE.relOf(WS, 'yuancz') >= 6) { WS.flags.yuanMan = 1; wLog('願隨袁崇煥。', 'Promised to follow Yuan Chonghuan to Ningyuan.'); } });
+  }
+}
+// the Seven Grievances: Nurhaci's declaration of war, copied and passed from hand to hand
+function wGrievances() {
+  wPanel({ zh: '七大恨', en: 'The Seven Grievances', t: 'A copy pasted on the notice board, half torn down by the runners' }, [['我之祖父，未嘗損明邊一草寸土，明無端起釁邊陲，害我祖父，恨一也。', '"My grandfather and father never harmed a blade of grass of the Ming border, yet the Ming without cause made trouble on the frontier and killed them: this is the first grievance."'], ['', 'Then: the Ming protected the Yehe against him; Ming men crossed the border; the Ming made him execute ten of his own men; a betrothed Yehe princess given to the Mongols; his farmers driven from their fields; an envoy who insulted him. "For these seven grievances I go to war."']],
+    [{ q: 'Tear it down', fx: () => { WS.karma = (WS.karma | 0); return wSays('', 'A runner sees you and nods his approval.'); } }, { q: 'Read it again, slowly', fx: () => { WS.learning = Math.min(100, WS.learning + 0.3); return wSays('', 'Some of it is true. That is what frightens you.'); } }]);
+}
+// Xu Guangqi's new army starves for pay and is disbanded when he resigns (early 1621)
+function wXuArmy() { if (WS.army && WS.army.col === 'xu' && WS.day >= D(1621, 1, 1)) { WS.army = null; wNote('徐光啟辭官，新兵散了。', 'Xu Guangqi has resigned, sick and unpaid; his new army at Tongzhou is disbanded. You are a free man again.'); } }

@@ -26,12 +26,12 @@ const WCORE = (() => {
     weaver: { zh: '織婦', en: 'a weaver', act: 13, work: ['home2'], woman: 1, talk: [['一匹布織半個月，賣不到二百文。', 'Half a month for a bolt, and it fetches less than two hundred wen.']] },
     herd: { zh: '放牛娃', en: 'a herd boy', act: 11, work: ['fieldE'], young: 1, talk: [['牛跑了我就挨打。', 'If the ox wanders off I get beaten.']] },
     carter: { zh: '車把式', en: 'a carter', act: 9, work: ['gate', 'road', 'market'], talk: [['去哪兒？我這車一天走六十里。', 'Where to? My cart does sixty li a day.'], ['路上不太平，有逃兵搶東西。', 'The roads aren\'t safe. Deserters robbing people.']] },
-    vendor: { zh: '小販', en: 'a vendor', act: 9, work: ['market', 'market2'], sells: ['rice', 'cake', 'salt', 'wine'], talk: [['米又漲了。', 'Rice is up again.'], ['要點什麼？', 'What\'ll it be?']] },
-    clothier: { zh: '布商', en: 'a cloth merchant', act: 9, work: ['market2'], sells: ['cloth'], rich: 1, talk: [['松江的好布，蘇州的綢子。', 'Good cloth from Songjiang, silk from Suzhou.']] },
+    vendor: { zh: '小販', en: 'a vendor', act: 9, work: ['market', 'market2'], sells: ['rice', 'cake', 'salt', 'wine', 'gift'], buys: ['rice', 'salt'], talk: [['米又漲了。', 'Rice is up again.'], ['要點什麼？', 'What\'ll it be?']] },
+    clothier: { zh: '布商', en: 'a cloth merchant', act: 9, work: ['market2'], sells: ['cloth'], buys: ['cloth', 'ginseng'], rich: 1, talk: [['松江的好布，蘇州的綢子。', 'Good cloth from Songjiang, silk from Suzhou.']] },
     ironmonger: { zh: '鐵匠鋪', en: 'an ironmonger', act: 18, work: ['smithy'], sells: ['iron', 'nails', 'knife'], buys: ['hoe', 'knife', 'nails', 'sword'], talk: [['你爹的手藝比我好。', 'Your father\'s a better smith than me.'], ['兵部又來定刀了，一千把。', 'The Ministry of War has ordered a thousand blades again.']] },
     tea: { zh: '茶館掌櫃', en: 'the teahouse keeper', act: 13, work: ['teahouse'], sells: ['tea'], talk: [['樓上有說書的，一碗茶兩文。', 'There\'s a storyteller upstairs. Two wen a bowl.']] },
     teller: { zh: '說書人', en: 'a storyteller', act: 6, work: ['teahouse'], talk: [['且聽下回分解。', 'And for what happened next, hear the next instalment.']] },
-    doctor: { zh: '郎中', en: 'a physician', act: 20, work: ['physician'], sells: ['medicine'], talk: [['伸手來，我號號脈。', 'Give me your wrist; let me take your pulse.']] },
+    doctor: { zh: '郎中', en: 'a physician', act: 20, work: ['physician'], sells: ['medicine'], buys: ['ginseng'], talk: [['伸手來，我號號脈。', 'Give me your wrist; let me take your pulse.']] },
     scribe: { zh: '代書先生', en: 'a letter-writer', act: 20, work: ['scribe'], talk: [['寫信、寫狀紙、看八字，都行。', 'Letters, plaints, horoscopes. Whatever you need.']] },
     porter: { zh: '腳夫', en: 'a porter', act: 11, work: ['market', 'gate', 'yard'], talk: [['一擔四十文，扛到城門。', 'Forty wen a load to the gate.']] },
     matchmaker: { zh: '媒婆', en: 'a matchmaker', act: 6, work: ['market'], woman: 1, talk: [['哎喲，這後生長得好！說親沒有？', 'My, what a handsome lad! Are you spoken for?']] },
@@ -40,22 +40,23 @@ const WCORE = (() => {
     runner: { zh: '衙役', en: 'a yamen runner', act: 11, work: ['yamenGate', 'market', 'gate'], rank: 1, talk: [['走開走開，別擋道。', 'Out of the way.']] },
     soldier: { zh: '兵丁', en: 'a soldier', act: 10, work: ['gate', 'yard', 'wall'], rank: 2, talk: [['三個月沒發餉了。', 'Three months without pay.'], ['聽說奴兒哈赤的兵都是鐵甲。', 'They say Nurhaci\'s men are all in iron.']] },
     candidate: { zh: '舉子', en: 'an examination candidate', act: 20, work: ['inn', 'teahouse', 'street'], hat: 'scholar', rank: 10, talk: [['今科的題目，聽說出在《孟子》。', 'They say this year\'s questions are from Mencius.'], ['我考了三次了。', 'This is my third time.']] },
-    bookseller: { zh: '書坊老闆', en: 'a bookseller', act: 20, work: ['bookshop'], sells: ['book'], talk: [['新刻的程墨，今科必用。', 'The newly cut model essays. You\'ll need them this year.']] },
+    bookseller: { zh: '書坊老闆', en: 'a bookseller', act: 20, work: ['bookshop'], sells: ['book', 'crib'], buys: ['book'], talk: [['新刻的程墨，今科必用。', 'The newly cut model essays. You\'ll need them this year.']] },
     boatman: { zh: '船夫', en: 'a boatman', act: 9, work: ['quay'], talk: [['運河上的糧船，一年四百萬石。', 'Four million piculs of grain come up the canal a year.']] },
     clerk: { zh: '書吏', en: 'a clerk', act: 20, work: ['yamenGate'], rank: 2, talk: [['文書在這兒，按個手印。', 'Here\'s the document. Your thumbprint.']] },
     petitioner: { zh: '告狀的', en: 'a petitioner', act: 4, seat: 1, work: ['yamenGate'], talk: [['青天大老爺，給小民做主啊！', 'Your Honour, give us justice!']] },
     refugee: { zh: '難民', en: 'a refugee', act: 4, seat: 1, work: ['market', 'gate', 'temple'], talk: [['家沒了。什麼都沒了。', 'The house is gone. Everything is gone.'], ['韃子進城那天，我在井裡藏了一夜。', 'The day the Jurchens came into town I hid all night in a well.']] },
-    jurchen: { zh: '女真商人', en: 'a Jurchen trader', act: 9, work: ['market2'], sells: ['ginseng', 'horse'], hat: 'felt', talk: [['人參，好人參。換鐵鍋，換布。', 'Ginseng, good ginseng. For iron pots, for cloth.']] },
-    eunuch: { zh: '太監', en: 'a palace eunuch', act: 11, work: ['street'], rank: 30, talk: [['咱家是司禮監的。', 'I am of the Directorate of Ceremonial.']] },
+    jurchen: { zh: '女真商人', en: 'a Jurchen trader', act: 9, work: ['market2'], sells: ['ginseng', 'horse'], buys: ['cloth', 'iron', 'nails', 'hoe', 'knife', 'salt'], hat: 'felt', talk: [['人參，好人參。換鐵鍋，換布。', 'Ginseng, good ginseng. For iron pots, for cloth.']] },
+    horsedealer: { zh: '馬販子', en: 'a horse dealer', act: 9, work: ['market2', 'yard', 'gate'], sells: ['horse'], buys: ['horse'], talk: [['蒙古馬，走得遠，吃得少。', 'Mongol ponies: go far, eat little.']] },
+  eunuch: { zh: '太監', en: 'a palace eunuch', act: 11, work: ['street'], rank: 30, talk: [['咱家是司禮監的。', 'I am of the Directorate of Ceremonial.']] },
   };
   // who lives in each place (trade, how many); the families of your village are fixed in world.js
   const POP = {
     lijia: [['farmer', 3], ['weaver', 1], ['herd', 1], ['carter', 1]],
-    liaoyang: [['vendor', 3], ['clothier', 1], ['ironmonger', 1], ['tea', 1], ['teller', 1], ['doctor', 1], ['scribe', 1], ['porter', 2], ['matchmaker', 1], ['monk', 1], ['beggar', 2], ['runner', 2], ['soldier', 3], ['carter', 1]],
+    liaoyang: [['vendor', 3], ['clothier', 1], ['bookseller', 1], ['horsedealer', 1], ['ironmonger', 1], ['tea', 1], ['teller', 1], ['doctor', 1], ['scribe', 1], ['porter', 2], ['matchmaker', 1], ['monk', 1], ['beggar', 2], ['runner', 2], ['soldier', 3], ['carter', 1]],
     fushun: [['vendor', 2], ['jurchen', 2], ['soldier', 3], ['runner', 1], ['beggar', 1], ['carter', 1]],
     shanhai: [['soldier', 4], ['carter', 2], ['vendor', 1], ['scribe', 1], ['beggar', 1]],
     tongzhou: [['boatman', 2], ['carter', 2], ['vendor', 2], ['porter', 1], ['beggar', 1]],
-    beijing: [['carter', 2], ['vendor', 3], ['tea', 1], ['teller', 1], ['candidate', 3], ['beggar', 2], ['doctor', 1], ['matchmaker', 1]],
+    beijing: [['carter', 2], ['vendor', 3], ['clothier', 1], ['horsedealer', 1], ['tea', 1], ['teller', 1], ['candidate', 3], ['beggar', 2], ['doctor', 1], ['matchmaker', 1]],
     city: [['runner', 2], ['candidate', 3], ['bookseller', 1], ['scribe', 1], ['vendor', 2], ['soldier', 2], ['monk', 1]],
     county: [['runner', 3], ['clerk', 2], ['vendor', 2], ['farmer', 2], ['petitioner', 2]],
   };
@@ -75,20 +76,25 @@ const WCORE = (() => {
     return { spot: f.work, act: T.act, seat: !!T.seat }; }
 
   // ---------------- goods, prices, the purse and the pack ----------------
-  const GOODS = { rice: ['米', 'rice (a dou)', 30], cake: ['餅', 'sesame cakes', 4], salt: ['鹽', 'salt (a jin)', 12], wine: ['酒', 'a jug of wine', 25], tea: ['茶', 'a bowl of tea', 2], cloth: ['布', 'a bolt of cotton', 220], iron: ['鐵', 'pig iron (a jin)', 18], nails: ['釘', 'nails (a hundred)', 40], hoe: ['鋤', 'a hoe', 120], knife: ['刀', 'a knife', 90], sword: ['劍', 'a sword', 900], book: ['書', 'model essays (程墨)', 300], medicine: ['藥', 'medicine', 150], ginseng: ['參', 'ginseng', 600], horse: ['馬', 'a horse', 9000], letter: ['信', 'a letter to carry', 0], gift: ['禮', 'a gift box (cakes and wine)', 80] };
+  const GOODS = { rice: ['米', 'rice (a dou)', 30], cake: ['餅', 'sesame cakes', 4], salt: ['鹽', 'salt (a jin)', 12], wine: ['酒', 'a jug of wine', 25], tea: ['茶', 'a bowl of tea', 2], cloth: ['布', 'a bolt of cotton', 220], iron: ['鐵', 'pig iron (a jin)', 18], nails: ['釘', 'nails (a hundred)', 40], hoe: ['鋤', 'a hoe', 120], knife: ['刀', 'a knife', 90], sword: ['劍', 'a sword', 900], book: ['書', 'model essays (程墨)', 300], medicine: ['藥', 'medicine', 150], ginseng: ['參', 'ginseng', 600], horse: ['馬', 'a horse', 9000], letter: ['信', 'a letter to carry', 0], gift: ['禮', 'a gift box (cakes and wine)', 80], crib: ['夾', 'a crib-shirt (the Four Books in tiny characters, sewn into a lining)', 600] };
   const PLACE_MUL = { lijia: 0.9, liaoyang: 1, fushun: 0.95, shanhai: 1.15, tongzhou: 1.2, beijing: 1.3, city: 1.4, county: 1 };
   const LIAO = { lijia: 1, liaoyang: 1, fushun: 1, shanhai: 0.5 };
   // history moves prices: in Liaodong, food dearer after Fushun, dearer still after Sarhu and the loss of Kaiyuan and Tieling
-  function price(S, place, g) { const G = GOODS[g]; if (!G) return 0; let p = G[2] * (PLACE_MUL[place] || 1);
+  // what is cheap where: ginseng and horses from the Jurchen markets, cloth from the south, salt from the coast
+  const SPREAD = { ginseng: { fushun: 0.6, liaoyang: 0.9, beijing: 1.5, city: 1.6, tongzhou: 1.4 }, horse: { fushun: 0.7, liaoyang: 0.9, beijing: 1.2 }, cloth: { beijing: 0.7, tongzhou: 0.75, city: 0.8, liaoyang: 1.15, fushun: 1.4, lijia: 1.2 }, salt: { tongzhou: 0.6, beijing: 0.8, liaoyang: 1.2, fushun: 1.5 }, book: { city: 0.8, beijing: 0.9, liaoyang: 1.3 } };
+  function price(S, place, g) { const G = GOODS[g]; if (!G) return 0; let p = G[2] * ((SPREAD[g] && SPREAD[g][place]) || (PLACE_MUL[place] || 1));
     const food = g === 'rice' || g === 'cake' || g === 'salt';
     if (food && LIAO[place]) { const k = LIAO[place]; if (S.day >= D(1618, 4, 15)) p *= 1 + 0.3 * k; if (S.day >= D(1619, 3, 5)) p *= 1 + 0.4 * k; if (S.day >= D(1619, 7, 25)) p *= 1 + 0.3 * k; }
     if (food && season(S.day) === 'winter') p *= 1.12;
+    if (g === 'ginseng' && place !== 'fushun' && S.day >= D(1618, 4, 15)) p *= 1.6; /* the Jurchen markets are closed */
     if ((g === 'iron' || g === 'knife' || g === 'sword') && S.day >= D(1618, 5, 1) && LIAO[place]) p *= 1.25; /* the army buys all the iron */
-    if (g === 'ginseng' && place === 'fushun') p *= 0.6; if (g === 'horse' && place === 'fushun') p *= 0.7;
     return Math.max(1, Math.round(p)); }
   const inv = (S, g) => (S.inv && S.inv[g]) | 0;
   const give = (S, g, n) => { S.inv = S.inv || {}; S.inv[g] = Math.max(0, (S.inv[g] | 0) + n); if (!S.inv[g]) delete S.inv[g]; };
-  function buy(S, place, g, n) { n = n || 1; const p = price(S, place, g) * n; if (S.cash < p) return [false, `You have not got ${p} wen.`]; S.cash -= p; give(S, g, n); return [true, `Bought ${GOODS[g][1]} for ${p} wen.`]; }
+  const WT = { letter: 0, horse: 0, tea: 0, crib: 0, book: 0.5, medicine: 0.2 };
+  const load = (S) => Object.entries(S.inv || {}).reduce((a, [g, n]) => a + (WT[g] !== undefined ? WT[g] : 1) * n, 0);
+  const cap = (S) => inv(S, 'horse') ? 60 : 20;
+  function buy(S, place, g, n) { n = n || 1; if (g !== 'tea' && load(S) + (WT[g] !== undefined ? WT[g] : 1) * n > cap(S)) return [false, `Your pack is full (${Math.round(load(S))} of ${cap(S)}${inv(S, 'horse') ? '' : '; a horse would carry more'}).`]; const p = price(S, place, g) * n; if (S.cash < p) return [false, `You have not got ${p} wen.`]; S.cash -= p; give(S, g, n); return [true, `Bought ${GOODS[g][1]} for ${p} wen.`]; }
   function sell(S, place, g, n) { n = n || 1; if (inv(S, g) < n) return [false, 'You have none to sell.']; const q = (S.quality && S.quality[g]) || 1, p = Math.round(price(S, place, g) * 0.7 * q) * n; S.cash += p; give(S, g, -n); return [true, `Sold ${GOODS[g][1]} for ${p} wen.`]; }
 
   // ---------------- the forge: what you can make, from what, in how long ----------------
@@ -261,7 +267,45 @@ const WCORE = (() => {
     const dead = S.folk ? Object.values(S.folk).filter(f => !f.alive && f.died && S.day - f.died < 360 && (f.place === S.place || relOf(S, f.k) > 5)).slice(-6) : []; if (dead.length) L.push(['故', 'The dead you knew', dead.map(f => `${f.en} (${f.how})`).join('; ')]);
     return L; }
 
-  return { D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
+  // ---------------- the festivals of the year: each once a year, wherever you are ----------------
+  const RIDDLES = [['一口咬掉牛尾巴（打一字）', 'One bite takes the ox\'s tail (a character)', ['告', '生', '午']], ['千里相逢（打一字）', 'Meeting after a thousand li (a character)', ['重', '里', '逢']], ['半部春秋（打一字）', 'Half the Spring and Autumn Annals (a character)', ['秦', '春', '秋']], ['人在草木中（打一字）', 'A man among grass and trees (a character)', ['茶', '休', '苦']]];
+  function festNow(S, home) { const T = DT(S.day), at = S.place === home, y = T.y, k = (s) => s + y; const done = (s) => S.dil && S.dil[k(s)];
+    const F = (key, title, text, opts) => done(key) ? null : { k: k(key), title, text, opts };
+    if (T.m === 1 && T.d <= 3) return at ? F('spring', ['過年', 'The New Year'], [['（門上貼了紅對聯。你娘包了餃子，你爹喝了兩盅。）', '(Red couplets on the door. Your mother has made dumplings; your father has had two cups.)'], ['你爹：又是一年。', 'Your father: Another year.']],
+        [['Kowtow to your parents and give them a red packet (200 wen)', 'Your mother cries a little. Your father pretends not to.', (S) => { S.cash -= 200; S.xiao = (S.xiao | 0) + 3; }], ['Set off firecrackers with Erniu (20 wen)', 'Erniu shrieks with joy; the dog hides under the cart.', (S) => { S.cash -= 20; S.xiao = (S.xiao | 0) + 1; }], ['Eat, and sleep early', 'You sleep like a stone.', (S) => { S.health = Math.min(100, S.health + 5); }]])
+      : F('spring', ['他鄉過年', 'New Year away from home'], [['（爆竹聲從四面傳來。你在客店裡，一個人。）', '(Firecrackers on every side. You are at an inn, alone.)']],
+        [['Send money home with a carter (300 wen)', 'It will reach them by the Lantern Festival, if the carter is honest.', (S) => { S.cash -= 300; S.xiao = (S.xiao | 0) + 2; }], ['Drink with the other travellers (30 wen)', 'A salt merchant from Shanxi tells you how to get rich. You forget it by morning.', (S) => { S.cash -= 30; }], ['Go to the temple fair', 'Acrobats, sugar figures, a fortune-teller who says you will rise.', (S) => { S.luck = 2; S.luckTo = S.day + 20; }]]);
+    if (T.m === 1 && T.d >= 15 && T.d <= 16 && S.place !== 'lijia') { const R = RIDDLES[y % RIDDLES.length]; return F('lantern', ['元宵燈謎', 'Lantern riddles'], [['（滿街的燈。一盞走馬燈下掛著一條謎。答對了有彩頭。）', '(Lanterns all down the street. Under a revolving lantern hangs a riddle; a prize for the answer.)'], [R[0], R[1]]],
+        R[2].map((a, i) => [a, i === 0 ? 'Right! The shopkeeper gives you a book of model essays as the prize.' : 'Wrong. The crowd laughs, not unkindly.', (S) => { if (i === 0) give(S, 'book', 1); }])); }
+    if (T.m === 3 && T.d >= 5 && T.d <= 7) { const dead = ['father', 'mother', 'erniu'].filter(x => S.dead && S.dead[x]); if (!dead.length) return null;
+      return at ? F('qingming', ['清明', 'Qingming: sweeping the graves'], [['（清明。墳上的草又長出來了。）', '(Qingming. The grass has grown back on the graves.)']], [['Sweep the graves, burn paper money, set out food (40 wen)', 'You pull the weeds and pile fresh earth. The paper money curls in the fire.', (S) => { S.cash -= 40; S.xiao = (S.xiao | 0) + 2; }], ['Sweep them, quickly', 'It is done.', (S) => { S.xiao = (S.xiao | 0) + 1; }]])
+        : F('qingming', ['清明', 'Qingming, far from the graves'], [['', 'It is Qingming. The graves at home will go unswept this year.']], [['Burn paper money at a crossroads, facing home (10 wen)', 'An old woman burning her own nods at you.', (S) => { S.cash -= 10; }], ['There is nothing to be done', 'Nothing.', (S) => { S.xiao = (S.xiao | 0) - 1; }]]); }
+    if (T.m === 5 && T.d >= 5 && T.d <= 6) return F('duanwu', ['端午', 'The Dragon Boat Festival'], [['（家家門上插著艾草。街上賣粽子。）', '(Mugwort over every door. Zongzi for sale in the street.)']],
+        [['Buy zongzi and realgar wine (25 wen)', 'Sticky rice and dates in bamboo leaves. The wine burns.', (S) => { S.cash -= 25; S.health = Math.min(100, S.health + 4); }], ['Watch the crowd at the river', S.place === 'beijing' || S.place === 'tongzhou' ? 'In the crush at the river someone cuts your purse-string.' : 'Boys swim in the cold river and shout.', (S) => { if (S.place === 'beijing' || S.place === 'tongzhou') S.cash -= Math.floor(S.cash / 5); }]]);
+    if (T.m === 8 && T.d >= 15 && T.d <= 16) return at ? F('zhongqiu', ['中秋', 'Mid-Autumn'], [['（月亮很圓。你娘買了月餅，切成四塊。）', '(The moon is full. Your mother has bought a mooncake and cut it in four.)']], [['Sit up with the family in the yard', 'Your father tells the story of Chang\'e, badly. Erniu falls asleep on your arm.', (S) => { S.xiao = (S.xiao | 0) + 1; S.health = Math.min(100, S.health + 3); }]])
+      : F('zhongqiu', ['中秋', 'Mid-Autumn away from home'], [['舉頭望明月，低頭思故鄉。', '"I raise my head to look at the bright moon; I lower it and think of home."'], ['', 'The same moon is over Lijia tonight.']], [['Write a poem of your own', 'It is not Li Bai. It is yours.', (S) => { S.learning = Math.min(100, S.learning + 0.6); }], ['Drink until the moon goes down (30 wen)', 'You wake with a headache.', (S) => { S.cash -= 30; S.health -= 3; }]]);
+    if (T.m === 9 && T.d >= 9 && T.d <= 10) return F('chongyang', ['重陽', 'The Double Ninth'], [['', 'The Double Ninth: people climb a height, wear dogwood, drink chrysanthemum wine for long life.']], [['Climb the nearest hill', 'From the top you can see the smoke of the next village.', (S) => { S.health = Math.min(100, S.health + 3); }], ['Visit the old people of the place with cakes (30 wen)', 'They talk to you about the old days of Li Chengliang, when the Jurchens were afraid of us.', (S) => { S.cash -= 30; S.karma = (S.karma | 0) + 1; }]]);
+    if (T.m === 11 && T.d >= 15 && T.d <= 16) return F('dongzhi', ['冬至', 'The winter solstice'], [['', 'The winter solstice: the longest night. Dumplings, so your ears won\'t freeze off, as they say.']], [['Eat dumplings', 'Your ears are safe for another year.', (S) => { S.health = Math.min(100, S.health + 2); }]]);
+    return null; }
+  // ---------------- the examination hall ----------------
+  const CELL = [['雨', 'Rain', 'In the night the rain comes through the cell roof onto your paper.', [['Hold your oilcloth over the paper all night', 'You save the paper and lose the night.', -2, -8], ['Move the paper under the board and sleep', 'Two characters are blotted.', -4, 0]]],
+    ['病', 'A neighbour', 'In the next cell a candidate is groaning; by midnight he is calling for his mother.', [['Call the guards for him', 'They carry him out. You lose an hour.', -1, 0, 1], ['Keep writing', 'He is quiet by dawn. They carry him out under a mat.', 1, 0, -1]]],
+    ['燭', 'The candle', 'Your candle is burning down and the third answer is half written.', [['Write by the guard\'s lantern in the corridor', 'The guard lets you, for twenty wen.', 0, 0, 0, 20], ['Finish it from memory in the dark', 'You write it in the dark. Some lines are crooked.', -3, 0]]],
+    ['鬼', 'The ghost', 'Old candidates say the hall is full of the ghosts of those wronged by examinees; at the third watch something knocks on your board.', [['Say aloud: "I have wronged no one"', 'The knocking stops. Probably a rat.', 1, 0], ['Hide under the board', 'You lose the night to fear.', -3, -4]]]];
+  const BAGU = [['破題', 'Breaking open the topic'], ['承題', 'Receiving the topic'], ['起講', 'Beginning the discussion'], ['入題', 'Entering the topic'], ['起股', 'The opening legs'], ['中股', 'The middle legs'], ['後股', 'The later legs'], ['束股', 'The tying legs']];
+  // ---------------- a life summed up: the stone ----------------
+  function epitaph(S, how) { const a = age(S, S.born), L = []; const st = { none: 'a commoner', tongsheng: 'a candidate', shengyuan: 'a licentiate (生員)', juren: 'a provincial graduate (舉人)', jinshi: 'a metropolitan graduate (進士)' }[S.status];
+    L.push(`${S.name.en} (${S.name.zh}), born ${S.born} in Lijia under Liaoyang, died ${how || ''} in ${DT(S.day).y}, aged ${a}.`);
+    L.push(`He was ${st}${S.office ? `, and served as ${S.office.en}` : ''}${S.army ? `; in the army he rose to ${S.army.t || 'the ranks'}` : ''}.`);
+    if (S.spouse) L.push(`He married ${S.spouse.en}${S.kids && S.kids.length ? `, who bore him ${S.kids.map(k => `${k.boy ? 'a son' : 'a daughter'}, ${k.en}`).join('; ')}` : ''}.`);
+    const dead = ['father', 'mother', 'erniu'].filter(k => S.dead && S.dead[k]); if (dead.length) L.push(`He buried ${dead.map(k => ({ father: 'his father', mother: 'his mother', erniu: 'his sister' })[k]).join(' and ')}.`);
+    const deeds = []; const D2 = S.dil || {};
+    if (D2.refugees === 1) deeds.push('took in a refugee family from Fushun'); if (D2.quota === 1) deeds.push('went to the army in his father\'s place'); if (D2.deserters === 1) deeds.push('hid two deserters from Sarhu'); if (D2.deserters === 3) deeds.push('gave two deserters up to the runners'); if (D2.pension === 1) deeds.push('won a widow her son\'s pension'); if (D2.cheat === 1) deeds.push('bought a word in an examiner\'s ear'); if (S.flags && S.flags.signedYang) deeds.push('signed Yang Lian\'s memorial against Wei Zhongxian');
+    if (deeds.length) L.push(`He ${deeds.join(', ')}.`);
+    const k = S.karma | 0, x = S.xiao | 0; L.push(k >= 5 ? 'The people of his place remembered him as a kind man.' : k <= -4 ? 'Not many came to his funeral.' : 'He was neither better nor worse than most.');
+    if (x >= 6) L.push('He was known as a filial son.'); if (S.cash > 50000) L.push(`He left ${Math.round(S.cash / 800)} taels of silver.`);
+    return L; }
+  return { festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
     DIL, dilemmaNow, dilemmaChoose, ROAD, roadDay, STICKS, drawStick, TALES, tale, dice, CASES, caseNow, judge, LADDER, evaluate, MEMOS, memosNow, memo, purge, journal, rngFor, age };
 })();
 if (typeof module !== 'undefined') module.exports = WCORE;
