@@ -99,7 +99,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 70. Tax quotas and the 1618–1620 Liaodong levies (遼餉) raised three times: real.
 71. Chongzhen's accession (1627/8) purges Wei Zhongxian's party: eunuch-party men fall.
 
-## R8: legacy
+## R8 (done, v171): legacy
 72. When you die with a son, play on as your son.
 73. Life goals the game recognises: a degree, an office, a family, wealth, a name.
 74. The tombstone page, kept in a hall of lives (the last lives you lived).

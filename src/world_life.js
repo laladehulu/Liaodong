@@ -11,13 +11,14 @@ function wFolkP(f) { const T = WCORE.TR[f.trade]; let p = W_FOLKP[f.k]; if (!p) 
 function wFamWhere(p, day) {
   const fam = p.k === 'father' || p.k === 'mother' || p.k === 'erniu' || p.k === 'wife';
   if (p.k === 'shitou') return WS.flags.shitou && WS.home === 'lijia' && !WS.dead.shitou ? [0, 1e9, 'lijia', 'forge', 11] : null;
-  if (p.k === 'wife') { if (!WS.spouse) return null; p.zh = WS.spouse.zh; p.en = `${WS.spouse.en}, your wife`; }
+  if (p.k === 'wife') { if (!WS.spouse && !WS.widow) return null; const w = WS.spouse || WS.widow; p.zh = w.zh; p.en = `${w.en}, your ${WS.spouse ? 'wife' : 'mother'}`; p.t = WS.spouse ? 'your wife' : 'your mother'; }
   if (p.k === 'boy1' && WS.flags.gouGoes) return day < D(1619, 2, 21) ? [0, 1e9, 'liaoyang', 'drill', 10] : null;
   if (p.k === 'father' && WS.flags.fatherDrafted && !WS.flags.fatherBack) return day < D(1619, 2, 21) ? [0, 1e9, 'liaoyang', 'yard', 10] : null;
   if (!fam) return undefined;
   if (WS.home === 'jin') return null;
   if (WS.home !== 'lijia') return [0, 1e9, WS.home, 'inn', p.k === 'father' ? 18 : 13];
   if (p.k === 'wife') return [0, 1e9, 'lijia', 'home', 13];
+  if (WS.flags.heirOf && (p.k === 'father' || p.k === 'mother' || p.k === 'erniu')) return null;
   return undefined;
 }
 const wFamDead = (k) => !!WS.dead[k];
@@ -201,10 +202,7 @@ function wRoadMeet(ex, arrive) {
 // ---------------- the journal (J) ----------------
 function wJournal() {
   let box = $('wJour'); if (box && !box.hidden) { box.hidden = true; requestLock(); return; }
-  if (!box) { box = document.createElement('div'); box.id = 'wJour'; document.body.appendChild(box); box.addEventListener('mousedown', (e) => { e.stopPropagation(); box.hidden = true; requestLock(); }); const st = document.createElement('style');
-    st.textContent = `#wJour { position: fixed; inset: 0; z-index: 70; background: rgba(12,10,8,.82); display: flex; align-items: center; justify-content: center; }
-#wJour .pp { width: min(760px, 94vw); max-height: 86vh; overflow: auto; background: #efe6cf; color: #2a2018; padding: 22px 28px; border: 1px solid #8a6a3a; font: 14px/1.55 Georgia, serif; box-shadow: 0 10px 40px #000; }
-#wJour h3 { margin: 0 0 2px; font: 700 19px Georgia, serif; } #wJour h4 { margin: 12px 0 2px; font: 700 14px Georgia, serif; color: #5a3a1a; } #wJour small { color: #6a5a46; } #wJour .lg { color: #4a3a28; font-size: 13px; }`; document.head.appendChild(st); }
+  if (!box) box = wJourBox();
   if (document.pointerLockElement) document.exitPointerLock();
   const T = wTitle(), F = wFmt(WS.day), J = WCORE.journal(WS);
   const fam = ['father', 'mother', 'erniu'].map(k => { const p = wPerson(k); return `${p.en.split(',')[0]}${WS.dead[k] ? ' (dead)' : ''}`; }).join(', ') + (WS.spouse ? `; your wife ${WS.spouse.en}` : '') + (WS.kids && WS.kids.length ? `; children: ${WS.kids.map(k => k.en).join(', ')}` : '');
@@ -221,7 +219,24 @@ ${friends.length ? `<h4>友 · People who like you</h4><div>${friends.join(', ')
 }
 document.addEventListener('keydown', (e) => { if (e.code !== 'KeyJ' || !WS || !WZ || !state.sim || !state.sim.cfg.camp || !state.sim.cfg.camp.world || state.zheDlg) return; e.stopImmediatePropagation(); e.preventDefault(); wJournal(); }, true);
 function wDie(how) { WS.alive = false; how = how || `of a fever ${WS.place === 'lijia' ? 'at home' : 'at ' + WPL[WS.place].en}`; const E = WCORE.epitaph(WS, how); wHall(E); wSave();
-  zCards([{ title: '墓誌 · His stone', year: wFmt(WS.day).en, p: E.concat([WS.spouse ? `${WS.spouse.en} burned paper money for him.` : 'The world went on without him.']) }], () => location.reload()); }
+  const son = (WS.kids || []).find(k => k.boy && !k.dead);
+  zCards([{ title: '墓誌 · His stone', year: wFmt(WS.day).en, p: E.concat([WS.spouse ? `${WS.spouse.en} burned paper money for him.` : 'The world went on without him.']) }], () => son ? wHeirAsk(son) : location.reload()); }
+// play on as your son: the world, the house, the land and what is left of the money are his
+function wHeirAsk(son) { WZ = WZ || { things: [] }; const age = WCORE.age(WS, son.born);
+  wPanel({ zh: '後人', en: 'Your son', t: `${son.en}, ${age} years old` }, [['', `${son.en} is ${age}.${age < 15 ? ` He will be a man in ${15 - age} years.` : ''} The house, the land and what is left of the money are his.`]],
+    [{ q: `Go on as ${son.en}${age < 15 ? ` (the years until he is fifteen pass)` : ''}`, fx: () => { wHeir(son); } }, { q: 'Let the story end here', fx: () => { location.reload(); } }], { noLeave: true }); }
+function wHeir(son) { const old = WS; const wid = old.spouse; const cash = Math.max(0, old.cash - 1000);
+  const N = Object.assign({}, old, { name: { zh: (old.name.zh[0] || '李') + son.zh.slice(-2), en: `Li ${son.en}` }, born: son.born, cash, learning: old.flags.sonSchool ? 30 : 10, arms: 10, health: 100, status: 'none', army: null, office: null, spouse: null, kids: [], alive: true,
+    smith: Math.max(10, (old.smith || 0) * 0.4), xiao: 0, karma: 0, rel: {}, brothers: [], debt: [], pawns: [], letters: [], contract: null, shop: null, inv: {}, exams: {}, dil: {}, flags: { heirOf: old.name.en, widow: wid ? wid.en : null, stayJin: old.flags.stayJin, fled: old.flags.fled, jinManor: old.flags.jinManor }, log: [], news: [], hour: 7 });
+  N.dead = Object.assign({}, old.dead, { father: 1, mother: 1, erniu: 1 }); N.widow = wid; WS = N; WS.place = WS.home === 'jin' ? 'lijia' : WS.home; if (WS.place === 'jin') WS.place = 'lijia';
+  const grow = Math.max(0, (son.born + 15 - WCORE.DT(WS.day).y) * 360); if (grow) wTurnDays(grow);
+  wLog('繼承家業。', `${WS.name.en} takes up his father's house.`); wSave();
+  zCards([{ title: `${WS.name.zh} · ${WS.name.en}`, year: wFmt(WS.day).en, p: [`You are ${WS.name.en}, son of ${old.name.en}. You are ${WCORE.age(WS, WS.born)}.`, wid ? `Your mother, ${wid.en}, keeps the house.` : 'Your mother is dead; you were raised by neighbours.', `You have ${WS.cash} wen${Object.values(WS.land || {}).some(n => n) ? ' and your father\'s land' : ''}.`] }], () => wScene()); }
+// the hall of lives: all the stones
+function wHallShow() { let H = []; try { H = JSON.parse(localStorage.getItem('mingLives') || '[]'); } catch (e) { }
+  let box = $('wJour') || wJourBox(); box.hidden = false;
+  box.innerHTML = `<div class="pp"><h3>墓誌 · The hall of lives</h3>${H.length ? H.map(h => `<h4>${new Date(h.t).toLocaleDateString()}</h4><div>${h.e.join(' ')}</div>`).join('') : '<p>No lives lived yet.</p>'}<p><small>Click to close.</small></p></div>`; }
+
 // the hall of lives: the stones of the last lives lived (on the menu card)
 function wHall(E) { try { const H = JSON.parse(localStorage.getItem('mingLives') || '[]'); H.unshift({ t: Date.now(), e: E }); localStorage.setItem('mingLives', JSON.stringify(H.slice(0, 8))); } catch (e) { } }
 function wHallHtml() { try { const H = JSON.parse(localStorage.getItem('mingLives') || '[]'); if (!H.length) return ''; return `<br><i>Lives lived: ${H.slice(0, 3).map(h => h.e[0]).join(' / ')}</i>`; } catch (e) { return ''; } }
@@ -401,3 +416,8 @@ function wAcademy() { if (WS.flags.lecture === WS.day) return toast('The lecture
 function wSiegeNow() { if (WS.day < D(1629, 11, 18) || WS.day > D(1629, 11, 24) || !['beijing', 'city', 'tongzhou'].includes(WS.place) || (WS.dil && WS.dil.siege1629)) return null;
   return { k: 'siege1629', title: ['兵臨城下', 'The Jin at the gates'], text: [['', 'The Jin army is outside the Guangqu Gate. Yuan Chonghuan\'s Ningyuan cavalry have ridden day and night to get between them and the city; the gates are shut behind them. Men are wanted on the wall and outside it.']],
     opts: [['Go out with Yuan\'s men to the Guangqu Gate', 'You are handed a spear at the gate.', (S) => { S.flags.pendingBattle = 'sj2'; }], ['Carry stones and water to the wall', 'Three days carrying stones. The Jin turn away to the south.', (S) => { S.karma = (S.karma | 0) + 1; S.health -= 6; }], ['Keep your head down', 'You keep your head down.', () => { }]] }; }
+
+function wJourBox() { let box; box = document.createElement('div'); box.id = 'wJour'; document.body.appendChild(box); box.addEventListener('mousedown', (e) => { e.stopPropagation(); box.hidden = true; requestLock(); }); const st = document.createElement('style');
+    st.textContent = `#wJour { position: fixed; inset: 0; z-index: 70; background: rgba(12,10,8,.82); display: flex; align-items: center; justify-content: center; }
+#wJour .pp { width: min(760px, 94vw); max-height: 86vh; overflow: auto; background: #efe6cf; color: #2a2018; padding: 22px 28px; border: 1px solid #8a6a3a; font: 14px/1.55 Georgia, serif; box-shadow: 0 10px 40px #000; }
+#wJour h3 { margin: 0 0 2px; font: 700 19px Georgia, serif; } #wJour h4 { margin: 12px 0 2px; font: 700 14px Georgia, serif; color: #5a3a1a; } #wJour small { color: #6a5a46; } #wJour .lg { color: #4a3a28; font-size: 13px; }`; document.head.appendChild(st); return box; }

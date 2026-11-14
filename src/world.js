@@ -421,8 +421,8 @@ function wMenu() {
   let el = $('wCta'); const z = $('djCta') || $('zheCta'); if (!z) return;
   if (!el) { el = document.createElement('div'); el.id = 'wCta'; el.className = z.className; z.parentNode.insertBefore(el, z.nextSibling); }
   const s = wLoad(); WS = s;
-  el.innerHTML = `<div><b>人間 · An open world (experimental)</b><small>Liaodong and Beijing from the spring of 1618: live as Li Tie, a smith's son. Work, study for the exams, go to Beijing, enlist. Real people, real events; the world goes on without you.${s && s.alive ? ` Now: ${wFmt(s.day).en}, ${WPL[s.place].en}.` : ''}${wHallHtml()}</small></div><div class="btns">${s && s.alive ? '<button type="button" class="btn primary" id="wGoOn">Continue</button>' : ''}<button type="button" class="btn${s && s.alive ? '' : ' primary'}" id="wNew">${s && s.alive ? 'New life' : 'Begin'}</button></div>`;
-  const go = $('wGoOn'); if (go) go.onclick = () => wStart(false); $('wNew').onclick = () => { if (s && s.alive && !confirm('Start a new life? This one will be lost.')) return; wStart(true); };
+  el.innerHTML = `<div><b>人間 · An open world (experimental)</b><small>Liaodong and Beijing from the spring of 1618: live as Li Tie, a smith's son. Work, study for the exams, go to Beijing, enlist. Real people, real events; the world goes on without you.${s && s.alive ? ` Now: ${wFmt(s.day).en}, ${WPL[s.place].en}.` : ''}${wHallHtml()}</small></div><div class="btns">${s && s.alive ? '<button type="button" class="btn primary" id="wGoOn">Continue</button>' : ''}${wHallHtml() ? '<button type="button" class="btn" id="wHall">Hall of lives</button>' : ''}<button type="button" class="btn${s && s.alive ? '' : ' primary'}" id="wNew">${s && s.alive ? 'New life' : 'Begin'}</button></div>`;
+  const go = $('wGoOn'); if (go) go.onclick = () => wStart(false); const hl = $('wHall'); if (hl) hl.onclick = () => wHallShow(); $('wNew').onclick = () => { if (s && s.alive && !confirm('Start a new life? This one will be lost.')) return; wStart(true); };
 }
 // the hooks: the world's places and battles answer the shared entry points
 { const kE = zheKeyE, hud = zheHUD, fin = zheFinish;

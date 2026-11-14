@@ -337,6 +337,7 @@ const WCORE = (() => {
     { const P = []; for (const pl in S.land || {}) if (S.land[pl]) P.push(`${S.land[pl]} mu at ${pl === 'lijia' ? 'Lijia' : 'Baodi county'}`); if (S.shop) P.push('a smithy rented in Liaoyang'); if (P.length) L.push(['產', 'Property', P.join('; ') + '.']); }
     { const M = []; for (const d of S.debt || []) M.push(`a note for ${d.n} wen, due ${DT(d.due).y}/${DT(d.due).m}/${DT(d.due).d} (now ${owed(S, d)})`); for (const t of S.pawns || []) M.push(`pawned: ${GOODS[t.g][1]} (redeem by ${DT(t.day + 90).m}/${DT(t.day + 90).d})`); if (S.contract) M.push(`a contract: ${S.contract.n} knives to the ironmonger in Liaoyang by ${DT(S.contract.due).m}/${DT(S.contract.due).d}, ${S.contract.each} wen each`); if (M.length) L.push(['債', 'Debts and dealings', M.join('; ') + '.']); }
     { const B = brothers(S).map(k => S.folk[k].en); const R = Object.entries(S.rep || {}).filter(([, v]) => Math.abs(v) >= 3).map(([p, v]) => `${p}: ${v >= 8 ? 'well thought of' : v >= 3 ? 'liked' : v <= -5 ? 'known as a thief' : 'distrusted'}`); if (B.length || R.length) L.push(['義', 'Brothers and name', [B.length ? `Sworn brothers: ${B.join(', ')}.` : '', R.length ? `Your name: ${R.join('; ')}.` : ''].join(' ')]); }
+    { const G = goals(S); L.push(['志', 'What a life can come to', G.map(g => `${g[2] ? '●' : '○'} ${g[1]}`).join(' · ')]); }
     const dead = S.folk ? Object.values(S.folk).filter(f => !f.alive && f.died && S.day - f.died < 360 && (f.place === S.place || relOf(S, f.k) > 5)).slice(-6) : []; if (dead.length) L.push(['故', 'The dead you knew', dead.map(f => `${f.en} (${f.how})`).join('; ')]);
     return L; }
 
@@ -377,6 +378,7 @@ const WCORE = (() => {
     if (deeds.length) L.push(`He ${deeds.join(', ')}.`);
     const k = S.karma | 0, x = S.xiao | 0; L.push(k >= 5 ? 'The people of his place remembered him as a kind man.' : k <= -4 ? 'Not many came to his funeral.' : 'He was neither better nor worse than most.');
     if (x >= 6) L.push('He was known as a filial son.'); if (S.cash > 50000) L.push(`He left ${Math.round(S.cash / 800)} taels of silver.`);
+    const G = goals(S).filter(g => g[2]); if (G.length) L.push(`What he came to: ${G.map(g => g[1].toLowerCase()).join(', ')}.`);
     return L; }
   // ---------------- the army: nights in the barracks ----------------
   const NIGHT = [
@@ -430,7 +432,12 @@ const WCORE = (() => {
     return [`${x.zh}娶了媳婦，是個厲害的。`, `${x.en} got married. A fierce one, they say: she keeps the money.`]; }
   function swear(S, k) { S.brothers = (S.brothers || []).concat([k]); addRel(S, k, 20); }
   const brothers = (S) => (S.brothers || []).filter(k => S.folk && S.folk[k] && S.folk[k].alive);
-  return { LADDERS, famineNow, repOf, addRep, steal, gossip, swear, brothers, landPrice, buyLand, sellLand, landYear, pawn, redeemCost, redeem, borrow, owed, repay, moneyDay, contractOffer, contractDeliver, NIGHT, nightEvent, makeMates, festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
+  // ---------------- what a life can come to: the goals the world recognises ----------------
+  function goals(S) { const land = Object.values(S.land || {}).reduce((a, n) => a + n, 0); const st = ['none', 'tongsheng', 'shengyuan', 'juren', 'jinshi'].indexOf(S.status);
+    return [['功名', 'A degree', st >= 2 || !!S.flags.jinPassed], ['舉人', 'A provincial graduate', st >= 3], ['進士', 'A metropolitan graduate', st >= 4], ['做官', 'Office', !!(S.office || S.flags.wasOffice)],
+      ['成家', 'A wife and a child', !!((S.spouse || S.flags.widower) && S.kids && S.kids.length)], ['富', 'Wealth (40 taels and land)', S.cash + land * 1500 >= 32000], ['名', 'A good name in a place', Object.values(S.rep || {}).some(v => v >= 8)],
+      ['孝', 'A filial son', (S.xiao | 0) >= 6], ['將', 'A company of your own (百總)', !!(S.army && S.army.r >= 3)], ['首功', 'Ten heads taken', !!(S.army && (S.army.heads | 0) >= 10)], ['義', 'A sworn brother', !!(S.brothers && S.brothers.length)], ['活', 'Alive in 1630', S.day >= D(1630, 1, 1)]]; }
+  return { goals, LADDERS, famineNow, repOf, addRep, steal, gossip, swear, brothers, landPrice, buyLand, sellLand, landYear, pawn, redeemCost, redeem, borrow, owed, repay, moneyDay, contractOffer, contractDeliver, NIGHT, nightEvent, makeMates, festNow, CELL, BAGU, epitaph, load, cap, SPREAD, D, DT, season, biome, TR, POP, makeFolk, folkAt, GOODS, price, inv, give, buy, sell, RECIPES, craft, JOBS, jobsFor, work, relOf, addRel, giftTo, letterAsk, letterTake, letterDeliver, matchOffer, marry, folkDay, folkHistory,
     DIL, dilemmaNow, dilemmaChoose, ROAD, roadDay, STICKS, drawStick, TALES, tale, dice, CASES, caseNow, judge, LADDER, evaluate, MEMOS, memosNow, memo, purge, journal, rngFor, age };
 })();
 if (typeof module !== 'undefined') module.exports = WCORE;
