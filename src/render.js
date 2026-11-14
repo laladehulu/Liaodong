@@ -1008,7 +1008,8 @@ class Renderer {
     const boxes = this.sim.boxes; if (!boxes.length) return; this.buildSpecialStructures(boxes);
     const T = this.tmp; const snow = this.biome.snow;
     const wallMat = new THREE.MeshLambertMaterial({ color: 0xa9a49a }), roofMat = new THREE.MeshLambertMaterial({ color: snow ? 0xe6e9ec : 0x3e4044 }), plasterMat = new THREE.MeshLambertMaterial({ color: 0x9a958c }), capMat = new THREE.MeshLambertMaterial({ color: snow ? 0xeef0f2 : 0x34363a });
-    const houses = boxes.filter(b => b.kind === 'house' || b.kind === 'hall'), walls = boxes.filter(b => b.kind === 'wall');
+    const houses0 = boxes.filter(b => b.kind === 'house' || b.kind === 'hall'), walls = boxes.filter(b => b.kind === 'wall');
+    const houses = houses0.length && this.buildArchHouses && !this.sim.chaos && this.buildArchHouses(houses0) ? [] : houses0; /* arch.js: Ming houses and halls drawn in code; the old boxes only if it is missing */
     const hm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), wallMat, houses.length + 1), rm = new THREE.InstancedMesh(new THREE.ConeGeometry(0.72, 1, 4), roofMat, houses.length + 1);
     // each house stands on a low stone plinth (台基) whose foot goes down to the lowest corner of the slope
     const plm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: snow ? 0x8a8780 : 0x75706a }), houses.length + 1);
