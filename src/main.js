@@ -235,7 +235,7 @@ function soloStart() {
   const cfg = myCfg(); const seed = (Math.random() * 0x7fffffff) | 0;
   state.lowfx = $('lowfxIn').checked; state.fog = false;
   if (state.mode === 'story') { const c = campFor(state.faction, state.chapter); if (c) { cfg.veterans = c.veterans; cfg.recruits = state.recruits.slice(); } }
-  startGame({ seed, battle: state.battle, mode: state.mode, chapter: state.chapter, scen: state.scen, mission: state.mission, op: state.op, diff: diffPref(), ai: aiFor(state.mode), players: [{ ...cfg, connected: true }] }, 0, null, 1);
+  startGame({ seed, battle: state.battle, standMap: state.standMap, mode: state.mode, chapter: state.chapter, scen: state.scen, mission: state.mission, op: state.op, diff: diffPref(), ai: aiFor(state.mode), players: [{ ...cfg, connected: true }] }, 0, null, 1);
 }
 // ---- the war council: every mode but Story is set up here. On its own it is a room on this computer (you and any AI generals
 // you add); "Invite friends" opens it online with a code, keeping everything chosen so far
@@ -339,7 +339,7 @@ $('btnStart').onclick = () => {
   const players = net.players.slice().sort((a, b) => a.idx - b.idx).map(p => ({ name: p.cfg ? p.cfg.name : 'Player', team: p.cfg ? p.cfg.team : 0, army: p.cfg ? p.cfg.army : [], mounted: p.cfg ? !!p.cfg.mounted : false, hclass: p.cfg ? p.cfg.hclass | 0 : 0, role: p.cfg ? p.cfg.role : 'musket', command: p.cfg ? p.cfg.command | 0 : 0, arms: p.cfg ? p.cfg.arms : null, kit: p.cfg ? p.cfg.kit : undefined, connected: p.connected }));
   let maxRtt = 0; for (const p of net.players) if (p.connected && p.rtt) maxRtt = Math.max(maxRtt, p.rtt);
   const delay = Math.max(3, Math.min(12, Math.ceil(maxRtt / 2 / 33.3) + 2));
-  net.start({ t: 'start', seed: (Math.random() * 0x7fffffff) | 0, players, delay, diff: diffPref(), ai: aiFor(state.mode), battle: state.battle, mode: state.mode, chapter: state.chapter, scen: state.scen, mission: state.mission, op: state.op });
+  net.start({ t: 'start', seed: (Math.random() * 0x7fffffff) | 0, players, delay, diff: diffPref(), ai: aiFor(state.mode), battle: state.battle, standMap: state.standMap, mode: state.mode, chapter: state.chapter, scen: state.scen, mission: state.mission, op: state.op });
 };
 function diffPref() { try { const v = localStorage.getItem('mingDiff'); return v === null ? 1 : Math.max(0, Math.min(3, +v | 0)); } catch (e) { return 1; } }
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -801,7 +801,7 @@ function cmdCamUpdate(dt) {
 // ---------- game ----------
 function startGame(msg, me, net, delay) {
   if (msg.mode === 'beacon') msg = Object.assign({}, msg, { mode: 'campaign', mission: 'beacon' });
-  if (msg.mode === 'stand') msg = Object.assign({}, msg, { mode: 'campaign', mission: 'laststand', battle: 'field' });
+  if (msg.mode === 'stand') msg = Object.assign({}, msg, { mode: 'campaign', mission: 'laststand', battle: msg.standMap || 'field' });
   // a story battle: the weapons you chose from your arsenal come with you (solo; the choice rides in the config)
   if (!net && msg.mode === 'campaign' && typeof arsKitFor === 'function' && S.MISSIONS[msg.mission] && S.MISSIONS[msg.mission].soldier) { const wk = arsKitFor(msg.mission); if (wk && msg.players[me | 0]) msg = Object.assign({}, msg, { players: msg.players.map((p, i) => i === (me | 0) ? Object.assign({}, p, { wkit: wk }) : p) }); }
   if (msg.mode === 'siege') msg = Object.assign({}, msg, { mode: 'assault', op: S.OPS[msg.op] && S.OPS[msg.op].siege ? msg.op : 'ningyuan_siege' }); // the Siege menu mode is an assault operation fought over a walled town

@@ -384,7 +384,9 @@ function wBattle(mission) {
   const M = SIM.MISSIONS[mission]; if (!M) return wScene();
   WB = { mission }; WZ = null; ZC = null; ZB = null;
   const cards = wBattleCards(mission);
-  zCards(cards, () => { startGame({ seed: (Math.random() * 0x7fffffff) | 0, battle: M.battle, mode: 'campaign', mission, players: [{ name: WS.name.zh, team: M.side | 0, connected: true }] }, 0, null, 1); });
+  zCards(cards, () => { startGame({ seed: (Math.random() * 0x7fffffff) | 0, battle: M.battle, mode: 'campaign', mission, players: [{ name: WS.name.zh, team: M.side | 0, connected: true }] }, 0, null, 1);
+    // what your life made you: arms and a blade of your own forging carry into the fight (solo: the sim is yours alone)
+    const sim = state.sim, h = sim && sim.units[sim.players[0].heroId]; if (h) { const k = 1 + Math.min(0.6, WS.arms / 160) + (WCORE.inv(WS, 'sword') ? 0.15 * ((WS.quality && WS.quality.sword) || 1) : 0); h.hp = Math.round(h.hp * k); if (k > 1.1) toast(`Your years ${WS.arms >= 40 ? 'of drill and battle' : 'at the anvil'}${WCORE.inv(WS, 'sword') ? ' and the sword you made' : ''} are with you (+${Math.round((k - 1) * 100)}% endurance).`); } });
 }
 function wFinish(winner) {
   const sim = state.sim, M = sim.mission, me = sim.players[state.localIdx], h = sim.units[me.heroId]; const won = winner === (M.side | 0), alive = !!(h && !h.dead);

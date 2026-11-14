@@ -285,7 +285,7 @@ class Sim {
   constructor(cfg) {
     this.cfg = cfg; this.seed = cfg.seed | 0; this.rng = new RNG(this.seed);
     this.scen = cfg.mode === 'heroes' ? (SCEN[cfg.scen] || SCEN.ningyuan) : null; this.heroMode = !!this.scen;
-    this.battle = cfg.mode === 'campaign' ? ((cfg.camp && cfg.camp.map && BATTLES[cfg.camp.map]) ? cfg.camp.map : (MISSIONS[cfg.mission] || MISSIONS.taizhou).battle) : cfg.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang).battle : this.scen ? this.scen.battle : cfg.mode === 'story' ? STORY[clamp(cfg.chapter | 0, 0, STORY.length - 1)].battle : BATTLES[cfg.battle] ? cfg.battle : 'field'; this.bdef = BATTLES[this.battle];
+    this.battle = cfg.mode === 'campaign' ? ((cfg.camp && cfg.camp.map && BATTLES[cfg.camp.map]) ? cfg.camp.map : (cfg.standMap && BATTLES[cfg.standMap] && MISSIONS[cfg.mission] && MISSIONS[cfg.mission].stand) ? cfg.standMap : (MISSIONS[cfg.mission] || MISSIONS.taizhou).battle) : cfg.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang).battle : this.scen ? this.scen.battle : cfg.mode === 'story' ? STORY[clamp(cfg.chapter | 0, 0, STORY.length - 1)].battle : BATTLES[cfg.battle] ? cfg.battle : 'field'; this.bdef = BATTLES[this.battle];
     this.diff = clamp(cfg.diff === undefined ? 1 : cfg.diff | 0, 0, 3); /* 0 recruit · 1 soldier · 2 veteran · 3 lone banner */
     this.solo = (cfg.players || []).length === 1; this.xc = XCOMBAT || !!cfg.xcombat; this.noRout = true; // nobody routs: squads fight on (and beaten mission groups withdraw by script)
     this.mode = MODES[cfg.mode] ? cfg.mode : 'standard'; this.chaos = this.mode === 'chaos'; this.real = this.mode === 'soldier' || this.mode === 'assault'; this.lethal = this.mode === 'soldier';

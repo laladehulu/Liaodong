@@ -111,7 +111,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 78. Fishing at the Hun River.
 79. Night in a roadside temple (a free bed, with stories).
 
-## R10: battles and modes
+## R10 (done, v173): battles and modes
 80. A Last Stand map of Shenyang's walls in 1621.
 81. The world's battles use your made weapons and your arms skill.
 82. A "witness" camera: when the world fires a historic event at your location, you see it.
