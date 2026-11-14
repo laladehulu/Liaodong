@@ -34,20 +34,29 @@ const WPL = {
     at: { liaoyang: [0, 120], start: [10, 22] }, exits: [{ to: 'liaoyang', x: 0, z: 132, sign: '遼', days: 1 }],
     spots: { forge: [7, 25], home: [16, 18], hearth: [9, 19], school: [-7, 22], fieldW: [-44, 4], fieldE: [44, -12], well: [-4, 40], road: [0, 60] } },
   liaoyang: { zh: '遼陽', en: 'Liaoyang', map: 'djliao', biome: 'spring', desc: 'The seat of the Liaodong Regional Military Commission: the west quarter, its streets, the Commission, the school, the recruiting yard.',
-    at: { lijia: [0, -128], west: [-100, 40] }, exits: [{ to: 'lijia', x: 0, z: -136, sign: '李', days: 1 }, { to: 'shanhai', x: -104, z: 40, sign: '京', days: 12, via: 'Guangning' }],
-    spots: { yamen: [-40, 14], yamenGate: [-40, 4], school: [40, -40], yard: [-88, 40], drill: [-80, 52], inn: [12, -14], market: [0, 0], barracks: [-92, 30] } },
+    at: { lijia: [0, -128], west: [-100, 40], fushun: [40, -116] }, exits: [{ to: 'lijia', x: 0, z: -136, sign: '李', days: 1 }, { to: 'shanhai', x: -104, z: 40, sign: '京', days: 12, via: 'Guangning' }, { to: 'fushun', x: 40, z: -132, sign: '撫', days: 2, via: 'Shenyang' }],
+    spots: { yamen: [-40, 14], yamenGate: [-40, 4], school: [40, -40], yard: [-88, 40], drill: [-80, 52], inn: [12, -14], market: [0, 0], barracks: [-92, 30], market2: [10, 8], teahouse: [22, 12], temple: [60, 24], physician: [-14, -22], smithy: [-22, -8], scribe: [-28, 2], street: [24, 30], gate: [0, -122], wall: [-96, 20], bookshop: [30, -28] } },
   shanhai: { zh: '山海關', en: 'Shanhai Pass', map: 'bonari', biome: 'spring', desc: 'The First Pass Under Heaven, between the mountains and the sea: the road from Liaodong into China.',
-    at: { liaoyang: [0, -118], beijing: [0, 118] }, exits: [{ to: 'liaoyang', x: 0, z: -132, sign: '遼', days: 12, via: 'Guangning' }, { to: 'beijing', x: 0, z: 132, sign: '京', days: 6, via: 'Yongping and Tongzhou' }],
-    spots: { gate: [0, 0], guard: [4, -6], inn: [-14, 30] } },
+    at: { liaoyang: [0, -118], beijing: [0, 118] }, exits: [{ to: 'liaoyang', x: 0, z: -132, sign: '遼', days: 12, via: 'Guangning' }, { to: 'tongzhou', x: 0, z: 132, sign: '通', days: 5, via: 'Yongping' }],
+    spots: { gate: [0, 0], guard: [4, -6], inn: [-14, 30], yard: [10, -20], market: [-10, 20], wall: [16, 6], road: [0, 50] } },
   beijing: { zh: '京師', en: 'Beijing, outside the Guangqu Gate', map: 'bjgate', biome: 'spring', desc: 'The suburb outside the outer wall of the capital: inns, carters, the gate.',
-    at: { shanhai: [6, -128], city: [6, 128] }, exits: [{ to: 'shanhai', x: 6, z: -136, sign: '遼', days: 6, via: 'Tongzhou and Yongping' }, { to: 'city', x: 6, z: 138, sign: '門', days: 0 }],
-    spots: { inn: [-30, 20], market: [20, -20], gate: [6, 128] } },
+    at: { shanhai: [6, -128], tongzhou: [6, -128], city: [6, 128] }, exits: [{ to: 'tongzhou', x: 6, z: -136, sign: '通', days: 1 }, { to: 'city', x: 6, z: 138, sign: '門', days: 0 }],
+    spots: { inn: [-30, 20], market: [20, -20], gate: [6, 128], market2: [26, -8], teahouse: [-22, 6], physician: [34, 10], street: [0, 40], temple: [-40, -30], inn2: [-30, 30] } },
   city: { zh: '京城', en: 'Beijing, within the walls', map: 'djdeng', biome: 'spring', desc: 'Within the walls: the Examination Hall (貢院), the Ministry of Personnel (吏部), the road to the palace.',
-    at: { beijing: [0, -44], palace: [0, 96] }, exits: [{ to: 'beijing', x: 0, z: -50, sign: '廣', days: 0 }, { to: 'palace', x: 0, z: 100, sign: '午', days: 0, rank: 30 }],
-    spots: { exam: [-10, 22], examGate: [-10, 14], ministry: [40, 6], ministryGate: [40, 0], street: [10, 40], inn: [-40, -30] } },
+    at: { beijing: [0, -44], palace: [0, 96], county: [-60, -30] }, exits: [{ to: 'beijing', x: 0, z: -50, sign: '廣', days: 0 }, { to: 'palace', x: 0, z: 100, sign: '午', days: 0, rank: 30 }, { to: 'county', x: -66, z: -30, sign: '縣', days: 2, via: 'the Shuntian roads', office: 1 }],
+    spots: { exam: [-10, 22], examGate: [-10, 14], ministry: [40, 6], ministryGate: [40, 0], street: [10, 40], inn: [-40, -30], bookshop: [24, -20], scribe: [30, -26], temple: [-50, 40], market: [14, -34], market2: [20, 50] } },
   palace: { zh: '午門', en: 'The Meridian Gate', map: 'ueno', biome: 'spring', desc: 'The court of the Meridian Gate and the hall beyond it, where the officials wait at dawn for an audience.',
     at: { city: [1, 36] }, exits: [{ to: 'city', x: 1, z: 30, sign: '城', days: 0 }],
     spots: { hall: [1, 70], ranks: [1, 62], gate: [1, 52] } },
+  fushun: { zh: '撫順', en: 'Fushun', map: 'djzhen', desc: 'The frontier market town on the Hun River, where the Jurchens come to trade ginseng and furs for iron and cloth.',
+    at: { liaoyang: [0, -34] }, exits: [{ to: 'liaoyang', x: 0, z: -46, sign: '遼', days: 2, via: 'Shenyang' }], jinFrom: wDay(1618, 4, 15),
+    spots: { market: [0, 0], market2: [14, 10], gate: [0, -32], yard: [-30, 40], yamenGate: [0, 18], wall: [-40, 0], street: [20, 40] } },
+  tongzhou: { zh: '通州', en: 'Tongzhou', map: 'sjvil', desc: 'The end of the Grand Canal, a day east of the capital: grain barges, warehouses, carters.',
+    at: { shanhai: [0, -100], beijing: [0, 100] }, exits: [{ to: 'shanhai', x: 0, z: -112, sign: '關', days: 5, via: 'Yongping' }, { to: 'beijing', x: 0, z: 112, sign: '京', days: 1 }],
+    spots: { quay: [30, 0], market: [0, 10], gate: [0, -60], road: [0, 60], inn: [-20, 20] } },
+  county: { zh: '寶坻縣', en: 'Baodi county seat', map: 'siegecity', desc: 'A county of Shuntian prefecture, two days east of the capital: the county yamen, a market, the gate.',
+    at: { city: [0, -40] }, exits: [{ to: 'city', x: 0, z: -52, sign: '京', days: 2, via: 'the Shuntian roads' }],
+    spots: { yamen: [0, 30], yamenGate: [0, 20], market: [-20, 0], market2: [20, 0], gate: [0, -36], fieldW: [-40, -20], fieldE: [40, -20] } },
 };
 
 // ---------------- the people ----------------
@@ -90,7 +99,7 @@ const WPP = [
 ];
 const wPerson = (k) => WPP.find(p => p.k === k);
 // where a person is on a given day (null: not in any place you can be), and whether he is alive
-function wWhere(p, day) { if (WS && WS.dead[p.k]) return null; for (const w of p.where) if (day >= w[0] && day < w[1]) return w; return null; }
+function wWhere(p, day) { if (WS && WS.dead[p.k]) return null; const fam = wFamWhere(p, day); if (fam !== undefined) return fam; for (const w of p.where) if (day >= w[0] && day < w[1]) return w; return null; }
 
 // ---------------- history's calendar ----------------
 // each: [day, key, news zh, news en, how far it is heard (places), effect(day)]
@@ -140,9 +149,11 @@ const WQ = [
 // ---------------- the save ----------------
 function wFresh() {
   return { v: 1, day: D(1618, 3, 1), hour: 7, place: 'lijia', from: 'start', name: { zh: '李鐵', en: 'Li Tie' }, born: 1602, cash: 1500, learning: 24, arms: 12, health: 100,
-    status: 'none', army: null, office: null, lodge: 'lijia', dead: {}, talked: {}, heard: {}, rel: {}, flags: {}, exams: {}, log: [], fired: {}, alive: true };
+    status: 'none', army: null, office: null, lodge: 'lijia', dead: {}, talked: {}, heard: {}, rel: {}, flags: {}, exams: {}, log: [], fired: {}, alive: true, ...wV2({}) };
 }
-function wLoad() { try { return JSON.parse(localStorage.getItem(WKEY) || 'null'); } catch (e) { return null; } }
+// the second save: the townsfolk, your pack, your skill at the forge, your home (it can move)
+function wV2(S) { if (!S.seed) S.seed = (Math.random() * 1e9) | 0; S.inv = S.inv || {}; if (S.smith === undefined) S.smith = 15; S.home = S.home || 'lijia'; S.news = S.news || []; S.karma = S.karma | 0; if (!S.folk) S.folk = WCORE.makeFolk(S); S.v = 2; return S; }
+function wLoad() { try { const s = JSON.parse(localStorage.getItem(WKEY) || 'null'); return s ? wV2(s) : null; } catch (e) { return null; } }
 function wSave() { try { localStorage.setItem(WKEY, JSON.stringify(WS)); } catch (e) { } }
 function wLog(zh, en) { WS.log.push([WS.day, zh, en]); if (WS.log.length > 200) WS.log.shift(); }
 const wCash = (w) => w >= 800 ? `${(w / 800).toFixed(1)} taels` : `${w} wen`;
@@ -156,14 +167,15 @@ function wTurnDays(n) {
     // family life: your father ages; in a bad year the price of grain doubles
     if (WS.army) { WS.army.paid = (WS.army.paid || 0) + 1; if (WS.army.paid >= 30) { WS.army.paid = 0; WS.cash += W_ARMY[WS.army.r][0] >= 6 ? 2000 : 1440; wLog('發了月餉。', 'Pay day.'); } }
     if (WS.office) { WS.office.paid = (WS.office.paid || 0) + 1; if (WS.office.paid >= 30) { WS.office.paid = 0; WS.cash += 4000; } }
-    wArmyCheck();
+    wArmyCheck(); wLifeDay();
   }
 }
 function wHappen(k) {
+  wLifeHistory(k);
   if (k === 'liaoyangfall' && (WS.place === 'liaoyang' || WS.place === 'lijia')) WS.flags.fallHere = 1;
 }
 // the news a person knows: what has happened, heard here after a delay that grows with the distance from where it happened
-const W_FAR = { lijia: 1, liaoyang: 0, shanhai: 6, beijing: 9, city: 9, palace: 9 };
+const W_FAR = { lijia: 1, liaoyang: 0, fushun: 1, shanhai: 6, tongzhou: 8, beijing: 9, city: 9, palace: 9, county: 10 };
 function wNews(place) { const delay = W_FAR[place] || 0; const out = []; for (const e of WEV) if (WS.day - e[0] >= delay && WS.day - e[0] < delay + 60) out.push(e); return out; }
 
 // ---------------- the army: you march with your company when history marches ----------------
@@ -181,6 +193,11 @@ function wPeopleHere() {
     const s = P.spots[w[3]] || [0, 0]; const e = { p, x: s[0] + ((p.k.charCodeAt(0) % 5) - 2) * 0.8, z: s[1] + ((p.k.charCodeAt(1) % 5) - 2) * 0.8, act: wNight() && ['father', 'mother', 'erniu'].includes(p.k) ? 1 : w[4], seat: !!w[5] };
     if (p.route && !wNight()) e.route = p.route.map(r => { const q = P.spots[r[0]] || s; return [q[0] + (Math.random() - 0.5) * 2, q[1] + (Math.random() - 0.5) * 2, r[1], r[2], r[3] ? 1 : 0]; });
     out.push(e); }
+  // the townsfolk: generated people with trades and days of their own (world_core.js)
+  const taken = {};
+  for (const k in WS.folk) { const f = WS.folk[k]; const a = WCORE.folkAt(WS, f, WS.hour); if (!a) continue; const s = P.spots[a.spot] || P.spots.market || Object.values(P.spots)[0];
+    const n = taken[a.spot] = (taken[a.spot] | 0) + 1; const ang = n * 2.4, rr = 1.6 + n * 0.5;
+    out.push({ p: wFolkP(f), x: s[0] + Math.cos(ang) * rr, z: s[1] + Math.sin(ang) * rr, act: a.act, seat: a.seat }); }
   return out;
 }
 // the things you can use in a place, with what they look like (camp props)
@@ -192,31 +209,31 @@ function wThings() {
   if (WS.place === 'beijing') T.push({ k: 'inn', x: WPL.beijing.spots.inn[0] + 2, z: WPL.beijing.spots.inn[1] });
   if (WS.place === 'shanhai') T.push({ k: 'inn', x: WPL.shanhai.spots.inn[0] + 2, z: WPL.shanhai.spots.inn[1] });
   if (WS.place === 'city') T.push({ k: 'board', x: WPL.city.spots.examGate[0] + 4, z: WPL.city.spots.examGate[1] - 2 }, { k: 'inn', x: WPL.city.spots.inn[0], z: WPL.city.spots.inn[1] });
-  return T;
+  return T.concat(wMoreThings(P));
 }
 function wScene(arriveFrom) {
   const P = WPL[WS.place]; const night = wNight(); const at = (arriveFrom && P.at[arriveFrom]) || P.at[WS.from] || P.at.start || Object.values(P.at)[0];
   const people = wPeopleHere(), things = wThings();
   const npcs = people.map((e, i) => ({ role: 'spear', x: e.x, z: e.z, yaw: Math.random() * 6.28, ci: i, pose: e.seat ? 'squat' : 'stand', act: e.act, rank: e.p.rank, route: e.route }));
   const props = [], fires = [];
-  for (const t of things) { if (t.k === 'exit') props.push(['banner', t.x + 1.4, t.z, 0, t.ex.sign]); if (t.k === 'forge') { props.push(['pot', t.x, t.z, 0], ['rack', t.x + 1.6, t.z + 0.6, 0.4]); fires.push([t.x - 0.4, t.z + 0.9]); } if (t.k === 'inn') props.push(['pot', t.x, t.z, 0], ['log', t.x + 1.4, t.z + 1, 0.3]); if (t.k === 'board') props.push(['rack', t.x, t.z, 0]); if (t.k === 'books') props.push(['log', t.x, t.z, 0]); }
+  for (const t of things) { if (t.k === 'exit') props.push(['banner', t.x + 1.4, t.z, 0, t.ex.sign]); if (t.k === 'forge') { props.push(['pot', t.x, t.z, 0], ['rack', t.x + 1.6, t.z + 0.6, 0.4]); fires.push([t.x - 0.4, t.z + 0.9]); } if (t.k === 'inn') props.push(['pot', t.x, t.z, 0], ['log', t.x + 1.4, t.z + 1, 0.3]); if (t.k === 'board') props.push(['rack', t.x, t.z, 0]); if (t.k === 'books') props.push(['log', t.x, t.z, 0]); if (t.prop) props.push([t.prop, t.x, t.z, t.yaw || 0]); }
   if (WS.place === 'lijia' && night) fires.push([WPL.lijia.spots.hearth[0], WPL.lijia.spots.hearth[1]]);
   const bedT = things.find(t => t.k === 'bed' || (t.k === 'bunk')), bedrolls = bedT ? [[bedT.x, bedT.z, 0, false]] : [];
-  const camp = { world: true, map: P.map, biome: night ? 'night' : P.biome || 'spring', fog: night ? 0.3 : 0.12, type: 'ronin', team: 0, fires, tents: [], props, bedrolls, npcs, things, me: { x: at[0], z: at[1], yaw: 0, role: 'spear' }, myRank: wRank() };
+  const camp = { world: true, map: P.map, biome: WCORE.biome(WS.day, night), fog: night ? 0.3 : 0.12, type: 'ronin', team: 0, fires, tents: [], props, bedrolls, npcs, things, me: { x: at[0], z: at[1], yaw: 0, role: 'spear' }, myRank: wRank() };
   ZC = null; ZB = null; WB = null;
   WZ = { place: WS.place, people, things, chatT: 5, hourT: 0, night };
   if (bedT) ZC = { bed: [bedT.x, bedT.z], world: true }; // (the bed marker: main.js marks ZC.bed)
   startGame({ seed: (Math.random() * 0x7fffffff) | 0, battle: P.map, mode: 'campaign', mission: 'zcamp', camp, players: [{ name: WS.name.zh, team: 0, connected: true }] }, 0, null, 1);
-  const sim = state.sim; WZ.map = {}; for (const u of sim.units) if (u.camp) { const e = people[u.ci]; if (!e) continue; WZ.map[u.id] = e.p.k; u.look = Object.assign({ id: 'w:' + e.p.k }, e.p.look || {}); if (state.renderer) state.renderer.colorFigure(u.id, u); }
+  const sim = state.sim; WZ.map = {}; WZ.pp = {}; for (const u of sim.units) if (u.camp) { const e = people[u.ci]; if (!e) continue; WZ.map[u.id] = e.p.k; WZ.pp[u.id] = e.p; u.look = Object.assign({ id: 'w:' + e.p.k }, e.p.look || {}); if (state.renderer) state.renderer.colorFigure(u.id, u); }
   // things snapped onto clear ground by the sim: keep its places
   WZ.things = sim.cfg.camp.things || things; { const bt = WZ.things.find(t => t.k === 'bed' || t.k === 'bunk'); if (bt && ZC) { ZC.bed = [bt.x, bt.z]; if (state.renderer && state.renderer.markBed) state.renderer.markBed(bt.x, bt.z); } }
   { const me = sim.units[sim.players[0].heroId]; if (me) { me.look = Object.assign({ id: 'w:me' }, wMyLook()); if (state.renderer) state.renderer.colorFigure(me.id, me); } }
   $('army').hidden = true; $('status').style.visibility = 'hidden'; MUSIC.play('menu'); MUSIC.setIntensity(night ? 0.12 : 0.2); if (night) AUDIO.setFire(0.3);
   const F = wFmt(WS.day); banner(`${P.zh} · ${P.en}`, `${F.zh} · ${wHourName(WS.hour)}`, 3.2);
-  wSave();
+  wSave(); wAfterScene();
 }
 // what you wear: your standing shows
-function wMyLook() { const r = wRank(); if (WS.office) return { hat: 'chief', h: 1.02, beard: 'mous' }; if (WS.army) return { hat: 'chief', h: 1.02 }; if (r >= 10) return { hat: 'scholar', h: 1.0 }; return { hat: 'kerchief', h: 1.0, apron: WS.place === 'lijia' }; }
+function wMyLook() { const r = wRank(); if (WS.jin) return { hat: 'shaved', h: 1.0 }; if (WS.office) return { hat: 'chief', h: 1.02, beard: 'mous' }; if (WS.army) return { hat: 'chief', h: 1.02 }; if (r >= 10) return { hat: 'scholar', h: 1.0 }; return { hat: 'kerchief', h: 1.0, apron: WS.place === 'lijia' }; }
 
 // ---------------- looking and using ----------------
 function wLook() {
@@ -224,7 +241,7 @@ function wLook() {
   let tb = null, td = 2.2; for (const t of WZ.things) { const d = Math.hypot(h.x - t.x, h.z - t.z); if (d < td) { td = d; tb = t; } }
   let best = null, bd = 0.5; const fx = Math.sin(Input.yaw), fz = Math.cos(Input.yaw);
   for (const u of sim.units) { if (!u.camp) continue; const dx = u.x - h.x, dz = u.z - h.z, d = Math.hypot(dx, dz); if (d > 3.4 || d < 0.3) continue; const off = 1 - (dx * fx + dz * fz) / d; if (off < bd) { bd = off; best = u; } }
-  if (best && (!tb || bd < 0.25)) return { u: best, p: wPerson(WZ.map[best.id]) };
+  if (best && (!tb || bd < 0.25)) return { u: best, p: (WZ.pp && WZ.pp[best.id]) || wPerson(WZ.map[best.id]) };
   return tb ? { t: tb } : null;
 }
 const W_THING = { forge: ['Work the forge with your father (four hours)', '打鐵'], bed: ['Sleep until morning', '睡覺'], bunk: ['Sleep in the barracks', '睡覺'], books: ['Read your books (three hours)', '讀書'], inn: ['Take a room for the night (40 wen)', '住店'], board: ['Read the notices', '看榜'] };
@@ -238,8 +255,9 @@ function wKeyE() {
   if (t.p) { wTalk(t.p, t.u); return true; }
   const T = t.t;
   if (T.k === 'exit') return wGo(T.ex), true;
-  if (T.k === 'forge') { wPass(4, () => { WS.cash += 60; WS.arms += 0.6; wLog('跟父親打了一下午鐵。', 'An afternoon at the forge with your father.'); toast('Four hours at the anvil. +60 wen; your arms are stronger.'); }); return true; }
-  if (T.k === 'books' || T.k === 'desk') { wPass(3, () => { const g = Math.max(0.4, 2.6 - WS.learning / 40); WS.learning = Math.min(100, WS.learning + g); toast(`You read the Four Books for three hours. Learning ${WS.learning.toFixed(0)}.`); }); return true; }
+  if (T.k === 'forge') { wForge(); return true; }
+  if (wThingUse(T)) return true;
+  if (T.k === 'books' || T.k === 'desk') { wPass(3, () => { const g = Math.max(0.4, 2.6 - WS.learning / 40) * (WCORE.inv(WS, 'book') ? 1.5 : 1); WS.learning = Math.min(100, WS.learning + g); toast(`You read the Four Books for three hours. Learning ${WS.learning.toFixed(0)}.`); }); return true; }
   if (T.k === 'bed' || T.k === 'bunk') { wSleep(); return true; }
   if (T.k === 'inn') { if (WS.cash < 40) { toast('You have not got forty wen.'); return true; } WS.cash -= 40; wSleep(); return true; }
   if (T.k === 'board') { wBoard(); return true; }
@@ -250,20 +268,23 @@ function wPass(hours, done) { WS.hour += hours; if (done) done(); if (WS.hour >=
 function wSleep(rough) {
   WS.hour = 6; wTurnDays(1); if (rough && WS.place !== 'lijia') { WS.health = Math.max(20, WS.health - 6); }
   const F = wFmt(WS.day); wSave();
+  if (!WS.alive) return wDie();
   if (WS.flags.pendingBattle) { const m = WS.flags.pendingBattle; WS.flags.pendingBattle = null; return wBattle(m); }
   if (WS.flags.fallHere && !WS.flags.fallDone) { WS.flags.fallDone = 1; return wBattle('dj1'); }
-  zCards([{ title: `${F.zh}`, year: F.en, p: [wMorning()] }], () => wScene());
+  zCards([{ title: `${F.zh}`, year: F.en, p: [wMorning()].concat(wLifeNews()) }], () => wScene());
 }
 function wMorning() { const N = wNews(WS.place).filter(e => !WS.heard[e[1]]); if (N.length) { const e = N[N.length - 1]; WS.heard[e[1]] = 1; return `You wake. In the street, people are saying: ${e[3]}`; } return 'You wake to another day.'; }
 // the road: the days go by on it, and you arrive
 function wGo(ex) {
   const P = WPL[ex.to];
   if (ex.rank && wRank() < ex.rank) { toast(`The guards turn you back. Only men of rank pass to ${P.en}.`); return; }
+  { const why = wRoadShut(ex); if (why) { toast(why); return; } }
   const cost = ex.days * 30; if (ex.days && WS.cash < cost) { toast(`The road to ${P.en} will cost you about ${cost} wen in food and lodging. You have ${WS.cash}.`); return; }
   const from = WS.place; WS.cash -= cost; if (ex.days) { wTurnDays(ex.days); WS.hour = 9; } WS.place = ex.to; WS.from = from; wSave();
   if (!ex.days) return wScene(from);
   const F = wFmt(WS.day), N = wNews(WS.place).slice(-2).map(e => e[3]);
-  zCards([{ title: `${WPL[from].zh} → ${P.zh}`, year: `${ex.days} day${ex.days > 1 ? 's' : ''} on the road${ex.via ? ', by ' + ex.via : ''} · ${F.en}`, p: [`You reach ${P.en}. ${P.desc}`].concat(N.length ? ['On the road you heard: ' + N.join(' ')] : []) }], () => wScene(from));
+  const arrive = () => zCards([{ title: `${WPL[from].zh} → ${P.zh}`, year: `${ex.days} day${ex.days > 1 ? 's' : ''} on the road${ex.via ? ', by ' + ex.via : ''} · ${F.en}`, p: [`You reach ${P.en}. ${P.desc}`].concat(N.length ? ['On the road you heard: ' + N.join(' ')] : []) }], () => wScene(from));
+  if (wRoadMeet(ex, arrive)) return; arrive();
 }
 function wBoard() {
   const done = WEX.filter(e => e[2] === WS.place && WS.day >= e[7] && WS.exams[e[0] + e[1]] !== undefined && !WS.exams[e[0] + e[1] + 'read']);
@@ -277,6 +298,7 @@ function wBoard() {
 
 // ---------------- talk ----------------
 function wTalk(p, u) {
+  if (p.folk) return wTalkFolk(p, u);
   const me = wRank(), rel = p.rank - me, T = wTitle(), age = p.born ? wDate(WS.day).y - p.born : 0;
   const greet = p.role === 'father' ? ['回來了？去拉風箱。', 'Back, are you? Work the bellows.'] : p.role === 'mother' ? ['鐵兒，餓了吧？', 'Tie, are you hungry?'] : p.role === 'sister' ? ['哥！', 'Brother!']
     : rel >= 30 ? ['何人？', 'Who are you?'] : rel >= 8 ? ['有事？', 'What is it?'] : me >= 40 && p.rank < 40 ? ['老爺。', 'Your Honour.'] : me >= 10 && p.rank < 10 ? ['相公。', 'Sir.'] : ['嗯？', 'Hm?'];
@@ -353,7 +375,7 @@ function wFinish(winner) {
   if (mission === 'roadA') { WS.flags.pendingBattle = 'abudali'; WS.day += 2; return wBattle('abudali'); }
   if (mission === 'abudali') { WS.day = Math.max(WS.day, D(1619, 3, 12)); WS.place = 'liaoyang'; WS.from = 'west'; WS.hour = 9; WS.army.r = Math.min(W_ARMY.length - 1, WS.army.r + 1); wLog('從阿布達里岡逃回遼陽。', 'Came back from Abudali to Liaoyang.');
     wSave(); return zCards([{ title: '敗歸 · Back from Abudali', year: wFmt(WS.day).en, p: ['Liu Ting\'s column was destroyed at Abudali. You and a handful of others came back through the hills to Liaoyang, nine days on foot.', `For bringing men back you are made ${W_ARMY[WS.army.r][2]}.`] }], () => wScene('west')); }
-  WS.place = 'shanhai'; WS.from = 'liaoyang'; WS.army = null; WS.day += 12; wSave();
+  WS.place = 'shanhai'; WS.from = 'liaoyang'; WS.army = null; WS.home = 'shanhai'; WS.flags.fled = 1; wTurnDays(12); wSave();
   zCards([{ title: '逃難 · West', year: wFmt(WS.day).en, p: ['Liaoyang is lost. You go west with the refugees, twelve days to the Shanhai Pass.'] }], () => wScene('liaoyang'));
 }
 
@@ -367,6 +389,7 @@ function wHUD(dt) {
   WS.hour += dt / 15; WZ.hourT += dt; if (WZ.hourT > 10) { WZ.hourT = 0; wSave(); }
   if (wNight() !== WZ.night && !state.zheDlg) { if (WS.hour >= 24) return wSleep(true); return wScene(); }
   WZ.chatT -= dt; if (WZ.chatT <= 0) { WZ.chatT = 8 + Math.random() * 8; const h = localHero(); if (!h) return; const near = sim.units.filter(u => u.camp && Math.hypot(u.x - h.x, u.z - h.z) < 14); if (!near.length) return; const u = near[Math.floor(Math.random() * near.length)];
+    const fp = WZ.pp && WZ.pp[u.id]; if (fp && fp.folk && Math.random() < 0.5) { const T = WCORE.TR[fp.folk.trade], l = T.talk[Math.floor(Math.random() * T.talk.length)]; SPEECH.say(u.id, l[0], l[1], { prio: 0, cool: 12 }); return; }
     const N = wNews(WS.place); const L = N.length && Math.random() < 0.6 ? N[N.length - 1 - Math.floor(Math.random() * Math.min(3, N.length))] : null; if (L) SPEECH.say(u.id, L[2], L[3], { prio: 0, cool: 12 }); }
 }
 
@@ -388,4 +411,4 @@ function wMenu() {
   zheHUD = function (dt) { if (WZ && WS && state.sim && state.sim.cfg.camp && state.sim.cfg.camp.world) return wHUD(dt); return hud(dt); };
   zheFinish = function (w) { if (WB) return wFinish(w); return fin(w); }; }
 setTimeout(() => { try { wMenu(); } catch (e) { } }, 400);
-window.__world = { wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks
+window.__world = { WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks

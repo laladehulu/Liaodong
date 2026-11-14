@@ -320,7 +320,7 @@ class Sim {
     if (this.mission) { this.phase = 1; this.battleTick = 0; for (const p of this.players) p.ready = true; }
     if (this.real) { this.phase = 1; this.battleTick = 0; for (const p of this.players) p.ready = true; if (this.lethal) this.tuneReal(); else { for (const u of this.units) u.bombs = 0; for (const p of this.players) p.bombs = 0; } }
     if (this.chaos) { this.objectives.length = 0; this.phase = 1; this.battleTick = 0; this.nextChaos = 30 * 14; for (const p of this.players) { p.auto = true; p.ready = true; } }
-    this.head = new Int32Array(this.gridN); this.next = new Int32Array(this.units.length);
+    this.head = new Int32Array(this.gridN).fill(-1); this.next = new Int32Array(this.units.length);
     this.obsHead = new Int32Array(this.gridN).fill(-1); this.obsNext = new Int32Array(this.obstacles.length);
     for (let i = 0; i < this.obstacles.length; i++) { const o = this.obstacles[i]; const c = this.cellOf(o.x, o.z); this.obsNext[i] = this.obsHead[c]; this.obsHead[c] = i; }
     // a keep is drawn as a broad brick platform (1.9 by 1.4 of its nominal width): its collider is made that size too
