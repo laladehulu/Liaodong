@@ -76,7 +76,7 @@ const WPP = [
   // Liaoyang: the ordinary people of the town
   { k: 'innkeep', zh: '錢掌櫃', en: 'Innkeeper Qian', t: 'keeps the inn by the market', born: 1575, look: { h: 1.0, hat: 'band', bulk: true }, rank: 0, where: [[0, 1e9, 'liaoyang', 'inn', 9]], role: 'inn' },
   { k: 'vendor', zh: '賣餅的', en: 'A cake seller', t: 'sells sesame cakes', born: 1585, look: { h: 0.96, hat: 'kerchief' }, rank: 0, where: [[0, 1e9, 'liaoyang', 'market', 9]], role: 'food' },
-  { k: 'jiaoshou', zh: '劉教授', en: 'Instructor Liu', t: 'Instructor (教授) of the Liaodong Regional School (遼東都司儒學)', born: 1570, look: { h: 1.02, hat: 'band', beard: 'longmous' }, rank: 41, where: [[0, 1e9, 'liaoyang', 'school', 20]], role: 'instructor' },
+  { k: 'jiaoshou', zh: '劉教授', en: 'Instructor Liu', t: 'Instructor (教授) of the Liaodong Regional School (遼東都司儒學)', born: 1570, look: { h: 1.02, hat: 'band', beard: 'longmous' }, rank: 41, where: [[0, D(1621, 3, 21), 'liaoyang', 'school', 20]], role: 'instructor' },
   { k: 'clerk', zh: '書辦', en: 'A Commission clerk', t: 'a clerk of the Regional Commission', born: 1590, look: { h: 1.0, hat: 'band' }, rank: 2, where: [[0, D(1621, 3, 20), 'liaoyang', 'yamenGate', 0]], role: 'clerk' },
   { k: 'recruiter', zh: '韓百總', en: 'Captain Han', t: 'a company commander (百總), raising men for the Liaodong army', born: 1584, look: { h: 1.06, hat: 'chief', beard: 'full', scar: true }, rank: 12, where: [[D(1618, 4, 25), D(1619, 2, 20), 'liaoyang', 'yard', 10]], role: 'recruiter' },
   { k: 'sergeant', zh: '馬總旗', en: 'Sergeant Ma', t: 'a section leader (總旗) who drills the recruits', born: 1590, look: { h: 1.02, hat: 'chief', brows: 'knit' }, rank: 8, where: [[D(1618, 4, 25), D(1619, 2, 20), 'liaoyang', 'drill', 10]], role: 'drill' },
@@ -172,7 +172,7 @@ function wTurnDays(n) {
 }
 function wHappen(k) {
   wLifeHistory(k);
-  if (k === 'liaoyangfall' && (WS.place === 'liaoyang' || WS.place === 'lijia')) WS.flags.fallHere = 1;
+  if (k === 'liaoyangfall' && (WS.place === 'liaoyang' || WS.place === 'lijia') && !WS.flags.stayJin) WS.flags.fallHere = 1;
 }
 // the news a person knows: what has happened, heard here after a delay that grows with the distance from where it happened
 const W_FAR = { lijia: 1, liaoyang: 0, fushun: 1, shanhai: 6, tongzhou: 8, beijing: 9, city: 9, palace: 9, county: 10 };
@@ -207,7 +207,7 @@ function wThings() {
   const P = WPL[WS.place], T = [];
   for (const ex of P.exits) T.push({ k: 'exit', to: ex.to, x: ex.x, z: ex.z, ex });
   if (WS.place === 'lijia') { const S2 = P.spots; T.push({ k: 'forge', x: S2.forge[0] + 1.4, z: S2.forge[1] - 1 }, { k: 'bed', x: S2.home[0], z: S2.home[1] }, { k: 'books', x: S2.home[0] - 2.2, z: S2.home[1] + 1.2 }); }
-  if (WS.place === 'liaoyang') { const S2 = P.spots; T.push({ k: 'inn', x: S2.inn[0] + 2, z: S2.inn[1] }, { k: 'board', x: S2.school[0] - 3, z: S2.school[1] - 2 }); if (WS.army && WS.army.col === 'liu') T.push({ k: 'bunk', x: S2.barracks[0], z: S2.barracks[1] }); }
+  if (WS.place === 'liaoyang') { const S2 = P.spots; T.push({ k: 'inn', x: S2.inn[0] + 2, z: S2.inn[1] }, { k: 'board', x: S2.school[0] - 3, z: S2.school[1] - 2 }); if (WS.army && (WS.army.col === 'liu' || WS.army.col === 'jin')) T.push({ k: 'bunk', x: S2.barracks[0], z: S2.barracks[1] }); }
   if (WS.place === 'beijing') T.push({ k: 'inn', x: WPL.beijing.spots.inn[0] + 2, z: WPL.beijing.spots.inn[1] });
   if (WS.place === 'shanhai') T.push({ k: 'inn', x: WPL.shanhai.spots.inn[0] + 2, z: WPL.shanhai.spots.inn[1] });
   if (WS.place === 'city') T.push({ k: 'board', x: WPL.city.spots.examGate[0] + 4, z: WPL.city.spots.examGate[1] - 2 }, { k: 'inn', x: WPL.city.spots.inn[0], z: WPL.city.spots.inn[1] });
@@ -219,7 +219,7 @@ function wScene(arriveFrom) {
   const people = wPeopleHere(), things = wThings();
   const npcs = people.map((e, i) => ({ role: 'spear', x: e.x, z: e.z, yaw: Math.random() * 6.28, ci: i, pose: e.seat ? 'squat' : 'stand', act: e.act, rank: e.p.rank, route: e.route }));
   const props = [], fires = [];
-  for (const t of things) { if (t.k === 'exit') props.push(['banner', t.x + 1.4, t.z, 0, t.ex.sign]); if (t.k === 'forge') { props.push(['pot', t.x, t.z, 0], ['rack', t.x + 1.6, t.z + 0.6, 0.4]); fires.push([t.x - 0.4, t.z + 0.9]); } if (t.k === 'inn') props.push(['pot', t.x, t.z, 0], ['log', t.x + 1.4, t.z + 1, 0.3]); if (t.k === 'board') props.push(['rack', t.x, t.z, 0]); if (t.k === 'books') props.push(['log', t.x, t.z, 0]); if (t.prop) props.push([t.prop, t.x, t.z, t.yaw || 0]); }
+  for (const t of things) { if (t.k === 'exit') props.push(['banner', t.x + 1.4, t.z, 0, t.ex.sign]); if (t.k === 'forge') { props.push(['pot', t.x, t.z, 0], ['rack', t.x + 1.6, t.z + 0.6, 0.4]); fires.push([t.x - 0.4, t.z + 0.9]); } if (t.k === 'inn') props.push(['pot', t.x, t.z, 0], ['log', t.x + 1.4, t.z + 1, 0.3]); if (t.k === 'board') props.push(['rack', t.x, t.z, 0]); if (t.k === 'books') props.push(['log', t.x, t.z, 0]); if (t.prop) props.push([t.prop, t.x, t.z, t.yaw || 0, t.sign]); }
   if (WS.place === 'lijia' && night) fires.push([WPL.lijia.spots.hearth[0], WPL.lijia.spots.hearth[1]]);
   const bedT = things.find(t => t.k === 'bed' || (t.k === 'bunk')), bedrolls = bedT ? [[bedT.x, bedT.z, 0, false]] : [];
   const camp = { world: true, map: P.map, biome: WCORE.biome(WS.day, night), fog: night ? 0.3 : 0.12, type: 'ronin', team: 0, fires, tents: [], props, bedrolls, npcs, things, me: { x: at[0], z: at[1], yaw: 0, role: 'spear' }, myRank: wRank() };

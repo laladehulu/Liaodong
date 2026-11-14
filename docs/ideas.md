@@ -63,7 +63,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 42. Childbirth can kill (a real risk): a physician helps.
 43. A widow remarries or keeps chaste (a memorial arch for chaste widows).
 
-## R4: under the Jin
+## R4 (done, v167): under the Jin
 44. If you stay in Liaodong in 1621: shave the head (薙髮) or hide.
 45. Han households assigned to Jurchen households (編莊, 1621–23): a Jurchen master takes half the grain.
 46. The 1623 grain-hoarder purge: the Jin kill Han who hide grain.

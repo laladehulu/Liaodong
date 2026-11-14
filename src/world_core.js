@@ -46,7 +46,8 @@ const WCORE = (() => {
     petitioner: { zh: '告狀的', en: 'a petitioner', act: 4, seat: 1, work: ['yamenGate'], talk: [['青天大老爺，給小民做主啊！', 'Your Honour, give us justice!']] },
     refugee: { zh: '難民', en: 'a refugee', act: 4, seat: 1, work: ['market', 'gate', 'temple'], talk: [['家沒了。什麼都沒了。', 'The house is gone. Everything is gone.'], ['韃子進城那天，我在井裡藏了一夜。', 'The day the Jurchens came into town I hid all night in a well.']] },
     jurchen: { zh: '女真商人', en: 'a Jurchen trader', act: 9, work: ['market2'], sells: ['ginseng', 'horse'], buys: ['cloth', 'iron', 'nails', 'hoe', 'knife', 'salt'], hat: 'felt', talk: [['人參，好人參。換鐵鍋，換布。', 'Ginseng, good ginseng. For iron pots, for cloth.']] },
-    horsedealer: { zh: '馬販子', en: 'a horse dealer', act: 9, work: ['market2', 'yard', 'gate'], sells: ['horse'], buys: ['horse'], talk: [['蒙古馬，走得遠，吃得少。', 'Mongol ponies: go far, eat little.']] },
+    bannerman: { zh: '旗人', en: 'a Jurchen bannerman', act: 10, work: ['market', 'gate', 'yard', 'road'], hat: 'felt', rank: 8, sells: ['horse'], talk: [['剃了頭就是自己人。', 'Shave your head and you are one of us.'], ['尼堪，糧食藏在哪兒？', 'Nikan, where is the grain hidden?'], ['汗說了，漢人和女真是一家。', 'The Khan says Han and Jurchen are one family.']] },
+  horsedealer: { zh: '馬販子', en: 'a horse dealer', act: 9, work: ['market2', 'yard', 'gate'], sells: ['horse'], buys: ['horse'], talk: [['蒙古馬，走得遠，吃得少。', 'Mongol ponies: go far, eat little.']] },
   eunuch: { zh: '太監', en: 'a palace eunuch', act: 11, work: ['street'], rank: 30, talk: [['咱家是司禮監的。', 'I am of the Directorate of Ceremonial.']] },
   };
   // who lives in each place (trade, how many); the families of your village are fixed in world.js
@@ -218,6 +219,26 @@ const WCORE = (() => {
       text: [['', 'An official whose parent dies must leave office and mourn for twenty-seven months (丁憂). There is no exception without an imperial order. To hide the death (匿喪) is a crime.']],
       opts: [['Report it and go home to mourn', 'You hand in your seal and go home in coarse hemp. In twenty-seven months you may ask the Ministry for a new post.', (S) => { S.flags.mournFor = S.flags.parentDied; delete S.dil.mourn; S.flags.mourning = S.day + 810; S.flags.wasOffice = S.office; S.office = null; S.xiao = (S.xiao | 0) + 4; }],
         ['Hide it, and stay in office', (S) => S.flags.hidMourn === 2 ? 'A censor finds out. You are dismissed, and your name is a byword for an unfilial son.' : 'Nobody finds out. Yet.', (S) => { S.flags.mournFor = S.flags.parentDied; delete S.dil.mourn; S.xiao = (S.xiao | 0) - 6; if (Math.random() < 0.35) { S.flags.hidMourn = 2; S.office = null; } else S.flags.hidMourn = 1; }]] });
+  // ---------------- under the Jin ----------------
+  const jinLand = (S) => (S.place === 'lijia' || S.place === 'liaoyang') && S.day >= D(1621, 3, 21) && S.flags.stayJin;
+  DIL.push({ k: 'shave', when: (S) => jinLand(S) && S.day >= D(1621, 3, 22), title: ['薙髮令', 'The order to shave'],
+      text: [['（城門口貼著告示，旗兵拿著剃刀站在旁邊。）', '(A proclamation on the gate; bannermen with razors stand beside it.)'], ['告示：凡降民，皆薙髮。不薙者，以抗命論。', 'The proclamation: All who submit shall shave the head. Whoever does not is a rebel.']],
+      opts: [['Kneel and let them shave you', 'The razor is cold. The front of your head is bare; what is left is plaited into a queue. You are a subject of the Khan.', (S) => { S.jin = 1; }],
+        ['Run for the hills tonight and make for the Pass', 'Fifteen days through the hills, eating roots. You reach the Shanhai Pass with your hair and nothing else.', (S) => { S.place = 'shanhai'; S.from = 'liaoyang'; S.day += 15; S.cash = Math.floor(S.cash / 3); S.health -= 25; S.flags.stayJin = 0; S.flags.fled = 1; S.home = (S.dead && S.dead.mother) ? 'shanhai' : 'jin'; }],
+        ['Refuse, in front of them all', 'They do not argue. Your head goes up on the gate beside the proclamation.', (S) => { S.flags.diedFor = 'refused to shave his head under the Jin, in 1621'; S.health = 0; }]] });
+  DIL.push({ k: 'manor', when: (S) => jinLand(S) && S.jin && S.day >= D(1621, 11, 1), title: ['編莊', 'The manors'],
+      text: [['', 'By the Khan\'s order the Han households are put under Jurchen masters: thirteen men to a manor (拖克索), the grain to the master, the men to his labour. A bannerman with a list stops at your gate.']],
+      opts: [['Accept: you are his now', 'Half of what you earn goes to the bannerman. He is not cruel, only hungry.', (S) => { S.flags.jinManor = 1; }], ['Bribe the bannerman to leave your name off (1500 wen)', 'He takes the silver and writes another name.', (S) => { S.cash -= 1500; }],
+        ['Run east to the coast, to Mao Wenlong', 'You go at night with nothing but a knife.', (S) => { S.flags.toMao = 1; }]] });
+  DIL.push({ k: 'grainpurge', when: (S) => jinLand(S) && S.jin && S.day >= D(1623, 6, 1), title: ['查糧', 'The grain search'],
+      text: [['', 'The Khan has ordered that Han who hide grain or plot are to be killed. Your neighbour Zhao Laosan has two sacks buried under his kang; his little girls will starve without them. The bannermen are going house to house.']],
+      opts: [['Help him move the sacks to your forge', 'The bannermen look in your forge and see only coal. Zhao\'s girls live through the winter.', (S) => { S.karma = (S.karma | 0) + 3; if (Math.random() < 0.2) S.health -= 30; }], ['Keep out of it', 'They find the sacks. Zhao Laosan is taken away.', (S) => { S.dead = S.dead || {}; S.dead.farmer1 = 1; }], ['Tell the bannermen, and be rewarded', 'You are given one of the sacks. Zhao Laosan is beheaded the same day.', (S) => { S.karma = (S.karma | 0) - 4; S.dead = S.dead || {}; S.dead.farmer1 = 1; S.cash += 600; }]] });
+  DIL.push({ k: 'serveJin', when: (S) => jinLand(S) && S.jin && !S.army && S.day >= D(1622, 2, 1) && S.day < D(1626, 1, 1), title: ['漢軍', 'The Han troops'],
+      text: [['', 'Li Yongfang, who surrendered Fushun and married a granddaughter of the Khan, is raising Han soldiers for the Jin. Pay, rations, no manor master. Your old neighbours would call it treason.']],
+      opts: [['Serve the Jin', 'You are given a Jin tunic and a spear.', (S) => { S.army = { r: 0, col: 'jin', unit: 'the Han troops under Li Yongfang', since: S.day }; S.karma = (S.karma | 0) - 1; }], ['Refuse', 'You stay at your forge.', () => { }]] });
+  DIL.push({ k: 'jinexam', when: (S) => jinLand(S) && S.jin && S.day >= D(1629, 9, 1) && S.day < D(1629, 12, 1) && S.learning >= 30, title: ['天聰三年考試', 'The Khan\'s examination of 1629'],
+      text: [['', 'Hong Taiji, the new Khan, has ordered that the Han scholars held as bondservants be examined; those who pass will be freed from their masters and given posts. You can still write.']],
+      opts: [['Sit it', (S) => S.flags.jinPassed ? 'Two hundred pass, and you among them. You are freed, given two oxen and made a scribe (bithesi) of the Jin court.' : 'You do not pass.', (S) => { if (S.learning >= 42 || Math.random() < 0.3) { S.flags.jinPassed = 1; S.flags.jinManor = 0; S.office = { zh: '筆帖式', en: 'a scribe (bithesi) of the Jin court', rank: 30, since: S.day, jin: 1 }; } }], ['Stay a smith', 'You stay a smith.', () => { }]] });
   function dilemmaNow(S) { for (const d of DIL) if (!(S.dil && S.dil[d.k]) && d.when(S)) return d; return null; }
   function dilemmaChoose(S, d, i) { S.dil = S.dil || {}; S.dil[d.k] = i + 1; const o = d.opts[i]; o[2](S); S.cash = Math.max(0, S.cash); return typeof o[1] === 'function' ? o[1](S) : o[1]; }
 
@@ -268,7 +289,7 @@ const WCORE = (() => {
   // a year in office: the evaluation (考滿): promotion, a stay, or dismissal
   const LADDER = [['知縣', 'County Magistrate', 43], ['知州', 'Department Magistrate', 44], ['知府', 'Prefect', 46], ['按察副使', 'Surveillance Vice Commissioner', 47], ['布政使', 'Provincial Administration Commissioner', 48]];
   function evaluate(S) { const o = S.office; const sc = (o.favor | 0) * 1.2 + (o.repute | 0) * 0.6 + (S.karma | 0) * 0.2 + (S.xiao | 0) * 0.3 + (S.flags.eunuchFaction && S.day >= D(1624, 6, 1) && S.day < D(1627, 9, 1) ? 4 : 0) + (S.flags.donglin && S.day >= D(1625, 1, 1) && S.day < D(1628, 1, 1) ? -5 : 0);
-    o.repute = 0; o.favor = 0; const i = LADDER.findIndex(l => l[0] === o.zh);
+    o.repute = 0; o.favor = 0; const i = LADDER.findIndex(l => l[0] === o.zh); if (i < 0) return 'Your year in office passes without remark.';
     if (sc >= 6 && i < LADDER.length - 1) { const L = LADDER[i + 1]; o.zh = L[0]; o.en = L[1]; o.rank = L[2]; return `Your evaluation is excellent. You are promoted ${L[1]} (${L[0]}).`; }
     if (sc <= -6) { S.office = null; return 'Your evaluation is "incompetent". You are dismissed and go home.'; }
     return 'Your evaluation is "adequate". You stay in your post.'; }
