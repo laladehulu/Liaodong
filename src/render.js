@@ -1009,7 +1009,7 @@ class Renderer {
     const T = this.tmp; const snow = this.biome.snow;
     const wallMat = new THREE.MeshLambertMaterial({ color: 0xa9a49a }), roofMat = new THREE.MeshLambertMaterial({ color: snow ? 0xe6e9ec : 0x3e4044 }), plasterMat = new THREE.MeshLambertMaterial({ color: 0x9a958c }), capMat = new THREE.MeshLambertMaterial({ color: snow ? 0xeef0f2 : 0x34363a });
     const houses0 = boxes.filter(b => b.kind === 'house' || b.kind === 'hall'), walls = boxes.filter(b => b.kind === 'wall');
-    const houses = houses0.length && this.buildArchHouses && !this.sim.chaos && this.buildArchHouses(houses0) ? [] : houses0; /* arch.js: Ming houses and halls drawn in code; the old boxes only if it is missing */
+    const houses = houses0.length && this.buildArchHouses && !this.sim.chaos && !window.__noArch && this.buildArchHouses(houses0) ? [] : houses0; /* arch.js: Ming houses and halls drawn in code; the old boxes only if it is missing */
     const hm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), wallMat, houses.length + 1), rm = new THREE.InstancedMesh(new THREE.ConeGeometry(0.72, 1, 4), roofMat, houses.length + 1);
     // each house stands on a low stone plinth (台基) whose foot goes down to the lowest corner of the slope
     const plm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: snow ? 0x8a8780 : 0x75706a }), houses.length + 1);
@@ -3633,6 +3633,12 @@ Renderer.prototype.campPoseT = function (u, a, w) {
     case 9: { rest(1); S3(tg.rh, -0.2 + 0.06 * Math.sin(t * 2.1), -0.26 + 0.09 * Math.sin(t * 1.7), 0.33 + 0.05 * Math.sin(t * 2.6)); R.twist = 0.1 * Math.sin(t * 0.9); R.lean = 0.05; break; } // talking with his hands
     case 10: { if (pole) rest(-1); else { S3(tg.wp, 0, -0.52, 0.28); S3(tg.wd, 0, -1, 0.12); nrm3(tg.wd); set3(tg.rh, tg.wp); set3(tg.lh, tg.wp); } if (pole) R.fkL = true; R.lean = -0.02; R.stance = 0.3; R.roll = 0; break; } // on watch
     case 11: { if (w === 'yari') { S3(tg.wp, -0.15, -0.1, 0.18); S3(tg.wd, 0.35, 0.85, 0.22); } else if (w === 'rifle') { S3(tg.wp, -0.21, 0.03, 0.04); S3(tg.wd, 0.16, 0.95, -0.24); } else { const K = KF.katana.carry; set3(tg.wp, K.g); set3(tg.wd, K.d); } nrm3(tg.wd); set3(tg.rh, tg.wp); R.fkL = true; R.stance = 0; R.lean = 0.04; break; } // walking with the weapon sloped
+    case 16: { S3(tg.rh, -0.04, -0.12, 0.28); S3(tg.lh, 0.04, -0.12, 0.28); grounded(); R.lean = 0.62; R.two = true; R.prop = ''; break; } // a bow (揖): hands clasped before him, bent from the waist
+    case 17: { S3(tg.rh, -0.1, -0.5, 0.42); S3(tg.lh, 0.1, -0.5, 0.42); grounded(); R.crouch = 0.85; R.lean = 0.55; R.stance = 0.1; break; } // on his knees (跪)
+    case 18: { const k = bump(1.1, 0.35); S3(tg.lh, 0.12, -0.42, 0.42); L3(tg.rh, [-0.05, 0.25, 0.25], [-0.02, -0.4, 0.46], k); grounded(); R.prop = 'stone'; R.lean = 0.3; break; } // the hammer at the anvil
+    case 19: { const k = bump(2.2, 0.5); L3(tg.rh, [-0.1, 0.1, 0.3], [-0.06, -0.6, 0.62], k); L3(tg.lh, [0.04, -0.05, 0.3], [0.02, -0.5, 0.6], k); grounded(); R.prop = 'stick'; R.lean = 0.25 + 0.25 * k; break; } // the hoe
+    case 20: { S3(tg.rh, -0.12, -0.22, 0.34); S3(tg.lh, 0.12, -0.22, 0.34); grounded(); R.prop = 'cloth'; R.lean = 0.2 + 0.03 * Math.sin(t * 0.4); break; } // reading a book held before him
+    case 21: { const k = Math.sin(t * 2.4); S3(tg.rh, -0.18 + 0.2 * k, -0.6, 0.45); S3(tg.lh, 0.0 + 0.2 * k, -0.35, 0.35); grounded(); R.prop = 'stick'; R.lean = 0.3; break; } // sweeping
     case 13: { const c = Math.cos(t * 1.5), s = Math.sin(t * 1.5); S3(tg.rh, -0.04 + 0.1 * c, -0.42, 0.5 + 0.1 * s); S3(tg.lh, 0.06 + 0.1 * c, -0.3, 0.48 + 0.1 * s); grounded(); R.prop = 'ladle'; R.lean = 0.2; break; } // stirring the pot
     default: { if (sit || squat) { knees(); grounded(); R.lean = 0.18; } else { rest(-1); R.fkL = true; } }
   }

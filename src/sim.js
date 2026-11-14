@@ -3815,6 +3815,28 @@ Sim.prototype.aiMedic = function (u) {
 
 // a man down and waiting for help drags himself back toward his own people, slowly, and lies still when the enemy is
 // on top of him (playing dead); he stops once a comrade is within reach so whoever comes for him can find him
+// ---- the open world (world.js): a person's day is a round of stops, each with its own work (act) and how long he stays;
+// he walks from one to the next. A man of lower standing who meets one of higher bows (a commoner to a degree-holder) or
+// kneels (anyone below the rank of an official, to an official); acts 16 bow 17 kneel 18 hammer 19 hoe 20 read 21 sweep
+Sim.prototype.worldThink = function (u) {
+  const C = this.cfg.camp, rng = this.rng, me = C.myRank | 0;
+  if (u.cAct === undefined) { u.cHx = u.x; u.cHz = u.z; u.cSeat = u.campPose === 'squat'; u.cLook = 0; u.cRise = 0; u.cMate = -1; u.cAct = u.cAct0 !== undefined ? u.cAct0 : 0; u.cT = (30 * (4 + rng.next() * 20)) | 0; u.rWalk = !!u.route; }
+  let h = null; for (const p of this.players) { if (p.ai) continue; const v = this.units[p.heroId]; if (v && !v.dead) { h = v; break; } }
+  if (h) { const dx = u.x - h.x, dz = u.z - h.z, d = len(dx, dz), face = d > 0.01 ? (dx * sin(h.yaw) + dz * cos(h.yaw)) / d : 0;
+    // deference: a lower man near you, or one you walk up to, makes his bow or kneels, once each meeting
+    if (me > (u.rank | 0) && d < 3.2 && !u.bowed) { u.bowed = true; u.bowT = 30 * (me >= 40 && (u.rank | 0) < 40 ? 3.2 : 2); u.bowAct = me >= 40 && (u.rank | 0) < 40 ? 17 : 16; }
+    if (d > 9) u.bowed = false;
+    if (u.bowT > 0) { u.bowT--; u.cAct = u.bowAct; u.cLook = 0; this.turnTo(u, atan2(h.x - u.x, h.z - u.z), 4 * DT); if (u.bowT === 0) { u.cAct = u.cAct0 !== undefined ? u.cAct0 : 0; u.cT = 30 * 3; } return; }
+    const was = u.cLook; u.cLook = d < 2.9 && face > 0.55 ? 1 : d < 1.7 ? 1 : 0; u.cRise = u.cLook && d < 2.2 ? 1 : 0;
+    if (u.cLook) { if (was === 0 && u.cAct === 11) u.cAct = 0; this.turnTo(u, atan2(h.x - u.x, h.z - u.z), 2.2 * DT); return; } }
+  if (u.route) { const st = u.route[u.rI | 0];
+    if (u.cAct === 11 || u.rWalk) { const d = len(st[0] - u.x, st[1] - u.z);
+      if (d > 0.7) { u.cAct = 11; const y = this.steerFoot(u, st[0], st[1], 1.25); this.turnTo(u, y, 3 * DT); return; }
+      u.rWalk = false; u.cAct = st[2] | 0; u.cSeat = !!st[4]; u.cT = (30 * ((st[3] || 20) * (0.7 + rng.next() * 0.6))) | 0; if (st[5] !== undefined) this.turnTo(u, st[5], PI); return; }
+    if (--u.cT <= 0) { u.rI = ((u.rI | 0) + 1) % u.route.length; u.rWalk = true; u.cAct = 11; }
+    return; }
+  if (--u.cT <= 0) { u.cT = (30 * (8 + rng.next() * 16)) | 0; if (u.cAct0 === undefined) u.cAct = [0, 9, 0, 8, 2][(rng.next() * 5) | 0]; }
+};
 // ---- camp life: what a man at the fire is doing (client draws it; u.cAct, u.cLook, u.cRise) ----
 // activities: 0 stand 1 warm hands 2 drink 3 eat 4 squat 5 sharpen 6 mend 7 sleep 8 stretch 9 talk 10 sentry 11 walk
 // 12 feed the fire 13 stir the pot 14 dice 15 pipe. Seated men stay at their place; a few standing men wander.
@@ -3823,6 +3845,7 @@ Sim.prototype.campThink = function (u) {
   const C = this.cfg.camp || {}, rng = this.rng;
   if (u.cAct === undefined) { u.cHx = u.x; u.cHz = u.z; u.cYaw0 = u.yaw; u.cSeat = u.campPose === 'squat'; u.cWander = !u.cSeat && rng.next() < 0.55; u.cT = (30 * (2 + rng.next() * 10)) | 0; u.cAct = u.cSeat ? CAMP_SEAT[(rng.next() * 6) | 0] : 0; u.cLook = 0; u.cRise = 0; u.cMate = -1; }
   u.mx = 0; u.mz = 0; u.target = -1;
+  if (C.world) return this.worldThink(u);
   // a man you walk up to looks at you; a seated man close enough to talk to gets up
   let h = null; for (const p of this.players) { if (p.ai) continue; const v = this.units[p.heroId]; if (v && !v.dead) { h = v; break; } }
   if (h) { const dx = u.x - h.x, dz = u.z - h.z, d = len(dx, dz), face = d > 0.01 ? (dx * sin(h.yaw) + dz * cos(h.yaw)) / d : 0;
@@ -3974,14 +3997,33 @@ Sim.prototype.campFit = function (C) {
   if (C.tents) { const keep = C.tents.filter(t => !hit(t[0], t[1], 0.2) && !nearBed(t[0], t[1], Math.min(t[2], t[3]))); this.campDropped = C.tents.length - keep.length; C.tents.length = 0; C.tents.push(...keep); }
   if (C.props) { const keep = C.props.filter(q => !hit(q[1], q[2], 0.5) && !nearBed(q[1], q[2], 0.3)); C.props.length = 0; C.props.push(...keep); }
 };
+// an open-world place (world.js): every person's standing place and every stop of his round goes onto clear ground (out of the
+// houses, walls, rocks, trees and water), the nearest such ground to where the place's plan put it
+Sim.prototype.clearPt = function (x, z, m) {
+  const bad = (x, z) => { if (Math.abs(x) > HALF - 6 || Math.abs(z) > HALF - 6) return true; for (const b of this.boxes) if (Math.abs(x - b.x) < b.hw + m && Math.abs(z - b.z) < b.hd + m) return true; for (const o of this.obstacles) if (len(x - o.x, z - o.z) < (o.r || 0.5) + m) return true; const w = waterAt(x, z); return w === 1 || w === 2; };
+  if (!bad(x, z)) return [x, z];
+  for (let r = 1; r <= 40; r += 1) for (let k = 0, n = Math.max(8, Math.round(r * 3)); k < n; k++) { const a = k / n * TAU, xx = x + sin(a) * r, zz = z + cos(a) * r; if (!bad(xx, zz)) return [+xx.toFixed(2), +zz.toFixed(2)]; }
+  return [x, z];
+};
+Sim.prototype.worldFit = function (C) {
+  for (const n of C.npcs || []) { const p = this.clearPt(n.x, n.z, 0.6); n.x = p[0]; n.z = p[1]; if (n.route) for (const st of n.route) { const q = this.clearPt(st[0], st[1], 0.6); st[0] = q[0]; st[1] = q[1]; } }
+  if (C.me) { const p = this.clearPt(C.me.x, C.me.z, 0.7); C.me.x = p[0]; C.me.z = p[1]; }
+  // a thing you can use (the forge, a bed, a notice, a road marker) and what is drawn for it (props, a fire, a bedroll) move together
+  for (const t of C.things || []) { const p = this.clearPt(t.x, t.z, 0.5), dx = p[0] - t.x, dz = p[1] - t.z; if (!dx && !dz) continue; const ox = t.x, oz = t.z;
+    for (const q of C.props || []) if (len(q[1] - ox, q[2] - oz) < 3) { q[1] += dx; q[2] += dz; }
+    for (const f of C.fires || []) if (len(f[0] - ox, f[1] - oz) < 3) { f[0] += dx; f[1] += dz; }
+    for (const b of C.bedrolls || []) if (len(b[0] - ox, b[1] - oz) < 1) { b[0] += dx; b[1] += dz; }
+    t.x = p[0]; t.z = p[1]; }
+};
 Sim.prototype.setupCamp = function (humans) {
   const C = this.cfg.camp || { npcs: [], tents: [], me: { x: 0, z: 6, yaw: PI, role: 'shield' } };
-  if (this.cfg.camp) this.campFit(C);
+  if (this.cfg.camp && !C.world) this.campFit(C);
+  if (C.world) this.worldFit(C);
   for (const t of C.tents || []) this.boxes.push({ x: t[0], z: t[1], hw: t[2], hd: t[3], h: t[4], kind: 'tent' });
   const CT = C.type || 'yuanyang', CTm = C.team | 0; // another campaign's camp: its own unit type and side (jin.js, shenji.js)
   const mk = (role, x, z, yaw) => { const u = this.addUnit(CT, CTm, -1, -1, x, z, yaw); if (CT === 'yuanyang') { u.role = role; u.def = YYDEF[role] || YYDEF.spear; u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } else { u.def = defFor(CT, CTm); u.hp = u.def.hp; u.weapon = u.def.weapons[0]; } return u; };
   humans.forEach((p, i) => { p.team = CTm; p.auto = false; p.ready = true; p.squads = []; const m = C.me; const u = mk(m.role || 'shield', m.x + i * 1.5, m.z, m.yaw); u.owner = p.idx; u.ctrl = p.idx; p.heroId = u.id; p.commanderId = -1; p.respawnAt = 0; });
-  for (const n of C.npcs || []) { const u = mk(n.role, n.x, n.z, n.yaw); u.camp = true; u.ci = n.ci; u.campPose = n.pose || 'stand'; }
+  for (const n of C.npcs || []) { const u = mk(n.role, n.x, n.z, n.yaw); u.camp = true; u.ci = n.ci; u.campPose = n.pose || 'stand'; if (n.route && n.route.length) { u.route = n.route; u.rI = (n.rI | 0) % n.route.length; } u.rank = n.rank | 0; if (n.act !== undefined) u.cAct0 = n.act; }
   this.mv.ph = 0;
 };
 Sim.prototype.humansIn = function (z) { for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && len(h.x - z.x, h.z - z.z) < z.r + 2) return true; for (const id of p.squads) { const q = this.squads[id]; if (q.alive && len(q.cx - z.x, q.cz - z.z) < z.r + 3) return true; } } return false; };

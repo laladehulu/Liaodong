@@ -19,7 +19,7 @@
     mesh(mat) { if (!this.p.length) return null; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2));
       const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; return m; }
   }
-  const UB = new THREE.BoxGeometry(1, 1, 1), UC = new THREE.CylinderGeometry(0.5, 0.56, 1, 8), UCL = new THREE.CylinderGeometry(0.5, 0.56, 1, 5);
+  const UB = new THREE.BoxGeometry(1, 1, 1), UC = new THREE.CylinderGeometry(0.5, 0.56, 1, 6, 1, true), UCL = new THREE.CylinderGeometry(0.5, 0.56, 1, 4, 1, true);
   const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), V = new THREE.Vector3(), S = new THREE.Vector3();
   // the building's own frame: origin at its centre at ground level, local x along its long side, turned by ry
   const frame = (x, y, z, ry) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0)), new THREE.Vector3(1, 1, 1));
@@ -33,7 +33,7 @@
   const roofCache = new Map();
   function roofGeo(a, b, H, hip, lift, lo) {
     const key = [a, b, H, hip, lift, lo].map(v => +(+v).toFixed(2)).join(':'); if (roofCache.has(key)) return roofCache.get(key);
-    const nx = lo ? 8 : 14, nz = lo ? 6 : 10, T = 0.16, pos = [], uv = [], idx = [];
+    const nx = lo ? 6 : hip ? 12 : 8, nz = lo ? 4 : hip ? 8 : 6, T = 0.16, pos = [], uv = [], idx = [];
     const h = (x, z) => { const tz = Math.abs(z) / b; let m = tz;
       if (hip) { const tx = Math.max(0, (Math.abs(x) - (a - b)) / b); m = Math.max(tz, tx); }
       let y = H * Math.pow(Math.max(0, 1 - m), 1.45); /* 舉折: steep at the ridge, flattening to the eaves */
@@ -83,7 +83,8 @@
       boxIn(hall ? bags.plaster : bags.wall, F, 0, (pt + wh) / 2, 0, a * 2, wallH, d * 2);
       // the timber front (and back): columns, a lintel under the eaves, lattice windows between, a plank door in the middle
       const bays = Math.max(1, Math.round(a * 2 / (hall ? 2.6 : 2.4))), bw = a * 2 / bays, colR = hall ? 0.17 : 0.12;
-      for (const side of hall ? [-1, 1] : [1, -1]) { const zf = side * (d + (hall ? 0.45 : 0.04));
+      const many = houses.length > 60; /* a whole quarter of a city: the backs of the houses plain */
+      for (const side of hall ? [-1, 1] : many ? [1] : [1, -1]) { const zf = side * (d + (hall ? 0.45 : 0.04));
         for (let i = 0; i <= bays; i++) colIn(bags.timber, F, -a + i * bw, (pt + wh) / 2, zf, colR, wallH, lo);
         boxIn(bags.timber, F, 0, wh - 0.16, zf, a * 2 + 0.2, 0.3, 0.22);
         if (lo) continue;
@@ -104,7 +105,8 @@
     const L = (c, extra) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, extra || {}));
     const tiles = tileTex(snow); tiles.repeat.set(1, 1);
     const brick = brickTex(snow ? '#8f8b85' : '#7e7a74', snow ? '#6a6660' : '#5a5650'); brick.repeat.set(4, 4);
-    const mats = { stone: L(snow ? 0x8a8780 : 0x77726a), wall: L(0xffffff, { map: brick }), plaster: L(0xd8d0c0), timber: L(0x7a2e20), dark: L(0x2a2018), roof: L(0xffffff, { map: tiles, side: THREE.DoubleSide }), ridge: L(snow ? 0xd8dde2 : 0x3a3c40), soot: L(0x3a3430) };
+    /* solid colours: the stylised shading keeps a material's colour and not its texture map */
+    const mats = { stone: L(snow ? 0x8a8780 : 0x77726a), wall: L(snow ? 0x8f8b85 : 0x7c7872), plaster: L(0xd8d0c0), timber: L(0x7a2e20), dark: L(0x2a2018), roof: L(snow ? 0xdfe4ea : 0x4a4f56, { side: THREE.DoubleSide }), ridge: L(snow ? 0xd8dde2 : 0x34363a), soot: L(0x3a3430) }; void tiles; void brick;
     for (const k in bags) { const m = bags[k].mesh(mats[k]); if (m) this.scene.add(m); }
     return true;
   };
