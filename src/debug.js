@@ -7,14 +7,14 @@
 // the input stream as commands, so they are deterministic; solo only). Game speed (= and -, or the panel) works in
 // any solo game, debug or not: more fixed-length sim ticks per frame, so the battle itself is unchanged.
 const DBG = { on: false, panel: null, tag: null, hud: null, spd: null, typed: '' };
-const DBG_KEYS = { zhe: 'mingZhe', jin: 'mingJin', sj: 'mingShenji' };
-const DBG_NAMES = { zhe: '浙兵 · The Zhejiang Company', jin: '八旗 · The Plain White Niru', sj: '神機營 · The Divine Engine Division' };
+const DBG_KEYS = { zhe: 'mingZhe', jin: 'mingJin', sj: 'mingShenji', dj: 'mingDongjiang' };
+const DBG_NAMES = { zhe: '浙兵 · The Zhejiang Company', jin: '八旗 · The Plain White Niru', sj: '神機營 · The Divine Engine Division', dj: '東江 · The East River' };
 const SPEEDS = [0.5, 1, 2, 4, 8];
 function dbgLS(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
 function dbgLoad(c) { try { return JSON.parse(dbgLS(DBG_KEYS[c]) || 'null'); } catch (e) { return null; } }
 function dbgStore(c, s) { dbgLS(DBG_KEYS[c], JSON.stringify(s)); }
 function dbgFresh(c) {
-  try { if (c === 'zhe' && typeof zFresh === 'function') return zFresh(); if (c === 'jin' && typeof jFresh === 'function') return jFresh(); if (c === 'sj' && typeof sjFresh === 'function') return sjFresh(); } catch (e) { }
+  try { if (c === 'zhe' && typeof zFresh === 'function') return zFresh(); if (c === 'jin' && typeof jFresh === 'function') return jFresh(); if (c === 'sj' && typeof sjFresh === 'function') return sjFresh(); if (c === 'dj' && typeof dFresh === 'function') return dFresh(); } catch (e) { }
   return { v: 1, stage: '', name: { zh: '阿明', en: 'Aming' }, alive: {}, fate: {}, bond: {}, talked: {}, flags: {} };
 }
 // every campaign's flow, in the order a player meets it; m = the battle's mission (its phases are listed)
@@ -27,6 +27,14 @@ function dbgFlows() {
     F.jin.push(['c' + n, `Ch ${n} · intro cards`, null, 'intro'], ['c' + n, `Ch ${n} · camp`], ['b' + n, `Ch ${n} · battle (${C.mission})`, C.mission]); }
   F.sj = [['drill', 'Prologue · the drill ground', 'sjdrill'], ['camp0', 'Camp · outside Shunyi'], ['battle1', 'Battle · Shunyi, 1629', 'sj1'], ['amb', 'Cards · forage'], ['battleA', 'Battle · the village ambush', 'sjamb'],
     ['ch2', 'Cards · the capital'], ['camp1', 'Camp · under the Guangqu Gate'], ['battle2', 'Battle · the Guangqu Gate', 'sj2'], ['ch3', 'Cards · Chapter 3'], ['camp2', 'Camp · Changshan'], ['battle3', 'Battle · Changshan, 1631', 'sj3'], ['end', 'Epilogue']];
+  // the East River: chapters 1-14 shared, then the two roads that part at Wuqiao (a: 15-20 with the mutiny, b: 35-40 against
+  // it), then the epilogue (21) on either road. Each entry: [scene, label, mission, kind, chapter, road]
+  F.dj = []; if (typeof DCH !== 'undefined') { const add = (n, road) => { const C = DCH[n]; if (!C) return; const t = road ? ` (road ${road})` : '', ms = C.mission && SIM.MISSIONS && SIM.MISSIONS[C.mission];
+      const nm = n === 21 ? 'Epilogue' : `Ch ${n >= 35 ? n - 20 : n}${road || ''}`;
+      F.dj.push(['c' + n, `${nm} · intro cards${n === 21 ? t : ''}`, null, 'intro', n, road]);
+      if (C.camp) F.dj.push(['c' + n, `${nm} · camp`, null, 'camp', n, road]);
+      if (ms) F.dj.push(['b' + n, `${nm} · battle: ${ms.title.split(' · ').slice(-1)[0]}`, C.mission, 'battle', n, road]); };
+    for (let n = 1; n <= 14; n++) add(n, ''); for (let n = 15; n <= 20; n++) add(n, 'a'); for (let n = 35; n <= 40; n++) add(n, 'b'); add(21, 'a'); add(21, 'b'); }
   if (typeof SJBAT !== 'undefined') F.sj = F.sj.filter(e => !/^battle/.test(e[0]) && e[0] !== 'drill' || SJBAT[e[0]]);
   if (typeof ZROAD !== 'undefined') F.zhe = F.zhe.filter(e => !/^road/.test(e[0]) || ZROAD[e[0].slice(4)]);
   return F;
@@ -38,15 +46,31 @@ function dbgJump(c, e, ph) {
   const [scene, , , kind] = e;
   if (c === 'zhe') { if (/^road/.test(scene)) { const D = ZROAD[scene.slice(4)]; s.flags['pre' + scene.slice(4)] = 1; s.stage = D ? D.next : s.stage; } else s.stage = scene; }
   else if (c === 'jin') { s.stage = scene; s.seen = s.seen || {}; if (kind === 'intro') delete s.seen['i' + scene.slice(1)]; }
+  else if (c === 'dj') dbgDjPrep(s, e);
   else s.stage = scene;
   dbgStore(c, s); dbgLS('mingDebugGo', JSON.stringify({ c, s: scene, ph: ph | 0, m: e[2] || null })); location.reload();
+}
+// the East River save, made fit to land on chapter n of a road: everyone who has joined by then is with the file, the road taken
+// at Wuqiao is set (the fork's choice, its flag, and the man who left: Qian on the mutiny's road, Liu Heizi on the other), and
+// the intro is unseen (intro) or seen (camp, battle) so the jump lands where it says
+function dbgDjPrep(s, e) {
+  const [scene, , , kind, n, road] = e; s.dj = true; s.alive = s.alive || {}; s.fate = s.fate || {}; s.flags = s.flags || {}; s.seen = s.seen || {}; s.ch = s.ch || {}; s.me = s.me || 'me';
+  const prog = n >= 35 ? n - 20 : n;
+  for (const r of (typeof DR !== 'undefined' ? DR : [])) if (!r.guest && !r.only && (r.joins || 0) <= prog && s.alive[r.k] === undefined) s.alive[r.k] = true;
+  const back = (k) => { if (s.alive[k] === false && s.fate[k] === 'gone') { s.alive[k] = true; delete s.fate[k]; } };
+  const gone = (k) => { s.alive[k] = false; s.fate[k] = 'gone'; };
+  if (!road || prog <= 14) { delete s.ch.dj14mutiny; delete s.flags.mutiny; delete s.flags.loyal; back('qian'); back('liu'); }
+  else if (road === 'a') { s.ch.dj14mutiny = { o: 0 }; s.flags.mutiny = 1; delete s.flags.loyal; gone('qian'); back('liu'); }
+  else { s.ch.dj14mutiny = { o: 1 }; s.flags.loyal = 1; delete s.flags.mutiny; gone('liu'); back('qian'); }
+  if (kind === 'intro') delete s.seen['i' + n]; else s.seen['i' + n] = 1;
+  s.stage = scene;
 }
 function dbgBoot() {
   let go = null; try { go = JSON.parse(dbgLS('mingDebugGo') || 'null'); } catch (e) { } dbgLS('mingDebugGo', null); if (!go) return;
   setTimeout(() => {
     AUDIO.init();
     if (go.c === 'zhe') { if (/^road/.test(go.s) && typeof zStartR === 'function') zStartR(go.s); else zStart(go.s); }
-    else if (go.c === 'jin') jStart(go.s); else if (go.c === 'sj') sjStart(go.s);
+    else if (go.c === 'jin') jStart(go.s); else if (go.c === 'sj') sjStart(go.s); else if (go.c === 'dj' && typeof dStart === 'function') dStart(go.s);
     if (go.ph > 0 && go.m) { let n = 0; const iv = setInterval(() => { const sim = state.sim; if (++n > 150) return clearInterval(iv);
       if (sim && sim.cfg.mission === go.m && sim.tick > 3) { clearInterval(iv); dbgCmd(0, go.ph); toast('Debug: jumped to phase ' + (go.ph + 1)); } }, 200); }
   }, 140);
@@ -56,9 +80,9 @@ function dbgSolo() { return !!(state.sim && !state.net && state.sim.players.filt
 // ---------------- the panel ----------------
 function dbgCSS() {
   if ($('dbgCss')) return; const st = document.createElement('style'); st.id = 'dbgCss';
-  st.textContent = `#dbgTag { position: fixed; left: 50%; top: 4px; transform: translateX(-50%); z-index: 60; font: 700 10px/1 sans-serif; letter-spacing: .12em; color: #ffd27a; background: #3a1410e0; border: 1px solid #c0503a; border-radius: 3px; padding: 3px 7px; pointer-events: none; }
+  st.textContent = `#dbgTag { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: 58px; z-index: 60; font: 700 10px/1 sans-serif; letter-spacing: .12em; color: #ffd27a; background: #3a1410e0; border: 1px solid #c0503a; border-radius: 3px; padding: 3px 7px; pointer-events: none; }
 #dbgSpd { position: fixed; right: 14px; top: 46%; z-index: 60; font: 700 15px/1 sans-serif; color: #f2e6c8; background: #1d1814cc; border: 1px solid #6a5a44; border-radius: 4px; padding: 4px 9px; pointer-events: none; }
-#dbgHud { position: fixed; left: 50%; top: 22px; transform: translateX(-50%); z-index: 60; font: 11px/1.35 ui-monospace, monospace; color: #e8dcc0; background: #14100ccc; border: 1px solid #5a4a34; border-radius: 3px; padding: 3px 8px; pointer-events: none; white-space: nowrap; }
+#dbgHud { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: 78px; z-index: 60; font: 11px/1.35 ui-monospace, monospace; color: #e8dcc0; background: #14100ccc; border: 1px solid #5a4a34; border-radius: 3px; padding: 3px 8px; pointer-events: none; white-space: nowrap; max-width: 34vw; overflow: hidden; text-overflow: ellipsis; opacity: .85; } /* top-left, under the tick readout: clear of the objective title and the order bar */
 #dbgPanel { position: fixed; right: 0; top: 0; bottom: 0; width: min(460px, 100vw); z-index: 70; overflow-y: auto; background: #15110dF2; color: #e8dcc0; font: 13px/1.4 system-ui, sans-serif; border-left: 1px solid #6a5a44; padding: 12px 14px 40px; box-sizing: border-box; }
 #dbgPanel h3 { margin: 14px 0 6px; font-size: 14px; color: #f0d38a; } #dbgPanel h4 { margin: 10px 0 4px; font-size: 12px; color: #c8b890; font-weight: 600; }
 #dbgPanel button { font: 12px system-ui, sans-serif; background: #2a2219; color: #f2e6c8; border: 1px solid #6a5a44; border-radius: 3px; padding: 3px 7px; margin: 2px 3px 2px 0; cursor: pointer; }

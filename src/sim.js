@@ -1045,6 +1045,7 @@ class Sim {
   applyCommand(p, c) {
     const type = c[1] | 0;
     if (type === 21) { if (this.beaconBuy) this.beaconBuy(p, c[2] | 0); return; }
+    if (type === 22) { if (this.standPick) this.standPick(p, c[2] | 0); return; } // 闖營 Last Stand: a boon chosen
     if (type === 31) { this.debugCmd(p, c[2] | 0, c[3] | 0); return; }
     if (type === ORD_SPAWN) { if ((this.mode === 'assault' || this.mode === 'campaign') && !p.ai) this.deploy(p, c[0] | 0, c[2] | 0); return; }
     if (this.mode === 'assault' && type === ORD_DIRECTIVE) return; // in an assault you are a soldier: the generals are not yours to command
@@ -3961,6 +3962,7 @@ Sim.prototype.mQuietDone = function (el) {
 Sim.prototype.missionThink = function () {
   const M = this.mission; if (this.mwin !== undefined) return; if (this.mode === 'assault') return this.assaultThink();
   if (M.beacon && this.beaconTick) { this.beaconTick(); if (this.mwin !== undefined) return; }
+  if (M.stand && this.standTick) { this.standTick(); if (this.mwin !== undefined) return; }
   const mv = this.mv;
   if (mv.ph < 0) { mv.ph = 0; mv.t0 = this.tick; this.mStart(); }
   if (M.soldier && this.tick % 15 === 0) { this.aidPost(); const E = this.storyEase; if (E && E.regen) for (const p of this.players) { if (p.ai) continue; const h = this.units[p.heroId]; if (h && !h.dead && h.hp > 0 && h.hp < h.def.hp && this.tick - (h.hurtTk || 0) > 30 * 5) h.hp = Math.min(h.def.hp, h.hp + h.def.hp * E.regen * 0.5); } }
