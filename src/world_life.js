@@ -43,7 +43,7 @@ function wLifeDay() {
       else if (L >= 34) { WS.health -= 10; wNote('歲考四等，挨了板子。', 'The licentiates\' yearly test: fourth grade. The Director of Studies has you beaten ten strokes for idleness.'); }
       else { WS.status = 'none'; wNote('歲考六等，革了功名。', 'The licentiates\' yearly test: sixth grade. You are stripped of your licentiate\'s degree.'); } }
     if (WS.flags.linsheng && WS.status === 'shengyuan' && T.d === 1) WS.cash += 600; }
-  wXuArmy(); wArmyDay(); wFamilyDay(); wMoneyDay();
+  wXuArmy(); wArmyDay(); wFamilyDay(); wMoneyDay(); WS.weather = WCORE.weatherRoll(WS);
   if (WS.health < 30 && Math.random() < 0.02) wNote('你病了。', 'You are running a fever. A physician could help (Liaoyang, Beijing).');
   if (WS.health < 30) WS.health -= 0.6; else if (WS.health < 100) WS.health = Math.min(100, WS.health + 0.6);
   if (WS.health <= 0 && WS.alive) { WS.alive = false; WS.flags.diedOf = 'fever'; }
@@ -138,9 +138,10 @@ function wForge() {
 }
 
 // ---------------- more things to use in places ----------------
-Object.assign(W_THING, { bench: ['Sit on the magistrate\'s bench and hear the day\'s case', '升堂'], desk: ['Write a memorial to the throne', '上疏'], shrine: ['Pray at the shrine of the Earth God (土地)', '拜'], ledger: ['Your journal (J)', '記'], shop: ['Work your own smithy (four hours)', '鋪'], east: ['Slip away east to the coast, to Mao Wenlong (continues in the East River campaign)', '東'] });
+Object.assign(W_THING, { bench: ['Sit on the magistrate\'s bench and hear the day\'s case', '升堂'], desk: ['Write a memorial to the throne', '上疏'], shrine: ['Pray at the shrine of the Earth God (土地)', '拜'], ledger: ['Your journal (J)', '記'], hills: ['Go up into the hills to hunt (five hours)', '獵'], river: ['Fish in the river (three hours)', '漁'], shop: ['Work your own smithy (four hours)', '鋪'], east: ['Slip away east to the coast, to Mao Wenlong (continues in the East River campaign)', '東'] });
 function wMoreThings(P) { const T = [], S2 = P.spots;
-  if (WS.place === 'lijia') T.push({ k: 'shrine', x: S2.well[0] + 3, z: S2.well[1] + 2, prop: 'rack' });
+  if (WS.place === 'lijia') T.push({ k: 'shrine', x: S2.well[0] + 3, z: S2.well[1] + 2, prop: 'rack' }, { k: 'hills', x: S2.fieldE[0] + 8, z: S2.fieldE[1] - 6, prop: 'banner', sign: '山' });
+  if (WS.place === 'tongzhou' || WS.place === 'fushun') { const q = S2.quay || S2.wall; T.push({ k: 'river', x: q[0] + 3, z: q[1] + 2, prop: 'log' }); }
   if (WS.army && W_ARMYAT[WS.army.col] === WS.place && WS.place !== 'liaoyang') { const q = S2.yard || S2.gate || Object.values(S2)[0]; T.push({ k: 'bunk', x: q[0] + 4, z: q[1] + 3 }); }
   if (WS.jin && WS.place === 'lijia' && WS.day >= D(1621, 7, 1) && WS.day < D(1627, 1, 1)) T.push({ k: 'east', x: S2.road[0] + 6, z: S2.road[1], prop: 'banner', sign: '東' });
   if (WS.shop && WS.place === WS.shop.place && S2.smithy) T.push({ k: 'shop', x: S2.smithy[0] + 2, z: S2.smithy[1], prop: 'pot' });
@@ -151,6 +152,8 @@ function wMoreThings(P) { const T = [], S2 = P.spots;
 function wThingUse(T) {
   if (T.k === 'shrine') { if (WS.flags.prayed === WS.day) { toast('You have prayed today.'); return true; } WS.flags.prayed = WS.day; if (Math.random() < 0.3) { WS.luck = 1; WS.luckTo = WS.day + 10; } toast('You light a stick of incense before the little Earth God and his wife.'); return true; }
   if (T.k === 'bench') { wCourt(); return true; }
+  if (T.k === 'hills') { if (!WCORE.inv(WS, 'bow') && WS.arms < 20) { toast('You need a bow, or at least to know how to use one (arms 20).'); return true; } wPass(5, () => { const r = WCORE.hunt(WS); toast(r[1]); }); return true; }
+  if (T.k === 'river') { wPass(3, () => { const r = WCORE.fish(WS); toast(r[1]); }); return true; }
   if (T.k === 'hdesk') { wDeskWork(); return true; }
   if (T.k === 'academy') { wAcademy(); return true; }
   if (T.k === 'shop') { wShopWork(); return true; }
@@ -182,9 +185,9 @@ function wChoice(d) {
     const moved = WS.place !== place0 || WS.day !== day0;
     return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { if (WS.health <= 0) return wDie(WS.flags.diedFor || 'of his wounds'); if (WS.flags.toMao) return wToMao(); if (WS.flags.pendingBattle) { const m = WS.flags.pendingBattle; WS.flags.pendingBattle = null; return wBattle(m); } if (moved) return wScene(place0); const nx = WCORE.dilemmaNow(WS) || WCORE.festNow(WS, WS.home); if (nx) wChoice(nx); } }] }; } }; }), { noLeave: true });
 }
-function wAfterScene() { if (state.zheDlg || !WS.alive) return; if (WS.flags.toMao) return wToMao(); if (wArmyMoment()) return; const d = WCORE.dilemmaNow(WS) || wSiegeNow() || WCORE.famineNow(WS) || WCORE.festNow(WS, WS.home); if (d) wChoice(d); }
+function wAfterScene() { if (state.zheDlg || !WS.alive) return; if (WS.flags.toMao) return wToMao(); if (wArmyMoment()) return; const d = WCORE.dilemmaNow(WS) || wSiegeNow() || wEndNow() || WCORE.famineNow(WS) || WCORE.festNow(WS, WS.home); if (d) wChoice(d); }
 // the road's length: a horse cuts it by a third, winter adds two-fifths
-function wDays(ex) { if (!ex.days) return 0; let d = ex.days; if (WCORE.inv(WS, 'horse')) d = Math.max(1, Math.ceil(d * 2 / 3)); if (WCORE.season(WS.day) === 'winter') d = Math.ceil(d * 1.4); return d; }
+function wDays(ex) { if (!ex.days) return 0; let d = ex.days + (WS.weather === 'rain' ? 1 : 0); if (WCORE.inv(WS, 'horse')) d = Math.max(1, Math.ceil(d * 2 / 3)); if (WCORE.season(WS.day) === 'winter') d = Math.ceil(d * 1.4); return d; }
 // roads that are shut: the Jin hold the east after their cities fall; only the magistrate goes to his county
 function wRoadShut(ex) {
   const P = WPL[ex.to];
@@ -195,7 +198,7 @@ function wRoadShut(ex) {
 }
 function wRoadMeet(ex, arrive) {
   if (!ex.days) return false; let e = null; const d0 = WS.day; for (let i = 0; i < ex.days && !e; i++) { WS.day = d0 - i; e = WCORE.roadDay(WS); } WS.day = d0; if (!e) return false;
-  wPanel({ zh: e[2][0], en: e[2][1], t: `On the road to ${WPL[ex.to].en}` }, e[3], e[4].map(o => ({ q: o[0], fx: () => { const w = o[1](WS); WS.cash = Math.max(0, WS.cash); WS.health = Math.max(5, WS.health); wLog(e[2][0], `${e[2][1]}: ${w}`); return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { arrive(); } }] }; } })), { noLeave: true });
+  wPanel({ zh: e[2][0], en: e[2][1], t: `On the road to ${WPL[ex.to].en}` }, e[3], e[4].map(o => ({ q: o[0], fx: () => { const d1 = WS.day; const w = o[1](WS); if (WS.day > d1) { const n = WS.day - d1; WS.day = d1; wTurnDays(n); } WS.cash = Math.max(0, WS.cash); WS.health = Math.max(5, WS.health); wLog(e[2][0], `${e[2][1]}: ${w}`); return { lines: [['', w]], opts: [{ q: 'Go on', fx: () => { arrive(); } }] }; } })), { noLeave: true });
   return true;
 }
 
@@ -285,12 +288,14 @@ function wBattleCards(m) { const F = wFmt(WS.day).en;
   return ({ roadA: [{ title: '東路 · The east road', year: F, p: ['General Liu Ting\'s column marches from Kuandian toward Hetu Ala: the Zhejiang men, the Sichuan men, the Korean allies, and the Liaoyang levy, you among them. The snow is still on the passes.'] }],
     abudali: [{ title: '阿布達里岡 · Abudali', year: F, p: ['The column has come out of the hills at Abudali. There is no word from the other columns.'] }],
     hunw: [{ title: '渾河 · The Hun River', year: F, p: ['Shenyang has fallen. The Sichuan and Zhejiang men under Chen Ce and Tong Zhongkui have crossed the Hun River to try to retake it. Your company is with them, on the north bank, with the river at your backs.'] }],
+    shanhai: [{ title: '山海關 · The First Pass Under Heaven', year: F, p: ['Li Zicheng\'s army attacks Wu Sangui\'s men at the Pass. On the flank, behind a curtain of dust, the Qing banners are waiting for the moment.'] }],
     sj2: [{ title: '廣渠門 · The Guangqu Gate', year: F, p: ['The twentieth day of the eleventh month. Yuan Chonghuan\'s nine thousand Ningyuan cavalry stand outside the Guangqu Gate against the Jin army. The gate is shut behind them.'] }],
     ningyuan: [{ title: '寧遠 · Ningyuan', year: F, p: ['Nurhaci has come with his whole army across the frozen plain. Every fort beyond the Pass has been abandoned except this one. Yuan Chonghuan has burned the suburbs, brought the people inside, and mounted the red barbarian cannon on the walls.'] }] })[m]
     || [{ title: '遼陽 · Liaoyang', year: F, p: ['The Jin are in the city. Get your family out.'] }]; }
 function wFinishMore(m, heads) {
   if (m === 'hunw') { wMatesFall(0.5); const d = D(1621, 3, 18); if (WS.day < d) wTurnDays(d - WS.day); WS.place = 'liaoyang'; WS.from = 'west'; WS.hour = 9; wSave();
     zCards([{ title: '渾河 · The Hun River', year: wFmt(WS.day).en, p: ['The north bank was lost. The Sichuan men fought until there were none of them left; the Zhejiang men on the south bank were overrun the next day. You swam the river at dusk.', 'You are back in Liaoyang. The Jin are three days behind you.'] }], () => wScene('west')); return true; }
+  if (m === 'shanhai') { wSave(); zCards([{ title: '一片石 · The Pass', year: wFmt(WS.day).en, p: ['When Li Zicheng\'s men were spent, the Qing cavalry came out of the dust. By evening the Shun army was running for Beijing; in two weeks the Qing were in the capital. The Ming you fought for is gone.'] }], () => wScene()); return true; }
   if (m === 'sj2') { wMatesFall(0.3); wSave(); zCards([{ title: '廣渠門 · The Guangqu Gate', year: wFmt(WS.day).en, p: ['The Jin drew off from the Guangqu Gate. In the city they are saying Yuan Chonghuan let them through the Wall on purpose.'] }], () => wScene()); return true; }
   if (m === 'ningyuan') { wMatesFall(0.15); if (WS.army) WS.army.r = Math.min(W_ARMY.length - 1, WS.army.r + 1); wSave();
     zCards([{ title: '寧遠大捷 · Victory at Ningyuan', year: wFmt(WS.day).en, p: ['The Jin assault broke on the walls of Ningyuan under the fire of the red barbarian cannon. It was the first defeat of Nurhaci\'s life; by the summer he was dead.', WS.army ? `You are made ${W_ARMY[WS.army.r][2]}.` : ''] }], () => wScene()); return true; }
@@ -421,3 +426,34 @@ function wJourBox() { let box; box = document.createElement('div'); box.id = 'wJ
     st.textContent = `#wJour { position: fixed; inset: 0; z-index: 70; background: rgba(12,10,8,.82); display: flex; align-items: center; justify-content: center; }
 #wJour .pp { width: min(760px, 94vw); max-height: 86vh; overflow: auto; background: #efe6cf; color: #2a2018; padding: 22px 28px; border: 1px solid #8a6a3a; font: 14px/1.55 Georgia, serif; box-shadow: 0 10px 40px #000; }
 #wJour h3 { margin: 0 0 2px; font: 700 19px Georgia, serif; } #wJour h4 { margin: 12px 0 2px; font: 700 14px Georgia, serif; color: #5a3a1a; } #wJour small { color: #6a5a46; } #wJour .lg { color: #4a3a28; font-size: 13px; }`; document.head.appendChild(st); return box; }
+
+// ===================== R9: the dynasty's last years, to 1644 =====================
+WEV.push([D(1631, 10, 28), 'dalinghe', '大凌河城降了。祖大壽投了韃子。', 'Dalinghe has surrendered. Zu Dashou went over to the Jin.'],
+  [D(1631, 11, 29), 'wuqiao', '孔有德的兵在吳橋反了，往山東殺回去了。', 'Kong Youde\'s men have mutinied at Wuqiao and are fighting their way back into Shandong.'],
+  [D(1633, 4, 1), 'kongjin', '孔有德、耿仲明帶著紅夷炮從海上投了韃子。', 'Kong Youde and Geng Zhongming have gone over to the Jin by sea, with the red barbarian cannon.'],
+  [D(1636, 4, 11), 'qing', '皇太極在瀋陽稱帝了，國號大清。', 'Hong Taiji has declared himself emperor at Shenyang. He calls his state the Great Qing.'],
+  [D(1639, 1, 2), 'jinan', '清兵破了濟南，德王被擄去了。', 'The Qing have sacked Jinan and carried off the Prince of De.'],
+  [D(1641, 1, 20), 'luoyang', '李自成破了洛陽，把福王煮了吃了。', 'Li Zicheng has taken Luoyang. They say he boiled the Prince of Fu and ate him with venison.'],
+  [D(1642, 2, 18), 'songshan', '松山破了，洪承疇降了清。', 'Songshan has fallen. Hong Chengchou has surrendered to the Qing.'],
+  [D(1644, 1, 1), 'dashun', '李自成在西安稱王，國號大順。', 'Li Zicheng has proclaimed himself king at Xi\'an, of the Great Shun.'],
+  [D(1644, 3, 19), 'chongzhen', '李自成進了北京。皇上在煤山上吊了。', 'Li Zicheng is in Beijing. The Emperor has hanged himself on Coal Hill.'],
+  [D(1644, 4, 22), 'shanhaiguan', '吳三桂開了山海關，請清兵進來打李自成。', 'Wu Sangui has opened the Shanhai Pass and called in the Qing against Li Zicheng.'],
+  [D(1644, 5, 2), 'qingbj', '清兵進了北京。', 'The Qing have entered Beijing.'],
+  [D(1645, 6, 15), 'queue', '剃髮令下了：留頭不留髮，留髮不留頭。', 'The order to shave has gone out to the whole empire: keep your hair and lose your head, or keep your head and lose your hair.']);
+WEV.sort((a, b) => a[0] - b[0]);
+for (const y of [1630, 1633, 1636, 1639, 1642]) WEX.push(['xiangshi', D(y, 8, 9), 'city', 'exam', 'shengyuan', 'juren', 68, D(y, 8, 29), '鄉試', 'the Shuntian provincial exam (鄉試)']);
+for (const y of [1631, 1634, 1637, 1640, 1643]) WEX.push(['huishi', D(y, 2, 9), 'city', 'exam', 'juren', 'jinshi', 78, D(y, 3, 15), '會試', 'the metropolitan exam (會試) and the palace exam']);
+for (const y of [1630, 1632, 1635, 1638, 1641]) WEX.push(['tongshi', D(y, 4, 10), 'tongzhou', 'market', 'none', 'shengyuan', 48, D(y, 4, 20), '童試', 'the licentiate exam (童試)']);
+WEX.sort((a, b) => a[1] - b[1]);
+// the fall of Beijing, the Pass, the queue
+function wEndNow() {
+  const at = (p) => p.includes(WS.place), d = WS.day, done = (k) => WS.dil && WS.dil[k];
+  if (d >= D(1644, 3, 19) && d < D(1644, 4, 25) && at(['city', 'beijing', 'palace']) && !done('fall1644')) return { k: 'fall1644', title: ['甲申', 'The year jiashen: Beijing falls'], text: [['', 'Li Zicheng\'s men are in the streets. The Emperor is dead on Coal Hill; the Empress has hanged herself in the palace. Officials are being rounded up and tortured for their silver (追贓).']],
+    opts: [['Serve the Great Shun: put on their cap and go to their ministry', 'You keep your life and lose your silver. Six weeks later the Shun army runs from the Qing and you run with it, or don\'t.', (S) => { S.cash = Math.floor(S.cash / 5); S.flags.servedShun = 1; S.karma = (S.karma | 0) - 2; }],
+      ['Hide in the cellar of a friend\'s house', 'Forty days in the dark. When you come up the Qing are in the city.', (S) => { S.health -= 15; }],
+      ['Die for the dynasty (殉節)', 'You write a last poem on the wall in your own blood and hang yourself from the beam, as two dozen officials do that week. Your name goes into the histories.', (S) => { S.flags.diedFor = 'for the Ming, in Beijing, in the spring of 1644, by his own hand'; S.health = 0; }]] };
+  if (d >= D(1644, 4, 18) && d < D(1644, 4, 23) && WS.place === 'shanhai' && !done('pass1644')) return { k: 'pass1644', title: ['山海關', 'The Pass, the twenty-second day'], text: [['', 'Li Zicheng\'s army is coming up the road from Beijing. Wu Sangui has sent to the Qing regent Dorgon. Tomorrow the gates may open to the people you have fought all your life.']],
+    opts: [['Fight on the Pass with Wu Sangui\'s men', 'You are given a horse.', (S) => { S.flags.pendingBattle = 'shanhai'; }], ['Slip away inside the Wall before the battle', 'You walk to Yongping and do not look back.', (S) => { S.place = 'tongzhou'; S.from = 'shanhai'; S.day += 5; }]] };
+  if (d >= D(1645, 6, 15) && !done('queue1645') && WS.place !== 'jin') return { k: 'queue1645', title: ['剃髮令', 'Keep your hair, lose your head'], text: [['', 'The Qing order has come here too: every man to shave the front of his head and wear the queue within ten days, on pain of death.'], ['留頭不留髮，留髮不留頭。', 'Keep your head and lose your hair; keep your hair and lose your head.']],
+    opts: [['Shave', 'You shave. Your father\'s generation would not know you.', (S) => { S.jin = 1; }], ['Become a monk: a shaven head under no one\'s order', 'You take the tonsure at the temple. The Qing leave monks alone.', (S) => { S.flags.monk = 1; S.office = null; S.army = null; }], ['Refuse', 'They take your head at the market cross.', (S) => { S.flags.diedFor = 'in 1645, refusing to shave his head for the Qing'; S.health = 0; }]] };
+  return null; }

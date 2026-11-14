@@ -104,7 +104,7 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 73. Life goals the game recognises: a degree, an office, a family, wealth, a name.
 74. The tombstone page, kept in a hall of lives (the last lives you lived).
 
-## R9: travel and land
+## R9 (done, v172): travel, land, and the dynasty's end
 75. Winter roads: +50% days; snow in the scene.
 76. Rain days: travel slower; the teahouse fuller.
 77. Hunting in the hills in autumn (furs to sell).

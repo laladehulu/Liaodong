@@ -14,7 +14,7 @@ const wDay = (y, m, d) => (y - W_Y0) * 360 + (m - 1) * 30 + (d - 1);
 const wDate = (day) => { const y = W_Y0 + Math.floor(day / 360), r = day - (y - W_Y0) * 360; return { y, m: Math.floor(r / 30) + 1, d: (r % 30) + 1 }; };
 const ZHN = '〇一二三四五六七八九十';
 const zhNum = (n) => n <= 10 ? ZHN[n] : n < 20 ? '十' + (n % 10 ? ZHN[n % 10] : '') : ZHN[Math.floor(n / 10)] + '十' + (n % 10 ? ZHN[n % 10] : '');
-const wReign = (y, m) => y < 1620 || (y === 1620 && m < 8) ? ['萬曆', 'Wanli', y - 1572] : y === 1620 ? ['泰昌', 'Taichang', 1] : y < 1628 ? ['天啟', 'Tianqi', y - 1620] : ['崇禎', 'Chongzhen', y - 1627];
+const wReign = (y, m) => y < 1620 || (y === 1620 && m < 8) ? ['萬曆', 'Wanli', y - 1572] : y === 1620 ? ['泰昌', 'Taichang', 1] : y < 1628 ? ['天啟', 'Tianqi', y - 1620] : y < 1644 || (y === 1644 && m < 5) ? ['崇禎', 'Chongzhen', y - 1627] : ['順治', 'Shunzhi', y - 1643];
 function wFmt(day) { const D = wDate(day), R = wReign(D.y, D.m); const dz = D.d <= 10 ? '初' + ZHN[D.d] : zhNum(D.d);
   return { zh: `${R[0]}${R[2] === 1 ? '元' : zhNum(R[2])}年${D.m === 1 ? '正' : zhNum(D.m)}月${dz}`, en: `${R[1]} ${R[2]}, the ${D.m}${D.m === 1 ? 'st' : D.m === 2 ? 'nd' : D.m === 3 ? 'rd' : 'th'} month, day ${D.d} (${D.y})` }; }
 const wHourName = (h) => h < 5 ? 'night' : h < 7 ? 'dawn' : h < 11 ? 'morning' : h < 14 ? 'midday' : h < 17 ? 'afternoon' : h < 19.5 ? 'evening' : 'night';
@@ -222,7 +222,7 @@ function wScene(arriveFrom) {
   for (const t of things) { if (t.k === 'exit') props.push(['banner', t.x + 1.4, t.z, 0, t.ex.sign]); if (t.k === 'forge') { props.push(['pot', t.x, t.z, 0], ['rack', t.x + 1.6, t.z + 0.6, 0.4]); fires.push([t.x - 0.4, t.z + 0.9]); } if (t.k === 'inn') props.push(['pot', t.x, t.z, 0], ['log', t.x + 1.4, t.z + 1, 0.3]); if (t.k === 'board') props.push(['rack', t.x, t.z, 0]); if (t.k === 'books') props.push(['log', t.x, t.z, 0]); if (t.prop) props.push([t.prop, t.x, t.z, t.yaw || 0, t.sign]); }
   if (WS.place === 'lijia' && night) fires.push([WPL.lijia.spots.hearth[0], WPL.lijia.spots.hearth[1]]);
   const bedT = things.find(t => t.k === 'bed' || (t.k === 'bunk')), bedrolls = bedT ? [[bedT.x, bedT.z, 0, false]] : [];
-  const camp = { world: true, map: P.map, biome: WCORE.biome(WS.day, night), fog: night ? 0.3 : 0.12, type: 'ronin', team: 0, fires, tents: [], props, bedrolls, npcs, things, me: { x: at[0], z: at[1], yaw: 0, role: 'spear' }, myRank: wRank() };
+  const camp = { world: true, map: P.map, biome: WCORE.biome(WS.day, night), weather: WS.weather === 'rain' && !night ? 'storm' : undefined, fog: night ? 0.3 : 0.12, type: 'ronin', team: 0, fires, tents: [], props, bedrolls, npcs, things, me: { x: at[0], z: at[1], yaw: 0, role: 'spear' }, myRank: wRank() };
   ZC = null; ZB = null; WB = null;
   WZ = { place: WS.place, people, things, chatT: 5, hourT: 0, night };
   if (bedT) ZC = { bed: [bedT.x, bedT.z], world: true }; // (the bed marker: main.js marks ZC.bed)

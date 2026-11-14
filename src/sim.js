@@ -290,7 +290,7 @@ class Sim {
     this.solo = (cfg.players || []).length === 1; this.xc = XCOMBAT || !!cfg.xcombat; this.noRout = true; // nobody routs: squads fight on (and beaten mission groups withdraw by script)
     this.mode = MODES[cfg.mode] ? cfg.mode : 'standard'; this.chaos = this.mode === 'chaos'; this.real = this.mode === 'soldier' || this.mode === 'assault'; this.lethal = this.mode === 'soldier';
     this.mission = this.mode === 'campaign' ? (MISSIONS[cfg.mission] || MISSIONS.taizhou) : this.mode === 'assault' ? (OPS[cfg.op] || OPS.liaoyang) : null;
-    if (this.mission && this.mission.bdef) this.bdef = Object.assign({}, this.bdef, this.mission.bdef); if (cfg.camp && cfg.camp.biome) this.bdef = Object.assign({}, this.bdef, { biome: cfg.camp.biome, fog: cfg.camp.fog !== undefined ? cfg.camp.fog : this.bdef.fog }); /* a camp on a real field, at night */ // a story mission can re-dress a map: another season, rain, another name
+    if (this.mission && this.mission.bdef) this.bdef = Object.assign({}, this.bdef, this.mission.bdef); if (cfg.camp && cfg.camp.biome) this.bdef = Object.assign({}, this.bdef, { biome: cfg.camp.biome, fog: cfg.camp.fog !== undefined ? cfg.camp.fog : this.bdef.fog }); if (cfg.camp && cfg.camp.weather) this.bdef = Object.assign({}, this.bdef, { weather: cfg.camp.weather }); /* the open world's rain */ /* a camp on a real field, at night */ // a story mission can re-dress a map: another season, rain, another name
     this.layout = this.planTerrain(); setTerrain(this.layout);
     this.rangeMul = 1 - 0.35 * this.bdef.fog;
     this.tick = 0; this.events = []; this.units = []; this.squads = []; this.players = []; this.generals = [];
