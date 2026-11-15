@@ -67,7 +67,7 @@ const YY_PLAY = { brush: ['Wolf-brush (Langxian)', '狼筅手'], shield: ['Ratta
   YYDEF.cook = mk({ weapons: ['katana'], reach: 2.0, dmg: [34, 28, 24, 28], block: 0.2, hp: 100 }); }
 // the Jin side fields the same drill under other banners
 const ALT = {
-  samurai: { name: 'Armored Bannermen', jp: '甲兵', desc: 'Eight Banners infantry in studded armor coats. Solid line breakers.', shield: false },
+  samurai: { name: 'Armored Bannermen', jp: '甲兵', desc: 'Eight Banners infantry in studded armor coats: no shield, but blades and arrows bite less. Solid line breakers.', shield: false, armor: 0.88 },
   ashigaru: { name: 'Han Banner Spearmen', jp: '漢軍槍兵', desc: 'Han Chinese bannermen with long spears. Cheap and long-reaching, but quick to break.' },
   horokutai: { name: 'Ujen Grenadiers', jp: '烏真超哈', desc: 'Han Banner grenadiers with iron bombs. They hurl them into packed ranks, then draw blades.' },
   ronin: { name: 'Mongol Raiders', jp: '蒙古兵', desc: 'Light Mongol fighters on foot. Cheap, fast, ragged and quick to run.' },
@@ -814,7 +814,8 @@ class Sim {
     if (this.phase === 1 && this.wx && !this.wx.done && this.tick - this.battleTick >= this.wx.at) this.weatherChange();
     if (this.phase === 1 && this.wx && this.wx.lift && this.tick >= this.wx.lift) this.weatherLift();
     if (this.phase === 1) { if (this.tick % 15 === 0) { this.objectivesThink(); this.fireThink(); } this.navalThink(); if (this.rain) this.stormThink(); if (this.duels.length) this.duelThink(); if (this.heroMode) this.heroThink(); }
-    for (let i = 0; i < units.length; i++) { const u = units[i]; if (!u.dead && !u.inactive) this.updateUnit(u); }
+    /* fairness: men are updated in turn, and whoever goes first lands his blow first when two swing on the same tick; so the order runs forward one tick and backward the next (team 0 used to win a mirror duel 21 times in 24) */
+    if (this.tick & 1) { for (let i = units.length - 1; i >= 0; i--) { const u = units[i]; if (!u.dead && !u.inactive) this.updateUnit(u); } } else for (let i = 0; i < units.length; i++) { const u = units[i]; if (!u.dead && !u.inactive) this.updateUnit(u); }
     if (this.xc) this.xcEbb();
     if (this.phase === 1 && this.tick % 3 === 0) this.brushThink();
     if (this.waves.length && this.phase === 1 && this.tick % 15 === 0) this.wavesThink();
@@ -1919,6 +1920,7 @@ class Sim {
   applyDamage(u, dmg, attackerId, ix, iy, iz, cause, hx, hy, hz) {
     if (u.dead || u.inactive) return false; if (dmg > 0) u.hurtTk = this.tick;
     if (u.ctrl >= 0 && this.players[u.ctrl] && this.players[u.ctrl].god) return false; // debug mode: the tester cannot be hurt
+    if (u.def.armor && dmg > 0 && !this.storyEase && !(this.mission && this.mission.soldier) && (cause === 'melee' || cause === 'counter' || cause === 'arrow' || cause === 'spear')) dmg *= u.def.armor; // a studded armour coat (not in the story chapters, which are balanced by hand)
     if (this._covZ && dmg > 0 && u.team !== this.mission.attacker) { for (const z of this._covZ) if (z && len(u.x - z.x, u.z - z.z) < z.r + 5) { dmg *= this._cov; break; } } // assault: defenders on the line they hold fight from cover
     if (this.storyEase && dmg > 0) { if (u.ctrl >= 0 && !this.players[u.ctrl].ai) dmg *= this.storyEase.take; else if (u.team === this.mission.side) dmg *= this.storyEase.ally; } // a story chapter at the chosen difficulty
     if (this.xc && u.ctrl >= 0 && !this.players[u.ctrl].ai && (cause === 'melee' || cause === 'trample' || cause === 'spear' || cause === 'counter' || cause === 'arrow' || cause === 'shot')) { // no instant deaths in a crowd or under a whole company's volley
