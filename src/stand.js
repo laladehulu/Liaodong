@@ -28,6 +28,9 @@
     ['drum', '鼓', 'War drum', 'Your men: +25% health, and much harder to break'],
     ['gun', '砲', 'Nest of Bees', 'A rocket cart is brought up to the camp, yours to command'],
     ['life', '命', 'Second wind', 'One more life'],
+    ['shield', '牌', 'Rattan shields', 'You and your men turn a blade a third more often'],
+    ['powder', '雷', 'Thunder-crash bombs', 'Three hand bombs for you to throw'],
+    ['fury', '怒', 'Hot wine', 'You: +12% speed, +15% blade damage, but -10% health'],
   ];
   const LEVY = ['ashigaru', 'rifle_imp', 'yuanyang', 'rifle_spencer'];
   const groups = {
@@ -157,6 +160,9 @@
     else if (key === 'aim') each([hero].concat(live), (n) => { if (n.rifle) { n.rifle.spread *= 0.67; if (n.rifle.ads) n.rifle.ads *= 0.67; } if (n.bow && n.bow.spread) n.bow.spread *= 0.67; });
     else if (key === 'drum') { each(live, (n) => { n.hp *= 1.25; }); for (const sid of p.squads) { const q = this.squads[sid]; if (q) { q.moraleMax *= 1.8; q.morale = q.moraleMax; } } }
     else if (key === 'life') T.lives[p.idx] = (T.lives[p.idx] | 0) + 1;
+    else if (key === 'shield') each([hero].concat(live), (n) => { if (n.block !== undefined) n.block = Math.min(0.9, n.block * 1.33); });
+    else if (key === 'powder') { if (hero && !hero.dead) hero.bombs = (hero.bombs | 0) + 3; p.bombs = (p.bombs | 0) + 3; }
+    else if (key === 'fury') each([hero], (n) => { n.speed *= 1.12; if (n.dmg) n.dmg = n.dmg.map(v => v * 1.15); n.hp *= 0.9; });
     else if (key === 'levy' || key === 'gun') { const gid = this.standFree(key === 'gun' ? 'lvg' : 'lv'); if (gid) this.standJoin(p, gid); }
     T.picked[p.idx] = b; T.took[p.idx] = (T.took[p.idx] || []).concat([b]); T.log.push([this.tick, p.idx, b]); if (T.log.length > 12) T.log.shift();
     this.events.push({ t: 'spick', p: p.idx, b });
