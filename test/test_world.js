@@ -40,12 +40,13 @@ for (let L = 0; L < LIVES; L++) {
   }
   // prices sane on all places at the end
   for (const p of PLACES) for (const g in C.GOODS) { const v = C.price(S, p, g); if (!(v > 0 && v < 50000)) bad(`price ${p} ${g} ${v}`, S); }
+  (globalThis.ENDS = globalThis.ENDS || []).push({ cash: S.cash, land: S.land, learning: Math.round(S.learning), smith: Math.round(S.smith || 0), goals: C.goals(S).filter(g => g[2]).map(g => g[1]).length });
   const J = C.journal(S); if (!J.length || J.some(l => l.length !== 3 || typeof l[2] !== 'string')) bad('journal', S);
 }
 // the seasons
 const seas = [1, 3, 6, 9, 12].map(m => C.season(C.D(1619, m, 5))).join(','); if (seas !== 'winter,spring,summer,autumn,winter') { fails++; console.log('FAIL seasons', seas); }
 // determinism: same seed, same folk
 { const a = C.makeFolk({ seed: 5 }), b = C.makeFolk({ seed: 5 }); if (JSON.stringify(a) !== JSON.stringify(b)) { fails++; console.log('FAIL folk not deterministic'); } }
-console.log(JSON.stringify(stats));
+console.log(JSON.stringify(stats)); { const E = globalThis.ENDS || []; const avg = (k) => Math.round(E.reduce((a, e) => a + e[k], 0) / E.length); console.log("end of life (avg): cash", avg("cash"), "max cash", Math.max(...E.map(e => e.cash)), "learning", avg("learning"), "smith", avg("smith"), "goals", (E.reduce((a, e) => a + e.goals, 0) / E.length).toFixed(1)); }
 console.log(fails ? `${fails} FAILURES` : `OK: ${LIVES} lives × ${YEARS} years`);
 process.exit(fails ? 1 : 0);
