@@ -381,7 +381,8 @@ function wExam(ex) {
 
 // ---------------- battles: when history comes for your company ----------------
 function wBattle(mission) {
-  const M = SIM.MISSIONS[mission]; if (!M) return wScene();
+  try { CH.missions(); CH.missions2(); CH.missions3(); } catch (e) { } /* the story variants (the Hun River's north bank, Juehua...) are installed on first use */
+  const M = SIM.MISSIONS[mission]; if (!M) { console.warn('world: no mission', mission); return wScene(); }
   WB = { mission }; WZ = null; ZC = null; ZB = null;
   const cards = wBattleCards(mission);
   zCards(cards, () => { startGame({ seed: (Math.random() * 0x7fffffff) | 0, battle: M.battle, mode: 'campaign', mission, players: [{ name: WS.name.zh, team: M.side | 0, connected: true }] }, 0, null, 1);
@@ -432,4 +433,4 @@ function wMenu() {
   zheHUD = function (dt) { if (WZ && WS && state.sim && state.sim.cfg.camp && state.sim.cfg.camp.world) return wHUD(dt); return hud(dt); };
   zheFinish = function (w) { if (WB) return wFinish(w); return fin(w); }; }
 setTimeout(() => { try { wMenu(); } catch (e) { } }, 400);
-window.__world = { wBunk, wAfterFall, wArmyMoment, WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks
+window.__world = { wBattleTest: (m) => { wBattle(m); const b = [...document.querySelectorAll("button")].find(b => /Continue/.test(b.textContent) && b.offsetParent); if (b) b.click(); }, wBunk, wAfterFall, wArmyMoment, WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks

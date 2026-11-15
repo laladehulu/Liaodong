@@ -439,6 +439,7 @@ function missionHUD(dt) {
   $('mobj').innerHTML = h; $('mobj').hidden = !!M.soldier;
 }
 function missionFinish(winner) {
+  if (typeof WB !== 'undefined' && WB && typeof wFinish === 'function') { $('mobj').hidden = true; $('radio').hidden = true; return wFinish(winner); } /* a battle of the open world (a commander's mission such as Ningyuan) goes back to the life */
   if (state.sim.mission.soldier && typeof arsRecord === 'function') { try { arsRecord(); } catch (e) { } }
   if (state.sim.mission.soldier && typeof zheFinish === 'function') { $('mobj').hidden = true; $('radio').hidden = true; return zheFinish(winner); }
   const sim = state.sim, me = sim.players[state.localIdx]; const won = winner === me.team; $('mobj').hidden = true; $('radio').hidden = true;
