@@ -121,3 +121,21 @@ world moving without them in a way they can see. "Flavour only" ideas are kept o
 - Playing as a woman: the world's exams and offices were closed to women; a woman's life is a different game deserving its own design. Not now.
 - Real portraits of historical people: not allowed and not needed.
 - An economy simulated at the level of every sack of grain: the cost is high and the player can't see it; prices by date and place are enough.
+
+# Part 2: every mode (v175–)
+Method: measure first. Three harnesses now play the whole game headless: `test/test_missions.js` (every phased story and co-op
+mission, played honestly: the hero walks, a commander orders his companies), `test/test_modes.js` (every skirmish mode on every
+field, AI against AI: does it end, does it stall), and the browser smoke tests (`test/smoke_menu.js`, every mode started).
+
+Found and fixed:
+- Assault/Siege: attackers won every operation in 4–8 minutes, losing ~44 men to the defenders' ~207 (v176: cover on the held line, faster defender reserves, per-operation tuning).
+- Duels: the side updated first landed the first blow on simultaneous swings (team 0 won mirror duels 21 of 24); the Jin armoured bannerman was the Ming shield man without the shield (v177).
+- Open world: the Hun River battle was skipped, Ningyuan didn't return to your life, the Shanhai Pass pointed at nothing (v180).
+- A menu-breaking TDZ error in v173 (v174); the smoke test now catches that class.
+
+Added: after-action reports (v175), medals for missions, operations and the Story battles (v175, v183), saved armies (v178), the codex (v179),
+the controls card (v181), difficulty against the AI in the open modes (v182), the won–lost record (v183), quick battle (v184).
+
+Measured and left alone: skirmish AI-vs-AI is even (4/2 over seeds), Beacon is won by a bot that only lights fires on Recruit and
+Soldier and lost on Veteran, idle squads far from the enemy are holding by design (guns in range, river guards), the sim costs
+1.5 ms a tick in a field battle and 8.6 ms in a grand battle (budget 33 ms).
