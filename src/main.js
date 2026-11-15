@@ -194,6 +194,15 @@ function skDiffRow() { const on = /^(standard|grand|officers|chaos|heroes|story)
   el.hidden = !on; if (!on) return; const cur = diffPref();
   el.innerHTML = '<span style="font:700 11px sans-serif;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-right:4px">Against the AI</span>' + SKD.map((d, i) => `<button type="button" class="btn sm${i === cur ? ' primary' : ''}" data-d="${i}">${d[0]} ${d[1]}</button>`).join('') + `<small style="opacity:.75">${SKD[cur][2]}</small>`;
   el.querySelectorAll('button').forEach(b => b.onclick = () => { try { localStorage.setItem('mingDiff', b.dataset.d); } catch (e) { } AUDIO.init(); AUDIO.play('ui'); skDiffRow(); }); }
+// 擂台 · the duel ladder (solo): five opponents in turn, each of his own kind and harder; beat one to meet the next
+const DUEL_LADDER = [{ name: 'Zhao Dahu, a village wrestler with a dao', type: 'samurai', k: 0.75 }, { name: 'Sun Er, a spearman of Cangzhou', type: 'ashigaru', k: 1.0 }, { name: 'Tong Ala, an armoured bannerman', type: 'samurai', k: 1.0 },
+  { name: 'Liu the horse-cutter, with the zhanmadao', type: 'jigen', k: 1.12 }, { name: 'Esen, a Bayara of the Khan\'s guard', type: 'shinsengumi', k: 1.25 }];
+function duelRung() { try { return Math.max(0, Math.min(DUEL_LADDER.length, +(localStorage.getItem('mingDuelRung') || 0))); } catch (e) { return 0; } }
+function duelFoeNow() { const r = state.duelPick !== undefined ? state.duelPick : duelRung(); return DUEL_LADDER[Math.min(r, DUEL_LADDER.length - 1)]; }
+function duelRow() { let el = $('duelLad'); const host = $('roster'); if (!host) return; if (!el) { el = document.createElement('div'); el.id = 'duelLad'; el.style.cssText = 'margin:0 0 12px;font-size:12.5px'; host.parentNode.insertBefore(el, host); }
+  el.hidden = state.mode !== 'duel'; if (el.hidden) return; const r = duelRung(), cur = state.duelPick !== undefined ? state.duelPick : Math.min(r, DUEL_LADDER.length - 1);
+  el.innerHTML = `<div style="font:700 11px sans-serif;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-bottom:4px">擂台 · The ladder (alone against the swordsman)${r >= DUEL_LADDER.length ? ' · all five beaten' : ''}</div>` + DUEL_LADDER.map((f, i) => `<button type="button" class="btn sm${i === cur ? ' primary' : ''}" data-r="${i}"${i > r ? ' disabled' : ''} style="margin:0 4px 4px 0">${i + 1}. ${f.name}${i < r ? ' ✓' : ''}</button>`).join('');
+  el.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { state.duelPick = +b.dataset.r; AUDIO.init(); AUDIO.play('ui'); duelRow(); }); }
 function armyRestore() { const A = armyStore(), f = state.faction | 0, a = A['last' + f]; if (a && a.length && a.every(k => S.ROSTER[f].includes(k)) && armyCost(a) <= S.BUDGET) state.army = a.slice();
   if (A.menu && S.BATTLES[A.menu.battle] && !S.BATTLES[A.menu.battle].hidden) state.battle = A.menu.battle; }
 function renderMenu() {
@@ -202,7 +211,7 @@ function renderMenu() {
   const ros = S.ROSTER[state.faction]; const cost = armyCost(state.army), left = S.BUDGET - cost;
   const b = $('budget'); b.textContent = `${left} / ${S.BUDGET} taels`; b.classList.toggle('over', left < 0);
   $('armyCount').textContent = `${state.army.length} squad${state.army.length === 1 ? '' : 's'} · ${state.army.reduce((s, k) => s + S.DEFS[k].count, 0)} men`;
-  armyPresets(); try { skDiffRow(); } catch (e) { }
+  armyPresets(); try { skDiffRow(); duelRow(); } catch (e) { }
   const r = $('roster'); r.innerHTML = '';
   for (const k of ros) {
     const d = S.defFor(k, state.faction); const el = document.createElement('div'); el.className = 'unit';
@@ -254,7 +263,7 @@ function soloStart() {
   const cfg = myCfg(); const seed = (Math.random() * 0x7fffffff) | 0;
   state.lowfx = $('lowfxIn').checked; state.fog = false;
   if (state.mode === 'story') { const c = campFor(state.faction, state.chapter); if (c) { cfg.veterans = c.veterans; cfg.recruits = state.recruits.slice(); } }
-  startGame({ seed, battle: state.battle, standMap: state.standMap, mode: state.mode, chapter: state.chapter, scen: state.scen, mission: state.mission, op: state.op, diff: diffPref(), ai: aiFor(state.mode), players: [{ ...cfg, connected: true }] }, 0, null, 1);
+  startGame({ seed, battle: state.battle, standMap: state.standMap, duelFoe: state.mode === 'duel' ? duelFoeNow() : undefined, mode: state.mode, chapter: state.chapter, scen: state.scen, mission: state.mission, op: state.op, diff: diffPref(), ai: aiFor(state.mode), players: [{ ...cfg, connected: true }] }, 0, null, 1);
 }
 // ---- the war council: every mode but Story is set up here. On its own it is a room on this computer (you and any AI generals
 // you add); "Invite friends" opens it online with a code, keeping everything chosen so far
@@ -972,6 +981,7 @@ function finish(winner) {
   if (sim.real && typeof soldierFinish === 'function') soldierFinish(winner);
   if (sim.mission && typeof missionFinish === 'function') missionFinish(winner);
   try { aarShow(sim, me); } catch (e) { }
+  if (sim.mode === 'duel' && !state.net && sim.cfg.duelFoe && won) { const i = DUEL_LADDER.findIndex(f => f.name === sim.cfg.duelFoe.name); if (i >= 0 && i === duelRung()) { try { localStorage.setItem('mingDuelRung', String(i + 1)); } catch (e) { } state.duelPick = undefined; $('resultText').textContent += i + 1 < DUEL_LADDER.length ? ` You beat ${sim.cfg.duelFoe.name}. Next on the ladder: ${DUEL_LADDER[i + 1].name}.` : ' You have beaten all five. The ladder is yours.'; } }
   // your record against the AI in the open modes, kept per mode and difficulty
   if (!sim.mission && !state.net && winner !== 2 && /^(standard|grand|officers|chaos|heroes|duel)$/.test(sim.mode)) { try { const R = JSON.parse(localStorage.getItem('mingRecord') || '{}'), k = sim.mode + ':' + (sim.diff | 0), o = R[k] || { w: 0, l: 0 }; if (won) o.w++; else o.l++; R[k] = o; localStorage.setItem('mingRecord', JSON.stringify(R));
     const nm = { standard: 'field battles', grand: 'grand battles', officers: 'officers battles', chaos: 'chaos', heroes: 'Heroes', duel: 'duels' }[sim.mode]; $('resultText').textContent += ` Your record in ${nm} at ${['Recruit', 'Soldier', 'Veteran', 'Lone banner'][sim.diff | 0]}: ${o.w} won, ${o.l} lost.`; } catch (e) { } }
