@@ -449,11 +449,11 @@ function missionFinish(winner) {
     if (r) $('resultText').textContent += ` ${r}`; }
 }
 // medals: the best difficulty each mission or operation was won at, and the fastest time, kept on this machine
-const MEDAL = ['銅 Recruit', '銀 Soldier', '金 Veteran', '玉 Lone banner'];
+function medalName(d) { return ['銅 Recruit', '銀 Soldier', '金 Veteran', '玉 Lone banner'][d] || ''; } /* a function, not a const: the menu draws medals before this file's consts exist */
 function medalsAll() { try { return JSON.parse(localStorage.getItem('mingMedals') || '{}'); } catch (e) { return {}; } }
 function medalSave(key, diff, secs) { const A = medalsAll(), o = A[key] || { d: -1, t: 1e9 }; const better = diff > o.d, faster = secs < o.t; A[key] = { d: Math.max(o.d, diff), t: Math.min(o.t, secs) }; try { localStorage.setItem('mingMedals', JSON.stringify(A)); } catch (e) { }
-  const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; return better ? `New medal: ${MEDAL[diff]} (${mm(secs)}).` : faster ? `A new best time: ${mm(secs)}.` : ''; }
-function medalTag(key) { const o = medalsAll()[key]; if (!o) return ''; const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; return ` <span class="medal" title="Best: ${MEDAL[o.d]}, ${mm(o.t)}">${MEDAL[o.d].split(' ')[0]} ${mm(o.t)}</span>`; }
+  const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; return better ? `New medal: ${medalName(diff)} (${mm(secs)}).` : faster ? `A new best time: ${mm(secs)}.` : ''; }
+function medalTag(key) { const o = medalsAll()[key]; if (!o) return ''; const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; return ` <span class="medal" title="Best: ${medalName(o.d)}, ${mm(o.t)}">${medalName(o.d).split(' ')[0]} ${mm(o.t)}</span>`; }
 // ---------- assault: deployment screen (pick a soldier from a gallery and where to enter the fight) ----------
 const DEP = { open: false, ti: 0, si: 0, el: null, por: {}, porT: {}, t: 0, key: '' };
 function depBuild() {

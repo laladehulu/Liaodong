@@ -38,7 +38,7 @@ function codexOpen(tab) {
 #codex .bd { overflow: auto; padding: 10px 18px 18px; } #codex .it { padding: 8px 0; border-bottom: 1px solid #d8c8a2; } #codex .it b { font-size: 15px; } #codex .it small { color: #6a5a46; margin-left: 6px; }
 #codex .side { display: inline-block; font-size: 11px; padding: 0 5px; margin-left: 6px; border-radius: 3px; background: #e0d2ae; } #codex .yr { font-weight: 700; margin: 12px 0 2px; color: #7a3a1a; }`; document.head.appendChild(st);
     box.addEventListener('mousedown', (e) => { if (e.target === box) box.hidden = true; }); }
-  tab = tab || 'people'; const tabs = [['people', '人 · People'], ['units', '兵 · Soldiers'], ['fields', '地 · Battlefields'], ['years', '年 · The years']];
+  tab = tab || 'people'; const tabs = [['people', '人 · People'], ['units', '兵 · Soldiers'], ['fields', '地 · Battlefields'], ['years', '年 · The years'], ['record', '功 · Your record']];
   let body = '';
   if (tab === 'people') body = CODEX_PEOPLE.map(p => `<div class="it"><b>${p[0]} · ${p[1]}</b><small>${p[2]}</small><span class="side">${p[3]}</span><div>${p[4]}</div></div>`).join('');
   if (tab === 'units') body = [0, 1].map(f => `<div class="yr">${f ? '後金 · The Later Jin' : '大明 · The Ming'}</div>` + S.ROSTER[f].map(k => { const d = S.defFor(k, f); const role = d.gun ? 'machine gun' : d.cannon ? 'artillery' : d.bow ? 'archers' : d.ai === 'ranged' ? 'firearms' : d.mounted ? 'cavalry' : 'foot, hand to hand';
@@ -47,6 +47,7 @@ function codexOpen(tab) {
   if (tab === 'years') { const E = (typeof WEV !== 'undefined' ? WEV : []).slice().sort((a, b) => a[0] - b[0]); let y = 0, out = '';
     for (const e of E) { const T = wDate(e[0]); if (T.y !== y) { y = T.y; out += `<div class="yr">${y}</div>`; } out += `<div class="it"><small style="margin:0 8px 0 0">${T.m}/${T.d}</small>${e[3]}<div style="color:#6a5a46;font-size:13px">${e[2]}</div></div>`; }
     body = out + '<p><small>Months are lunar, as people counted them; the game\'s calendar keeps thirty days to the month.</small></p>'; }
+  if (tab === 'record') body = codexRecord();
   box.hidden = false; box.innerHTML = `<div class="pp"><div class="hd"><h3>典 · Codex</h3>${tabs.map(t => `<button type="button" class="tab${t[0] === tab ? ' on' : ''}" data-t="${t[0]}">${t[1]}</button>`).join('')}<button type="button" class="tab x">Close</button></div><div class="bd">${body}</div></div>`;
   box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => codexOpen(b.dataset.t)); box.querySelector('.x').onclick = () => { box.hidden = true; };
 }
@@ -61,3 +62,16 @@ function quickBattle() { AUDIO.init(); AUDIO.play('ui'); state.mode = 'standard'
   state.aiSlots = []; renderMenu(); soloStart(); }
 { const host = $('modeSeg') && $('modeSeg').previousElementSibling; if (host) { const a = document.createElement('button'); a.type = 'button'; a.className = 'btn sm primary'; a.textContent = '速戰 · Quick battle'; a.title = 'A field battle now: a random field, your army (or a random one), against the AI';
     a.style.cssText = 'float:right;margin:-4px 6px 0 0'; a.onclick = quickBattle; host.appendChild(a); } }
+
+// 功 · your record: everything this browser remembers of what you did, in every mode
+function codexRecord() { const J = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || 'null') || d; } catch (e) { return d; } }; const out = []; const mm = (x) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`;
+  const sec = (t, rows) => { out.push(`<div class="yr">${t}</div>`); out.push(rows.length ? rows.map(r => `<div class="it">${r}</div>`).join('') : '<div class="it"><small style="margin:0">Nothing yet.</small></div>'); };
+  const rec = J('mingRecord', {}); const nm = { standard: 'Field battles', grand: 'Grand battles', officers: 'Officers', chaos: 'Chaos', heroes: 'Heroes', duel: 'Duels' }, dn = ['Recruit', 'Soldier', 'Veteran', 'Lone banner'];
+  sec('戰 · Battles against the AI', Object.keys(rec).sort().map(k => { const [m, d] = k.split(':'); return `<b>${nm[m] || m}</b><small>${dn[+d]}</small> · ${rec[k].w} won, ${rec[k].l} lost`; }));
+  const med = J('mingMedals', {}); const MD = ['銅 Recruit', '銀 Soldier', '金 Veteran', '玉 Lone banner'];
+  sec('章 · Medals', Object.keys(med).sort().map(k => { const o = med[k]; let t = k; if (/^story:/.test(k)) { const [, c, sd] = k.split(':'); t = `Story ${+c + 1}. ${(STORY_TEXT[+c] || {}).title || ''} (${+sd ? 'Jin' : 'Ming'})`; } else if (/^op:/.test(k)) t = ((S.OPS[k.slice(3)] || {}).title || k); else t = ((S.MISSIONS[k] || {}).title || k); return `<b>${t}</b><small>${MD[o.d]} · best ${mm(o.t)}</small>`; }));
+  const rung = +(localStorage.getItem('mingDuelRung') || 0); sec('擂 · The duel ladder', [`${Math.min(rung, 5)} of 5 opponents beaten${rung >= 5 ? ': the ladder is yours' : ''}.`]);
+  const sb = []; for (const m of [['field', 'Jiefan Hill'], ['zroad', 'The road village'], ['hakodate', 'The Ningyuan plain'], ['nagaoka', 'The paddies'], ['djzhen', 'Inside Zhenjiang']]) { const v = +(localStorage.getItem('mingStandBest' + (m[0] !== 'field' ? ':' + m[0] : '')) || 0); if (v) sb.push(`<b>${m[1]}</b> · ${v} raids held`); } sec('闖 · Last Stand', sb);
+  const camps = [['mingZhe', '浙兵 · The Zhejiang Company'], ['mingShenji', '神機 · The Divine Engine Division'], ['mingJin', '正白 · The Plain White Niru'], ['mingDongjiang', '東江 · The East River']].map(([k, t]) => { const v = J(k, null); return v ? `<b>${t}</b> · begun${v.stage ? ` (at ${String(v.stage).replace(/^c/, 'chapter ')})` : ''}` : null; }).filter(Boolean); sec('記 · The campaigns', camps);
+  const lives = J('mingLives', []); sec('人間 · Lives lived in the open world', lives.map(h => h.e.slice(0, 1).concat(h.e.filter(x => /^What he came to/.test(x))).join(' ')));
+  return out.join(''); }
