@@ -92,12 +92,12 @@ Scores 1–5: **F**un, **P**ersonal, **I**nteractive, **N**ovel, **H**istorical 
 | 36 | The 連坐 rule: the whole file punished for your running; the men's faces at the fire | scene/systemic | 5 | 5 | 2 | 5 | 5 | 3 | 25 | ✅2 |
 | 37 | A man who fears you after he saw you cut down the running keeps his distance in camp and battle | systemic | 4 | 4 | 1 | 5 | 4 | 3 | 21 | ✅1 |
 | 38 | A wounded man you left survives and comes back to camp later; the meeting | scene | 5 | 5 | 3 | 5 | 3 | 3 | 24 | ◻ |
-| 39 | Sworn brotherhood (結拜) after saving the same man twice or being saved by him | scene | 5 | 5 | 4 | 4 | 4 | 3 | 25 | ◻ |
-| 40 | The chief asks your advice before the next battle if your record is good | talk/systemic | 4 | 4 | 4 | 4 | 3 | 4 | 23 | ◻ |
+| 39 | Sworn brotherhood (結拜) after saving the same man twice or being saved by him | scene | 5 | 5 | 4 | 4 | 4 | 3 | 25 | ✅3 |
+| 40 | The chief asks your advice before the next battle if your record is good | talk/systemic | 4 | 4 | 4 | 4 | 3 | 4 | 23 | ✅3 |
 | 41 | Dreams after a hard battle (shame if you abandoned men; grief; fear; home) | playable vignette | 5 | 5 | 3 | 5 | 4 | 2 | 24 | ◻ (backlog by request) |
 | 42 | Your kills tallied in the Jin way: ears/heads counted for 軍功, share of spoils; the 巴圖魯 title | scene | 4 | 4 | 3 | 4 | 5 | 4 | 24 | ✅2 |
 | 43 | 神機營 silver per head and fines for wasted powder, paid at the pay table | scene | 3 | 3 | 3 | 3 | 5 | 4 | 21 | ✅2 |
-| 44 | The cook gives the brave the meat and the cowards the scraps | scene | 3 | 4 | 2 | 4 | 4 | 4 | 21 | ◻ |
+| 44 | The cook gives the brave the meat and the cowards the scraps | scene | 3 | 4 | 2 | 4 | 4 | 4 | 21 | ✅3 |
 | 45 | Children in a village play "you" in a mock battle | scene | 3 | 4 | 1 | 5 | 3 | 2 | 18 | ◻ |
 | 46 | A storyteller (說書) in a market town tells a twisted version of your deed | scene | 4 | 4 | 1 | 5 | 4 | 3 | 21 | ◻ |
 | 47 | The enemy campaign's camp tells of you by your nickname ("the iron-wall shield man") | echo | 4 | 4 | 1 | 5 | 4 | 4 | 22 | ✅5 |
