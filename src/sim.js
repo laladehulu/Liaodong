@@ -1919,6 +1919,7 @@ class Sim {
   applyDamage(u, dmg, attackerId, ix, iy, iz, cause, hx, hy, hz) {
     if (u.dead || u.inactive) return false; if (dmg > 0) u.hurtTk = this.tick;
     if (u.ctrl >= 0 && this.players[u.ctrl] && this.players[u.ctrl].god) return false; // debug mode: the tester cannot be hurt
+    if (this._covZ && dmg > 0 && u.team !== this.mission.attacker) { for (const z of this._covZ) if (z && len(u.x - z.x, u.z - z.z) < z.r + 5) { dmg *= this._cov; break; } } // assault: defenders on the line they hold fight from cover
     if (this.storyEase && dmg > 0) { if (u.ctrl >= 0 && !this.players[u.ctrl].ai) dmg *= this.storyEase.take; else if (u.team === this.mission.side) dmg *= this.storyEase.ally; } // a story chapter at the chosen difficulty
     if (this.xc && u.ctrl >= 0 && !this.players[u.ctrl].ai && (cause === 'melee' || cause === 'trample' || cause === 'spear' || cause === 'counter' || cause === 'arrow' || cause === 'shot')) { // no instant deaths in a crowd or under a whole company's volley
       const dec = (this.tick - (u.xcT === undefined ? this.tick : u.xcT)) * DT * 0.3 * u.def.hp; u.xcB = Math.max(0, (u.xcB || 0) - dec); u.xcT = this.tick;
@@ -3349,6 +3350,7 @@ const MISSIONS = {
   },
   zcamp: { title: '營 · Camp', year: '', battle: 'zcamp', side: 0, camp: true, hidden: true, brief: '', start: [0, 0, 0], zones: [], groups: {}, phases: [{ title: '營 · Camp', text: '', obj: { never: true } }], win: '' },
 };
+let ASSAULT_COVER = 0.5, ASSAULT_KEEP = 1.0, ASSAULT_REV = 10; /* how much of a blow a defender on his own line takes (tuned AI against AI so the defence can hold) */
 const OPS = { // Assault: attackers with limited manpower take sectors of fortified points one by one; defenders fall back
   ningyuan_siege: {
     siege: true, title: '寧遠攻守 · The Siege of Ningyuan', year: 'February 1626', battle: 'siegecity', attacker: 1, tickets: 640,
@@ -3370,7 +3372,7 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
     attAt: [0, -122, 0],
   },
   liaoyang: {
-    title: '遼陽之戰 · Assault on Liaoyang', year: 'April 1621', battle: 'aizu', attacker: 1, tickets: 520,
+    title: '遼陽之戰 · Assault on Liaoyang', year: 'April 1621', battle: 'aizu', attacker: 1, tickets: 460, keep: 0.8, cover: 0.65,
     brief: 'The Jin storm Liaoyang, the capital of Liaodong.',
     talk: { 1: [[4, 'Your banner chief', 'Liaoyang. Take this and Liaodong is ours.', '遼陽。拿下它，遼東就是咱們的。'], [18, 'A bannerman', 'Trenches first, west and east. They have muskets in them.', '先是壕，東西兩道。裡頭有銃。'],
         [45, 'Your banner chief', 'Behind the trenches, the market. Then the gate. Then the keep.', '壕後頭是市集。再是城門。再是內城。']],
@@ -3388,7 +3390,7 @@ const OPS = { // Assault: attackers with limited manpower take sectors of fortif
     attAt: [0, -140, 0],
   },
   shanhai: {
-    title: '山海關 · The First Pass Under Heaven', year: 'May 1644', battle: 'bonari', attacker: 1, tickets: 480,
+    title: '山海關 · The First Pass Under Heaven', year: 'May 1644', battle: 'bonari', attacker: 1, tickets: 480, cover: 0.35, keep: 1.25,
     brief: 'The Qing banners come down on Shanhai Pass, the First Pass Under Heaven.',
     talk: { 1: [[4, 'Your banner chief', 'Beijing has fallen to the rebels. This pass is the way in.', '北京落到流賊手裡了。這道關是進去的路。'], [18, 'A bannerman', 'Narrow. A trench line, then an earthwork, then the gate.', '窄。一道壕，一道土牆，再是關門。'],
         [45, 'Your banner chief', 'No way round the slopes. Straight up the middle, point by point.', '兩邊坡繞不過去。從中間一處一處打。']],
@@ -4180,6 +4182,7 @@ Sim.prototype.reviveUnit = function (u, x, z) {
 Sim.prototype.defKey = function (di) { const M = this.mission; let k = 0; for (const s of M.sectors) for (const key of s) { if (k === di) return key; k++; } return null; };
 Sim.prototype.assaultThink = function () {
   const M = this.mission, A = M.attacker; const keys = M.sectors[this.sector];
+  this._covZ = keys ? keys.map(k => this.missionZone(k)) : null; this._cov = this.cfg.cover !== undefined ? this.cfg.cover : M.cover !== undefined ? M.cover : ASSAULT_COVER;
   // the briefing as talk: each side's lines, spaced through the opening (both sides' events go out; the HUD keeps its own)
   if (M.talk) { const mv = this.mv, el = this.tick / 30; for (const tm in M.talk) for (const [t, who, text, zh] of M.talk[tm]) { const k = 'op:' + tm + ':' + t; if (!mv.said[k] && el >= t) { mv.said[k] = 1; this.events.push({ t: 'msay', who, text, zh: zh || '', team: tm | 0 }); } } }
   // manpower: every attacking man who falls costs a ticket; reserves march on while tickets last and the line is thin
@@ -4217,8 +4220,8 @@ Sim.prototype.assaultThink = function () {
   }
   if (this.tick % 150 === 0) this.assaultDirs();
   if (M.siege && this.sg && this.sector >= 2 && this.tick % 30 === 15) this.siegeTown();
-  if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(Math.round(CAP * 0.7), (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * 0.75)) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
-    for (const u of this.units) { if (!u.dead || u.trimmed || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * 25) continue;
+  if (this.tick % 90 === 0 && this.teamAlive[1 - A].length < Math.min(Math.round(CAP * 0.7), (this.defStart || (this.defStart = this.teamAlive[1 - A].length)) * (this.cfg.defKeep || this.mission.keep || ASSAULT_KEEP))) { const D = 1 - A, nz = this.missionZone((M.sectors[Math.min(this.sector + 1, M.sectors.length - 1)] || keys)[0]) || this.missionZone(keys[0]), fz = A === 1 ? 1 : -1;
+    for (const u of this.units) { if (!u.dead || u.trimmed || u.team !== D || u.type === 'horse' || u.type === 'hero' || u.squad < 0 || u.inactive || u.def.ai === 'cannon' || u.ctrl >= 0) continue; if (this.tick - (u.deathTick || 0) < 30 * (this.cfg.defRev || ASSAULT_REV)) continue;
       const k = u.id % 9; this.reviveUnit(u, clamp(nz.x + (k % 3 - 1) * 3, -HALF + 4, HALF - 4), clamp(nz.z + fz * (14 + Math.floor(k / 3) * 3), -HALF + 4, HALF - 4)); } }
   const left = Object.keys(this.mg).some(g => this.mg[g].G.team === A && !this.mg[g].released);
   if (this.tickets <= 0 || (act < 8 && !left && !revivable)) { this.mwin = 1 - A; this.events.push({ t: 'mend', won: false, text: 'The attackers have no men left to send.', att: A }); }
