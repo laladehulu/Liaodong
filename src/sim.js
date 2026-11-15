@@ -137,7 +137,7 @@ const SCEN = {
     text: ['The moat: the Jin must seize the bridge over the flooded moat', 'The walls: the ram at the gate, ladders against the ramparts', 'The gate tower: Liaoyang is breached! Hold the tower'] },
 };
 function A2(s) { return s.split(' '); }
-// Story: seven battles of the Ming–Jin wars. Each side lists its commanders; the first is the player's when playing that side.
+// Story: nine battles of the Ming–Jin wars. Each side lists its commanders; the first is the player's when playing that side.
 const A = (s) => s.split(' ');
 const STORY = [
   { battle: 'field', ming: [['Du Song', A('samurai rifle_imp ashigaru jigen cavalry')], ['Ma Lin', A('rifle_imp ashigaru samurai rifle_spencer')]],
@@ -148,6 +148,10 @@ const STORY = [
     jin: [['Nurhaci', A('samurai shinsengumi archer cavalry cavalry')], ['Ajige', A('samurai ashigaru archer cannon4')], ['Dodo', A('byakkotai archer horokutai cavalry')]] },
   { battle: 'hakodate', ming: [['Yuan Chonghuan', A('armstrong armstrong rifle_imp samurai')], ['Man Gui', A('cavalry cavalry samurai rifle_spencer')], ['Zu Dashou', A('rifle_imp ashigaru samurai gatling')]],
     jin: [['Nurhaci', A('samurai samurai shinsengumi archer cavalry')], ['Daišan', A('samurai ashigaru horokutai archer cannon4')], ['Hong Taiji', A('shinsengumi archer cavalry byakkotai')]] },
+  { battle: 'jinzhou', ming: [['Zhao Shuaijiao', A('rifle_imp rifle_imp armstrong samurai ashigaru')], ['Man Gui', A('cavalry cavalry samurai rifle_spencer')], ['Zu Dashou', A('samurai ashigaru jigen cavalry')]],
+    jin: [['Hong Taiji', A('shinsengumi samurai archer cannon4 cavalry')], ['Amin', A('samurai ashigaru archer horokutai')], ['Daišan', A('samurai samurai archer cavalry')]] },
+  { battle: 'dalinghe', ming: [['Zhang Chun', A('rifle_imp samurai ashigaru jigen armstrong')], ['Zu Dashou', A('samurai samurai rifle_imp ashigaru')]],
+    jin: [['Hong Taiji', A('shinsengumi samurai archer cannon4 cannon4')], ['Dorgon', A('samurai cavalry cavalry archer')], ['Tong Yangxing', A('rifle_sho rifle_sho cannon4 ashigaru')]] },
   { battle: 'ueno', ming: [['Hong Chengchou', A('samurai rifle_imp rifle_imp armstrong jigen')], ['Cao Bianjiao', A('cavalry samurai ashigaru ronin')]],
     jin: [['Hong Taiji', A('shinsengumi samurai archer cannon4 cavalry')], ['Dorgon', A('samurai archer archer horokutai')], ['Ajige', A('archer ashigaru byakkotai cannon4')]] },
   { battle: 'bonari', ming: [['Wu Sangui', A('cavalry cavalry samurai rifle_imp jigen')], ['Gao Diyuan', A('rifle_imp ashigaru horokutai armstrong')]],
