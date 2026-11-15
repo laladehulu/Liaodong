@@ -91,7 +91,7 @@ Scores 1–5: **F**un, **P**ersonal, **I**nteractive, **N**ovel, **H**istorical 
 | 35 | Demotion: your 腰牌 taken away in front of the men | scene | 4 | 4 | 2 | 3 | 5 | 4 | 22 | ✅2 |
 | 36 | The 連坐 rule: the whole file punished for your running; the men's faces at the fire | scene/systemic | 5 | 5 | 2 | 5 | 5 | 3 | 25 | ✅2 |
 | 37 | A man who fears you after he saw you cut down the running keeps his distance in camp and battle | systemic | 4 | 4 | 1 | 5 | 4 | 3 | 21 | ✅1 |
-| 38 | A wounded man you left survives and comes back to camp later; the meeting | scene | 5 | 5 | 3 | 5 | 3 | 3 | 24 | ◻ |
+| 38 | A wounded man you left survives and comes back to camp later; the meeting | scene | 5 | 5 | 3 | 5 | 3 | 3 | 24 | ✅3 |
 | 39 | Sworn brotherhood (結拜) after saving the same man twice or being saved by him | scene | 5 | 5 | 4 | 4 | 4 | 3 | 25 | ✅3 |
 | 40 | The chief asks your advice before the next battle if your record is good | talk/systemic | 4 | 4 | 4 | 4 | 3 | 4 | 23 | ✅3 |
 | 41 | Dreams after a hard battle (shame if you abandoned men; grief; fear; home) | playable vignette | 5 | 5 | 3 | 5 | 4 | 2 | 24 | ◻ (backlog by request) |
