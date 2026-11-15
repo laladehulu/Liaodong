@@ -159,7 +159,8 @@ function ddRoll() {
   zTalk = function (k, night) { return ddAugment(_talk(k, night), k); }; }
 function ddFrame(dt) {
   const sim = state.sim; if (!sim || !sim.mission) return;
-  if (ZB && sim.mission.soldier && DD.zb !== ZB) { DD.zb = ZB; DD.B = ddFresh(sim); DD.fx = { cool: 0, charge: 0, aloneT: 0, blk: 0, start: false, mark: 0 }; DD.fileKills = 0; DD.killers = {}; DD.firstShot = true; DD.placeSince = 0; DD.acc = 0; }
+  if (ZB && sim.mission.soldier && DD.zb !== ZB) { { const C0 = ddCtx(), D0 = C0 && ddDD(C0.S); if (D0 && D0.flags && D0.flags.advised) { toast(D0.flags.advised === 'bold' ? 'As you advised, the chief has put your file at the front.' : 'As you advised, the chief has sent men round first.'); D0.flags.advised = null; C0.save(); } }
+    DD.zb = ZB; DD.B = ddFresh(sim); DD.fx = { cool: 0, charge: 0, aloneT: 0, blk: 0, start: false, mark: 0 }; DD.fileKills = 0; DD.killers = {}; DD.firstShot = true; DD.placeSince = 0; DD.acc = 0; }
   if (ZB && DD.B) ddSample(dt);
   if (ZC && sim.mission.camp && DD.zc !== ZC) { DD.zc = ZC; DD.obj = null; ddCampObjects(); DD.sc = { q: [], cur: null, wait: 0 }; ddPlanScenes();
     // the Jin chapters keep their talk in JCH: wrap each chapter's table once
