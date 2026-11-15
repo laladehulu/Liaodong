@@ -27,6 +27,7 @@ const CODEX_PEOPLE = [
   ['朱由檢', 'The Chongzhen Emperor', '1611–1644', 'Ming', 'The last Ming emperor (r. 1627–1644). He destroyed Wei Zhongxian\'s faction but distrusted his generals and changed his ministers fifty times. When Li Zicheng took Beijing he hanged himself on Coal Hill.'],
   ['李自成', 'Li Zicheng', '1606–1645', 'Rebel', 'A former postal courier from Shaanxi who became the greatest of the rebel leaders of the famine years. He took Beijing in the spring of 1644 and proclaimed the Great Shun, was beaten at the Shanhai Pass a few weeks later, and died in flight in 1645.'],
   ['吳三桂', 'Wu Sangui', '1612–1678', 'Ming', 'Commander of the Ming army at the Shanhai Pass in 1644. Caught between Li Zicheng and the Qing, he opened the Pass to Dorgon; he later served the Qing, and rebelled against them in 1673.'],
+  ['湯若望', 'Johann Adam Schall von Bell', '1592–1666', 'Jesuit', 'A German Jesuit who reached Beijing in 1623, predicted eclipses better than the Directorate of Astronomy, worked with Xu Guangqi on the Chongzhen calendar and cast cannon for the Ming in its last years. He stayed on under the Qing and headed their astronomical bureau.'],
   ['利瑪竇', 'Matteo Ricci', '1552–1610', 'Jesuit', 'The Italian Jesuit who learned the classics, wore a scholar\'s robes and was allowed to live in Beijing from 1601. His friends among the officials, Xu Guangqi first, carried Western mathematics, maps and later guns into the Ming state.'],
 ];
 function codexOpen(tab) {
