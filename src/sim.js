@@ -315,6 +315,10 @@ class Sim {
     if (this.vets && this.vets.length && this.players[0]) { // veterans of earlier chapters: their losses and their stars march with them
       const used = {}; this.vets.forEach((v) => { const sid = this.players[0].squads.find(id => !used[id] && this.squads[id].type === v.type); if (sid === undefined) return; used[sid] = 1; const sq = this.squads[sid]; const xp = clamp(v.xp | 0, 0, 200); sq.xp = xp; sq.stars = xp >= 30 ? 3 : xp >= 15 ? 2 : xp >= 6 ? 1 : 0; sq.moraleMax = (sq.def.morale || 100) + sq.stars * 10; sq.morale = sq.moraleMax; sq.veteran = true;
         const keep = clamp(v.n | 0, 1, sq.count); for (let k = keep; k < sq.unitIds.length; k++) { const u = this.units[sq.unitIds[k]]; u.dead = true; u.hp = 0; this.total[u.team]--; } sq.aliveCount = keep; }); }
+    // against the AI alone: the difficulty you chose hardens or softens the side no human plays (field, grand, officers, chaos, story, heroes; 1 is even)
+    if (!this.mission && this.mode !== 'duel' && cfg.diff !== undefined) { const hum = [0, 0]; for (const p of this.players) if (!p.ai) hum[p.team]++;
+      if ((hum[0] > 0) !== (hum[1] > 0)) { const foe = hum[0] ? 1 : 0, k = [0.75, 1, 1.12, 1.25][this.diff]; if (k !== 1) { const cache = new Map();
+        for (const u of this.units) { if (u.team !== foe || u.type === 'horse') continue; let d = cache.get(u.def); if (!d) { d = Object.assign({}, u.def, { hp: u.def.hp * k, dmg: u.def.dmg ? u.def.dmg.map(x => x * k) : u.def.dmg }); cache.set(u.def, d); } u.def = d; u.hp = d.hp; } } } }
     if (this.heroMode) { const S2 = this.scen; this.objectives = [{ id: 0, x: S2.bridge[0], z: S2.bridge[1], r: 11, name: 'Moat bridge', ctrl: 100, owner: 0 }, { id: 1, x: S2.citadel[0], z: S2.citadel[1], r: S2.citadel[2], name: 'Citadel', ctrl: 100, owner: 0 }];
       this.phase = 1; this.battleTick = 0; for (const p of this.players) p.ready = true; this.heroDirectives(); }
     if (this.mission) { this.phase = 1; this.battleTick = 0; for (const p of this.players) p.ready = true; }

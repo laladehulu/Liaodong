@@ -187,6 +187,13 @@ function armyPresets() { const A = armyStore(), f = state.faction | 0, slots = (
   box.innerHTML = '<span style="opacity:.7">Saved armies:</span>' + slots.map((a, i) => `<span style="display:inline-flex;gap:2px"><button type="button" class="btn sm" data-ld="${i}"${ok(a) ? '' : ' disabled'} title="${a ? a.map(k => S.defFor(k, f).name).join(', ') : 'empty'}">${i + 1}${a ? ` · ${a.length} sq` : ' · empty'}</button><button type="button" class="btn sm" data-sv="${i}" title="Save the army above in slot ${i + 1}"${state.army.length ? '' : ' disabled'}>save</button></span>`).join('');
   box.querySelectorAll('[data-ld]').forEach(b => b.onclick = () => { const a = slots[+b.dataset.ld]; if (!ok(a)) return; state.army = state.mode === 'officers' ? a.slice(0, 1) : a.slice(); AUDIO.init(); AUDIO.play('ui'); renderMenu(); });
   box.querySelectorAll('[data-sv]').forEach(b => b.onclick = () => { slots[+b.dataset.sv] = state.army.slice(); const B = armyStore(); B['s' + f] = slots; try { localStorage.setItem('mingArmies', JSON.stringify(B)); } catch (e) { } AUDIO.init(); AUDIO.play('ui'); renderMenu(); }); }
+// difficulty against the AI in the open modes (the same choice the campaigns keep)
+const SKD = [['新兵', 'Recruit', 'The enemy\'s men are a quarter softer.'], ['兵', 'Soldier', 'Even: both armies as they are.'], ['老兵', 'Veteran', 'The enemy\'s men are an eighth harder.'], ['孤旗', 'Lone banner', 'The enemy\'s men are a quarter harder.']];
+function skDiffRow() { const on = /^(standard|grand|officers|chaos|heroes|story)$/.test(state.mode); let el = $('skDiff'); const host = $('roster'); if (!host) return;
+  if (!el) { el = document.createElement('div'); el.id = 'skDiff'; el.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 10px;font-size:12px'; host.parentNode.insertBefore(el, host); }
+  el.hidden = !on; if (!on) return; const cur = diffPref();
+  el.innerHTML = '<span style="font:700 11px sans-serif;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-right:4px">Against the AI</span>' + SKD.map((d, i) => `<button type="button" class="btn sm${i === cur ? ' primary' : ''}" data-d="${i}">${d[0]} ${d[1]}</button>`).join('') + `<small style="opacity:.75">${SKD[cur][2]}</small>`;
+  el.querySelectorAll('button').forEach(b => b.onclick = () => { try { localStorage.setItem('mingDiff', b.dataset.d); } catch (e) { } AUDIO.init(); AUDIO.play('ui'); skDiffRow(); }); }
 function armyRestore() { const A = armyStore(), f = state.faction | 0, a = A['last' + f]; if (a && a.length && a.every(k => S.ROSTER[f].includes(k)) && armyCost(a) <= S.BUDGET) state.army = a.slice();
   if (A.menu && S.BATTLES[A.menu.battle] && !S.BATTLES[A.menu.battle].hidden) state.battle = A.menu.battle; }
 function renderMenu() {
@@ -195,7 +202,7 @@ function renderMenu() {
   const ros = S.ROSTER[state.faction]; const cost = armyCost(state.army), left = S.BUDGET - cost;
   const b = $('budget'); b.textContent = `${left} / ${S.BUDGET} taels`; b.classList.toggle('over', left < 0);
   $('armyCount').textContent = `${state.army.length} squad${state.army.length === 1 ? '' : 's'} · ${state.army.reduce((s, k) => s + S.DEFS[k].count, 0)} men`;
-  armyPresets();
+  armyPresets(); try { skDiffRow(); } catch (e) { }
   const r = $('roster'); r.innerHTML = '';
   for (const k of ros) {
     const d = S.defFor(k, state.faction); const el = document.createElement('div'); el.className = 'unit';
