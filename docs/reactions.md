@@ -79,10 +79,10 @@ Scores 1–5: **F**un, **P**ersonal, **I**nteractive, **N**ovel, **H**istorical 
 | 23 | Camp game: dice / 象棋 where opponents play scared or cocky depending on your name | playable | 4 | 3 | 5 | 4 | 4 | 2 | 22 | ◻ |
 | 24 | Officer's test: a dangerous errand offered to the man with the best (or worst) record | playable | 5 | 4 | 5 | 4 | 4 | 2 | 24 | ◻ |
 | 25 | The outing: the man you saved invites you foraging; something goes wrong; you protect him | playable | 5 | 5 | 5 | 4 | 4 | 2 | 25 | ◻ |
-| 26 | Night watch shared with the man who trusts you most; what he confesses depends on your record | scene | 4 | 5 | 3 | 4 | 4 | 3 | 23 | ◻ |
+| 26 | Night watch shared with the man who trusts you most; what he confesses depends on your record | scene | 4 | 5 | 3 | 4 | 4 | 3 | 23 | ✅3 |
 | 27 | A letter arrives for a dead man; read it, burn it, or keep it for his family | scene | 4 | 5 | 4 | 4 | 4 | 4 | 25 | ✅5 |
 | 28 | Your weapon gets notched and named after its deeds ("Old Notch" 缺口刀) in the HUD and talk | object | 4 | 4 | 1 | 4 | 3 | 4 | 20 | ✅4 |
-| 29 | Camp mood: songs after a good fight, silence after a bad one, a fist-fight if someone ran | systemic/visual | 4 | 3 | 1 | 4 | 4 | 4 | 20 | ◻ |
+| 29 | Camp mood: songs after a good fight, silence after a bad one, a fist-fight if someone ran | systemic/visual | 4 | 3 | 1 | 4 | 4 | 4 | 20 | ✅3 |
 | 30 | The new draft is put next to you on purpose because you are steady (or kept away) | systemic | 3 | 4 | 1 | 4 | 4 | 4 | 20 | ◻ |
 | 31 | Men copy you: if you hold fire, the file holds better next time; if you fire early, they do too | systemic | 4 | 3 | 2 | 5 | 4 | 3 | 21 | ◻ |
 | 32 | A prisoner you took is brought to you to decide his fate | scene | 5 | 4 | 4 | 4 | 4 | 2 | 23 | ◻ |
