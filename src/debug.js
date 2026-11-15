@@ -172,3 +172,4 @@ setInterval(() => {
 }, 250);
 { const q = new URLSearchParams(location.search).get('debug'); if (q === '1') dbgEnable(true); else if (q === '0') dbgEnable(false); else if (dbgLS('mingDebug') === '1') dbgEnable(true); }
 dbgBoot();
+window.__dbg = { dbgFlows, dbgJump, dbgLoad, dbgFresh };
