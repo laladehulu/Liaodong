@@ -8,8 +8,8 @@ const S = ctx.SIM, B = Object.keys(S.BATTLES).filter(b => !S.BATTLES[b].hidden &
 const want = process.argv[2], wb = process.argv[3], MAXMIN = +(process.env.MIN || 15);
 const runs = [];
 for (const mode of ['standard', 'grand', 'chaos', 'officers', 'duel']) for (const b of B) runs.push({ mode, battle: b });
-for (const op of Object.keys(ctx.OPS)) runs.push({ mode: 'assault', op, battle: ctx.OPS[op].battle });
-for (const sc of Object.keys(ctx.SCEN)) runs.push({ mode: 'heroes', scen: sc, battle: 'x' });
+for (const op of Object.keys(S.OPS || {})) runs.push({ mode: "assault", op, battle: S.OPS[op].battle });
+for (const sc of Object.keys(S.SCEN || {})) runs.push({ mode: 'heroes', scen: sc, battle: 'x' });
 for (let ch = 0; ch < (S.STORY || []).length; ch++) runs.push({ mode: 'story', chapter: ch, battle: S.STORY[ch].battle || 'x', scen: 'ch' + ch });
 for (const b of ['field', 'aizu', 'hakodate']) runs.push({ mode: 'siege', battle: b });
 for (const b of ['field', 'sarhu']) runs.push({ mode: 'soldier', battle: b });
