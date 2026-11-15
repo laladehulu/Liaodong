@@ -54,3 +54,10 @@ function codexOpen(tab) {
 { const t = document.querySelector('#menu h1') || document.querySelector('#menu .title') || null; const host = $('modeSeg') && $('modeSeg').previousElementSibling;
   if (host) { const a = document.createElement('button'); a.type = 'button'; a.className = 'btn sm'; a.textContent = '典 · Codex: the people, soldiers, fields and years'; a.style.cssText = 'float:right;margin-top:-4px'; a.onclick = () => codexOpen(); host.appendChild(a); } }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('codex') && !$('codex').hidden) { $('codex').hidden = true; e.stopPropagation(); } }, true);
+// 速戰 · Quick battle: one click from the menu to a field battle on a random field, with your saved army (or a random one) against the AI
+function quickBattle() { AUDIO.init(); AUDIO.play('ui'); state.mode = 'standard'; const B = Object.keys(S.BATTLES).filter(k => !S.BATTLES[k].hidden && !/^dj/.test(k)); state.battle = B[Math.floor(Math.random() * B.length)];
+  const f = state.faction | 0, ros = S.ROSTER[f]; if (!state.army.length || armyCost(state.army) > S.BUDGET || !state.army.every(k => ros.includes(k))) { const a = []; let left = S.BUDGET, guard = 0;
+    while (a.length < 7 && guard++ < 60) { const k = ros[Math.floor(Math.random() * ros.length)], c = S.DEFS[k].cost; if (c <= left && !(S.DEFS[k].cannon && a.some(x => S.DEFS[x].cannon))) { a.push(k); left -= c; } } state.army = a; }
+  state.aiSlots = []; renderMenu(); soloStart(); }
+{ const host = $('modeSeg') && $('modeSeg').previousElementSibling; if (host) { const a = document.createElement('button'); a.type = 'button'; a.className = 'btn sm primary'; a.textContent = '速戰 · Quick battle'; a.title = 'A field battle now: a random field, your army (or a random one), against the AI';
+    a.style.cssText = 'float:right;margin:-4px 6px 0 0'; a.onclick = quickBattle; host.appendChild(a); } }
