@@ -139,3 +139,9 @@ the controls card (v181), difficulty against the AI in the open modes (v182), th
 Measured and left alone: skirmish AI-vs-AI is even (4/2 over seeds), Beacon is won by a bot that only lights fires on Recruit and
 Soldier and lost on Veteran, idle squads far from the enemy are holding by design (guns in range, river guards), the sim costs
 1.5 ms a tick in a field battle and 8.6 ms in a grand battle (budget 33 ms).
+
+Later in part 2 (v185–v200): the duel ladder, open-world arrivals by the right gate and data checks, Story's two new battles,
+the career on its historical fields, Fight again, a less wasteful target search (exact), Qin Liangyu / Sun Chengzong /
+Adam Schall in the open world, letting the days go by, the later years' choices (1622–1643), story-camp scenes from the
+reactions backlog (brotherhood, the chief's advice, the cook, the night watch, the mood of the fire, the man who comes back),
+three Last Stand boons, the codex record and What's new, and a menu fix (a medal name read before its file ran).
