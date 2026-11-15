@@ -331,6 +331,10 @@ for (const ev of ['click', 'change']) $('personal').addEventListener(ev, () => s
 $('btnCopy').onclick = () => { const code = $('codeOut').textContent; navigator.clipboard && navigator.clipboard.writeText(code).then(() => { $('copyMsg').textContent = 'Copied'; }, () => { $('copyMsg').textContent = 'Select the code and copy it.'; }); };
 $('btnLeave').onclick = () => { if (state.net) state.net.destroy(); state.net = null; show('menu'); };
 $('btnMenu').onclick = () => { location.reload(); };
+// fight again: the same battle, the same armies and settings, a new roll of the dice (solo battles of the open modes, missions and operations)
+function againOk() { const m = state.lastSolo, sim = state.sim; if (!m || state.net || !sim || (sim.cfg && sim.cfg.camp) || (typeof WB !== 'undefined' && WB)) return false; const M = sim.mission; return !(M && M.soldier) && m.mode !== 'campaigns'; }
+{ const b = document.createElement('button'); b.className = 'btn'; b.id = 'btnAgain'; b.type = 'button'; b.textContent = 'Fight again'; b.hidden = true; $('btnMenu').before(b);
+  b.onclick = () => { const m = Object.assign({}, state.lastSolo, { seed: (Math.random() * 0x7fffffff) | 0 }); try { localStorage.setItem('mingRematch', JSON.stringify(m)); } catch (e) { } location.reload(); }; }
 function wireLobby(net) {
   net.onLobby = renderLobby;
   net.onFail = (msg) => { $('menuMsg').textContent = msg; show('menu'); };
@@ -838,6 +842,7 @@ function cmdCamUpdate(dt) {
 }
 // ---------- game ----------
 function startGame(msg, me, net, delay) {
+  if (!net) state.lastSolo = JSON.parse(JSON.stringify(msg)); /* for 'Fight again' */
   if (msg.mode === 'beacon') msg = Object.assign({}, msg, { mode: 'campaign', mission: 'beacon' });
   if (msg.mode === 'stand') msg = Object.assign({}, msg, { mode: 'campaign', mission: 'laststand', battle: msg.standMap || 'field' });
   // a story battle: the weapons you chose from your arsenal come with you (solo; the choice rides in the config)
@@ -995,7 +1000,7 @@ function finish(winner) {
   // your record against the AI in the open modes, kept per mode and difficulty
   if (!sim.mission && !state.net && winner !== 2 && /^(standard|grand|officers|chaos|heroes|duel)$/.test(sim.mode)) { try { const R = JSON.parse(localStorage.getItem('mingRecord') || '{}'), k = sim.mode + ':' + (sim.diff | 0), o = R[k] || { w: 0, l: 0 }; if (won) o.w++; else o.l++; R[k] = o; localStorage.setItem('mingRecord', JSON.stringify(R));
     const nm = { standard: 'field battles', grand: 'grand battles', officers: 'officers battles', chaos: 'chaos', heroes: 'Heroes', duel: 'duels' }[sim.mode]; $('resultText').textContent += ` Your record in ${nm} at ${['Recruit', 'Soldier', 'Veteran', 'Lone banner'][sim.diff | 0]}: ${o.w} won, ${o.l} lost.`; } catch (e) { } }
-  setTimeout(() => { $('result').hidden = false; $('btnReplay').hidden = !state.replay || state.replay.inputs.length < 60; if (document.pointerLockElement) document.exitPointerLock(); }, 3600);
+  setTimeout(() => { $('result').hidden = false; $('btnAgain').hidden = !againOk(); $('btnReplay').hidden = !state.replay || state.replay.inputs.length < 60; if (document.pointerLockElement) document.exitPointerLock(); }, 3600);
 }
 // ---------- after-action report: your companies, what each did and what it cost ----------
 function aarShow(sim, me) {
@@ -1344,4 +1349,5 @@ try { const r = JSON.parse(localStorage.getItem('mingResume') || 'null'); if (r)
 try { armyRestore(); } catch (e) { }
 renderMenu();
 requestAnimationFrame(frame);
+{ let r = null; try { r = JSON.parse(localStorage.getItem('mingRematch') || 'null'); localStorage.removeItem('mingRematch'); } catch (e) { } if (r) setTimeout(() => startGame(r, 0, null, 1), 0); } /* after every file of the page has run */
 })();
