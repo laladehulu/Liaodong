@@ -470,3 +470,19 @@ WPP.push({ k: 'qinly', zh: '秦良玉', en: 'Qin Liangyu', t: 'commander of the 
   if (p.k === 'schall') { say('Ask to look through his telescope', [['這是望遠鏡。看月亮。看見山了嗎？月亮上有山。', 'This is a telescope. Look at the moon. Do you see the mountains? There are mountains on the moon.']], () => { WS.learning = Math.min(100, WS.learning + 0.8); WS.flags.xixue = (WS.flags.xixue | 0) + 1; toast('There are mountains on the moon.'); });
     say('Ask about the calendar', [['欽天監的曆法差了。日食，他們算錯了一個時辰；我們算得準。', 'The Directorate\'s calendar is out. They miscalculated the last eclipse by two hours; ours was right.'], ['徐閣老要修新曆。你懂算學嗎？', 'Grand Secretary Xu wants a new calendar. Do you know mathematics?']], () => { if ((WS.flags.xixue | 0) >= 2 && WS.learning >= 50) { WS.flags.calendar = 1; WS.cash += 1200; wLog('入曆局。', 'Worked on the new calendar with the Jesuits.'); toast('Three months of calculations for the new calendar. 1,200 wen, and your name in the preface.'); } }); }
 }; }
+
+// the bed: sleep the night, or live quietly for a while (working for your keep) until something happens
+function wBed() {
+  const home = WS.place === WS.home, forge = home && WS.place === 'lijia' && !WS.jin;
+  const perDay = forge ? (WS.dead.father ? 30 : 40) : WS.office ? 0 : WS.army ? 0 : 15, keep = home || WS.army || WS.office ? 0 : 20;
+  const what = forge ? 'working the forge' : WS.office ? 'at your duties' : WS.army ? 'drilling with the company' : home ? 'doing odd jobs' : 'doing odd jobs for your keep';
+  const live = (maxDays) => { let n = 0, why = '';
+    for (; n < maxDays; n++) { WS.hour = 6; wTurnDays(1); WS.cash = Math.max(0, WS.cash + perDay - keep); if (forge) WS.smith = Math.min(100, (WS.smith || 0) + 0.15);
+      if (!WS.alive) return wDie(); if (WS.flags.pendingBattle || (WS.flags.fallHere && !WS.flags.fallDone)) { why = 'the war came to you'; n++; break; }
+      const d = WCORE.dilemmaNow(WS) || wSiegeNow() || wEndNow() || WCORE.festNow(WS, WS.home); if (d) { why = 'something needs you'; n++; break; }
+      const ex = WEX.find(e => e[2] === WS.place && Math.abs(e[1] - WS.day) <= 1); if (ex) { why = `${ex[9]} is about to be held here`; n++; break; } }
+    wSave(); if (WS.flags.pendingBattle) { const m = WS.flags.pendingBattle; WS.flags.pendingBattle = null; return wBattle(m); } if (WS.flags.fallHere && !WS.flags.fallDone) { WS.flags.fallDone = 1; return wBattle('dj1'); }
+    const F = wFmt(WS.day); zCards([{ title: F.zh, year: F.en, p: [`${n} day${n > 1 ? 's' : ''} pass, ${what}.${why ? ` Then ${why}.` : ''}`, wMorning()].concat(wLifeNews()) }], () => wScene()); };
+  wPanel({ zh: '床', en: 'Your bed', t: `${wFmt(WS.day).en} · ${WS.cash} wen` }, [['', 'Sleep, or let the days go by until something happens (a choice, a festival, an exam here, the war).']],
+    [{ q: 'Sleep the night', fx: () => { wSleep(); } }, { q: `Live quietly for up to a week (${what})`, fx: () => { live(7); } }, { q: `Live quietly for up to a month (${what})`, fx: () => { live(30); } }]);
+}

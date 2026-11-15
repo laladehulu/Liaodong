@@ -262,7 +262,7 @@ function wKeyE() {
   if (wThingUse(T)) return true;
   if (T.k === 'books' || T.k === 'desk') { wPass(3, () => { const g = Math.max(0.4, 2.6 - WS.learning / 40) * (WCORE.inv(WS, 'book') ? 1.5 : 1); WS.learning = Math.min(100, WS.learning + g); toast(`You read the Four Books for three hours. Learning ${WS.learning.toFixed(0)}.`); }); return true; }
   if (T.k === 'bunk') { wBunk(); return true; }
-  if (T.k === 'bed') { wSleep(); return true; }
+  if (T.k === 'bed') { wBed(); return true; }
   if (T.k === 'inn') { if (WS.cash < 40) { toast('You have not got forty wen.'); return true; } WS.cash -= 40; wSleep(); return true; }
   if (T.k === 'board') { wBoard(); return true; }
   return true;
@@ -433,4 +433,4 @@ function wMenu() {
   zheHUD = function (dt) { if (WZ && WS && state.sim && state.sim.cfg.camp && state.sim.cfg.camp.world) return wHUD(dt); return hud(dt); };
   zheFinish = function (w) { if (WB) return wFinish(w); return fin(w); }; }
 setTimeout(() => { try { wMenu(); } catch (e) { } }, 400);
-window.__world = { WPP, WEV, wThings, wMoreThings, wBattleTest: (m) => { wBattle(m); const b = [...document.querySelectorAll("button")].find(b => /Continue/.test(b.textContent) && b.offsetParent); if (b) b.click(); }, wBunk, wAfterFall, wArmyMoment, WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks
+window.__world = { wBed, WPP, WEV, wThings, wMoreThings, wBattleTest: (m) => { wBattle(m); const b = [...document.querySelectorAll("button")].find(b => /Continue/.test(b.textContent) && b.offsetParent); if (b) b.click(); }, wBunk, wAfterFall, wArmyMoment, WCORE, wLifeDay, wTalkFolk, wJournal, wForge, wCourt, wChoice, wPeopleHere, wStart, wFresh, wTurnDays, wGo, wSleep, wScene, wBoard, wExam, wTalk, wLook, wPerson, WEX, WPL, get WS() { return WS; }, set WS(v) { WS = v; } }; // test hooks
